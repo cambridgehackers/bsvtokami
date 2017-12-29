@@ -1,0 +1,8 @@
+#!/bin/bash
+
+script=`which $0`
+scriptdir=`dirname $0`
+
+for f in $*; do
+    java -classpath $scriptdir:$scriptdir/antlr-4.7-complete.jar Main $f
+done

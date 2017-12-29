@@ -1,0 +1,24 @@
+#!/bin/sh
+
+script=`which $0`
+scriptdir=`dirname $0`
+
+ppfiles=""
+doremove=0
+if [ -d connectal ]; then
+    for f in $*; do
+	./connectal/scripts/bsvpreprocess.py -I$scriptdir $f > $f.pp
+	ppfiles="$ppfiles $f.pp"
+    done
+    doremove=1
+else
+    ppfiles="$*"
+fi
+echo java
+time java -classpath $scriptdir/classes:$scriptdir/jars/antlr-4.7.1-complete.jar org.antlr.v4.gui.TestRig BSV packagedef $ppfiles
+echo c++
+time ./bin/bsv-parser-cpp $ppfiles
+
+if [ "$doremove" = "1" ]; then
+    rm -f $ppfiles
+fi
