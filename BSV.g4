@@ -5,9 +5,9 @@ packagedef :
        | packagestmt* EOF
        ;
 
-packagedecl : 'package' packageide ';'
+packagedecl : 'package' pkgname=upperCaseIdentifier ';'
     ;
-endpackage : 'endpackage' ( ':' packageide )?
+endpackage : 'endpackage' ( ':' upperCaseIdentifier )?
     ;
 
 UpperCaseIdentifier :
@@ -28,14 +28,16 @@ upperCaseIdentifier :
     UpperCaseIdentifier | 'C' | 'CF' | 'SB'
     ;
 
+identifier : lowerCaseIdentifier | upperCaseIdentifier ;
+anyidentifier : lowerCaseIdentifier | upperCaseIdentifier | DollarIdentifier ;
+
 exportdecl :
     'export' exportitem (',' exportitem)* ';'
     ;
 
 exportitem :
-    packageide '::' '*'
-    | upperCaseIdentifier ('(' '..' ')')?
-    | lowerCaseIdentifier ('(' '..' ')')?
+    upperCaseIdentifier '::' '*'
+    | identifier ('(' '..' ')')?
     ;
 
 importdecl :
@@ -56,9 +58,6 @@ packagestmt :
     | importbvi
     | importdecl
     | exportdecl
-    ;
-packageide :
-    upperCaseIdentifier
     ;
 interfacedecl :
     attributeinstance* 'interface' typedeftype ';' (interfacememberdecl)* 'endinterface' (':' typeide)?
@@ -349,72 +348,51 @@ binop :
     ;
 
 exprprimary :
-    '(' expression ')'
-    | exprprimary '.' lowerCaseIdentifier
-    | ( type | ( '(' type ')' ) ) '\'' exprprimary
-    | (pkg=upperCaseIdentifier '::')? lowerCaseIdentifier
-    | (pkg=upperCaseIdentifier '::')? upperCaseIdentifier
-    | val=DollarIdentifier
-    | val=IntLiteral
-    | val=RealLiteral
-    | val=StringLiteral
-    | '?'
-    | 'valueof' '(' type ')'
-    | 'valueOf' '(' type ')'
-    | 'return' expression
-    | bitconcat
-    | array=exprprimary  '[' expression (':' expression)? ']'
-    | fcn=exprprimary '(' (expression (',' expression)*)? ')'
-    | 'clocked_by' exprprimary
-    | 'reset_by' exprprimary
-    | typeassertion
-    | structexpr
-    | taggedunionexpr
-    | interfaceexpr
-    | rulesexpr
-    | bigbeginendblock
-    | actionblock
-    | actionvalueblock
-    | seqfsmstmt
-    | parfsmstmt
-    ;
-bitconcat :
-    '{' expression (',' expression)* '}'
-    ;
-typeassertion :
-    type '’' bitconcat
-    | type '’' '(' expression ')'
-    ;
-structexpr :
-    tag=upperCaseIdentifier '{' memberbinds '}'
+    '(' expression ')' #parenexpr
+    | exprprimary '.' exprfield=lowerCaseIdentifier #fieldexpr
+    | ( type | ( '(' type ')' ) ) '\'' exprprimary #castexpr
+    | (pkg=upperCaseIdentifier '::')? anyidentifier #varexpr
+    | IntLiteral #intliteral
+    | RealLiteral #realliteral
+    | StringLiteral #stringliteral
+    | '?' #undefinedexpr
+    | ('valueof' | 'valueOf') '(' type ')' #valueofexpr
+    | 'return' expression #returnexpr
+    | '{' expression (',' expression)* '}' #bitconcat
+    | array=exprprimary  '[' expression (':' expression)? ']' #arraysub
+    | fcn=exprprimary '(' (expression (',' expression)*)? ')' #callexpr
+    | 'clocked_by' exprprimary #clockedbyexpr
+    | 'reset_by' exprprimary #resetbyexpr
+    | type '’' ( ( '{' expression (',' expression)* '}' ) | ( '(' expression ')' )) #typeassertion
+    | tag=upperCaseIdentifier '{' memberbinds '}' #structexpr
+    | 'tagged' upperCaseIdentifier (('{' memberbinds '}' ) | (exprprimary) | ) #taggedunionexpr
+    | 'interface' type (';')? (interfacestmt)* 'endinterface' (':' typeide)? #interfaceexpr
+    | attributeinstance* 'rules' (':' lowerCaseIdentifier)? (rulesstmt)* 'endrules' (':' lowerCaseIdentifier)?
+      #rulesexpr
+    | beginendblock #blockexpr
+    | actionblock #actionblockexpr
+    | actionvalueblock #actionvalueblockexpr
+    | seqfsmstmt #seqfsmstmtexpr
+    | parfsmstmt #parfsmstmtexpr
     ;
 memberbinds :
     memberbind (',' memberbind)*
     ;
-taggedunionexpr :
-    'tagged' upperCaseIdentifier '{' memberbinds '}'
-    | 'tagged' upperCaseIdentifier (exprprimary)?
-    ;
 memberbind :
     field=lowerCaseIdentifier ':' expression
     ;
-interfaceexpr :
-    'interface' type (';')? (interfacestmt)* 'endinterface' (':' typeide)?
-    ;
+
 interfacestmt :
     methoddef
     | subinterfacedef
     | vardecl
     | varassign
     ;
-rulesexpr :
-    attributeinstance* 'rules' (':' lowerCaseIdentifier)? (rulesstmt)* 'endrules' (':' lowerCaseIdentifier)?
-    ;
 rulesstmt :
     ruledef
     | expression
     ;
-bigbeginendblock :
+beginendblock :
     'begin' (':' lowerCaseIdentifier)? (bigstmt)* 'end' (':' lowerCaseIdentifier)?
     ;
 actionblock :
@@ -434,7 +412,7 @@ bigstmt :
     | moduledef
     | ruledef
     | regwrite ';'
-    | bigbeginendblock
+    | beginendblock
     | bigif
     | bigcase
     | bigfor
@@ -491,9 +469,7 @@ varincr :
     lowerCaseIdentifier '=' expression
     ;
 condpredicate :
-    condpredicate '&&&' condpredicate
-    | expression 'matches' pattern
-    | expression
+    expression ('matches' pattern)? ('&&&' condpredicate)?
     ;
 pattern :
     '.' lowerCaseIdentifier
@@ -529,11 +505,7 @@ attributeinstance :
     '(*' attrspec (',' attrspec)* '*)'
     ;
 attrspec :
-    attrname ('=' expression)?
-    ;
-attrname :
-    lowerCaseIdentifier
-    | upperCaseIdentifier
+    identifier ('=' expression)?
     ;
 provisos :
     'provisos' '(' proviso (',' proviso)* ')'
@@ -584,46 +556,42 @@ loopbodyfsmstmt :
     | 'continue' ';'
     ;
 
-portide : 
-       (lowerCaseIdentifier|upperCaseIdentifier)
-       ;
-
 importbvi :
-    'import' '"BVI"' portide '=' moduleproto modulestmt* bvistmt* bvischedule* 'endmodule' (':' (lowerCaseIdentifier|upperCaseIdentifier))?
+    'import' '"BVI"' identifier '=' moduleproto modulestmt* bvistmt* bvischedule* 'endmodule' (':' identifier)?
     ;
 
 bvistmt :
-    'parameter' portide '=' expression ';'
+    'parameter' identifier '=' expression ';'
     | 'no_reset' ';'
-    | 'default_clock' lowerCaseIdentifier? ( '(' portide? ')' ('=' expression )? )? ';'
-    | 'default_reset' lowerCaseIdentifier? ( '(' portide? ')' ('=' expression )? )? ';'
-    | 'input_clock' lowerCaseIdentifier? '(' (portide (',' attributeinstance* portide )? )? ')' ('=' expression )? ';'
-    | 'input_reset' lowerCaseIdentifier? '(' portide? ')' bviportopt* ('=' expression )? ';'
-    | 'output_clock' lowerCaseIdentifier '(' portide? (',' attributeinstance* portide )? ')' ';'
-    | 'output_reset' lowerCaseIdentifier '(' portide? ')' bviportopt* ';'
-    | 'method' portide? lowerCaseIdentifier ('(' ( portide (',' portide)*)? ')' )? bvimethodopt* ';'
-    | 'port' portide bviportopt* '=' expression ';'
-    | 'inout' portide bviportopt* ( '(' portide? ')' )? ( '=' expression ) ';'
-    | 'ifc_inout' portide bviportopt* ( '(' portide? ')' )? ( '=' expression)? ';'
-    | 'path' '(' portide ',' portide ')' ';' 
-    | 'same_family' '(' portide ',' portide ')' ';' 
+    | 'default_clock' lowerCaseIdentifier? ( '(' identifier? ')' ('=' expression )? )? ';'
+    | 'default_reset' lowerCaseIdentifier? ( '(' identifier? ')' ('=' expression )? )? ';'
+    | 'input_clock' lowerCaseIdentifier? '(' (identifier (',' attributeinstance* identifier )? )? ')' ('=' expression )? ';'
+    | 'input_reset' lowerCaseIdentifier? '(' identifier? ')' bviportopt* ('=' expression )? ';'
+    | 'output_clock' lowerCaseIdentifier '(' identifier? (',' attributeinstance* identifier )? ')' ';'
+    | 'output_reset' lowerCaseIdentifier '(' identifier? ')' bviportopt* ';'
+    | 'method' identifier? lowerCaseIdentifier ('(' ( identifier (',' identifier)*)? ')' )? bvimethodopt* ';'
+    | 'port' identifier bviportopt* '=' expression ';'
+    | 'inout' identifier bviportopt* ( '(' identifier? ')' )? ( '=' expression ) ';'
+    | 'ifc_inout' identifier bviportopt* ( '(' identifier? ')' )? ( '=' expression)? ';'
+    | 'path' '(' identifier ',' identifier ')' ';' 
+    | 'same_family' '(' identifier ',' identifier ')' ';' 
     | 'interface' upperCaseIdentifier lowerCaseIdentifier ';' bvistmt* 'endinterface'
     ;
 
 bviportopt :
-    'clocked_by' '(' attributeinstance* portide ')'
-    | 'reset_by' '(' attributeinstance* portide ')'
+    'clocked_by' '(' attributeinstance* identifier ')'
+    | 'reset_by' '(' attributeinstance* identifier ')'
     ;
 bvimethodopt :
-    'clocked_by' '(' portide ')'
-    | 'reset_by' '(' portide ')'
-    | 'ready' '(' attributeinstance* portide ')'
-    | 'enable' '(' attributeinstance* portide ')'
+    'clocked_by' '(' identifier ')'
+    | 'reset_by' '(' identifier ')'
+    | 'ready' '(' attributeinstance* identifier ')'
+    | 'enable' '(' attributeinstance* identifier ')'
     ;
 
 bvimethodname :
-    bvimethodname '.' portide
-    | portide
+    bvimethodname '.' identifier
+    | identifier
     ;
 
 bvimethodnames :
