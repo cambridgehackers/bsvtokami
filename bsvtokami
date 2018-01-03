@@ -4,5 +4,5 @@ script=`which $0`
 scriptdir=`dirname $0`
 
 for f in $*; do
-    java -classpath $scriptdir:$scriptdir/antlr-4.7-complete.jar Main $f
+    java -classpath $scriptdir/classes:$scriptdir/jars/antlr-4.7.1-complete.jar Main $f
 done
