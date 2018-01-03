@@ -220,7 +220,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 	    System.err.println("var " + varName);
 	    if (scope.containsKey(varName)) {
 		SymbolTableEntry entry = scope.lookup(varName);
-		//System.err.println("found binding " + varName + " " + entry.type);
+		System.err.println("found binding " + varName + " " + entry.type);
 		if (entry.type.equals("Reg"))
 		    System.out.print("(ReadReg " + varName + ")");
 		else
