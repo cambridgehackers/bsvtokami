@@ -41,6 +41,7 @@ class SymbolTable {
     }
 
     void bind(String key, SymbolTableEntry entry) {
+	System.err.println("binding " + key + " with type " + entry.type);
 	bindings.put(key, entry);
     }
 

@@ -23,7 +23,69 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 	}
     }	
 
+    @Override
+    public Void visitInterfacedecl(BSVParser.InterfacedeclContext ctx) {
+	String interfaceName = ctx.typedeftype().typeide().getText();
+	symbolTable.bind(interfaceName,
+			 new SymbolTableEntry(interfaceName, "interface"));
+	return null;
+    }
+
+    @Override
+    public Void visitTypedefsynonym(BSVParser.TypedefsynonymContext ctx) {
+	String typedefname = ctx.typedeftype().typeide().getText();
+	String type;
+	if (ctx.type() != null)
+	    type = ctx.type().getText();
+	else
+	    type = ctx.functionproto().getText();
+	symbolTable.bind(typedefname,
+			 new SymbolTableEntry(typedefname, type));
+	return null;
+    }
+
+    @Override public Void visitTypedefenum(BSVParser.TypedefenumContext ctx) {
+	String typedefname = ctx.upperCaseIdentifier().getText();
+	symbolTable.bind(typedefname,
+			 new SymbolTableEntry(typedefname, "struct"));
+	for (BSVParser.TypedefenumelementContext elt: ctx.typedefenumelement()) {
+	    String tagname = elt.upperCaseIdentifier().getText();
+	    symbolTable.bind(tagname, new SymbolTableEntry(tagname, typedefname));
+	}
+	return null;
+    }
+
+    @Override public Void visitTypedefstruct(BSVParser.TypedefstructContext ctx) {
+	String typedefname = ctx.typedeftype().getText();
+	return null;
+    }
+
+    @Override public Void visitTypedeftaggedunion(BSVParser.TypedeftaggedunionContext ctx) {
+	String typedefname = ctx.typedeftype().typeide().getText();
+	symbolTable.bind(typedefname,
+			 new SymbolTableEntry(typedefname, "tagged union"));
+	for (BSVParser.UnionmemberContext member: ctx.unionmember()) {
+	    BSVParser.UpperCaseIdentifierContext id = member.upperCaseIdentifier();
+	    if (id != null) {
+		String idname = id.getText();
+		symbolTable.bind(idname,
+				 new SymbolTableEntry(idname, typedefname));
+	    } else if (member.substruct() != null) {
+	    } else if (member.subunion() != null) {
+	    }
+	}
+	return null;
+    }
+
     @Override public Void visitModuledef(BSVParser.ModuledefContext ctx) {
+	String modulename = ctx.moduleproto().modulename.getText();
+	String interfacename = "Empty";
+	BSVParser.ModuleformalargsContext moduleformalargs = ctx.moduleproto().moduleformalargs();
+	if (moduleformalargs != null) {
+	    interfacename = moduleformalargs.type(0).getText();
+	}
+	symbolTable.bind(modulename,
+			 new SymbolTableEntry(modulename, interfacename));
 	symbolTable = new SymbolTable(symbolTable);
 	scopes.put(ctx, symbolTable);
 	visitChildren(ctx);
