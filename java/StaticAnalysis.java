@@ -120,5 +120,14 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 	return null;
     }
 
-
+    @Override public Void visitLetBinding(BSVParser.LetBindingContext ctx) {
+	String typeName = "unknown";
+	for (BSVParser.LowerCaseIdentifierContext ident: ctx.lowerCaseIdentifier()) {
+	    String varName = ident.getText();
+	    //System.err.println("VarInit " + typeName + " " + varName);
+	    //Expression rhs = expressionConverter.visit(ctx.rhs);
+	    symbolTable.bind(varName, new SymbolTableEntry(varName, typeName));
+	}
+	return null;
+    }
 }

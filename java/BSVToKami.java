@@ -11,7 +11,7 @@ class BSVExpressionConverter extends BSVBaseVisitor<Expression>
 	}
 	@Override
 	public Expression visitCondExpr(BSVParser.CondExprContext ctx) {
-	    return new CondExpression(visit(ctx.condpredicate()),
+	    return new CondExpression(visit(ctx.pred),
 				      visit(ctx.expression(0)),
 				      visit(ctx.expression(1)));
 	}
@@ -109,10 +109,12 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 	return null;
     }
     @Override public Void visitLetBinding(BSVParser.LetBindingContext ctx) {
-	String varName = ctx.var.getText();
 	BSVParser.ExpressionContext rhs = ctx.rhs;
-	System.out.println("    Variable " + varName + ": " + "TBDLetType" + ".");
 	Expression expr = expressionConverter.visit(rhs);
+	for (BSVParser.LowerCaseIdentifierContext ident: ctx.lowerCaseIdentifier()) {
+	    String varName = ident.getText();
+	    System.out.println("    Variable " + varName + ": " + "TBDLetType" + ".");
+	}
 	return null ;
     }
     @Override public Void visitActionBinding(BSVParser.ActionBindingContext ctx) {
@@ -174,10 +176,10 @@ public class BSVToKami extends BSVBaseVisitor<Void>
     @Override
     public Void visitCondpredicate(BSVParser.CondpredicateContext ctx) {
 	visit(ctx.expression());
-	if (ctx.pattern() != null) {
-	    System.out.print(" matches ");
-	    visit(ctx.pattern());
-	}
+	// if (ctx.pattern() != null) {
+	//     System.out.print(" matches ");
+	//     visit(ctx.pattern());
+	// }
 	if (ctx.condpredicate() != null) {
 	    System.out.print(" && ");
 	    visit(ctx.condpredicate());

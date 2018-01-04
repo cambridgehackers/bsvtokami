@@ -19,9 +19,11 @@ LowerCaseIdentifier :
 DollarIdentifier :
     [$][a-z][a-zA-Z0-9_$]*
     ;
-
+EscapedOperator :
+    [\\][-+!%^&*<>=|/]+
+    ;
 lowerCaseIdentifier :
-    LowerCaseIdentifier | 'default_clock' | 'default_reset' | 'enable' | 'no_reset' | 'path' | 'port' | 'ready' | 'same_family'
+    LowerCaseIdentifier | 'default_clock' | 'default_reset' | 'enable' | 'no_reset' | 'path' | 'port' | 'ready' | 'same_family' | EscapedOperator
     ;
 
 upperCaseIdentifier :
@@ -132,9 +134,8 @@ derives :
     ;
 vardecl :
     attributeinstance* t=type varinit (',' varinit)*  ';' #VarBinding
-    | attributeinstance*t=type var=lowerCaseIdentifier arraydims '<-' rhs=expression ';' #ActionBinding
-    | attributeinstance* 'let' var=lowerCaseIdentifier arraydims ';' #LetDecl
-    | attributeinstance* 'let' var=lowerCaseIdentifier arraydims '=' rhs=expression ';' #LetBinding
+    | attributeinstance* t=type var=lowerCaseIdentifier arraydims '<-' rhs=expression ';' #ActionBinding
+    | attributeinstance* 'let' (lowerCaseIdentifier | ('{' lowerCaseIdentifier (',' lowerCaseIdentifier )* '}'))  ('=' rhs=expression)? ';' #LetBinding
     | attributeinstance* 'let' var=lowerCaseIdentifier arraydims '<-' rhs=expression ';' #LetActionBinding
     | attributeinstance* 'match' pattern '<-' rhs=expression ';' #PatternActionBinding
     | attributeinstance* 'match' pattern '=' rhs=expression ';' #PatternBinding
@@ -227,13 +228,13 @@ subinterfacedef :
     | 'interface' (type)? lowerCaseIdentifier '=' expression ';'
     ;
 ruledef :
-    attributeinstance* 'rule' rulename=lowerCaseIdentifier (rulecond)? ';' rulebody 'endrule' (':' lowerCaseIdentifier)?
+    attributeinstance* 'rule' rulename=lowerCaseIdentifier rulecond? ';' rulebody 'endrule' (':' lowerCaseIdentifier)?
     ;
 rulecond :
     ('if')? '(' condpredicate ')'
     ;
 rulebody :
-    (bigstmt)*
+    bigstmt*
     ;
 functiondef :
     attributeinstance* functionproto ';' (bigstmt)* 'endfunction' (':' lowerCaseIdentifier)?
@@ -260,8 +261,8 @@ bigcfuncarg :
     type (lowerCaseIdentifier)?
     ;
 varassign :
-    lvalue '=' expression ';'
-    | lvalue '<-' expression ';'
+    lvalue op=('='|'<-') expression ';'
+    | '{' lvalue (',' lvalue)* '}' op=('='|'<-') expression ';'
     ;
 lvalue :
     lowerCaseIdentifier
@@ -287,9 +288,19 @@ typenat :
     IntLiteral
     ;
 expression :
-    '(' condpredicate ')' '?' expression ':' expression #CondExpr
+       pred=expression '?' expression ':' expression #CondExpr
+    |  expression 'matches' pattern #MatchesExpr
+    | 'case' '(' expression ')' 'matches'? (caseexpritem)* (caseexprdefaultitem)? 'endcase' #CaseExpr
     | binopexpr '?' expression ':' expression #SimpleCondExpr
     | binopexpr #OperatorExpr
+    ;
+
+caseexpritem :
+    pattern ('&&&' expression)* ':' expression ';'
+    | expression (',' expression)* ':' expression ';'
+    ;
+caseexprdefaultitem :
+    'default' (':')? expression ';'
     ;
 
 binopexpr :
@@ -309,42 +320,6 @@ unopexpr :
      op=('!' | '~' | '&' | '~&' | '|' | '~|' | '^' | '^~' | '~^') exprprimary
     | op=('+' | '-') right=unopexpr
     | exprprimary
-    ;
-
-unop :
-    '+'
-    | '-'
-    | '!'
-    | '~'
-    | '&'
-    | '~&'
-    | '|'
-    | '~|'
-    | '^'
-    | '^~'
-    | '~^'
-    ;
-binop :
-    '*'
-    | '|'
-    | '%'
-    | '+'
-    | '-'
-    | '<<'
-    | '>>'
-    | '<='
-    | '>='
-    | '<'
-    | '>'
-    | '=='
-    | '!='
-    | '&'
-    | '^'
-    | '^~'
-    | '~^'
-    | '|'
-    | '&&'
-    | '||'
     ;
 
 exprprimary :
@@ -469,7 +444,7 @@ varincr :
     lowerCaseIdentifier '=' expression
     ;
 condpredicate :
-    expression ('matches' pattern)? ('&&&' condpredicate)?
+    matchee=expression ('&&&' condpredicate)?
     ;
 pattern :
     '.' lowerCaseIdentifier
@@ -478,6 +453,7 @@ pattern :
     | taggedunionpattern
     | structpattern
     | tuplepattern
+    | '(' pattern ')'
     ;
 constantpattern :
     IntLiteral
@@ -486,7 +462,7 @@ constantpattern :
     | upperCaseIdentifier
     ;
 
-IntLiteral : ([1-9][0-9]*)?('\''[hdob]?)?[0-9a-fA-F_]+ ;
+IntLiteral : ([1-9][0-9]*)?('\''[hdob]?)?[0-9a-fA-F_?]+ ;
 
 RealLiteral : [0-9]+'.'[0-9]+ ;
 
