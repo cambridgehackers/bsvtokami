@@ -17,6 +17,10 @@ generated/BSVParser.java: BSV.g4 $(JARS)
 generated/BSVParser.cpp: BSV.g4 $(JARS)
 	java -jar $(JARS)  -Dlanguage=Cpp -listener -visitor -o generated BSV.g4
 
+python/BSVParser.py: BSV.g4 $(JARS)
+	pip3 install -q -r requirements.txt
+	java -jar $(JARS)  -Dlanguage=Python3 -listener -visitor -o python BSV.g4
+
 bin/bsv-parser-cpp: cpp/main.cpp generated/BSVParser.cpp antlr4-cpp-runtime/dist/libantlr4-runtime.a
 	mkdir -p bin
 	$(CXX) -O -Wall -std=c++11 -Igenerated -Iantlr4-cpp-runtime/runtime/src/ -o bin/bsv-parser-cpp cpp/main.cpp generated/*.cpp antlr4-cpp-runtime/dist/libantlr4-runtime.a
