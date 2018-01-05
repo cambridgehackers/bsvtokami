@@ -135,10 +135,8 @@ derives :
 vardecl :
     attributeinstance* t=type varinit (',' varinit)*  ';' #VarBinding
     | attributeinstance* t=type var=lowerCaseIdentifier arraydims '<-' rhs=expression ';' #ActionBinding
-    | attributeinstance* 'let' (lowerCaseIdentifier | ('{' lowerCaseIdentifier (',' lowerCaseIdentifier )* '}'))  ('=' rhs=expression)? ';' #LetBinding
-    | attributeinstance* 'let' var=lowerCaseIdentifier arraydims '<-' rhs=expression ';' #LetActionBinding
-    | attributeinstance* 'match' pattern '<-' rhs=expression ';' #PatternActionBinding
-    | attributeinstance* 'match' pattern '=' rhs=expression ';' #PatternBinding
+    | attributeinstance* 'let' (lowerCaseIdentifier | ('{' lowerCaseIdentifier (',' lowerCaseIdentifier )* '}'))  (op=('='|'<-') rhs=expression)? ';' #LetBinding
+    | attributeinstance* 'match' pattern op=('='|'<-') rhs=expression ';' #PatternBinding
     ;
 varinit :
     var=lowerCaseIdentifier arraydims ('=' rhs=expression)?
@@ -196,7 +194,7 @@ modulestmt :
     | moduleinst
     | subinterfacedef
     | ruledef
-    | bigstmt
+    | stmt
     ;
 moduleinst :
     attributeinstance* type lowerCaseIdentifier ':' moduleapp ';'
@@ -210,7 +208,7 @@ moduleactualparamarg :
     | expression
     ;
 methoddef :
-    'method' (type)? lowerCaseIdentifier ('(' methodformals? ')')? provisos? (implicitcond)? ';' (bigstmt)* 'endmethod' (':' lowerCaseIdentifier)?
+    'method' (type)? lowerCaseIdentifier ('(' methodformals? ')')? provisos? (implicitcond)? ';' (stmt)* 'endmethod' (':' lowerCaseIdentifier)?
     | 'method' (type)? lowerCaseIdentifier ('(' methodformals? ')')? (implicitcond)? '=' expression ';'
     ;
 methodformals :
@@ -234,10 +232,10 @@ rulecond :
     ('if')? '(' condpredicate ')'
     ;
 rulebody :
-    bigstmt*
+    stmt*
     ;
 functiondef :
-    attributeinstance* functionproto ';' (bigstmt)* 'endfunction' (':' lowerCaseIdentifier)?
+    attributeinstance* functionproto ';' (stmt)* 'endfunction' (':' lowerCaseIdentifier)?
     | functionproto '=' expression ';'
     ;
 functionproto :
@@ -267,8 +265,8 @@ varassign :
 lvalue :
     lowerCaseIdentifier
     | lvalue '.' lowerCaseIdentifier
-    | lvalue '[' expression ']'
-    | lvalue '[' expression ':' expression ']'
+    | lvalue '[' index=expression ']'
+    | lvalue '[' msb=expression ':' lsb=expression ']'
     ;
 type :
     typeprimary
@@ -368,19 +366,19 @@ rulesstmt :
     | expression
     ;
 beginendblock :
-    'begin' (':' lowerCaseIdentifier)? (bigstmt)* 'end' (':' lowerCaseIdentifier)?
+    'begin' (':' lowerCaseIdentifier)? (stmt)* 'end' (':' lowerCaseIdentifier)?
     ;
 actionblock :
-    'action' (':' lowerCaseIdentifier)? (bigstmt)* 'endaction' (':' lowerCaseIdentifier)?
+    'action' (':' lowerCaseIdentifier)? (stmt)* 'endaction' (':' lowerCaseIdentifier)?
     ;
 actionvalueblock :
-    'actionvalue' (':' lowerCaseIdentifier)? (bigstmt)* 'endactionvalue' (':' lowerCaseIdentifier)?
+    'actionvalue' (':' lowerCaseIdentifier)? (stmt)* 'endactionvalue' (':' lowerCaseIdentifier)?
     ;
 regwrite :
     lhs=lvalue '<=' rhs=expression
     ;
 
-bigstmt :
+stmt :
      vardecl
     | varassign
     | functiondef
@@ -388,35 +386,35 @@ bigstmt :
     | ruledef
     | regwrite ';'
     | beginendblock
-    | bigif
-    | bigcase
-    | bigfor
-    | bigwhile
+    | ifstmt
+    | casestmt
+    | forstmt
+    | whilestmt
     | actionblock
     | actionvalueblock
     | expression ';'
     ;
-bigif :
-    'if' '(' condpredicate ')' bigstmt ('else' bigstmt)?
+ifstmt :
+    'if' '(' condpredicate ')' stmt ('else' stmt)?
     ;
-bigcase :
-    'case' '(' expression ')' (bigcaseitem)* (bigdefaultitem)? 'endcase'
-    | 'case' '(' expression ')' 'matches' (bigcasepatitem)* (bigdefaultitem)? 'endcase'
+casestmt :
+    'case' '(' expression ')' (casestmtitem)* (bigdefaultitem)? 'endcase'
+    | 'case' '(' expression ')' 'matches' (casestmtpatitem)* (bigdefaultitem)? 'endcase'
     ;
-bigcaseitem :
-    expression (',' expression)* ':' bigstmt
+casestmtitem :
+    expression (',' expression)* ':' stmt
     ;
-bigcasepatitem :
-    pattern ('&&&' expression)* ':' bigstmt
+casestmtpatitem :
+    pattern ('&&&' expression)* ':' stmt
     ;
 bigdefaultitem :
-    'default' (':')? bigstmt
+    'default' (':')? stmt
     ;
-bigwhile :
-    'while' '(' expression ')' bigstmt
+whilestmt :
+    'while' '(' expression ')' stmt
     ;
-bigfor :
-    'for' '(' forinit ';' fortest ';' forincr ')' bigstmt
+forstmt :
+    'for' '(' forinit ';' fortest ';' forincr ')' stmt
     ;
 forinit :
     foroldinit
