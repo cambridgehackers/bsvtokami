@@ -377,7 +377,7 @@ actionvalueblock :
     'actionvalue' (':' lowerCaseIdentifier)? (bigstmt)* 'endactionvalue' (':' lowerCaseIdentifier)?
     ;
 regwrite :
-    lhs=expression '<=' rhs=expression
+    lhs=lvalue '<=' rhs=expression
     ;
 
 bigstmt :
