@@ -69,17 +69,17 @@ interfacememberdecl :
     | subinterfacedecl
     ;
 methodproto :
-    attributeinstance* 'method' type lowerCaseIdentifier ('(' methodprotoformals? ')')? ';'
+    attributeinstance* 'method' bsvtype lowerCaseIdentifier ('(' methodprotoformals? ')')? ';'
     ;
 methodprotoformals :
     methodprotoformal (',' methodprotoformal)*
     ;
 methodprotoformal :
-    attributeinstance* type lowerCaseIdentifier
+    attributeinstance* bsvtype lowerCaseIdentifier
     | functionproto
     ;
 subinterfacedecl :
-    attributeinstance* 'interface' type lowerCaseIdentifier ';'
+    attributeinstance* 'interface' bsvtype lowerCaseIdentifier ';'
     ;
 typedecl :
     typedefsynonym
@@ -97,7 +97,7 @@ typeformal :
     ('numeric')? 'type' typeide
     ;
 typedefsynonym :
-    'typedef' type typedeftype ';'
+    'typedef' bsvtype typedeftype ';'
     | 'typedef' functionproto typedeftype ';'
     ;
 typedefenum :
@@ -115,11 +115,11 @@ typedeftaggedunion :
     'typedef' 'union' 'tagged' '{' (unionmember)* '}' typedeftype (derives)? ';'
     ;
 structmember :
-    type lowerCaseIdentifier ';'
+    bsvtype lowerCaseIdentifier ';'
     | subunion lowerCaseIdentifier ';'
     ;
 unionmember :
-    type upperCaseIdentifier ';'
+    bsvtype upperCaseIdentifier ';'
     | substruct upperCaseIdentifier ';'
     | subunion upperCaseIdentifier ';'
     ;
@@ -133,8 +133,8 @@ derives :
     'deriving' '(' typeclasside (',' typeclasside)* ')'
     ;
 vardecl :
-    attributeinstance* t=type varinit (',' varinit)*  ';' #VarBinding
-    | attributeinstance* t=type var=lowerCaseIdentifier arraydims '<-' rhs=expression ';' #ActionBinding
+    attributeinstance* t=bsvtype varinit (',' varinit)*  ';' #VarBinding
+    | attributeinstance* t=bsvtype var=lowerCaseIdentifier arraydims '<-' rhs=expression ';' #ActionBinding
     | attributeinstance* 'let' (lowerCaseIdentifier | ('{' lowerCaseIdentifier (',' lowerCaseIdentifier )* '}'))  (op=('='|'<-') rhs=expression)? ';' #LetBinding
     | attributeinstance* 'match' pattern op=('='|'<-') rhs=expression ';' #PatternBinding
     ;
@@ -165,7 +165,7 @@ overloadeddef :
     | moduleproto
     | vardecl
     ;
-tctype : type | functionproto ;
+tctype : bsvtype | functionproto ;
 typeclassinstance :
     'instance' typeclasside '#' '(' tctype (',' tctype)* ')' (provisos)? ';'
     (varassign
@@ -176,18 +176,18 @@ moduledef :
     attributeinstance* moduleproto (modulestmt)* 'endmodule' (':' lowerCaseIdentifier)?
     ;
 moduleproto :
-    'module' ('[' type ']')? modulename=lowerCaseIdentifier (moduleformalparams)? '(' (moduleformalargs)? ')' (provisos)? ';'
+    'module' ('[' bsvtype ']')? modulename=lowerCaseIdentifier (moduleformalparams)? '(' (moduleformalargs)? ')' (provisos)? ';'
     ;
 moduleformalparams :
     '#' '(' moduleformalparam (',' moduleformalparam)* ')'
     ;
 moduleformalparam :
-    attributeinstance* ('parameter')? type lowerCaseIdentifier
+    attributeinstance* ('parameter')? bsvtype lowerCaseIdentifier
     | attributeinstance* ('parameter')? functionproto
     ;
 moduleformalargs :
-    attributeinstance* type
-    | attributeinstance* type lowerCaseIdentifier (',' attributeinstance* type lowerCaseIdentifier)*
+    attributeinstance* bsvtype
+    | attributeinstance* bsvtype lowerCaseIdentifier (',' attributeinstance* bsvtype lowerCaseIdentifier)*
     ;
 modulestmt :
     methoddef
@@ -197,7 +197,7 @@ modulestmt :
     | stmt
     ;
 moduleinst :
-    attributeinstance* type lowerCaseIdentifier ':' moduleapp ';'
+    attributeinstance* bsvtype lowerCaseIdentifier ':' moduleapp ';'
     ;
 moduleapp :
     lowerCaseIdentifier ('(' moduleactualparamarg (',' moduleactualparamarg)* ')')?
@@ -208,14 +208,14 @@ moduleactualparamarg :
     | expression
     ;
 methoddef :
-    'method' (type)? lowerCaseIdentifier ('(' methodformals? ')')? provisos? (implicitcond)? ';' (stmt)* 'endmethod' (':' lowerCaseIdentifier)?
-    | 'method' (type)? lowerCaseIdentifier ('(' methodformals? ')')? (implicitcond)? '=' expression ';'
+    'method' bsvtype? lowerCaseIdentifier ('(' methodformals? ')')? provisos? (implicitcond)? ';' (stmt)* 'endmethod' (':' lowerCaseIdentifier)?
+    | 'method' bsvtype? lowerCaseIdentifier ('(' methodformals? ')')? (implicitcond)? '=' expression ';'
     ;
 methodformals :
     methodformal (',' methodformal)*
     ;
 methodformal :
-    attributeinstance* (type)? lowerCaseIdentifier
+    attributeinstance* bsvtype? lowerCaseIdentifier
     | attributeinstance* functionproto
     ;
 implicitcond :
@@ -223,7 +223,7 @@ implicitcond :
     ;
 subinterfacedef :
     'interface' upperCaseIdentifier lowerCaseIdentifier ';' (interfacestmt)* 'endinterface' (':' lowerCaseIdentifier)?
-    | 'interface' (type)? lowerCaseIdentifier '=' expression ';'
+    | 'interface' bsvtype? lowerCaseIdentifier '=' expression ';'
     ;
 ruledef :
     attributeinstance* 'rule' rulename=lowerCaseIdentifier rulecond? ';' rulebody 'endrule' (':' lowerCaseIdentifier)?
@@ -239,24 +239,24 @@ functiondef :
     | functionproto '=' expression ';'
     ;
 functionproto :
-    'function' (type)? lowerCaseIdentifier ('(' functionformals? ')')? (provisos)?
+    'function' bsvtype? lowerCaseIdentifier ('(' functionformals? ')')? (provisos)?
     ;
 functionformals :
     functionformal (',' functionformal)*
     ;
 functionformal :
-    (type)? lowerCaseIdentifier
+    bsvtype? lowerCaseIdentifier
     | functionproto
     ;
 externcimport :
-    'import' '"BDPI"' (lowerCaseIdentifier '=')? 'function' type lowerCaseIdentifier '(' (bigcfuncargs)? ')' (provisos)? ';'
+    'import' '"BDPI"' (lowerCaseIdentifier '=')? 'function' bsvtype lowerCaseIdentifier '(' (bigcfuncargs)? ')' (provisos)? ';'
     ;
 
 bigcfuncargs :
     bigcfuncarg (',' bigcfuncarg)*
     ;
 bigcfuncarg :
-    type (lowerCaseIdentifier)?
+    bsvtype (lowerCaseIdentifier)?
     ;
 varassign :
     lvalue op=('='|'<-') expression ';'
@@ -268,12 +268,12 @@ lvalue :
     | lvalue '[' index=expression ']'
     | lvalue '[' msb=expression ':' lsb=expression ']'
     ;
-type :
+bsvtype :
     typeprimary
     ;
 typeprimary :
-    typeide ('#' '(' type (',' type)* ')')?
-    | '(' typeide ('#' '(' type (',' type)* ')')? ')'
+    typeide ('#' '(' bsvtype (',' bsvtype)* ')')?
+    | '(' typeide ('#' '(' bsvtype (',' bsvtype)* ')')? ')'
     | '(' functionproto ')'
     | typenat
     ;
@@ -323,23 +323,23 @@ unopexpr :
 exprprimary :
     '(' expression ')' #parenexpr
     | exprprimary '.' exprfield=lowerCaseIdentifier #fieldexpr
-    | ( type | ( '(' type ')' ) ) '\'' exprprimary #castexpr
+    | ( bsvtype | ( '(' bsvtype ')' ) ) '\'' exprprimary #castexpr
     | (pkg=upperCaseIdentifier '::')? anyidentifier #varexpr
     | IntLiteral #intliteral
     | RealLiteral #realliteral
     | StringLiteral #stringliteral
     | '?' #undefinedexpr
-    | ('valueof' | 'valueOf') '(' type ')' #valueofexpr
+    | ('valueof' | 'valueOf') '(' bsvtype ')' #valueofexpr
     | 'return' expression #returnexpr
     | '{' expression (',' expression)* '}' #bitconcat
     | array=exprprimary  '[' expression (':' expression)? ']' #arraysub
     | fcn=exprprimary '(' (expression (',' expression)*)? ')' #callexpr
     | 'clocked_by' exprprimary #clockedbyexpr
     | 'reset_by' exprprimary #resetbyexpr
-    | type '’' ( ( '{' expression (',' expression)* '}' ) | ( '(' expression ')' )) #typeassertion
+    | bsvtype '’' ( ( '{' expression (',' expression)* '}' ) | ( '(' expression ')' )) #typeassertion
     | tag=upperCaseIdentifier '{' memberbinds '}' #structexpr
     | 'tagged' upperCaseIdentifier (('{' memberbinds '}' ) | (exprprimary) | ) #taggedunionexpr
-    | 'interface' type (';')? (interfacestmt)* 'endinterface' (':' typeide)? #interfaceexpr
+    | 'interface' bsvtype (';')? (interfacestmt)* 'endinterface' (':' typeide)? #interfaceexpr
     | attributeinstance* 'rules' (':' lowerCaseIdentifier)? (rulesstmt)* 'endrules' (':' lowerCaseIdentifier)?
       #rulesexpr
     | beginendblock #blockexpr
@@ -427,10 +427,10 @@ simplevarassign :
     lowerCaseIdentifier '=' expression
     ;
 fornewinit :
-    type lowerCaseIdentifier '=' expression (',' simplevardeclassign)*
+    bsvtype lowerCaseIdentifier '=' expression (',' simplevardeclassign)*
     ;
 simplevardeclassign :
-    (type)? lowerCaseIdentifier '=' expression
+    bsvtype? lowerCaseIdentifier '=' expression
     ;
 fortest :
     expression
@@ -485,7 +485,7 @@ provisos :
     'provisos' '(' proviso (',' proviso)* ')'
     ;
 proviso :
-    (pkg=upperCaseIdentifier '::')? var=upperCaseIdentifier '#' '(' type (',' type)* ')'
+    (pkg=upperCaseIdentifier '::')? var=upperCaseIdentifier '#' '(' bsvtype (',' bsvtype)* ')'
     ;
 fsmstmt :
     regwrite ';'
