@@ -111,10 +111,14 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         String typeName = ctx.t.getText();
         for (BSVParser.VarinitContext varinit: ctx.varinit()) {
             String varName = varinit.var.getText();
-            System.out.println("    Variable " + varName + ": " + typeName + ".");
+            System.out.print("    Variable " + varName + ": " + typeName);
             BSVParser.ExpressionContext rhs = varinit.rhs;
-            if (rhs != null)
+            if (rhs != null) {
                 expressionConverter.visit(rhs);
+		System.out.print(" = ");
+		visit(rhs);
+	    }
+	    System.out.println(".");
         }
         return null;
     }
@@ -123,8 +127,13 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         Expression expr = expressionConverter.visit(rhs);
         for (BSVParser.LowerCaseIdentifierContext ident: ctx.lowerCaseIdentifier()) {
             String varName = ident.getText();
-            System.out.println("    Variable " + varName + ": " + "TBDLetType" + ".");
+            System.out.print("    Variable " + varName + ": " + "TBDLetType" + " ");
         }
+	if (ctx.op != null) {
+	    System.out.print("    " + ctx.op.getText());
+	    visit(ctx.rhs);
+	}
+	System.out.println(".");
         return null ;
     }
     @Override public Void visitActionBinding(BSVParser.ActionBindingContext ctx) {
@@ -144,7 +153,19 @@ public class BSVToKami extends BSVBaseVisitor<Void>
             }
 
             System.out.println("");
-        }
+        } else {
+            System.out.print("    Variable \"" + varName + "\" : " + "TBDType"
+                             + " <- ");
+
+            BSVParser.CallexprContext call = getCall(ctx.rhs);
+            if (call != null && call.fcn != null && call.fcn.getText().equals("mkReg")) {
+                System.out.print(call.expression().get(0).getText());
+            } else {
+                visit(ctx.rhs);
+            }
+
+            System.out.println("");
+	}
         return null;
     }
 
@@ -169,13 +190,46 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 
     @Override public Void visitRegwrite(BSVParser.RegwriteContext regwrite) {
         System.out.print("        WriteReg ");
-        visitChildren(regwrite.lhs);
+        visit(regwrite.lhs);
         System.out.print(" <- ");
-        visitChildren(regwrite.rhs);
+        visit(regwrite.rhs);
+        System.out.println(";" + "\n");
+        return null;
+    }
+    @Override public Void visitVarassign(BSVParser.VarassignContext ctx) {
+	System.out.print("        Assign ");
+	boolean multi = ctx.lvalue().size() > 1;
+	int count = 0;
+	if (multi) System.out.print("{ ");
+	for (BSVParser.LvalueContext lvalue: ctx.lvalue()) {
+	    if (multi && count > 0) System.out.print(", ");
+	    System.out.print(lvalue.getText());
+	    count++;
+	}
+	if (multi) System.out.print(" }");
+        System.out.print(" " + ctx.op.getText() + " ");
+        visit(ctx.expression());
         System.out.println(";" + "\n");
         return null;
     }
 
+    @Override
+    public Void visitIfstmt(BSVParser.IfstmtContext ctx) {
+	System.out.print("        (If ");
+	visit(ctx.condpredicate());
+	System.out.println("");
+	System.out.print("        then ");
+	visit(ctx.stmt(0));
+	System.out.print("        Retv;");
+	if (ctx.stmt(1) != null) {
+	    System.out.println("");
+	    System.out.print("        else ");
+	    visit(ctx.stmt(1));
+	    System.out.print("        Retv;");
+	}
+	System.out.println(")");
+	return null;
+    }
     @Override
     public Void visitPattern(BSVParser.PatternContext ctx) {
         //FIXME
@@ -242,5 +296,26 @@ public class BSVToKami extends BSVBaseVisitor<Void>
             }
         }
         return null;
+    }
+    @Override public Void visitLvalue(BSVParser.LvalueContext ctx) {
+	if (ctx.lvalue() != null) {
+	    visit(ctx.lvalue());
+	}
+	if (ctx.lowerCaseIdentifier() != null) {
+	    if (ctx.lvalue() != null)
+		System.out.print(".");
+	    System.out.print(ctx.lowerCaseIdentifier().getText());
+	} else if (ctx.index != null) {
+	    System.out.print("[");
+	    visit(ctx.index);
+	    System.out.print("]");
+	} else if (ctx.msb != null) {
+	    System.out.print("[");
+	    visit(ctx.msb);
+	    System.out.print(", ");
+	    visit(ctx.lsb);
+	    System.out.print("]");
+	}
+	return null;
     }
 }
