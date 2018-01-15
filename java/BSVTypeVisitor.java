@@ -182,7 +182,15 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public BSVType visitTypedeftype(BSVParser.TypedeftypeContext ctx) { return visitChildren(ctx); }
+	@Override public BSVType visitTypedeftype(BSVParser.TypedeftypeContext ctx) {
+	    BSVType bsvtype = new BSVType(ctx.typeide().getText());
+	    if (ctx.typeformals() != null) {
+		for (BSVParser.TypeformalContext tf: ctx.typeformals().typeformal()) {
+		    bsvtype.params.add(visit(tf));
+		}
+	    }
+	    return bsvtype;
+	}
 	/**
 	 * {@inheritDoc}
 	 *
@@ -196,7 +204,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public BSVType visitTypeformal(BSVParser.TypeformalContext ctx) { return visitChildren(ctx); }
+	@Override public BSVType visitTypeformal(BSVParser.TypeformalContext ctx) {
+	    return new BSVType(ctx.typeide().getText());
+	}
 	/**
 	 * {@inheritDoc}
 	 *
@@ -598,7 +608,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	    } else if (ctx.typenat() != null) {
 		return new BSVType(ctx.typenat().getText());
 	    } else {
-		List<BSVType> typeparams = new ArrayList();
+		List<BSVType> typeparams = new ArrayList<BSVType>();
 		for (BSVParser.BsvtypeContext param : ctx.bsvtype()) {
 		    typeparams.add(visit(param));
 		}

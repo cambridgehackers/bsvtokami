@@ -4,8 +4,8 @@ import java.util.*;
 
 class SymbolTableEntry {
     public final String name;
-    public final String type;
-    SymbolTableEntry(String name, String type) {
+    public final BSVType type;
+    SymbolTableEntry(String name, BSVType type) {
 	this.name = name;
 	this.type = type;
     }
