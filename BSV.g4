@@ -184,13 +184,6 @@ moduleproto :
 modulecontext :
     '[' bsvtype ']'
     ;
-moduleformalparams :
-    moduleformalparam (',' moduleformalparam)*
-    ;
-moduleformalparam :
-    attributeinstance* ('parameter')? bsvtype lowerCaseIdentifier
-    | attributeinstance* ('parameter')? functionproto
-    ;
 modulestmt :
     methoddef
     | moduleinst
