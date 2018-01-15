@@ -176,18 +176,20 @@ moduledef :
     attributeinstance* moduleproto (modulestmt)* 'endmodule' (':' lowerCaseIdentifier)?
     ;
 moduleproto :
-    'module' ('[' bsvtype ']')? modulename=lowerCaseIdentifier (moduleformalparams)? '(' (moduleformalargs)? ')' (provisos)? ';'
+    'module' modulecontext? modulename=lowerCaseIdentifier
+    (  ( ('#' '(' methodprotoformals ')' )? '(' attributeinstance * bsvtype ')' )
+     | ( '(' methodprotoformals ')' ) )
+    provisos? ';'
+    ;
+modulecontext :
+    '[' bsvtype ']'
     ;
 moduleformalparams :
-    '#' '(' moduleformalparam (',' moduleformalparam)* ')'
+    moduleformalparam (',' moduleformalparam)*
     ;
 moduleformalparam :
     attributeinstance* ('parameter')? bsvtype lowerCaseIdentifier
     | attributeinstance* ('parameter')? functionproto
-    ;
-moduleformalargs :
-    attributeinstance* bsvtype
-    | attributeinstance* bsvtype lowerCaseIdentifier (',' attributeinstance* bsvtype lowerCaseIdentifier)*
     ;
 modulestmt :
     methoddef
