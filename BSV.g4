@@ -69,7 +69,7 @@ interfacememberdecl :
     | subinterfacedecl
     ;
 methodproto :
-    attributeinstance* 'method' bsvtype lowerCaseIdentifier ('(' methodprotoformals? ')')? ';'
+    attributeinstance* 'method' bsvtype name=lowerCaseIdentifier ('(' methodprotoformals? ')')? ';'
     ;
 methodprotoformals :
     methodprotoformal (',' methodprotoformal)*
@@ -176,7 +176,7 @@ moduledef :
     attributeinstance* moduleproto (modulestmt)* 'endmodule' (':' lowerCaseIdentifier)?
     ;
 moduleproto :
-    'module' modulecontext? modulename=lowerCaseIdentifier
+    'module' modulecontext? name=lowerCaseIdentifier
     (  ( ('#' '(' methodprotoformals ')' )? '(' attributeinstance * bsvtype ')' )
      | ( '(' methodprotoformals ')' ) )
     provisos? ';'
@@ -234,14 +234,7 @@ functiondef :
     | functionproto '=' expression ';'
     ;
 functionproto :
-    'function' bsvtype? lowerCaseIdentifier ('(' functionformals? ')')? (provisos)?
-    ;
-functionformals :
-    functionformal (',' functionformal)*
-    ;
-functionformal :
-    bsvtype? lowerCaseIdentifier
-    | functionproto
+    'function' bsvtype? name=lowerCaseIdentifier ('(' methodprotoformals? ')')? (provisos)?
     ;
 externcimport :
     'import' '"BDPI"' (lowerCaseIdentifier '=')? 'function' bsvtype lowerCaseIdentifier '(' (bigcfuncargs)? ')' (provisos)? ';'
@@ -264,9 +257,6 @@ lvalue :
     | lvalue '[' msb=expression ':' lsb=expression ']'
     ;
 bsvtype :
-    typeprimary
-    ;
-typeprimary :
     typeide ('#' '(' bsvtype (',' bsvtype)* ')')?
     | '(' typeide ('#' '(' bsvtype (',' bsvtype)* ')')? ')'
     | '(' functionproto ')'
