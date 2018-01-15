@@ -40,6 +40,10 @@ class Main {
                  */
                 ParserRuleContext packagedef = parser.packagedef();
 
+		BSVTypeVisitor typeVisitor = new BSVTypeVisitor();
+		typeVisitor.visit(packagedef);
+		System.err.println("finished processing package " + pkgName);
+
                 StaticAnalysis staticAnalysis = new StaticAnalysis();
                 staticAnalysis.visit(packagedef);
 

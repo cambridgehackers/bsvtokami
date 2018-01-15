@@ -1,13 +1,13 @@
 
-all: bin/bsv-parser-cpp classes/Main.class
+all: classes/Main.class
 
 JARS = jars/antlr-4.7.1-complete.jar
 
-test: classes/Main.class bin/bsv-parser-cpp connectal
+test: classes/Main.class connectal
 	./bsvparse tests/*.bsv
 	./bsvparse connectal/bsv/*.bsv
 
-classes/Main.class: java/Main.java generated/BSVParser.java generated/BSVLexer.java java/BSVToKami.java java/StaticAnalysis.java java/SymbolTable.java $(JARS)
+classes/Main.class: java/Main.java generated/BSVParser.java generated/BSVLexer.java java/BSVToKami.java java/StaticAnalysis.java java/SymbolTable.java java/BSVTypeVisitor.java $(JARS)
 	mkdir -p classes
 	javac -d classes -classpath classes:$(JARS) java/*.java generated/*.java
 
@@ -21,7 +21,7 @@ python/BSVParser.py: BSV.g4 $(JARS)
 	pip3 install -q -r requirements.txt
 	java -jar $(JARS)  -Dlanguage=Python3 -listener -visitor -o python BSV.g4
 
-bin/bsv-parser-cpp: cpp/main.cpp generated/BSVParser.cpp antlr4-cpp-runtime/dist/libantlr4-runtime.a
+bin/bsv-parser-cpp: cpp/main.cpp cpp/BSVTypeVisitor.h generated/BSVParser.cpp antlr4-cpp-runtime/dist/libantlr4-runtime.a
 	mkdir -p bin
 	$(CXX) -O -Wall -std=c++11 -Igenerated -Iantlr4-cpp-runtime/runtime/src/ -o bin/bsv-parser-cpp cpp/main.cpp generated/*.cpp antlr4-cpp-runtime/dist/libantlr4-runtime.a
 
