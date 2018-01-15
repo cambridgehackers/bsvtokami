@@ -16,8 +16,8 @@ else
 fi
 echo java
 time java -classpath $scriptdir/classes:$scriptdir/jars/antlr-4.7.1-complete.jar org.antlr.v4.gui.TestRig BSV packagedef $ppfiles
-echo c++
-time $scriptdir/bin/bsv-parser-cpp $ppfiles
+# echo c++
+# time $scriptdir/bin/bsv-parser-cpp $ppfiles
 
 if [ "$doremove" = "1" ]; then
     rm -f $ppfiles
