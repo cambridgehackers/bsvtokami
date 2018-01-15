@@ -94,8 +94,8 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     public Void visitTypedefsynonym(BSVParser.TypedefsynonymContext ctx) {
         String typedefname = ctx.typedeftype().typeide().getText();
         String type;
-        if (ctx.type() != null)
-            type = ctx.type().getText();
+        if (ctx.bsvtype() != null)
+            type = ctx.bsvtype().getText();
         else
             type = ctx.functionproto().getText();
         symbolTable.bind(typedefname,
@@ -108,7 +108,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         String interfacename = "Empty";
         BSVParser.ModuleformalargsContext moduleformalargs = ctx.moduleproto().moduleformalargs();
         if (moduleformalargs != null) {
-            interfacename = moduleformalargs.type(0).getText();
+            interfacename = moduleformalargs.bsvtype(0).getText();
         }
         symbolTable.bind(modulename,
                          new SymbolTableEntry(modulename, interfacename));
