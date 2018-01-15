@@ -104,7 +104,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     }
 
     @Override public Void visitModuledef(BSVParser.ModuledefContext ctx) {
-        String modulename = ctx.moduleproto().modulename.getText();
+        String modulename = ctx.moduleproto().name.getText();
         String interfacename = "Empty";
         BSVParser.BsvtypeContext moduletype = ctx.moduleproto().bsvtype();
         if (moduletype != null) {

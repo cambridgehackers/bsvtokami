@@ -311,14 +311,24 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public BSVType visitVarBinding(BSVParser.VarBindingContext ctx) { return visitChildren(ctx); }
+	@Override public BSVType visitVarBinding(BSVParser.VarBindingContext ctx) {
+	    BSVType bsvtype = visit(ctx.t);
+	    for (BSVParser.VarinitContext varinit : ctx.varinit()) {
+		System.err.println("vardecl " + varinit.var.getText() + " : " + bsvtype);
+	    }
+	    return bsvtype;
+	}
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public BSVType visitActionBinding(BSVParser.ActionBindingContext ctx) { return visitChildren(ctx); }
+	@Override public BSVType visitActionBinding(BSVParser.ActionBindingContext ctx) {
+	    BSVType bsvtype = visit(ctx.t);
+	    System.err.println("actiondecl " + ctx.var.getText() + " <- " + bsvtype);
+	    return bsvtype;
+	}
 	/**
 	 * {@inheritDoc}
 	 *
