@@ -89,13 +89,13 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 
     @Override public Void visitModuledef(BSVParser.ModuledefContext ctx) {
         scope = scopes.getScope(ctx);
-        String moduleName = ctx.moduleproto().modulename.getText();
+        String moduleName = ctx.moduleproto().name.getText();
         moduleDef = new ModuleDef(moduleName);
         pkg.addStatement(moduleDef);
         System.err.println("module " + moduleName);
         System.out.println("Definition " + moduleName + " := MODULE {" + "\n");
         visitChildren(ctx);
-        System.out.println("}. (*" + ctx.moduleproto().modulename.getText() + " *)" + "\n");
+        System.out.println("}. (*" + ctx.moduleproto().name.getText() + " *)" + "\n");
         scope = scope.parent;
         moduleDef = null;
         System.err.println("endmodule : " + moduleName);
@@ -230,6 +230,10 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 	System.out.println(")");
 	return null;
     }
+    @Override public Void visitCasestmt(BSVParser.CasestmtContext ctx) {
+	visitChildren(ctx);
+	return null;
+    }
     @Override
     public Void visitPattern(BSVParser.PatternContext ctx) {
         //FIXME
@@ -297,15 +301,22 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         }
         return null;
     }
+    @Override public Void visitArraysub(BSVParser.ArraysubContext ctx) {
+	visit(ctx.array);
+	System.out.print("[");
+	visit(ctx.expression(0));
+	if (ctx.expression(1) != null) {
+	    System.out.print(" : ");
+	    visit(ctx.expression(1));
+	}
+	System.out.print("]");
+	return null;
+    }
     @Override public Void visitLvalue(BSVParser.LvalueContext ctx) {
 	if (ctx.lvalue() != null) {
 	    visit(ctx.lvalue());
 	}
-	if (ctx.lowerCaseIdentifier() != null) {
-	    if (ctx.lvalue() != null)
-		System.out.print(".");
-	    System.out.print(ctx.lowerCaseIdentifier().getText());
-	} else if (ctx.index != null) {
+	if (ctx.index != null) {
 	    System.out.print("[");
 	    visit(ctx.index);
 	    System.out.print("]");
@@ -315,6 +326,10 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 	    System.out.print(", ");
 	    visit(ctx.lsb);
 	    System.out.print("]");
+	} else if (ctx.lowerCaseIdentifier() != null) {
+	    if (ctx.lvalue() != null)
+		System.out.print(".");
+	    System.out.print(ctx.lowerCaseIdentifier().getText());
 	}
 	return null;
     }
