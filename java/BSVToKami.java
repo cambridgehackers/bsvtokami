@@ -108,10 +108,10 @@ public class BSVToKami extends BSVBaseVisitor<Void>
     }
 
     @Override public Void visitVarBinding(BSVParser.VarBindingContext ctx) {
-        String typeName = ctx.t.getText();
         for (BSVParser.VarinitContext varinit: ctx.varinit()) {
             String varName = varinit.var.getText();
-            System.out.print("    Variable " + varName + ": " + typeName);
+	    SymbolTableEntry entry = scope.lookup(varName);
+            System.out.print("    Variable " + varName + ": " + entry.type);
             BSVParser.ExpressionContext rhs = varinit.rhs;
             if (rhs != null) {
                 expressionConverter.visit(rhs);
@@ -127,7 +127,8 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         Expression expr = expressionConverter.visit(rhs);
         for (BSVParser.LowerCaseIdentifierContext ident: ctx.lowerCaseIdentifier()) {
             String varName = ident.getText();
-            System.out.print("    Variable " + varName + ": " + "TBDLetType" + " ");
+	    SymbolTableEntry entry = scope.lookup(varName);
+            System.out.print("    Variable " + varName + ": " + entry.type + " ");
         }
 	if (ctx.op != null) {
 	    System.out.print("    " + ctx.op.getText());

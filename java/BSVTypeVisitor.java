@@ -11,6 +11,14 @@ import java.util.*;
  * operations with no return type.
  */
 public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements BSVVisitor<BSVType> {
+    private SymbolTable scope;
+    public void pushScope(SymbolTable newScope)
+    {
+	scope = newScope;
+    }
+    public void popScope() {
+	scope = scope.parent;
+    }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -705,7 +713,11 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public BSVType visitVarexpr(BSVParser.VarexprContext ctx) { return visitChildren(ctx); }
+	@Override public BSVType visitVarexpr(BSVParser.VarexprContext ctx) {
+	    String varName = ctx.anyidentifier().getText();
+	    SymbolTableEntry entry = scope.lookup(varName);
+	    return entry.type;
+	}
 	/**
 	 * {@inheritDoc}
 	 *
@@ -726,7 +738,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public BSVType visitStringliteral(BSVParser.StringliteralContext ctx) { return visitChildren(ctx); }
+	@Override public BSVType visitStringliteral(BSVParser.StringliteralContext ctx) {
+	    return new BSVType("String");
+	}
 	/**
 	 * {@inheritDoc}
 	 *
@@ -740,14 +754,18 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public BSVType visitIntliteral(BSVParser.IntliteralContext ctx) { return visitChildren(ctx); }
+	@Override public BSVType visitIntliteral(BSVParser.IntliteralContext ctx) {
+	    return new BSVType("Bit", new BSVType());
+	}
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public BSVType visitRealliteral(BSVParser.RealliteralContext ctx) { return visitChildren(ctx); }
+	@Override public BSVType visitRealliteral(BSVParser.RealliteralContext ctx) {
+	    return new BSVType("Real");
+	}
 	/**
 	 * {@inheritDoc}
 	 *
