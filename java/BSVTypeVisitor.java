@@ -541,7 +541,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public BSVType visitFunctiondef(BSVParser.FunctiondefContext ctx) { return visitChildren(ctx); }
+	@Override public BSVType visitFunctiondef(BSVParser.FunctiondefContext ctx) {
+	    return visitChildren(ctx);
+	}
 	/**
 	 * {@inheritDoc}
 	 *
@@ -603,7 +605,26 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public BSVType visitLvalue(BSVParser.LvalueContext ctx) { return visitChildren(ctx); }
+	@Override public BSVType visitLvalue(BSVParser.LvalueContext ctx) {
+	    BSVParser.LvalueContext lvalue = ctx.lvalue();
+	    if (lvalue != null) {
+		System.err.println("computing type of lvalue " + lvalue.getText());
+		BSVType lvaluetype = visit(lvalue);
+		if (ctx.lowerCaseIdentifier() != null) {
+		    // subinterface
+		} else if (ctx.index != null) {
+		    // selection of bit or array
+		} else if (ctx.msb != null && ctx.lsb != null) {
+		}
+	    } else if (ctx.lowerCaseIdentifier() != null) {
+		SymbolTableEntry entry = scope.lookup(ctx.lowerCaseIdentifier().getText());
+		if (entry == null)
+		    return new BSVType();
+		return entry.type;
+	    }
+	    System.err.println("Unhandled lvalue " + ctx.getText());
+	    return null;
+	}
 	/**
 	 * {@inheritDoc}
 	 *
@@ -842,14 +863,32 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public BSVType visitCallexpr(BSVParser.CallexprContext ctx) { return visitChildren(ctx); }
+	@Override public BSVType visitCallexpr(BSVParser.CallexprContext ctx) {
+	    BSVType fcntype = visit(ctx.fcn);
+	    BSVType resulttype;
+	    for (BSVParser.ExpressionContext expr: ctx.expression()) {
+		resulttype = new BSVType();
+		try {
+		    BSVType argtype = visit(expr);
+		    BSVType ftype = new BSVType("Function", argtype, resulttype);
+		    System.err.println("Apply (" + fcntype + ") to (" + ftype + ")");
+		    fcntype.unify(ftype);
+		    System.err.println("   -> " + resulttype.prune());
+		} catch (InferenceError e) {
+		    System.err.println("Apply InferenceError " + e);
+		}
+		fcntype = resulttype;
+	    }
+	    return fcntype.prune();
+	}
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public BSVType visitValueofexpr(BSVParser.ValueofexprContext ctx) { return visitChildren(ctx); }
+	@Override public BSVType visitValueofexpr(BSVParser.ValueofexprContext ctx) {
+	    return new BSVType("Integer"); }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -940,7 +979,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public BSVType visitRegwrite(BSVParser.RegwriteContext ctx) { return visitChildren(ctx); }
+    @Override public BSVType visitRegwrite(BSVParser.RegwriteContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *

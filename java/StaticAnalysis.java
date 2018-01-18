@@ -137,14 +137,23 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         scopes.put(ruledef, symbolTable);
 	typeVisitor.pushScope(symbolTable);
 
+	System.err.println("entering rule {");
         visitChildren(ruledef);
+	System.err.println("} exited rule");
 
 	typeVisitor.popScope();
         symbolTable = symbolTable.parent;
         return null;
     }
 
-
+    @Override public Void visitFunctiondef(BSVParser.FunctiondefContext ctx) {
+	BSVParser.FunctionprotoContext functionproto = ctx.functionproto();
+	BSVType functiontype = typeVisitor.visit(functionproto);
+	String functionname = functionproto.name.getText();
+	symbolTable.bind(functionname,
+			 new SymbolTableEntry(functionname, functiontype));
+	return null;
+    }
     @Override public Void visitVarBinding(BSVParser.VarBindingContext ctx) {
 	BSVType bsvtype = typeVisitor.visit(ctx.t);
         for (BSVParser.VarinitContext varinit: ctx.varinit()) {
@@ -187,5 +196,31 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         }
         return null;
     }
+    @Override public Void visitRegwrite(BSVParser.RegwriteContext ctx) {
+	BSVType lhstype = typeVisitor.visit(ctx.lhs);
+	BSVType rhstype = typeVisitor.visit(ctx.rhs);
+	BSVType rhsregtype = new BSVType("Reg", rhstype);
+	try {
+	    System.err.println("lhs " + ctx.lhs.getText() + " : " + lhstype.prune());
+	    System.err.println("rhs " + ctx.rhs.getText() + " : " + rhstype.prune());
+	    lhstype.unify(rhsregtype);
+	    System.err.println("regwrite lhs (" + lhstype + ") rhs (" + rhstype + ")");
+	} catch (InferenceError e) {
+	    System.err.println("Reg write InferenceError " + e);
+	}
+	return null;
+    }
+    @Override public Void visitBeginendblock(BSVParser.BeginendblockContext block) {
+        symbolTable = new SymbolTable(symbolTable);
+        scopes.put(block, symbolTable);
+	typeVisitor.pushScope(symbolTable);
 
+	System.err.println("entering block {");
+        visitChildren(block);
+	System.err.println("} exited block");
+
+	typeVisitor.popScope();
+        symbolTable = symbolTable.parent;
+	return null;
+    }
 }
