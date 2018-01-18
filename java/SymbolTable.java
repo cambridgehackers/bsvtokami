@@ -14,9 +14,14 @@ class SymbolTableEntry {
 class SymbolTable {
     private Map<String,SymbolTableEntry> bindings;
     public final SymbolTable parent;
+    public enum ScopeType {
+	Package, Module, Action, Declaration
+    }
+    public final ScopeType scopeType;
 
-    SymbolTable (SymbolTable parent) {
+    SymbolTable (SymbolTable parent, ScopeType st) {
 	this.parent = parent;
+	scopeType = st;
 	bindings = new TreeMap<String,SymbolTableEntry>();
     }
 

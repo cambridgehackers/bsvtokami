@@ -12,7 +12,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 
     StaticAnalysis() {
         // global table
-        symbolTable = new SymbolTable(null);
+        symbolTable = new SymbolTable(null, SymbolTable.ScopeType.Package);
         scopes = new HashMap<ParserRuleContext, SymbolTable>();
 	typeVisitor = new BSVTypeVisitor();
 	typeVisitor.pushScope(symbolTable);
@@ -33,7 +33,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
                          new SymbolTableEntry(interfaceName,
 					      typeVisitor.visit(ctx.typedeftype())));
 
-        symbolTable = new SymbolTable(symbolTable);
+        symbolTable = new SymbolTable(symbolTable, SymbolTable.ScopeType.Declaration);
         scopes.put(ctx, symbolTable);
 	typeVisitor.pushScope(symbolTable);
 
@@ -80,7 +80,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     }
 
     @Override public Void visitTypeclassdecl(BSVParser.TypeclassdeclContext ctx) {
-        symbolTable = new SymbolTable(symbolTable);
+        symbolTable = new SymbolTable(symbolTable, SymbolTable.ScopeType.Declaration);
         scopes.put(ctx, symbolTable);
 	typeVisitor.pushScope(symbolTable);
 
@@ -92,7 +92,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     }
 
     @Override public Void visitTypeclassinstance(BSVParser.TypeclassinstanceContext ctx) {
-        symbolTable = new SymbolTable(symbolTable);
+        symbolTable = new SymbolTable(symbolTable, SymbolTable.ScopeType.Declaration);
         scopes.put(ctx, symbolTable);
 	typeVisitor.pushScope(symbolTable);
 
@@ -121,7 +121,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         BSVType moduletype = typeVisitor.visit(ctx.moduleproto());
         symbolTable.bind(modulename,
                          new SymbolTableEntry(modulename, moduletype));
-        symbolTable = new SymbolTable(symbolTable);
+        symbolTable = new SymbolTable(symbolTable, SymbolTable.ScopeType.Module);
         scopes.put(ctx, symbolTable);
 	typeVisitor.pushScope(symbolTable);
 
@@ -133,7 +133,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     }
 
     @Override public Void visitRuledef(BSVParser.RuledefContext ruledef) {
-        symbolTable = new SymbolTable(symbolTable);
+        symbolTable = new SymbolTable(symbolTable, SymbolTable.ScopeType.Action);
         scopes.put(ruledef, symbolTable);
 	typeVisitor.pushScope(symbolTable);
 
@@ -172,27 +172,39 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         return null;
     }
 
-    @Override public Void visitActionBinding(BSVParser.ActionBindingContext ctx) {
-	BSVType bsvtype = typeVisitor.visit(ctx.t);
-	BSVType rhstype = typeVisitor.visit(ctx.rhs);
+    void handleArrowBinding(String varName, BSVType lhsparamtype, BSVType rhstype) {
+	BSVType lhstype = new BSVType((symbolTable.scopeType == SymbolTable.ScopeType.Module)
+				      ? "Module" : "ActionValue",
+				      lhsparamtype);
 	try {
-	    bsvtype.unify(rhstype);
+	    lhstype.unify(rhstype);
 	} catch (InferenceError e) {
 	    System.err.println("Action binding InferenceError " + e);
 	}
-        String varName = ctx.var.getText();
-        //System.err.println("ActionBinding " + typeName + " " + varName);
+        System.err.println("ArrowBinding  " + varName + " : " + lhsparamtype);
+	System.err.println("    bsvtype (" + lhstype + ") rhstype (" + rhstype + ")");
+    }
+
+    @Override public Void visitActionBinding(BSVParser.ActionBindingContext ctx) {
+	BSVType bsvtype = typeVisitor.visit(ctx.t);
+	BSVType rhstype = typeVisitor.visit(ctx.rhs);
+	String varName = ctx.var.getText();
+	handleArrowBinding(ctx.var.getText(), bsvtype, rhstype);
         symbolTable.bind(ctx.var.getText(), new SymbolTableEntry(varName, bsvtype.prune()));
         return null;
     }
 
     @Override public Void visitLetBinding(BSVParser.LetBindingContext ctx) {
-        BSVType bsvtype = typeVisitor.visit(ctx.rhs);
+        BSVType rhstype = typeVisitor.visit(ctx.rhs);
         for (BSVParser.LowerCaseIdentifierContext ident: ctx.lowerCaseIdentifier()) {
             String varName = ident.getText();
-            System.err.println("VarInit " + varName + " : " + bsvtype);
-            //Expression rhs = expressionConverter.visit(ctx.rhs);
-            symbolTable.bind(varName, new SymbolTableEntry(varName, bsvtype));
+            System.err.println("Let " + varName + " : " + rhstype + " " + ctx.op.getText() + " " + ctx.rhs.getText());
+	    BSVType lhstype = rhstype;
+	    if (ctx.op.getText().equals("<-")) {
+		lhstype = new BSVType();
+		handleArrowBinding(varName, lhstype, rhstype);
+	    }
+            symbolTable.bind(varName, new SymbolTableEntry(varName, lhstype));
         }
         return null;
     }
@@ -211,7 +223,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 	return null;
     }
     @Override public Void visitBeginendblock(BSVParser.BeginendblockContext block) {
-        symbolTable = new SymbolTable(symbolTable);
+        symbolTable = new SymbolTable(symbolTable, symbolTable.scopeType);
         scopes.put(block, symbolTable);
 	typeVisitor.pushScope(symbolTable);
 
