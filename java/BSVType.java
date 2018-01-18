@@ -98,6 +98,16 @@ public class BSVType {
 	} else if (b.isVar) {
 	    b.unify(a);
 	} else {
+	    if (!a.name.equals(b.name)) {
+		if (a.name.equals("Reg")) {
+		    a.params.get(0).unify(b);
+		    return;
+		}
+		if (b.name.equals("Reg")) {
+		    b.params.get(0).unify(a);
+		    return;
+		}
+	    }
 	    if ((a.name.equals("Reg") || b.name.equals("Reg"))
 		&& !a.name.equals(b.name))
 	    if (!a.name.equals(b.name)
