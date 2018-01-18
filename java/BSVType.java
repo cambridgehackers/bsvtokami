@@ -5,53 +5,56 @@ class InferenceError extends Exception {
 }
 
 public class BSVType {
-    final public String name;
-    final public boolean numeric;
-    final public boolean isVar;
+    public String name;
+    public boolean numeric;
+    public boolean isVar;
     public List<BSVType> params;
     public BSVType instance;
 
     private static int count = 0;
 
-    BSVType() {
-	name = "tvar-" + count;
-	count++;
-	this.params = new ArrayList<BSVType>();
+    private void init(String name, boolean numeric) {
+	params = new ArrayList<BSVType>();
 	numeric = false;
-	isVar = true;
+	if (name == null) {
+	    name = "tvar" + count;
+	    count++;
+	}
+	if (name.equals("void"))
+	    name = "Void";
+	if (name.equals("int")) {
+	    name  = "Int";
+	    params.add(new BSVType("32"));
+	}
+	if (name.equals("bit")) {
+	    name  = "Bit";
+	    params.add(new BSVType("1"));
+	}
+	numeric = name.matches("[0-9]+");
+	isVar = name.matches("[a-z].*");
+	this.name = name;
+    }
+    BSVType() {
+	init(null, false);
     }
     BSVType(String name) {
-	this.name = name;
-	this.params = new ArrayList<BSVType>();
-	numeric = false;
-	isVar = name.matches("^[a-z]");
+	init(name, false);
     }
     BSVType(String name, boolean numeric) {
-	this.name = name;
-	this.params = new ArrayList<BSVType>();
-	this.numeric = numeric;
-	isVar = name.matches("^[a-z]");
+	init(name, numeric);
     }
     BSVType(String name, List<BSVType> params) {
-	this.name = name;
+	init(name, false);
 	this.params = params;
-	numeric = false;
-	isVar = false;
     }
     BSVType(String name, BSVType param0) {
-	this.name = name;
-	this.params = new ArrayList<>();
+	init(name, false);
 	this.params.add(param0);
-	numeric = false;
-	isVar = false;
     }
     BSVType(String name, BSVType param0, BSVType param1) {
-	this.name = name;
-	this.params = new ArrayList<>();
+	init(name, false);
 	this.params.add(param0);
 	this.params.add(param1);
-	numeric = false;
-	isVar = false;
     }
     public BSVType prune() {
 	if (isVar && instance != null) {
@@ -95,6 +98,8 @@ public class BSVType {
 	} else if (b.isVar) {
 	    b.unify(a);
 	} else {
+	    if ((a.name.equals("Reg") || b.name.equals("Reg"))
+		&& !a.name.equals(b.name))
 	    if (!a.name.equals(b.name)
 		|| a.params.size() != b.params.size()
 		) {
