@@ -637,11 +637,25 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	    } else if (ctx.typenat() != null) {
 		return new BSVType(ctx.typenat().getText());
 	    } else {
-		List<BSVType> typeparams = new ArrayList<BSVType>();
-		for (BSVParser.BsvtypeContext param : ctx.bsvtype()) {
-		    typeparams.add(visit(param));
+		String typeide = ctx.typeide().getText();
+		// is type variable?
+		if (typeide.matches("[a-z].*")) {
+		    SymbolTableEntry entry = scope.lookupType(typeide);
+		    BSVType bsvtype;
+		    if (entry == null) {
+			bsvtype = new BSVType(typeide);
+			scope.bindType(typeide, bsvtype);
+		    } else {
+			bsvtype = entry.type;
+		    }
+		    return bsvtype;
+		} else {
+		    List<BSVType> typeparams = new ArrayList<BSVType>();
+		    for (BSVParser.BsvtypeContext param : ctx.bsvtype()) {
+			typeparams.add(visit(param));
+		    }
+		    return new BSVType(ctx.typeide().getText(), typeparams);
 		}
-		return new BSVType(ctx.typeide().getText(), typeparams);
 	    }
 	}
 	/**

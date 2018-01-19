@@ -18,6 +18,17 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 	typeVisitor.pushScope(symbolTable);
     }
 
+    private void pushScope(ParserRuleContext ctx, SymbolTable.ScopeType st) {
+        symbolTable = new SymbolTable(symbolTable, st);
+        scopes.put(ctx, symbolTable);
+	typeVisitor.pushScope(symbolTable);
+    }
+
+    private void popScope() {
+	typeVisitor.popScope();
+	symbolTable = symbolTable.parent;
+    }
+
     SymbolTable getScope(ParserRuleContext def) {
         if (scopes.containsKey(def)) {
             return (SymbolTable)scopes.get(def);
@@ -33,13 +44,11 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
                          new SymbolTableEntry(interfaceName,
 					      typeVisitor.visit(ctx.typedeftype())));
 
-        symbolTable = new SymbolTable(symbolTable, SymbolTable.ScopeType.Declaration);
-        scopes.put(ctx, symbolTable);
-	typeVisitor.pushScope(symbolTable);
+	pushScope(ctx, SymbolTable.ScopeType.Declaration);
 
         visitChildren(ctx);
 
-	typeVisitor.popScope();
+	popScope();
         return null;
     }
 
@@ -80,26 +89,20 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     }
 
     @Override public Void visitTypeclassdecl(BSVParser.TypeclassdeclContext ctx) {
-        symbolTable = new SymbolTable(symbolTable, SymbolTable.ScopeType.Declaration);
-        scopes.put(ctx, symbolTable);
-	typeVisitor.pushScope(symbolTable);
+	pushScope(ctx, SymbolTable.ScopeType.Declaration);
 
         visitChildren(ctx);
 
-	typeVisitor.popScope();
-        symbolTable = symbolTable.parent;
+	popScope();
         return null;
     }
 
     @Override public Void visitTypeclassinstance(BSVParser.TypeclassinstanceContext ctx) {
-        symbolTable = new SymbolTable(symbolTable, SymbolTable.ScopeType.Declaration);
-        scopes.put(ctx, symbolTable);
-	typeVisitor.pushScope(symbolTable);
+        pushScope(ctx, SymbolTable.ScopeType.Declaration);
 
         visitChildren(ctx);
 
-	typeVisitor.popScope();
-        symbolTable = symbolTable.parent;
+	popScope();
         return null;
     }
 
@@ -121,29 +124,30 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         BSVType moduletype = typeVisitor.visit(ctx.moduleproto());
         symbolTable.bind(modulename,
                          new SymbolTableEntry(modulename, moduletype));
-        symbolTable = new SymbolTable(symbolTable, SymbolTable.ScopeType.Module);
-        scopes.put(ctx, symbolTable);
-	typeVisitor.pushScope(symbolTable);
+        pushScope(ctx, SymbolTable.ScopeType.Module);
 
         visitChildren(ctx);
 
-	typeVisitor.popScope();
-        symbolTable = symbolTable.parent;
+	popScope();
         return null;
     }
 
     @Override public Void visitRuledef(BSVParser.RuledefContext ruledef) {
-        symbolTable = new SymbolTable(symbolTable, SymbolTable.ScopeType.Action);
-        scopes.put(ruledef, symbolTable);
-	typeVisitor.pushScope(symbolTable);
+        pushScope(ruledef, SymbolTable.ScopeType.Action);
 
 	System.err.println("entering rule {");
         visitChildren(ruledef);
 	System.err.println("} exited rule");
 
-	typeVisitor.popScope();
-        symbolTable = symbolTable.parent;
+	popScope();
         return null;
+    }
+
+    @Override public Void visitMethodproto(BSVParser.MethodprotoContext ctx) {
+	pushScope(ctx, SymbolTable.ScopeType.Declaration);
+	BSVType methodtype = typeVisitor.visit(ctx);
+	popScope();
+	return null;
     }
 
     @Override public Void visitFunctiondef(BSVParser.FunctiondefContext ctx) {
@@ -223,16 +227,13 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 	return null;
     }
     @Override public Void visitBeginendblock(BSVParser.BeginendblockContext block) {
-        symbolTable = new SymbolTable(symbolTable, symbolTable.scopeType);
-        scopes.put(block, symbolTable);
-	typeVisitor.pushScope(symbolTable);
+        pushScope(block, symbolTable.scopeType);
 
 	System.err.println("entering block {");
         visitChildren(block);
 	System.err.println("} exited block");
 
-	typeVisitor.popScope();
-        symbolTable = symbolTable.parent;
+	popScope();
 	return null;
     }
 }
