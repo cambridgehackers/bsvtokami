@@ -75,7 +75,7 @@ methodprotoformals :
     methodprotoformal (',' methodprotoformal)*
     ;
 methodprotoformal :
-    attributeinstance* bsvtype lowerCaseIdentifier
+    attributeinstance* bsvtype name=lowerCaseIdentifier
     | functionproto
     ;
 subinterfacedecl :
@@ -203,14 +203,14 @@ moduleactualparamarg :
     | expression
     ;
 methoddef :
-    'method' bsvtype? lowerCaseIdentifier ('(' methodformals? ')')? provisos? (implicitcond)? ';' (stmt)* 'endmethod' (':' lowerCaseIdentifier)?
-    | 'method' bsvtype? lowerCaseIdentifier ('(' methodformals? ')')? (implicitcond)? '=' expression ';'
+    'method' bsvtype? name=lowerCaseIdentifier ('(' methodformals? ')')? provisos? (implicitcond)? ';' (stmt)* 'endmethod' (':' lowerCaseIdentifier)?
+    | 'method' bsvtype? name=lowerCaseIdentifier ('(' methodformals? ')')? (implicitcond)? '=' expression ';'
     ;
 methodformals :
     methodformal (',' methodformal)*
     ;
 methodformal :
-    attributeinstance* bsvtype? lowerCaseIdentifier
+    attributeinstance* bsvtype? name=lowerCaseIdentifier
     | attributeinstance* functionproto
     ;
 implicitcond :
@@ -221,13 +221,10 @@ subinterfacedef :
     | 'interface' bsvtype? lowerCaseIdentifier '=' expression ';'
     ;
 ruledef :
-    attributeinstance* 'rule' rulename=lowerCaseIdentifier rulecond? ';' rulebody 'endrule' (':' lowerCaseIdentifier)?
+    attributeinstance* 'rule' name=lowerCaseIdentifier rulecond? ';' stmt* 'endrule' (':' lowerCaseIdentifier)?
     ;
 rulecond :
     ('if')? '(' condpredicate ')'
-    ;
-rulebody :
-    stmt*
     ;
 functiondef :
     attributeinstance* functionproto ';' (stmt)* 'endfunction' (':' lowerCaseIdentifier)?
@@ -301,7 +298,7 @@ binopexpr :
     ;
 unopexpr : 
      op=('!' | '~' | '&' | '~&' | '|' | '~|' | '^' | '^~' | '~^') exprprimary
-    | op=('+' | '-') right=unopexpr
+    | op=('+' | '-') unopexpr
     | exprprimary
     ;
 
