@@ -5,9 +5,17 @@ import java.util.*;
 class SymbolTableEntry {
     public final String name;
     public final BSVType type;
+    public SymbolTable mappings; // for interfaces
+    public Value value;
     SymbolTableEntry(String name, BSVType type) {
 	this.name = name;
 	this.type = type;
+    }
+    public SymbolTableEntry copy() {
+	return new SymbolTableEntry(name, type);
+    }
+    public void setValue(Value v) {
+	value = v;
     }
 }
 
@@ -16,7 +24,7 @@ class SymbolTable {
     private Map<String,SymbolTableEntry> typeBindings;
     public final SymbolTable parent;
     public enum ScopeType {
-	Package, Module, Action, Declaration
+	Package, Module, Action, Declaration, Block
     }
     public final ScopeType scopeType;
 
@@ -48,7 +56,7 @@ class SymbolTable {
     }
 
     void bind(String key, SymbolTableEntry entry) {
-	System.err.println("binding " + key + " with type " + entry.type);
+	System.err.println("binding " + key + " with type " + entry.type + " in scope " + this);
 	bindings.put(key, entry);
     }
 
@@ -56,7 +64,7 @@ class SymbolTable {
 	if (typeBindings.containsKey(key)) {
 	    return (SymbolTableEntry)typeBindings.get(key);
 	} else if (parent != null) {
-	    return parent.lookup(key);
+	    return parent.lookupType(key);
 	} else {
 	    return null;
 	}
@@ -66,5 +74,19 @@ class SymbolTable {
 	System.err.println("binding type " + key + " with type " + bsvtype);
 	typeBindings.put(key, new SymbolTableEntry(key, bsvtype));
     }
-
+    void bindType(String key, BSVType bsvtype, SymbolTable mappings) {
+	System.err.println("binding type " + key + " with type " + bsvtype);
+	SymbolTableEntry entry = new SymbolTableEntry(key, bsvtype);
+	entry.mappings = mappings;
+	typeBindings.put(key, entry);
+    }
+    SymbolTable copy(SymbolTable parentContext) {
+	SymbolTable n = new SymbolTable(parentContext, scopeType);
+	for (Map.Entry<String,SymbolTableEntry> entry: bindings.entrySet()) {
+	    n.bindings.put(entry.getKey(), entry.getValue().copy());
+	    System.err.println("    copy " + entry.getKey() + " " + entry.getValue());
+	}
+	n.typeBindings = typeBindings;
+	return n;
+    }
 }

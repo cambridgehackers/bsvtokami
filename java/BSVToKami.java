@@ -172,7 +172,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 
     @Override public Void visitRuledef(BSVParser.RuledefContext ruledef) {
         scope = scopes.getScope(ruledef);
-        String ruleName = ruledef.rulename.getText();
+        String ruleName = ruledef.name.getText();
         RuleDef ruleDef = new RuleDef(ruleName);
         BSVParser.RulecondContext rulecond = ruledef.rulecond();
         moduleDef.addRule(ruleDef);
@@ -183,8 +183,10 @@ public class BSVToKami extends BSVBaseVisitor<Void>
             visit(rulecond);
             System.out.println(")");
         }
-        visit(ruledef.rulebody());
-        System.out.println("        Retv (* rule " + ruledef.rulename.getText() + " *)" + "\n");
+	for (BSVParser.StmtContext stmt: ruledef.stmt()) {
+	    visit(stmt);
+	}
+        System.out.println("        Retv (* rule " + ruledef.name.getText() + " *)" + "\n");
         scope = scope.parent;
         return null;
     }

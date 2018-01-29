@@ -8,10 +8,10 @@ interface Reg#(type a);
     method a _read();
 endinterface
 
-typedef union tagged {
-  a Valid;
-  void Invalid;
-} Maybe#(type a);
+typedef struct  {
+  Boolean valid;
+  Bit#(sz) value;
+} Maybe#(numeric type sz);
 
 module mkReg#(a dv)(Reg#(a));
 endmodule

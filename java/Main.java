@@ -49,6 +49,10 @@ class Main {
                 System.out.println("");
 		System.err.println("finished processing package " + pkgName);
 
+		System.err.println("Evaluating module main"); Evaluator evaluator = new Evaluator(staticAnalysis);
+		evaluator.evaluate("main", packagedef);
+
+
             } catch (IOException e) {
                 System.err.println("IOException " + e);
             } catch (Exception e) {

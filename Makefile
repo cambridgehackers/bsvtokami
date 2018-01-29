@@ -7,7 +7,7 @@ test: classes/Main.class connectal
 	./bsvparse tests/*.bsv
 	./bsvparse connectal/bsv/*.bsv
 
-classes/Main.class: java/Main.java generated/BSVParser.java generated/BSVLexer.java java/BSVToKami.java java/StaticAnalysis.java java/SymbolTable.java java/BSVTypeVisitor.java java/BSVType.java $(JARS)
+classes/Main.class: java/Main.java generated/BSVParser.java generated/BSVLexer.java java/BSVToKami.java java/StaticAnalysis.java java/SymbolTable.java java/BSVTypeVisitor.java java/BSVType.java java/Evaluator.java java/Value.java $(JARS)
 	mkdir -p classes
 	javac -Xlint:unchecked -d classes -classpath classes:$(JARS) java/*.java generated/*.java
 
