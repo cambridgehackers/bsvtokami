@@ -10,7 +10,7 @@ if [ -d $scriptdir/connectal ]; then
 	$scriptdir/connectal/scripts/bsvpreprocess.py -I$scriptdir -I. $f > $f.pp
 	ppfiles="$ppfiles $f.pp"
     done
-    doremove=1
+    doremove=0
 else
     ppfiles="$*"
 fi

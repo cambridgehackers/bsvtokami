@@ -29,32 +29,32 @@ module mkGCD(ArithIO#(Bit#(32)));
       m <= m - n; 
    endrule 
 
-   // method Action start(Bit#(size_t) in_n, Bit#(size_t) in_m) if (m == 0); 
-   //    action 
-   // 	 n <= in_n; 
-   // 	 m <= in_m; 
-   //    endaction 
-   // endmethod: start 
+   method Action start(Bit#(32) in_n, Bit#(32) in_m) if (m == 0); 
+      action 
+         n <= in_n; 
+         m <= in_m; 
+      endaction 
+   endmethod: start 
 
-   // method Bit#(size_t) result() if (m == 0); 
-   //    result = n; 
-   // endmethod: result 
+   method Bit#(32) result() if (m == 0); 
+      result = n; 
+   endmethod: result 
 endmodule: mkGCD 
 
 // module main(Empty);
-// 	 Reg#(Bit#(size_t)) n <- mkReg(60); 
-// 	 Reg #(Bit#(size_t)) m <- mkReg(12); 
-	 
-// 	 rule swap (n > m && m != 0); 
-// 			n <= m; 
-// 			m <= n; 
-// 			$display("swap m=%d n=%d\n", m, n);
-// 	 endrule 
-	 
-// 	 rule sub (n <= m && m != 0); 
-// 			m <= m - n; 
-// 			$display("sub m=%d n=%d\n", m, n);
-// 	 endrule 
+//       Reg#(Bit#(size_t)) n <- mkReg(60); 
+//       Reg #(Bit#(size_t)) m <- mkReg(12); 
+         
+//       rule swap (n > m && m != 0); 
+//                      n <= m; 
+//                      m <= n; 
+//                      $display("swap m=%d n=%d\n", m, n);
+//       endrule 
+         
+//       rule sub (n <= m && m != 0); 
+//                      m <= m - n; 
+//                      $display("sub m=%d n=%d\n", m, n);
+//       endrule 
 // endmodule
 
 // endpackage: GCD
