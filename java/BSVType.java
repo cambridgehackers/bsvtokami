@@ -109,7 +109,9 @@ public class BSVType {
 		}
 	    }
 	    if ((a.name.equals("Reg") || b.name.equals("Reg"))
-		&& !a.name.equals(b.name))
+		&& !a.name.equals(b.name)) {
+		// FIXME
+	    }
 	    if (!a.name.equals(b.name)
 		|| a.params.size() != b.params.size()
 		) {

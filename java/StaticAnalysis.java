@@ -254,6 +254,12 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     }
 
     void handleArrowBinding(String varName, BSVType lhsparamtype, BSVType rhstype) {
+	if (varName == null || lhsparamtype == null || rhstype == null) {
+	    System.err.println(String.format("varName=%s lhsparamtype=%s rhstype=%s\n",
+					     varName, lhsparamtype, rhstype));
+	    return;
+	}
+
 	BSVType lhstype = new BSVType((symbolTable.scopeType == SymbolTable.ScopeType.Module)
 				      ? "Module" : "ActionValue",
 				      lhsparamtype);

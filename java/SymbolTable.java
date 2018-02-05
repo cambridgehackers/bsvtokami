@@ -7,6 +7,7 @@ class SymbolTableEntry {
     public final BSVType type;
     public SymbolTable mappings; // for interfaces
     public Value value;
+    public String instanceName;
     SymbolTableEntry(String name, BSVType type) {
 	this.name = name;
 	this.type = type;
