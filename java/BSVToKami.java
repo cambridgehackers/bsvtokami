@@ -29,56 +29,6 @@ class RegReadVisitor extends BSVBaseVisitor<Void> {
     }
 }
 
-class BSVExpressionConverter extends BSVBaseVisitor<Expression>
-{
-        @Override
-        public Expression visitIdentifier(BSVParser.IdentifierContext ctx) {
-            return new VariableRead(ctx.getText());
-        }
-        @Override
-        public Expression visitCondExpr(BSVParser.CondExprContext ctx) {
-            return new CondExpression(visit(ctx.pred),
-                                      visit(ctx.expression(0)),
-                                      visit(ctx.expression(1)));
-        }
-        @Override
-        public Expression visitSimpleCondExpr(BSVParser.SimpleCondExprContext ctx) {
-            return new CondExpression(visit(ctx.binopexpr()),
-                                      visit(ctx.expression(0)),
-                                      visit(ctx.expression(1)));
-        }
-        @Override public Expression visitBinopexpr(BSVParser.BinopexprContext ctx) {
-            if (ctx.left == null) {
-                return visit(ctx.unopexpr());
-            } else {
-                Expression left = visit(ctx.left);
-                String op = ctx.op.getText();
-                if (ctx.right != null) {
-                    return new OperatorExpression(op, left, visit(ctx.right));
-                } else {
-                    return new OperatorExpression(op, left);
-                }
-            }
-        }
-        @Override public Expression visitUnopexpr(BSVParser.UnopexprContext ctx) {
-            if (ctx.op != null) {
-                String op = ctx.op.getText();
-                if (ctx.exprprimary() != null) {
-                    return new OperatorExpression(op, visit(ctx.exprprimary()));
-                } else {
-                    return new OperatorExpression(op, visit(ctx.unopexpr()));
-                }
-            } else {
-                return visit(ctx.exprprimary());
-            }
-        }
-    @Override public Expression visitIntliteral(BSVParser.IntliteralContext ctx) {
-        return new IntExpression(ctx.IntLiteral().getText());
-    }
-    @Override public Expression visitRealliteral(BSVParser.RealliteralContext ctx) {
-        return new RealExpression(ctx.RealLiteral().getText());
-    }
-}
 
 public class BSVToKami extends BSVBaseVisitor<Void>
 {
@@ -87,11 +37,9 @@ public class BSVToKami extends BSVBaseVisitor<Void>
     private String pkgName;
     private Package pkg;
     private ModuleDef moduleDef;
-    private BSVExpressionConverter expressionConverter;
     BSVToKami(String pkgName, StaticAnalysis scopes) {
         this.scopes = scopes;
         this.pkgName = pkgName;
-        expressionConverter = new BSVExpressionConverter();
         pkg = new Package(pkgName);
     }
 
@@ -168,7 +116,6 @@ public class BSVToKami extends BSVBaseVisitor<Void>
             System.out.print("    Variable " + varName + ": " + entry.type);
             BSVParser.ExpressionContext rhs = varinit.rhs;
             if (rhs != null) {
-                expressionConverter.visit(rhs);
                 System.out.print(" = ");
                 visit(rhs);
             }
@@ -178,7 +125,6 @@ public class BSVToKami extends BSVBaseVisitor<Void>
     }
     @Override public Void visitLetBinding(BSVParser.LetBindingContext ctx) {
         BSVParser.ExpressionContext rhs = ctx.rhs;
-        Expression expr = expressionConverter.visit(rhs);
         for (BSVParser.LowerCaseIdentifierContext ident: ctx.lowerCaseIdentifier()) {
             String varName = ident.getText();
             SymbolTableEntry entry = scope.lookup(varName);
@@ -195,7 +141,6 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         String typeName = ctx.t.getText();
         String varName = ctx.var.getText();
         BSVParser.ExpressionContext rhs = ctx.rhs;
-        Expression expr = expressionConverter.visit(rhs);
         SymbolTableEntry entry = scope.lookup(varName);
         BSVType bsvtype = entry.type;
         if (typeName.startsWith("Reg")) {
