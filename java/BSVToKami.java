@@ -12,10 +12,33 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
     InstanceNameVisitor(SymbolTable scope) {
 	this.scope = scope;
     }
+    @Override public String visitOperatorExpr(BSVParser.OperatorExprContext ctx) {
+	String instanceName = visit(ctx.binopexpr());
+	System.err.println("visitOperatorExpr " + ctx.getRuleIndex() + " " + ctx.getText() + " " + instanceName);
+	return instanceName;
+    }
+    @Override public String visitBinopexpr(BSVParser.BinopexprContext ctx) {
+	String instanceName = null;
+	if (ctx.unopexpr() != null) {
+	    instanceName = visit(ctx.unopexpr());
+	}
+	System.err.println("visitBinopexpr " + ctx.getRuleIndex() + " " + ctx.getText() + " " + instanceName);
+	return instanceName;
+    }
+    @Override public String visitUnopexpr(BSVParser.UnopexprContext ctx) {
+	String instanceName = null;
+	if (ctx.op == null)
+	    instanceName = visit(ctx.exprprimary());
+	System.err.println("visitUnopexpr " + ctx.getRuleIndex() + " " + ctx.getText() + " " + instanceName);
+	return instanceName;
+    }
+    @Override public String visitCallexpr(BSVParser.CallexprContext ctx) {
+	return visit(ctx.fcn);
+    }
     @Override public String visitFieldexpr(BSVParser.FieldexprContext ctx) {
 	String instanceName = visit(ctx.exprprimary());
 	if (instanceName != null) {
-	    String fieldName = String.format("%s.%s", instanceName, ctx.exprfield.getText());
+	    String fieldName = String.format("%s.%s", instanceName.substring(1), ctx.exprfield.getText());
 	    System.err.println("Fieldname " + fieldName);
 	    return fieldName;
 	}
@@ -187,6 +210,9 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         BSVType bsvtype = entry.type;
 	InstanceNameVisitor inv = new InstanceNameVisitor(scope);
 	String calleeInstanceName = inv.visit(ctx.rhs);
+	if (calleeInstanceName != null && actionContext)
+	    calleeInstanceName = calleeInstanceName.replace(".", "");
+
         if (typeName.startsWith("Reg")) {
             BSVType paramtype = bsvtype.params.get(0);
             System.out.print("Register ^\"" + varName + "\" : " + bsvTypeToKami(paramtype)
@@ -201,16 +227,18 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 
             System.out.println("");
         } else if (calleeInstanceName != null) {
-	    System.out.println(String.format("        Call %s <- %s(); (* method call *)", varName, calleeInstanceName));
+	    System.out.println(String.format("        Call %s <- %s(); (* method call 1 *)", varName, calleeInstanceName));
 	} else if (!actionContext) {
+	    System.out.println(String.format("        (* instantiate %s *);", varName));
+
 	    String instanceName = String.format("^%s", varName);
 	    entry.instanceName = instanceName;
-	    System.out.println(String.format("        (* instantiate %s *);", varName));
+
             BSVParser.CallexprContext call = getCall(ctx.rhs);
 	    instances.add(call.fcn.getText());
 	} else {
-	    String instanceName = entry.instanceName;
-            System.out.print(String.format("        Call %s <- (", varName));
+            System.out.print(String.format("        Call %s <- %s(", varName, calleeInstanceName));
+	    System.err.println("generic call " + ctx.rhs.getRuleIndex() + " " + ctx.rhs.getText());
             BSVParser.CallexprContext call = getCall(ctx.rhs);
 	    String sep = "";
 	    for (BSVParser.ExpressionContext expr: call.expression()) {
@@ -218,7 +246,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 		visit(expr);
 		sep = ", ";
 	    }
-	    System.out.println("); (* method call *)");
+	    System.out.println("); (* method call 2 *)");
         }
         return null;
     }
@@ -451,6 +479,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
     @Override public Void visitCallexpr(BSVParser.CallexprContext ctx) {
 	InstanceNameVisitor inv = new InstanceNameVisitor(scope);
 	String methodName = inv.visit(ctx.fcn);
+	methodName = methodName.replace(".", "");
 	if (methodName != null) {
 	    System.out.print(String.format("        Call %s(", methodName));
 	    String sep = "";
