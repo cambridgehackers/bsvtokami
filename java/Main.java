@@ -25,6 +25,9 @@ class Main {
                 File file = new File(filename);
                 String[] components = file.getName().split("\\.");
                 String pkgName = components[0];
+		System.err.println("Path " + file.getParent());
+		File ofile = new File(file.getParent(), pkgName + ".v");
+
                 CharStream charStream = CharStreams.fromFileName(filename);
 
                 if (lexer == null) {
@@ -43,7 +46,7 @@ class Main {
                 StaticAnalysis staticAnalysis = new StaticAnalysis();
                 staticAnalysis.visit(packagedef);
 
-                BSVToKami bsvToKami = new BSVToKami(pkgName, staticAnalysis);
+                BSVToKami bsvToKami = new BSVToKami(pkgName, ofile, staticAnalysis);
 
                 bsvToKami.visit(packagedef);
                 System.out.println("");
