@@ -46,7 +46,7 @@ module mkGCD(GCD#(Bit#(32)));
    endmethod:
 
    method Bit#(32) result() if (m == 0);
-      result = n;
+      return n;
    endmethod: result
 endmodule: mkGCD
 

@@ -291,7 +291,6 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 
 	SymbolTable methodScope = scopes.getScope(ctx);
 	String methodName = ctx.name.getText();
-	BSVParser.BsvtypeContext returntype = ctx.bsvtype();
 	System.out.print("Method ^\"" + methodName + "\" (");
 	if (ctx.methodformals() != null) {
 	    String sep = "";
@@ -302,7 +301,8 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 		sep = ", ";
 	    }
 	}
-	System.out.println(") : " + ((returntype != null) ? bsvTypeToKami(returntype) : "") + " := ");
+	String returntype = (ctx.bsvtype() != null) ? bsvTypeToKami(ctx.bsvtype()) : "";
+	System.out.println(") : " + returntype + " := ");
 	RegReadVisitor regReadVisitor = new RegReadVisitor(scope);
 	for (BSVParser.StmtContext stmt: ctx.stmt())
 	    regReadVisitor.visit(stmt);
@@ -317,7 +317,9 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 	    visit(stmt);
 	if (ctx.expression() != null)
 	    visit(ctx.expression());
-	System.out.println("        Retv");
+
+	if (returntype.equals("Action"))
+	    System.out.println("        Retv");
 	System.out.println("");
 	actionContext = outerContext;
 	return null;
@@ -425,6 +427,12 @@ public class BSVToKami extends BSVBaseVisitor<Void>
     @Override public Void visitRealliteral(BSVParser.RealliteralContext ctx) {
         System.out.print("$" + ctx.RealLiteral().getText());
         return null;
+    }
+    @Override public Void visitReturnexpr(BSVParser.ReturnexprContext ctx) {
+	System.out.print("        Ret ");
+	visit(ctx.expression());
+	System.out.println("");
+	return null;
     }
     @Override public Void visitVarexpr(BSVParser.VarexprContext ctx) {
         if (ctx.anyidentifier() != null) {
