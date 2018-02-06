@@ -98,6 +98,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
     private ModuleDef moduleDef;
     private ArrayList<String> instances;
     private boolean actionContext;
+    private boolean stmtEmitted;
     BSVToKami(String pkgName, StaticAnalysis scopes) {
         this.scopes = scopes;
         this.pkgName = pkgName;
@@ -169,16 +170,18 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         }
 
         System.out.println("    Definition " + moduleName + "Module := MODULE {" + "\n");
-        String prefix = "    ";
+        String stmtPrefix = "    ";
         for (BSVParser.ModulestmtContext modulestmt: ctx.modulestmt()) {
-            System.out.print(prefix);
+	    stmtEmitted = true;
+	    System.out.print(stmtPrefix);
             visit(modulestmt);
-            prefix = "    with ";
+            if (stmtEmitted)
+		stmtPrefix = "    with ";
         }
         System.out.println("    }. (*" + ctx.moduleproto().name.getText() + " *)" + "\n");
 
-        if (instances.size())
-            System.out.println(String.format("    Definition %s := (%s)%%kami.",
+        if (instances.size() > 0)
+            System.out.println(String.format("    Definition %sToplevel := (%s)%%kami.",
                                              moduleName,
                                              String.join("\n            ++ ", instances)));
 
@@ -249,13 +252,16 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         } else if (calleeInstanceName != null) {
             System.out.println(String.format("        Call %s <- %s(); (* method call 1 *)", varName, calleeInstanceName));
         } else if (!actionContext) {
-            System.out.println(String.format("        (* instantiate %s *);", varName));
+            System.out.println(String.format("        (* instantiate %s *)", varName));
+	    stmtEmitted = false;
 
             String instanceName = String.format("%s", varName); //FIXME concat methodName
             entry.instanceName = instanceName;
 
             BSVParser.CallexprContext call = getCall(ctx.rhs);
-            instances.add(call.fcn.getText());
+            instances.add(String.format("%s(\"%s\")",
+					call.fcn.getText(),
+					instanceName));
         } else {
             System.out.print(String.format("        Call %s <- %s(", varName, calleeInstanceName));
             System.err.println("generic call " + ctx.rhs.getRuleIndex() + " " + ctx.rhs.getText());
