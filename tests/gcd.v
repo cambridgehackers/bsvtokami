@@ -47,6 +47,7 @@ Section GCD.
 
     }. (*mkGCD *)
 
+    Definition mkGCD := (mkGCDModule)%kami.
 End GCD.
 Section Main.
     Variable moduleName: string.
@@ -75,5 +76,6 @@ Section Main.
 
     }. (*mkMain *)
 
-    Definition mkMainToplevel := (mkGCD("gcd"))%kami.
+    Definition mkMainInstances := (mkGCD("gcd"))%kami.
+    Definition mkMain := (mkMainInstances ++ mkMainModule)%kami.
 End Main.

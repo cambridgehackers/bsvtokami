@@ -190,9 +190,15 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         printstream.println("    }. (*" + ctx.moduleproto().name.getText() + " *)" + "\n");
 
         if (instances.size() > 0)
-            printstream.println(String.format("    Definition %sToplevel := (%s)%%kami.",
+            printstream.println(String.format("    Definition %sInstances := (%s)%%kami.",
                                              moduleName,
                                              String.join("\n            ++ ", instances)));
+
+	printstream.print(String.format("    Definition %1$s := (", moduleName));
+	if (instances.size() > 0)
+	    printstream.print(String.format("%1$sInstances ++ ",
+					    moduleName));
+	printstream.println(String.format("%1$sModule)%%kami.", moduleName));
 
         printstream.println("End " + sectionName + ".");
         scope = scope.parent;
