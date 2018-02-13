@@ -59,9 +59,7 @@ Section Main.
 
             (* instantiate gcd *)
     Register ^"started" : Bit 1 <- $0
-    with Rule ^"rl_init" :=
-        Retv (* rule rl_init *)
-
+    with Register ^"dv" : Bit 32 <- $0
     with Rule ^"rl_start" :=
         Read started_v : Bit 1 <- ^"started";
         Assert((#started_v == $0));
@@ -71,7 +69,8 @@ Section Main.
         Retv (* rule rl_start *)
 
     with Rule ^"rl_display" :=
-        Call v <- gcdresult(); (* method call 1 *)
+        Write ^"dv" : Bit 32 <-         Call gcdresult(); (* method call expr *)
+;
         Retv (* rule rl_display *)
 
     }. (*mkMain *)

@@ -35,9 +35,7 @@ module mkGCD(GCD#(Bit#(32)));
    endrule
 
    method Action set_n(Bit#(32) in_n) if (m == 0);
-      action
          n <= in_n;
-      endaction
    endmethod:
    method Action set_m(Bit#(32) in_m) if (m == 0);
       action
@@ -53,15 +51,14 @@ endmodule: mkGCD
 module mkMain(Empty);
    GCD#(Bit#(32)) gcd <- mkGCD();
    Reg#(Bit#(1)) started <- mkReg(0);
-   rule rl_init;
-   endrule
+   Reg#(Bit#(32)) dv <- mkReg(0);
    rule rl_start if (started == 0);
       gcd.set_n(100);
       gcd.set_m(20);
       started <= 1;
    endrule
    rule rl_display;
-      Bit#(32) v <- gcd.result();
+      dv <= gcd.result();
    endrule
 endmodule
 
