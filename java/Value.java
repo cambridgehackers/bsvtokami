@@ -1,26 +1,93 @@
 import java.util.*;
 import org.antlr.v4.runtime.ParserRuleContext;
 
-interface Value {
+class Value {
+    Value read() {
+	return this;
+    }
+    public Value unop(String op) { return this; }
+    public Value binop(String op, Value other) { return this; }
 }
 
-interface ArithValue {
-    public Value unop(String op);
-}
-
-class VoidValue implements Value {
+class VoidValue extends Value {
     VoidValue() {}
 }
 
-class IntValue implements Value, ArithValue {
-    IntValue(int x) {}
+class IntValue extends Value {
+    final int value;
+    IntValue(int x) { value = x;}
+
+    @Override
     public Value unop(String op) {
 	//FIXME
+	return (Value)this;
+    }
+    @Override
+    public Value binop(String op, Value other) {
+	int ov = ((IntValue)other).value;
+	if (op.equals("==")) {
+	    return new BoolValue(value == ov);
+	} else if (op.equals("!=")) {
+	    return new BoolValue (value != ov);
+	} else if (op.equals("<")) {
+	    return new BoolValue(value < ov);
+	} else if (op.equals("<=")) {
+	    return new BoolValue(value <= ov);
+	} else if (op.equals(">")) {
+	    return new BoolValue(value > ov);
+	} else if (op.equals(">=")) {
+	    return new BoolValue(value >= ov);
+	} else if (op.equals("+")) {
+	    return new IntValue(value + ov);
+	} else if (op.equals("-")) {
+	    return new IntValue(value - ov);
+	} else if (op.equals("*")) {
+	    return new IntValue(value * ov);
+	}
+	System.err.println("Unhandled int binop " + op);
 	return this;
     }
 }
 
-class FunctionValue implements Value {
+class BoolValue extends Value {
+    final boolean value;
+    BoolValue(boolean x) { value = x; }
+    @Override
+    public Value unop(String op) {
+	//FIXME
+	return this;
+    }
+    @Override
+    public Value binop(String op, Value other) {
+	boolean ov = ((BoolValue)other).value;
+	if (op.equals("&&")) {
+	    return new BoolValue(value && ov);
+	} else if (op.equals("||")) {
+	    return new BoolValue(value || ov);
+	}
+	System.err.println("Unhandled bool binop " + op);
+	return this;
+    }
+}
+
+class RegValue extends Value {
+    final String name;
+    Value value;
+    RegValue(String name, Value initValue) {
+	this.name = name;
+	value = initValue;
+	System.err.println(String.format("New register %s with value %s", name, initValue));
+    }
+    void update(Value v) {
+	v = value;
+    }
+    @Override
+    Value read() {
+	return value;
+    }
+}
+
+class FunctionValue extends Value {
     public final String name;
     public final BSVParser.FunctiondefContext function;
     public final BSVParser.ModuledefContext module;
@@ -85,7 +152,7 @@ class FunctionValue implements Value {
     }
 }
 
-class Rule implements Value {
+class Rule extends Value {
     final public String name;
     final public BSVParser.CondpredicateContext condpredicate;
     final public List<BSVParser.StmtContext> body;
@@ -105,7 +172,7 @@ class Rule implements Value {
     }
 }
 
-class ModuleInstance implements Value {
+class ModuleInstance extends Value {
     final String name;
     final BSVParser.ModuledefContext module;
     final SymbolTable context;
