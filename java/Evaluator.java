@@ -17,11 +17,12 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
     private StaticAnalysis staticAnalyzer;
     private BSVTypeVisitor typeVisitor;
     private Stack<SymbolTable> scopeStack;
-    
+    private ArrayList<Rule> rules;
 
     Evaluator(StaticAnalysis staticAnalyzer) {
 	this.staticAnalyzer = staticAnalyzer;
 	scopeStack = new Stack<>();
+	rules = new ArrayList<>();
     }
 
     public Value evaluate(String modulename, ParserRuleContext pkgdef) {
@@ -31,16 +32,42 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 	System.err.println("evaluate module " + modulename + " scope " + scope);
 	SymbolTableEntry entry = scope.lookup(modulename);
 	System.err.println("evaluate module " + modulename + " scope " + scope + " entry " + entry
-			   + " constructor "  + entry.value);
+			   + " constructor "  + ((entry != null) ? entry.value : "<null entry>"));
 	FunctionValue constructor = (FunctionValue)entry.value;
 	Value instance = instantiateModule(modulename, constructor);
 	popScope();
 	return instance;
     }
 
+    private boolean isRuleReady(Rule rule) {
+	if (rule.condpredicate == null)
+	    return true;
+	pushScope(rule);
+	Value v = visit(rule.condpredicate);
+	popScope();
+	BoolValue bv = (BoolValue)v;
+	if (bv == null) {
+	    System.err.println("Expecting a BoolValue, got " + v);
+	    return false;
+	}
+	return bv.value;
+    }
+
+    public void runRulesOnce() {
+	for (Rule rule: rules) {
+	    System.err.println(String.format("Rule %s %s", rule.name, (isRuleReady(rule) ? "ready" : "")));
+	}
+    }
+
     private void pushScope(ParserRuleContext ctx) {
 	SymbolTable newScope = staticAnalyzer.getScope(ctx);
 	System.err.println("pushScope {" + ctx.getText());
+	scopeStack.push(scope);
+	scope = newScope;
+    }
+    private void pushScope(Rule rule) {
+	SymbolTable newScope = rule.context;
+	System.err.println(String.format("pushScope rule %s{", rule.name));
 	scopeStack.push(scope);
 	scope = newScope;
     }
@@ -440,18 +467,20 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 	}
 
     public Value instantiateModule(String instanceName, FunctionValue constructor) {
+	System.err.println("Instantiating module " + constructor.name);
+	if (constructor.name.equals("mkReg")) {
+	    return new RegValue(instanceName, constructor.args.get(0));
+	}
 	ModuleInstance instance = new ModuleInstance(instanceName,
 						     constructor.module,
 						     constructor.context //.copy(constructor.parentFrame)
 						     );
-	BSVParser.ModuledefContext moduledef = constructor.module;
-	ArrayList<Value> argValues = new ArrayList<>();
 	pushScope(constructor.module);
-	Value v = null;
 	for (BSVParser.ModulestmtContext stmt: constructor.module.modulestmt()) {
-	    v = visit(stmt);
+	    Value v = visit(stmt);
 	}
 	popScope();
+	//BSVParser.ModuledefContext moduledef = constructor.module;
 	return instance;
     }
 
@@ -547,6 +576,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 	 */
 	@Override public Value visitRuledef(BSVParser.RuledefContext ctx) {
 	    Rule rule = new Rule(ctx.name.getText(), ctx, scope);
+	    rules.add(rule);
 	    pushScope(ctx);
 	    popScope();
 	    return rule;
@@ -684,7 +714,16 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public Value visitBinopexpr(BSVParser.BinopexprContext ctx) { return visitChildren(ctx); }
+	@Override public Value visitBinopexpr(BSVParser.BinopexprContext ctx) {
+	    if (ctx.left == null)
+		return visit(ctx.unopexpr());
+	    System.err.println("visitBinop " + ctx.getText());
+	    Value left = visit(ctx.left).read();
+	    Value right = visit(ctx.right).read();
+	    String op = ctx.op.getText();
+	    System.err.println(String.format("    %s %s %s", left, op, right));
+	    return left.binop(op, right);
+	}
 	/**
 	 * {@inheritDoc}
 	 *
@@ -696,12 +735,10 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 		return visit(ctx.exprprimary());
 	    } else if (ctx.exprprimary() != null) {
 		Value v = visit(ctx.exprprimary());
-		ArithValue arithvalue = (ArithValue)v;
-		return arithvalue.unop(ctx.op.getText());
+		return v.unop(ctx.op.getText());
 	    } else {
 		Value v = visit(ctx.unopexpr());
-		ArithValue arithValue = (ArithValue)v;
-		return arithValue.unop(ctx.op.getText());
+		return v.unop(ctx.op.getText());
 	    }
 	}
 	/**

@@ -52,9 +52,9 @@ class Main {
                 System.out.println("");
 		System.err.println("finished processing package " + pkgName);
 
-		System.err.println("Evaluating module main"); Evaluator evaluator = new Evaluator(staticAnalysis);
-		evaluator.evaluate("main", packagedef);
-
+		System.err.println("Evaluating module mkMain"); Evaluator evaluator = new Evaluator(staticAnalysis);
+		evaluator.evaluate("mkMain", packagedef);
+		evaluator.runRulesOnce();
 
             } catch (IOException e) {
                 System.err.println("IOException " + e);
