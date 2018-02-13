@@ -3,10 +3,12 @@ import org.antlr.v4.runtime.ParserRuleContext;
 
 class Value {
     Value read() {
-	return this;
+        return this;
     }
     public Value unop(String op) { return this; }
     public Value binop(String op, Value other) { return this; }
+    public Value sub(Value index) { return this; }
+    public Value sub(Value msb, Value lsb) { return this; }
 }
 
 class VoidValue extends Value {
@@ -19,33 +21,37 @@ class IntValue extends Value {
 
     @Override
     public Value unop(String op) {
-	//FIXME
-	return (Value)this;
+        //FIXME
+        return (Value)this;
     }
     @Override
     public Value binop(String op, Value other) {
-	int ov = ((IntValue)other).value;
-	if (op.equals("==")) {
-	    return new BoolValue(value == ov);
-	} else if (op.equals("!=")) {
-	    return new BoolValue (value != ov);
-	} else if (op.equals("<")) {
-	    return new BoolValue(value < ov);
-	} else if (op.equals("<=")) {
-	    return new BoolValue(value <= ov);
-	} else if (op.equals(">")) {
-	    return new BoolValue(value > ov);
-	} else if (op.equals(">=")) {
-	    return new BoolValue(value >= ov);
-	} else if (op.equals("+")) {
-	    return new IntValue(value + ov);
-	} else if (op.equals("-")) {
-	    return new IntValue(value - ov);
-	} else if (op.equals("*")) {
-	    return new IntValue(value * ov);
-	}
-	System.err.println("Unhandled int binop " + op);
-	return this;
+        int ov = ((IntValue)other).value;
+        if (op.equals("==")) {
+            return new BoolValue(value == ov);
+        } else if (op.equals("!=")) {
+            return new BoolValue (value != ov);
+        } else if (op.equals("<")) {
+            return new BoolValue(value < ov);
+        } else if (op.equals("<=")) {
+            return new BoolValue(value <= ov);
+        } else if (op.equals(">")) {
+            return new BoolValue(value > ov);
+        } else if (op.equals(">=")) {
+            return new BoolValue(value >= ov);
+        } else if (op.equals("+")) {
+            return new IntValue(value + ov);
+        } else if (op.equals("-")) {
+            return new IntValue(value - ov);
+        } else if (op.equals("*")) {
+            return new IntValue(value * ov);
+        }
+        System.err.println("Unhandled int binop " + op);
+        return this;
+    }
+
+    public String toString() {
+        return String.format("<IntValue %d>", value);
     }
 }
 
@@ -54,19 +60,23 @@ class BoolValue extends Value {
     BoolValue(boolean x) { value = x; }
     @Override
     public Value unop(String op) {
-	//FIXME
-	return this;
+        //FIXME
+        return this;
     }
     @Override
     public Value binop(String op, Value other) {
-	boolean ov = ((BoolValue)other).value;
-	if (op.equals("&&")) {
-	    return new BoolValue(value && ov);
-	} else if (op.equals("||")) {
-	    return new BoolValue(value || ov);
-	}
-	System.err.println("Unhandled bool binop " + op);
-	return this;
+        boolean ov = ((BoolValue)other).value;
+        if (op.equals("&&")) {
+            return new BoolValue(value && ov);
+        } else if (op.equals("||")) {
+            return new BoolValue(value || ov);
+        }
+        System.err.println("Unhandled bool binop " + op);
+        return this;
+    }
+
+    public String toString() {
+        return String.format("<BoolValue %s>", value);
     }
 }
 
@@ -74,16 +84,30 @@ class RegValue extends Value {
     final String name;
     Value value;
     RegValue(String name, Value initValue) {
-	this.name = name;
-	value = initValue;
-	System.err.println(String.format("New register %s with value %s", name, initValue));
+        this.name = name;
+        value = initValue;
+        System.err.println(String.format("New register %s with value %s", name, initValue));
     }
     void update(Value v) {
-	v = value;
+        value = v;
     }
     @Override
     Value read() {
-	return value;
+        return value;
+    }
+    @Override
+    public Value sub(Value index) {
+        int v = ((IntValue)value).value;
+        int i = ((IntValue)index).value;
+        return new IntValue((v >> i)  & 1);
+    }
+    @Override
+    public Value sub(Value msb, Value lsb) {
+        int v = ((IntValue)value).value;
+        int m = ((IntValue)msb).value;
+        int l = ((IntValue)lsb).value;
+        int mask = (1 << (m - l + 1)) - 1;
+        return new IntValue((v >> l) & mask);
     }
 }
 
@@ -97,58 +121,58 @@ class FunctionValue extends Value {
     public ArrayList<Value> args;
     public final int argCount;
     public enum FunctionType {
-	Function, Module, Action
+        Function, Module, Action
     };
     public final FunctionType functionType;
     FunctionValue(String name, BSVParser.FunctiondefContext function, SymbolTable context, SymbolTable parentFrame) {
-	this.name = name;
-	this.function = function;
-	this.method = null;
-	this.module = null;
-	this.context = context;
-	this.parentFrame = parentFrame;
-	argCount = (function.functionproto().methodprotoformals() == null) ? 0 : function.functionproto().methodprotoformals().methodprotoformal().size();
-	this.functionType = FunctionType.Function;
-	args = new ArrayList<>();
+        this.name = name;
+        this.function = function;
+        this.method = null;
+        this.module = null;
+        this.context = context;
+        this.parentFrame = parentFrame;
+        argCount = (function.functionproto().methodprotoformals() == null) ? 0 : function.functionproto().methodprotoformals().methodprotoformal().size();
+        this.functionType = FunctionType.Function;
+        args = new ArrayList<>();
     }
     FunctionValue(String name, BSVParser.MethoddefContext method, SymbolTable context, SymbolTable parentFrame) {
-	this.name = name;
-	this.function = null;
-	this.method = method;
-	this.module = null;
-	this.context = context;
-	this.parentFrame = parentFrame;
-	argCount = (method.methodformals() == null) ? 0 : method.methodformals().methodformal().size();
-	this.functionType = FunctionType.Function;
-	args = new ArrayList<>();
+        this.name = name;
+        this.function = null;
+        this.method = method;
+        this.module = null;
+        this.context = context;
+        this.parentFrame = parentFrame;
+        argCount = (method.methodformals() == null) ? 0 : method.methodformals().methodformal().size();
+        this.functionType = FunctionType.Function;
+        args = new ArrayList<>();
     }
     FunctionValue(String name, BSVParser.ModuledefContext module, SymbolTable context, SymbolTable parentFrame) {
-	this.name = name;
-	this.function = null;
-	this.method = null;
-	this.module = module;
-	this.context = context;
-	this.parentFrame = parentFrame;
-	// implicit argument to delay evaluation until the <- operator
-	argCount = 1 + ((module.moduleproto().methodprotoformals() == null)
-			? 0
-			: module.moduleproto().methodprotoformals().methodprotoformal().size());
-	args = new ArrayList<>();
-	this.functionType = FunctionType.Module;
+        this.name = name;
+        this.function = null;
+        this.method = null;
+        this.module = module;
+        this.context = context;
+        this.parentFrame = parentFrame;
+        // implicit argument to delay evaluation until the <- operator
+        argCount = 1 + ((module.moduleproto().methodprotoformals() == null)
+                        ? 0
+                        : module.moduleproto().methodprotoformals().methodprotoformal().size());
+        args = new ArrayList<>();
+        this.functionType = FunctionType.Module;
     }
     FunctionValue copy() {
-	FunctionValue nfv;
-	if (function != null)
-	    nfv = new FunctionValue(name, function, context, parentFrame);
-	if (module != null)
-	    nfv = new FunctionValue(name, module, context, parentFrame);
-	else
-	    nfv = new FunctionValue(name, method, context, parentFrame);
-	nfv.args = (ArrayList<Value>)args.clone();
-	return nfv;
+        FunctionValue nfv;
+        if (function != null)
+            nfv = new FunctionValue(name, function, context, parentFrame);
+        if (module != null)
+            nfv = new FunctionValue(name, module, context, parentFrame);
+        else
+            nfv = new FunctionValue(name, method, context, parentFrame);
+        nfv.args = (ArrayList<Value>)args.clone();
+        return nfv;
     }
     int remainingArgCount() {
-	return argCount - args.size();
+        return argCount - args.size();
     }
 }
 
@@ -159,16 +183,16 @@ class Rule extends Value {
     final public SymbolTable context;
 
     public Rule(String name, BSVParser.RuledefContext ruledef, SymbolTable context) {
-	this.name = name;
-	if (ruledef.rulecond() != null)
-	    this.condpredicate = ruledef.rulecond().condpredicate();
-	else
-	    this.condpredicate = null;
-	this.body = ruledef.stmt();
-	this.context = context;
+        this.name = name;
+        if (ruledef.rulecond() != null)
+            this.condpredicate = ruledef.rulecond().condpredicate();
+        else
+            this.condpredicate = null;
+        this.body = ruledef.stmt();
+        this.context = context;
     }
     public String toString() {
-	return "Rule-" + name;
+        return "Rule-" + name;
     }
 }
 
@@ -177,8 +201,8 @@ class ModuleInstance extends Value {
     final BSVParser.ModuledefContext module;
     final SymbolTable context;
     ModuleInstance(String name, BSVParser.ModuledefContext module, SymbolTable context) {
-	this.name = name;
-	this.module = module;
-	this.context = context;
+        this.name = name;
+        this.module = module;
+        this.context = context;
     }
 }
