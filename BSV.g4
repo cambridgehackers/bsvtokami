@@ -227,8 +227,8 @@ rulecond :
     ('if')? '(' condpredicate ')'
     ;
 functiondef :
-    attributeinstance* functionproto ';' (stmt)* 'endfunction' (':' lowerCaseIdentifier)?
-    | functionproto '=' expression ';'
+    attributeinstance* functionproto (( ';' (stmt)* 'endfunction' (':' lowerCaseIdentifier)? )
+                                     |( '=' expression ';' ))
     ;
 functionproto :
     'function' bsvtype? name=lowerCaseIdentifier ('(' methodprotoformals? ')')? (provisos)?
