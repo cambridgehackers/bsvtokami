@@ -3,6 +3,7 @@ import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 import org.antlr.v4.runtime.ParserRuleContext;
 import java.util.*;
 
+
 /**
  * This class provides an empty implementation of {@link BSVVisitor},
  * which can be extended to create a visitor which only needs to handle a subset
@@ -41,6 +42,13 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 	return instance;
     }
 
+    Value evaluate(ParserRuleContext ctx, SymbolTable newScope) {
+	pushScope(newScope);
+	Value v = visit(ctx);
+	popScope();
+	return v;
+    }
+
     private boolean isRuleReady(Rule rule) {
 	if (rule.condpredicate == null)
 	    return true;
@@ -76,12 +84,14 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
     private void pushScope(ParserRuleContext ctx) {
 	SymbolTable newScope = staticAnalyzer.getScope(ctx);
 	System.err.println("pushScope {" + ctx.getText());
-	scopeStack.push(scope);
-	scope = newScope;
+	pushScope(newScope);
     }
     private void pushScope(Rule rule) {
 	SymbolTable newScope = rule.context;
 	System.err.println(String.format("pushScope rule %s{", rule.name));
+	pushScope(newScope);
+    }
+    private void pushScope(SymbolTable newScope) {
 	scopeStack.push(scope);
 	scope = newScope;
     }
@@ -590,12 +600,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
 	@Override public Value visitSubinterfacedef(BSVParser.SubinterfacedefContext ctx) { return visitChildren(ctx); }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation returns the result of calling
-	 * {@link #visitChildren} on {@code ctx}.</p>
-	 */
+
 	@Override public Value visitRuledef(BSVParser.RuledefContext ctx) {
 	    Rule rule = new Rule(ctx.name.getText(), ctx, scope);
 	    rules.add(rule);
@@ -942,6 +947,17 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 	    ArrayList<Value> argValues = new ArrayList<>();
 	    for (BSVParser.ExpressionContext argExpr: ctx.expression()) {
 		argValues.add(visit(argExpr));
+	    }
+	    if (closure.name.equals("$methodready")) {
+		FunctionValue mv = (FunctionValue)argValues.get(0);
+		BSVParser.MethoddefContext mc = mv.method;
+		BSVParser.MethodcondContext methodcond = mc.methodcond();
+		if (methodcond != null) {
+		    pushScope(mv.context);
+		    Value v = visit(methodcond.condpredicate());
+		    popScope();
+		    return v;
+		}
 	    }
 	    if (argValues.size() < closure.remainingArgCount()) {
 		FunctionValue newClosure = closure.copy();
