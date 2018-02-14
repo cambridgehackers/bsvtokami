@@ -83,13 +83,23 @@ class BoolValue extends Value {
 class RegValue extends Value {
     final String name;
     Value value;
+    Value newValue;
     RegValue(String name, Value initValue) {
         this.name = name;
         value = initValue;
         System.err.println(String.format("New register %s with value %s", name, initValue));
     }
     void update(Value v) {
-        value = v;
+        newValue = v;
+    }
+    void commit() {
+	if (newValue != null) {
+	    value = newValue;
+	    newValue = null;
+	}
+    }
+    void abort() {
+	newValue = null;
     }
     @Override
     Value read() {

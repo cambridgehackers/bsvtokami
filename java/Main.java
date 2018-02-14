@@ -54,8 +54,9 @@ class Main {
 
 		System.err.println("Evaluating module mkMain"); Evaluator evaluator = new Evaluator(staticAnalysis);
 		evaluator.evaluate("mkMain", packagedef);
-		evaluator.runRulesOnce();
-
+		while (!evaluator.isFinished()) {
+		    evaluator.runRulesOnce();
+		}
             } catch (IOException e) {
                 System.err.println("IOException " + e);
             } catch (Exception e) {
