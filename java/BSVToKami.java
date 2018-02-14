@@ -58,7 +58,9 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
                 if (entry.instanceName != null) {
                     System.err.println(String.format("Instancename %s -> %s", varName, entry.instanceName));
                     return entry.instanceName;
-                }
+                } else {
+                    return varName;
+		}
             } else {
                 System.err.println(String.format("No symbol table entry for %s", varName));
             }
