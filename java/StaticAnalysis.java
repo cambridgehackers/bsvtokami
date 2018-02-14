@@ -164,6 +164,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     @Override public Void visitModuledef(BSVParser.ModuledefContext ctx) {
         String modulename = ctx.moduleproto().name.getText();
         BSVType moduletype = typeVisitor.visit(ctx.moduleproto());
+	System.err.println(String.format("Binding module %s", modulename));
         symbolTable.bind(modulename,
                          new SymbolTableEntry(modulename, moduletype));
         pushScope(ctx, SymbolTable.ScopeType.Module);
@@ -195,8 +196,8 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
                 symbolTable.bind(methodformal.lowerCaseIdentifier().getText(), new SymbolTableEntry(mfname, mftype));
             }
         }
-        if (ctx.implicitcond() != null)
-            visit(ctx.implicitcond());
+        if (ctx.methodcond() != null)
+            visit(ctx.methodcond());
         for (BSVParser.StmtContext stmt: ctx.stmt())
             visit(stmt);
         if (ctx.expression() != null)

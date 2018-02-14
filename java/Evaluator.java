@@ -582,7 +582,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public Value visitImplicitcond(BSVParser.ImplicitcondContext ctx) { return visitChildren(ctx); }
+	@Override public Value visitMethodcond(BSVParser.MethodcondContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *

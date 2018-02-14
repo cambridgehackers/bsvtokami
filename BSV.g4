@@ -203,8 +203,8 @@ moduleactualparamarg :
     | expression
     ;
 methoddef :
-    'method' bsvtype? name=lowerCaseIdentifier ('(' methodformals? ')')? provisos? (implicitcond)? ';' (stmt)* 'endmethod' (':' lowerCaseIdentifier)?
-    | 'method' bsvtype? name=lowerCaseIdentifier ('(' methodformals? ')')? (implicitcond)? '=' expression ';'
+    'method' bsvtype? name=lowerCaseIdentifier ('(' methodformals? ')')? provisos? methodcond? ';' (stmt)* 'endmethod' (':' lowerCaseIdentifier)?
+    | 'method' bsvtype? name=lowerCaseIdentifier ('(' methodformals? ')')? methodcond? '=' expression ';'
     ;
 methodformals :
     methodformal (',' methodformal)*
@@ -213,7 +213,7 @@ methodformal :
     attributeinstance* bsvtype? name=lowerCaseIdentifier
     | attributeinstance* functionproto
     ;
-implicitcond :
+methodcond :
     'if' '(' condpredicate ')'
     ;
 subinterfacedef :
