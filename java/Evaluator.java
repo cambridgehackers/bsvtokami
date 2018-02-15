@@ -4,6 +4,12 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import java.util.*;
 
 
+class RuleNotReady extends RuntimeException {
+    public RuleNotReady(String message) {
+        super(message);
+    }
+}
+
 /**
  * This class provides an empty implementation of {@link BSVVisitor},
  * which can be extended to create a visitor which only needs to handle a subset
@@ -34,11 +40,17 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
         visit(pkgdef);
         this.modulename = modulename;
         isElaborating = true;
+        finishCalled = false;
         pushScope(pkgdef);
         System.err.println("evaluate module " + modulename + " scope " + scope);
         SymbolTableEntry entry = scope.lookup(modulename);
         System.err.println("evaluate module " + modulename + " scope " + scope + " entry " + entry
                            + " constructor "  + ((entry != null) ? entry.value : "<null entry>"));
+        if (entry == null) {
+            finishCalled = true;
+            return new VoidValue();
+        }
+
         FunctionValue constructor = (FunctionValue)entry.value;
         Value instance = instantiateModule(modulename, constructor);
         popScope();
@@ -75,6 +87,19 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
         return bv.value;
     }
 
+    boolean isMethodReady(FunctionValue mv) {
+        BSVParser.MethoddefContext mc = mv.method;
+        BSVParser.MethodcondContext methodcond = mc.methodcond();
+        if (methodcond == null)
+            return true;
+
+        pushScope(mv.context);
+        Value v = visit(methodcond.condpredicate());
+        popScope();
+        BoolValue bv = (BoolValue)v;
+        return bv.value;
+    }
+
     public void runRule(Rule rule) {
         pushScope(rule);
         for (BSVParser.StmtContext stmt: rule.body) {
@@ -90,9 +115,13 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
             boolean ready = isRuleReady(rule);
             System.out.println(String.format("Rule %s %s", rule.name, (ready ? "ready" : "")));
             if (ready) {
-                runRule(rule);
-                commitRegisters();
-                fire_count += 1;
+                try {
+                    runRule(rule);
+                    commitRegisters();
+                    fire_count += 1;
+                } catch (RuleNotReady ex) {
+                    System.err.println("Rule not ready " + ex);
+                }
             }
         }
         return fire_count;
@@ -969,14 +998,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
             }
             if (closure.name.equals("$methodready")) {
                 FunctionValue mv = (FunctionValue)argValues.get(0);
-                BSVParser.MethoddefContext mc = mv.method;
-                BSVParser.MethodcondContext methodcond = mc.methodcond();
-                if (methodcond != null) {
-                    pushScope(mv.context);
-                    Value v = visit(methodcond.condpredicate());
-                    popScope();
-                    return v;
-                }
+                return new BoolValue (isMethodReady(mv));
             }
             if (closure.name.equals("$finish")) {
                 finishCalled = true;
@@ -1017,6 +1039,9 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
                     }
                 }
             } else {
+                boolean ready = isMethodReady(closure);
+                if (!ready)
+                    throw new RuleNotReady(closure.name);
                 if (closure.method.expression() != null) {
                     v = visit(closure.method.expression());
                 } else {
