@@ -21,8 +21,8 @@ class SymbolTableEntry {
 }
 
 class SymbolTable {
-    private Map<String,SymbolTableEntry> bindings;
-    private Map<String,SymbolTableEntry> typeBindings;
+    public final Map<String,SymbolTableEntry> bindings;
+    public final Map<String,SymbolTableEntry> typeBindings;
     public final SymbolTable parent;
     public enum ScopeType {
 	Package, Module, Action, Declaration, Block
@@ -87,7 +87,10 @@ class SymbolTable {
 	    n.bindings.put(entry.getKey(), entry.getValue().copy());
 	    System.err.println("    copy " + entry.getKey() + " " + entry.getValue());
 	}
-	n.typeBindings = typeBindings;
+	for (Map.Entry<String,SymbolTableEntry> entry: typeBindings.entrySet()) {
+	    n.typeBindings.put(entry.getKey(), entry.getValue().copy());
+	    System.err.println("    copy " + entry.getKey() + " " + entry.getValue());
+	}
 	return n;
     }
 }

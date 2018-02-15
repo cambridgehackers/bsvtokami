@@ -23,6 +23,25 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         this.pkgname = pkgname;
         visit(ctx);
     }
+
+    private void importPackage(String pkgname) {
+	SymbolTable importScope = symbolTable.parent;
+	SymbolTable pkgscope = packages.get(pkgname);
+	if (pkgscope == null) {
+	    System.err.println(String.format("Failed to import package %s", pkgname));
+	    return;
+	}
+	System.err.println(String.format("Importing package %s", pkgname));
+	for (Map.Entry<String,SymbolTableEntry> entry: pkgscope.bindings.entrySet()) {
+	    System.err.println(String.format("Importing %s::%s entry %s", pkgname, entry.getKey(), entry.getValue()));
+	    importScope.bind(entry.getKey(), entry.getValue());
+	}
+	for (Map.Entry<String,SymbolTableEntry> entry: pkgscope.typeBindings.entrySet()) {
+	    System.err.println(String.format("Importing %s::%s entry %s", pkgname, entry.getKey(), entry.getValue()));
+	    importScope.bind(entry.getKey(), entry.getValue());
+	}
+    }
+
     private void pushScope(ParserRuleContext ctx, SymbolTable.ScopeType st) {
         symbolTable = new SymbolTable(symbolTable, st);
         System.err.println("pushScope { " + ctx.getText());
@@ -72,11 +91,23 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 
     @Override public Void visitPackagedef(BSVParser.PackagedefContext ctx) {
         pushScope(ctx, SymbolTable.ScopeType.Package);
+        pushScope(ctx, SymbolTable.ScopeType.Package);
+	importPackage("Prelude");
         packages.put(pkgname, symbolTable);
         visitChildren(ctx);
         popScope();
+        popScope();
         return null;
     }
+
+    @Override public Void visitImportdecl(BSVParser.ImportdeclContext importdecl) {
+	for (BSVParser.ImportitemContext importitem: importdecl.importitem()) {
+	    String importedPkgName = importitem.pkgname.getText();
+	    importPackage(importedPkgName);
+	}
+	return null;
+    }
+
     @Override
     public Void visitInterfacedecl(BSVParser.InterfacedeclContext ctx) {
         String interfaceName = ctx.typedeftype().typeide().getText();
@@ -233,6 +264,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 
     @Override public Void visitFunctiondef(BSVParser.FunctiondefContext ctx) {
         BSVParser.FunctionprotoContext functionproto = ctx.functionproto();
+	System.err.println("visit functiondef " + functionproto);
         BSVType functiontype = typeVisitor.visit(functionproto);
         String functionname = functionproto.name.getText();
         System.err.println("entering functiondef " + functionname + " {");
