@@ -46,7 +46,7 @@ importdecl :
     'import' importitem (',' importitem)* ';'
     ;
 importitem :
-    upperCaseIdentifier '::' '*'
+    pkgname=upperCaseIdentifier '::' '*'
     ;
 packagestmt :
     interfacedecl
