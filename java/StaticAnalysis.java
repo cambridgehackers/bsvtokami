@@ -89,6 +89,12 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         }
     }
 
+    SymbolTableEntry lookup(String packageName, String varName) {
+        assert packages.containsKey(packageName);
+        SymbolTable packageScope = packages.get(packageName);
+        return packageScope.lookup(varName);
+    }
+
     @Override public Void visitPackagedef(BSVParser.PackagedefContext ctx) {
         pushScope(ctx, SymbolTable.ScopeType.Package);
         pushScope(ctx, SymbolTable.ScopeType.Package);

@@ -260,8 +260,8 @@ bsvtype :
     | typenat
     ;
 typeide :
-    (pkg=upperCaseIdentifier '::')? upperCaseIdentifier
-    | lowerCaseIdentifier
+    (pkg=upperCaseIdentifier '::')? typename=upperCaseIdentifier
+    | typevar=lowerCaseIdentifier
     | 'SizeOf'
     ;
 typenat :

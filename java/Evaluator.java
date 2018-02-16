@@ -848,7 +848,13 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
         @Override public Value visitVarexpr(BSVParser.VarexprContext ctx) {
             //FIXME package name
             String varName = ctx.anyidentifier().getText();
-            SymbolTableEntry entry = scope.lookup(varName);
+            SymbolTableEntry entry;
+            if (ctx.pkg != null) {
+                String varPackageName = ctx.pkg.getText();
+                entry = staticAnalyzer.lookup(varPackageName, varName);
+            } else {
+                entry = scope.lookup(varName);
+            }
             System.err.println("var '" + varName + "' entry " + entry + " " + scope + " parent " + scope.parent);
             if (entry != null)
                 System.err.println("    entry.value " + entry.value);

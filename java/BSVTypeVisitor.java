@@ -669,8 +669,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
         @Override public BSVType visitTypeide(BSVParser.TypeideContext ctx) {
-	    String typeide = ctx.getText();
-	    if (typeide.matches("[a-z].*")) {
+	    if (ctx.typevar != null) {
+		String typeide = ctx.typevar.getText();
 		SymbolTableEntry entry = scope.lookupType(typeide);
 		BSVType bsvtype;
 		if (entry == null) {
@@ -681,6 +681,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 		}
 		return bsvtype;
 	    } else {
+		String typeide = ctx.getText(); //FIXME
 		return new BSVType(typeide);
 	    }
 	}
@@ -797,6 +798,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	 */
 	@Override public BSVType visitVarexpr(BSVParser.VarexprContext ctx) {
 	    String varName = ctx.anyidentifier().getText();
+	    assert (ctx.pkg == null);
 	    SymbolTableEntry entry = scope.lookup(varName);
 	    System.err.println("var expr " + varName + " " + entry);
 	    if (varName.startsWith("$"))
