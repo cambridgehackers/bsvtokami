@@ -6,7 +6,7 @@ import java.io.*;
 
 public class StaticAnalysis extends BSVBaseVisitor<Void>
 {
-    private String pkgname;
+    private String packageName;
     private SymbolTable symbolTable;
     private HashMap<ParserRuleContext, SymbolTable> scopes;
     private HashMap<String, SymbolTable> packages;
@@ -19,27 +19,27 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         typeVisitor.pushScope(symbolTable);
     }
 
-    public void visitPackage(String pkgname, ParserRuleContext ctx) {
-        this.pkgname = pkgname;
+    public void visitPackage(String packageName, ParserRuleContext ctx) {
+        this.packageName = packageName;
         visit(ctx);
     }
 
     private void importPackage(String pkgname) {
-	SymbolTable importScope = symbolTable.parent;
-	SymbolTable pkgscope = packages.get(pkgname);
-	if (pkgscope == null) {
-	    System.err.println(String.format("Failed to import package %s", pkgname));
-	    return;
-	}
-	System.err.println(String.format("Importing package %s", pkgname));
-	for (Map.Entry<String,SymbolTableEntry> entry: pkgscope.bindings.entrySet()) {
-	    System.err.println(String.format("Importing %s::%s entry %s", pkgname, entry.getKey(), entry.getValue()));
-	    importScope.bind(entry.getKey(), entry.getValue());
-	}
-	for (Map.Entry<String,SymbolTableEntry> entry: pkgscope.typeBindings.entrySet()) {
-	    System.err.println(String.format("Importing %s::%s entry %s", pkgname, entry.getKey(), entry.getValue()));
-	    importScope.bind(entry.getKey(), entry.getValue());
-	}
+        SymbolTable importScope = symbolTable.parent;
+        SymbolTable pkgscope = packages.get(pkgname);
+        if (pkgscope == null) {
+            System.err.println(String.format("Failed to import package %s", pkgname));
+            return;
+        }
+        System.err.println(String.format("Importing package %s", pkgname));
+        for (Map.Entry<String,SymbolTableEntry> entry: pkgscope.bindings.entrySet()) {
+            System.err.println(String.format("Importing %s::%s entry %s", pkgname, entry.getKey(), entry.getValue()));
+            importScope.bind(entry.getKey(), entry.getValue());
+        }
+        for (Map.Entry<String,SymbolTableEntry> entry: pkgscope.typeBindings.entrySet()) {
+            System.err.println(String.format("Importing %s::%s entry %s", pkgname, entry.getKey(), entry.getValue()));
+            importScope.bind(entry.getKey(), entry.getValue());
+        }
     }
 
     private void pushScope(ParserRuleContext ctx, SymbolTable.ScopeType st) {
@@ -92,8 +92,8 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     @Override public Void visitPackagedef(BSVParser.PackagedefContext ctx) {
         pushScope(ctx, SymbolTable.ScopeType.Package);
         pushScope(ctx, SymbolTable.ScopeType.Package);
-	importPackage("Prelude");
-        packages.put(pkgname, symbolTable);
+        importPackage("Prelude");
+        packages.put(packageName, symbolTable);
         visitChildren(ctx);
         popScope();
         popScope();
@@ -101,11 +101,11 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     }
 
     @Override public Void visitImportdecl(BSVParser.ImportdeclContext importdecl) {
-	for (BSVParser.ImportitemContext importitem: importdecl.importitem()) {
-	    String importedPkgName = importitem.pkgname.getText();
-	    importPackage(importedPkgName);
-	}
-	return null;
+        for (BSVParser.ImportitemContext importitem: importdecl.importitem()) {
+            String importedPkgName = importitem.pkgname.getText();
+            importPackage(importedPkgName);
+        }
+        return null;
     }
 
     @Override
@@ -119,7 +119,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         visitChildren(ctx);
 
         popScope();
-        symbolTable.bindType(interfaceName, interfaceType, interfaceMappings);
+        symbolTable.bindType(packageName, interfaceName, interfaceType, interfaceMappings);
 
         System.err.println("} exiting interface decl " + interfaceName);
         return null;
@@ -128,12 +128,12 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     @Override public Void visitTypedefenum(BSVParser.TypedefenumContext ctx) {
         String typedefname = ctx.upperCaseIdentifier().getText();
         BSVType enumtype = typeVisitor.visit(ctx);
-        symbolTable.bind(typedefname,
+        symbolTable.bind(packageName, typedefname,
                          new SymbolTableEntry(typedefname,
                                               enumtype));
         for (BSVParser.TypedefenumelementContext elt: ctx.typedefenumelement()) {
             String tagname = elt.upperCaseIdentifier().getText();
-            symbolTable.bind(tagname, new SymbolTableEntry(tagname, enumtype));
+            symbolTable.bind(packageName, tagname, new SymbolTableEntry(tagname, enumtype));
         }
         return null;
     }
@@ -146,14 +146,14 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     @Override public Void visitTypedeftaggedunion(BSVParser.TypedeftaggedunionContext ctx) {
         String typedefname = ctx.typedeftype().typeide().getText();
         BSVType taggeduniontype = typeVisitor.visit(ctx);
-        symbolTable.bind(typedefname,
+        symbolTable.bind(packageName, typedefname,
                          new SymbolTableEntry(typedefname,
                                               taggeduniontype));
         for (BSVParser.UnionmemberContext member: ctx.unionmember()) {
             BSVParser.UpperCaseIdentifierContext id = member.upperCaseIdentifier();
             if (id != null) {
                 String idname = id.getText();
-                symbolTable.bind(idname, new SymbolTableEntry(idname, taggeduniontype));
+                symbolTable.bind(packageName, idname, new SymbolTableEntry(idname, taggeduniontype));
             } else if (member.substruct() != null) {
             } else if (member.subunion() != null) {
             }
@@ -187,7 +187,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
             bsvtype = typeVisitor.visit(ctx.bsvtype());
         else
             bsvtype = typeVisitor.visit(ctx.functionproto());
-        symbolTable.bind(typedefname,
+        symbolTable.bind(packageName, typedefname,
                          new SymbolTableEntry(typedefname, bsvtype));
         return null;
     }
@@ -195,8 +195,8 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     @Override public Void visitModuledef(BSVParser.ModuledefContext ctx) {
         String modulename = ctx.moduleproto().name.getText();
         BSVType moduletype = typeVisitor.visit(ctx.moduleproto());
-	System.err.println(String.format("Binding module %s", modulename));
-        symbolTable.bind(modulename,
+        System.err.println(String.format("Binding module %s", modulename));
+        symbolTable.bind(packageName, modulename,
                          new SymbolTableEntry(modulename, moduletype));
         pushScope(ctx, SymbolTable.ScopeType.Module);
 
@@ -264,12 +264,17 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 
     @Override public Void visitFunctiondef(BSVParser.FunctiondefContext ctx) {
         BSVParser.FunctionprotoContext functionproto = ctx.functionproto();
-	System.err.println("visit functiondef " + functionproto);
+        System.err.println("visit functiondef " + functionproto);
         BSVType functiontype = typeVisitor.visit(functionproto);
         String functionname = functionproto.name.getText();
-        System.err.println("entering functiondef " + functionname + " {");
-        symbolTable.bind(functionname,
-                         new SymbolTableEntry(functionname, functiontype));
+        System.err.println(String.format("entering functiondef %s {", functionname));
+        if (symbolTable.scopeType == SymbolTable.ScopeType.Package) {
+            symbolTable.bind(packageName, functionname,
+                             new SymbolTableEntry(functionname, functiontype));
+        } else {
+            symbolTable.bind(functionname,
+                             new SymbolTableEntry(functionname, functiontype));
+        }
         // save the lexical scope
         pushScope(ctx, SymbolTable.ScopeType.Action);
         visit(functionproto);
@@ -307,7 +312,11 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
                 }
             }
             //System.err.println("VarInit " + typeName + " " + varName);
-            symbolTable.bind(varinit.var.getText(), new SymbolTableEntry(varName, bsvtype));
+            if (symbolTable.scopeType == SymbolTable.ScopeType.Package) {
+                symbolTable.bind(packageName, varinit.var.getText(), new SymbolTableEntry(varName, bsvtype));
+            } else {
+                symbolTable.bind(varinit.var.getText(), new SymbolTableEntry(varName, bsvtype));
+            }
         }
         return null;
     }
@@ -342,6 +351,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         if (isModuleContext()) {
             entry.instanceName = String.format("%s", varName);
         }
+        assert (symbolTable.scopeType != SymbolTable.ScopeType.Package);
         symbolTable.bind(varName, entry);
         return null;
     }
@@ -361,7 +371,11 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
             if (isModuleContext() && arrowBinding) {
                 entry.instanceName = String.format("%s", varName);
             }
-            symbolTable.bind(varName, entry);
+            if (symbolTable.scopeType == SymbolTable.ScopeType.Package) {
+                symbolTable.bind(packageName, varName, entry);
+            } else {
+                symbolTable.bind(varName, entry);
+            }
         }
         return null;
     }
