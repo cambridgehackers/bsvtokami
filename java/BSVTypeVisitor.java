@@ -756,6 +756,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 		BSVType lhstype = visit(ctx.left);
 		BSVType rhstype = visit(ctx.right);
 		String op = ctx.op.getText();
+		assert lhstype != null : "Binopexpr lhstype is null: " + ctx.left.getText();
+		assert rhstype != null : "Binopexpr rhstype is null: " + ctx.right.getText();
 		try {
 		    if (lhstype.prune() != rhstype.prune())
 			lhstype.unify(rhstype);
