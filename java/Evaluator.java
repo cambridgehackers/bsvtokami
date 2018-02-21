@@ -1010,6 +1010,10 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
                 finishCalled = true;
                 return new VoidValue();
             }
+            if (closure.name.equals("$newvector")) {
+                IntValue mv = (IntValue)argValues.get(0);
+                return new VectorValue(mv.value);
+            }
             if (argValues.size() < closure.remainingArgCount()) {
                 FunctionValue newClosure = closure.copy();
                 newClosure.args.addAll(argValues);
