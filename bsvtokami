@@ -14,7 +14,7 @@ if [ -d $scriptdir/connectal ]; then
 else
     ppfiles="$*"
 fi
-java -classpath $scriptdir/classes:$scriptdir/jars/antlr-4.7.1-complete.jar Main $ppfiles
+java -ea -classpath $scriptdir/classes:$scriptdir/jars/antlr-4.7.1-complete.jar Main $ppfiles
 
 if [ "$doremove" = "1" ]; then
     rm -f $ppfiles
