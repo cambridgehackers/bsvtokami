@@ -80,6 +80,34 @@ class BoolValue extends Value {
     }
 }
 
+class VectorValue extends Value {
+    public final ArrayList<Value> value;
+    public final int size;
+    VectorValue(int size) {
+	this.size = size;
+	value = new ArrayList<>(size);
+    }
+    public String toString() {
+        return String.format("<Vector#(%d)>", size);
+    }
+    public void update(int i, Value v) {
+	value.add(i, v);
+    }
+    public Value select(int i) {
+	return value.get(i);
+    }
+    public static VectorValue newVector(int size) {
+	VectorValue vect = new VectorValue(size);
+	return vect;
+    }
+    public static VectorValue genVector(int size) {
+	VectorValue vect = new VectorValue(size);
+	for (int i = 0; i < size; i++)
+	    vect.value.add(i, new IntValue(i));
+	return vect;
+    }
+}
+
 class RegValue extends Value {
     final String name;
     Value value;
