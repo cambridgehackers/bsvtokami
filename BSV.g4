@@ -20,7 +20,7 @@ DollarIdentifier :
     [$][a-z][a-zA-Z0-9_$]*
     ;
 EscapedOperator :
-    [\\][^ \t\r\n]+
+    [\\][-A-Za-z0-9=+_*&^%$#@!~<>?/|]+
     ;
 lowerCaseIdentifier :
     LowerCaseIdentifier | 'default_clock' | 'default_reset' | 'enable' | 'no_reset' | 'path' | 'port' | 'ready' | 'same_family' | EscapedOperator
