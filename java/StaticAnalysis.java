@@ -95,6 +95,13 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         return packageScope.lookup(varName);
     }
 
+    public static String unescape(String identifier) {
+	if (identifier.startsWith("\\"))
+	    return identifier.substring(1);
+	else
+	    return identifier;
+    }
+
     @Override public Void visitPackagedef(BSVParser.PackagedefContext ctx) {
         pushScope(ctx, SymbolTable.ScopeType.Package);
         pushScope(ctx, SymbolTable.ScopeType.Package);
@@ -171,18 +178,26 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     }
 
     @Override public Void visitTypeclassdecl(BSVParser.TypeclassdeclContext ctx) {
-        pushScope(ctx, SymbolTable.ScopeType.Declaration);
 
-        visitChildren(ctx);
+	for (BSVParser.OverloadeddefContext def : ctx.overloadeddef()) {
+	    BSVParser.FunctionprotoContext functionproto = def.functionproto();
+	    BSVParser.ModuleprotoContext moduleproto = def.moduleproto();
+	    BSVParser.VardeclContext vardecl = def.vardecl();
+	    if (functionproto != null)
+		visit(functionproto);
+	    if (moduleproto != null)
+		visit(moduleproto);
+	    if (vardecl != null)
+		visit(vardecl);
+	}
 
-        popScope();
         return null;
     }
 
     @Override public Void visitTypeclassinstance(BSVParser.TypeclassinstanceContext ctx) {
         pushScope(ctx, SymbolTable.ScopeType.Declaration);
 
-        visitChildren(ctx);
+        //visitChildren(ctx);
 
         popScope();
         return null;
@@ -271,12 +286,9 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         return null;
     }
 
-    @Override public Void visitFunctiondef(BSVParser.FunctiondefContext ctx) {
-        BSVParser.FunctionprotoContext functionproto = ctx.functionproto();
-        System.err.println("visit functiondef " + functionproto);
+    @Override public Void visitFunctionproto(BSVParser.FunctionprotoContext functionproto) {
+        String functionname = unescape(functionproto.name.getText());
         BSVType functiontype = typeVisitor.visit(functionproto);
-        String functionname = functionproto.name.getText();
-        System.err.println(String.format("entering functiondef %s {", functionname));
         if (symbolTable.scopeType == SymbolTable.ScopeType.Package) {
             symbolTable.bind(packageName, functionname,
                              new SymbolTableEntry(functionname, functiontype));
@@ -284,8 +296,22 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
             symbolTable.bind(functionname,
                              new SymbolTableEntry(functionname, functiontype));
         }
+	return null;
+    }
+
+    @Override public Void visitFunctiondef(BSVParser.FunctiondefContext ctx) {
+        BSVParser.FunctionprotoContext functionproto = ctx.functionproto();
+        System.err.println("visit functiondef " + functionproto);
+        String functionname = functionproto.name.getText();
+	visit(functionproto);
+        System.err.println(String.format("entering functiondef %s {", functionname));
         // save the lexical scope
         pushScope(ctx, SymbolTable.ScopeType.Action);
+	if (functionproto.methodprotoformals() != null) {
+	    for (BSVParser.MethodprotoformalContext formal: functionproto.methodprotoformals().methodprotoformal()) {
+		visit(formal);
+	    }
+	}
         visit(functionproto);
         if (ctx.expression() != null)
             visit(ctx.expression());
@@ -392,6 +418,8 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         BSVType lhstype = typeVisitor.visit(ctx.lhs);
         BSVType rhstype = typeVisitor.visit(ctx.rhs);
         BSVType rhsregtype = new BSVType("Reg", rhstype);
+	assert lhstype != null : ctx.lhs.getText();
+	assert rhstype != null : ctx.rhs.getText();
         try {
             System.err.println("lhs " + ctx.lhs.getText() + " : " + lhstype.prune());
             System.err.println("rhs " + ctx.rhs.getText() + " : " + rhstype.prune());
