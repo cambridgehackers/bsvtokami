@@ -845,7 +845,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
 	@Override public BSVType visitIntliteral(BSVParser.IntliteralContext ctx) {
-	    return new BSVType("Bit", new BSVType());
+	    return new BSVType("Integer");
 	}
 	/**
 	 * {@inheritDoc}
@@ -862,7 +862,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public BSVType visitCastexpr(BSVParser.CastexprContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitCastexpr(BSVParser.CastexprContext ctx) { return visit(ctx.bsvtype()); }
 	/**
 	 * {@inheritDoc}
 	 *

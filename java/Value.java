@@ -5,6 +5,7 @@ class Value {
     Value read() {
         return this;
     }
+    public Value cast(BSVType bsvtype) { return this; }
     public Value unop(String op) { return this; }
     public Value binop(String op, Value other) { return this; }
     public Value sub(Value index) { return this; }
@@ -84,27 +85,27 @@ class VectorValue extends Value {
     public final ArrayList<Value> value;
     public final int size;
     VectorValue(int size) {
-	this.size = size;
-	value = new ArrayList<>(size);
+        this.size = size;
+        value = new ArrayList<>(size);
     }
     public String toString() {
         return String.format("<Vector#(%d)>", size);
     }
     public void update(int i, Value v) {
-	value.add(i, v);
+        value.add(i, v);
     }
     public Value select(int i) {
-	return value.get(i);
+        return value.get(i);
     }
     public static VectorValue newVector(int size) {
-	VectorValue vect = new VectorValue(size);
-	return vect;
+        VectorValue vect = new VectorValue(size);
+        return vect;
     }
     public static VectorValue genVector(int size) {
-	VectorValue vect = new VectorValue(size);
-	for (int i = 0; i < size; i++)
-	    vect.value.add(i, new IntValue(i));
-	return vect;
+        VectorValue vect = new VectorValue(size);
+        for (int i = 0; i < size; i++)
+            vect.value.add(i, new IntValue(i));
+        return vect;
     }
 }
 
@@ -121,13 +122,13 @@ class RegValue extends Value {
         newValue = v;
     }
     void commit() {
-	if (newValue != null) {
-	    value = newValue;
-	    newValue = null;
-	}
+        if (newValue != null) {
+            value = newValue;
+            newValue = null;
+        }
     }
     void abort() {
-	newValue = null;
+        newValue = null;
     }
     @Override
     Value read() {

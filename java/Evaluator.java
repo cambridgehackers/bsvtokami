@@ -910,7 +910,11 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public Value visitCastexpr(BSVParser.CastexprContext ctx) { return visitChildren(ctx); }
+        @Override public Value visitCastexpr(BSVParser.CastexprContext ctx) {
+	    Value v = visit(ctx.exprprimary());
+	    BSVType bsvtype = typeVisitor.visit(ctx.bsvtype());
+	    return v.cast(bsvtype);
+	}
         /**
          * {@inheritDoc}
          *
