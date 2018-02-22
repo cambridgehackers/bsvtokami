@@ -1,19 +1,17 @@
+package Prelude;
+
 typedef enum {
    VoidValue
    } Void;
-
-typedef enum {
-   False, True
-   } Bool deriving (Bits,Eq);
 
 interface Reg#(type a);
   method a _read();
   method Action _write(a v);
 endinterface
 
-`ifdef BSVTOKAMI
+//`ifdef BSVTOKAMI
 (* nogen *)
-`endif
+//`endif
 module mkReg#(a v)(Reg#(a));
     method Action _write(a v);
     endmethod
@@ -35,13 +33,23 @@ typeclass Literal #(type data_t);
    function Bool   inLiteralRange(data_t target, Integer x);
 endtypeclass
 
+instance Literal(Bit#(bsz));
+   function Bit#(bsz) fromInteger(Integer x); return (Bit#(bsz))'x; endfunction
+endinstance
+instance Literal(Int#(bsz));
+   function Int#(bsz) fromInteger(Integer x); return (Bit#(bsz))'x; endfunction
+endinstance
+instance Literal(UInt#(bsz));
+   function UInt#(bsz) fromInteger(Integer x); return (Bit#(bsz))'x; endfunction
+endinstance
+
 typeclass RealLiteral #(type data_t);
    function data_t fromReal(Real x);
 endtypeclass
 
 typeclass SizedLiteral #(type data_t, type size_t)
    dependencies (data_t determines size_t);
-   function data_t fromSizedInteger(Bit#(size_t);
+   function data_t fromSizedInteger(Bit#(size_t) x);
 endtypeclass
 
 typeclass Arith#(type data_t)
@@ -84,13 +92,13 @@ typeclass Bitwise #(type data_t);
    function data_t \~^ (data_t x1, data_t x2);
    function data_t \^~ (data_t x1, data_t x2);
    function data_t invert (data_t x1);
-   function data_t \<< (data_t x1, x2);
-   function data_t \>> (data_t x1, x2);
+   function data_t \<< (data_t x1, data_t x2);
+   function data_t \>> (data_t x1, data_t x2);
    function Bit#(1) msb (data_t x);
    function Bit#(1) lsb (data_t x);
 endtypeclass
 
-typeclass BitReduction #(type x, numeric type n)
+typeclass BitReduction #(type x, numeric type n);
    function x#(1) reduceAnd (x#(n) d);
    function x#(1) reduceOr (x#(n) d);
    function x#(1) reduceXor (x#(n) d);
@@ -128,11 +136,58 @@ typeclass FShow#(type t);
    function Fmt fshow(t value);
 endtypeclass
 
-function Bit#(0) $methodready(Bit#(1) m);
+typedef enum {
+   False, True
+   } Bool deriving (Bits,Eq);
+
+typedef union tagged {
+   a Valid;
+   Void Invalid;
+   } Maybe#(type a) deriving (Bits,Eq);
+
+function Bit#(0) \$methodready (Bit#(1) m);
    return 1;
 endfunction
 
-function Void $finish();
+function Void \$finish ();
+endfunction
+
+typedef struct {
+		t1 tpl_1;
+		t2 tpl_2;
+   } Tuple2#(type t1, type t2) deriving (Bits);
+
+function Tuple2#(t1, t2) tuple2(t1 x1, t2 x2);
+   return Tuple2 { tpl_1: x1, tpl_2: x2 };
+endfunction
+
+typedef struct {
+		t1 tpl_1;
+		t2 tpl_2;
+		t3 tpl_3;
+   } Tuple3#(type t1, type t2, type t3) deriving (Bits);
+
+function Tuple3#(t1, t2, t3) tuple3(t1 x1, t2 x2, t3 x3);
+   return Tuple3 { tpl_1: x1, tpl_2: x2, tpl_3: x3 };
+endfunction
+
+typedef struct {
+		t1 tpl_1;
+		t2 tpl_2;
+		t3 tpl_3;
+		t4 tpl_4;
+   } Tuple3#(type t1, type t2, type t3, type t4) deriving (Bits);
+
+function Tuple4#(t1, t2, t3, t4) tuple4(t1 x1, t2 x2, t3 x3, t4 x4);
+   return Tuple4 { tpl_1: x1, tpl_2: x2, tpl_3: x3, tpl_4 x4 };
+endfunction
+
+function t1 tpl_1(Tuple2#(t1,t2) tpl);
+   return tpl.tpl_1;
+endfunction
+
+function t2 tpl_2(Tuple2#(t1,t2) tpl);
+   return tpl.tpl_2;
 endfunction
 
 endpackage
