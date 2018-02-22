@@ -31,6 +31,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 
     Evaluator(StaticAnalysis staticAnalyzer) {
         this.staticAnalyzer = staticAnalyzer;
+        typeVisitor = new BSVTypeVisitor();
         scopeStack = new Stack<>();
         rules = new ArrayList<>();
         registers = new ArrayList<>();
@@ -129,7 +130,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 
     private void pushScope(ParserRuleContext ctx) {
         SymbolTable newScope = staticAnalyzer.getScope(ctx);
-        System.err.println("pushScope {" + ctx.getText());
+        System.err.println("pushScope { " + newScope);
         pushScope(newScope);
     }
     private void pushScope(Rule rule) {
@@ -139,10 +140,12 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
     }
     private void pushScope(SymbolTable newScope) {
         scopeStack.push(scope);
+        typeVisitor.pushScope(scope);
         scope = newScope;
     }
     private void popScope() {
         System.err.println("popScope " + " }");
+        typeVisitor.popScope();
         scope = scopeStack.pop();
     }
 
@@ -392,7 +395,10 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public Value visitVarBinding(BSVParser.VarBindingContext ctx) { return visitChildren(ctx); }
+        @Override public Value visitVarBinding(BSVParser.VarBindingContext ctx) {
+            assert false : ctx.getText();
+            return visitChildren(ctx);
+        }
         /**
          * {@inheritDoc}
          *
@@ -479,7 +485,21 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public Value visitTypeclassdecl(BSVParser.TypeclassdeclContext ctx) { return visitChildren(ctx); }
+        @Override public Value visitTypeclassdecl(BSVParser.TypeclassdeclContext ctx) {
+            // FIXME
+            for (BSVParser.OverloadeddefContext def: ctx.overloadeddef()) {
+                BSVParser.FunctionprotoContext functionproto = def.functionproto();
+                if (functionproto != null) {
+                    SymbolTable functionScope = staticAnalyzer.getScope(ctx);
+                    String functionName = StaticAnalysis.unescape(functionproto.name.getText());
+                    System.err.println("function " + functionName + " scope " + functionScope);
+                    int argCount = (functionproto.methodprotoformals() != null) ? functionproto.methodprotoformals().methodprotoformal().size() : 0;
+                    FunctionValue function = new FunctionValue(functionName, argCount, functionScope, scope);
+                    scope.lookup(functionName).setValue(function);
+                }
+            }
+            return new VoidValue();
+        }
         /**
          * {@inheritDoc}
          *
@@ -671,7 +691,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          */
         @Override public Value visitFunctiondef(BSVParser.FunctiondefContext ctx) {
             SymbolTable functionScope = staticAnalyzer.getScope(ctx);
-            String functionName = ctx.functionproto().name.getText();
+            String functionName = StaticAnalysis.unescape(ctx.functionproto().name.getText());
             System.err.println("function " + functionName + " scope " + functionScope);
             FunctionValue function = new FunctionValue(functionName, ctx, functionScope, scope);
             scope.lookup(functionName).setValue(function);
@@ -911,10 +931,10 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public Value visitCastexpr(BSVParser.CastexprContext ctx) {
-	    Value v = visit(ctx.exprprimary());
-	    BSVType bsvtype = typeVisitor.visit(ctx.bsvtype());
-	    return v.cast(bsvtype);
-	}
+            Value v = visit(ctx.exprprimary());
+            BSVType bsvtype = typeVisitor.visit(ctx.bsvtype());
+            return v.cast(bsvtype);
+        }
         /**
          * {@inheritDoc}
          *
@@ -1001,7 +1021,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          */
         @Override public Value visitCallexpr(BSVParser.CallexprContext ctx) {
             FunctionValue closure = (FunctionValue)visit(ctx.fcn);
-            System.err.println("closure " + closure);
+            assert closure != null : ctx.fcn.getText();
             ArrayList<Value> argValues = new ArrayList<>();
             for (BSVParser.ExpressionContext argExpr: ctx.expression()) {
                 argValues.add(visit(argExpr));
@@ -1014,8 +1034,9 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
                 finishCalled = true;
                 return new VoidValue();
             }
-            if (closure.name.equals("$newvector")) {
+            if (closure.name.equals("$vecnew")) {
                 IntValue mv = (IntValue)argValues.get(0);
+                assert mv != null : ctx.expression(0).getText();
                 return new VectorValue(mv.value);
             }
             if (argValues.size() < closure.remainingArgCount()) {
@@ -1073,7 +1094,14 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public Value visitValueofexpr(BSVParser.ValueofexprContext ctx) { return visitChildren(ctx); }
+        @Override public Value visitValueofexpr(BSVParser.ValueofexprContext ctx) {
+            assert ctx.bsvtype() != null;
+            BSVType bsvtype = typeVisitor.visit(ctx.bsvtype());
+            assert bsvtype != null : ctx.bsvtype().getText();
+            bsvtype = bsvtype.prune();
+            assert !bsvtype.isVar : ctx.bsvtype().getText();
+            return new IntValue((int)Long.parseLong(bsvtype.name));
+        }
         /**
          * {@inheritDoc}
          *

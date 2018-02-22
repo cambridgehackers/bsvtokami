@@ -89,10 +89,8 @@ class Main {
             } catch (IOException e) {
                 System.err.println("IOException " + e);
             } catch (Exception e) {
-		System.err.println("Exception " + e);
                 e.printStackTrace();
             } catch (AssertionError e) {
-		System.err.println("Assertion " + e);
                 e.printStackTrace();
             }
         }

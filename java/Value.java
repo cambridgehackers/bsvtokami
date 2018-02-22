@@ -163,6 +163,17 @@ class FunctionValue extends Value {
         Function, Module, Action
     };
     public final FunctionType functionType;
+    FunctionValue(String name, int argCount, SymbolTable context, SymbolTable parentFrame) {
+        this.name = name;
+        this.function = null;
+        this.method = null;
+        this.module = null;
+        this.context = context;
+        this.parentFrame = parentFrame;
+        this.argCount = argCount;
+        this.functionType = FunctionType.Function;
+        args = new ArrayList<>();
+    }
     FunctionValue(String name, BSVParser.FunctiondefContext function, SymbolTable context, SymbolTable parentFrame) {
         this.name = name;
         this.function = function;
