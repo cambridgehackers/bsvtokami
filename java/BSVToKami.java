@@ -136,8 +136,8 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         printstream.println("");
 
         if (ctx.packagedecl() != null) {
-            if (!pkgName.equals(ctx.packagedecl().pkgname)) {
-                System.err.println("Expected " + pkgName + " found " + ctx.packagedecl().pkgname);
+            if (!pkgName.equals(ctx.packagedecl().pkgname.getText())) {
+                System.err.println("Expected " + pkgName + " found " + ctx.packagedecl().pkgname.getText());
             }
         }
         return visitChildren(ctx);
