@@ -145,7 +145,7 @@ arraydims :
     ('[' expression ']')*
     ;
 typeclassdecl :
-    'typeclass' typeclasside typeformals (provisos)? (typedepends)? ';' (overloadeddef)* 'endtypeclass' (':' typeclasside)?
+    'typeclass' typeclasside typeformals (provisos)? (typedepends)? ';' overloadeddecl* 'endtypeclass' (':' typeclasside)?
     ;
 typeclasside :
     upperCaseIdentifier
@@ -160,7 +160,7 @@ typelist :
     typeide
     | '(' typeide (',' typeide)* ')'
     ;
-overloadeddef :
+overloadeddecl :
     functionproto ';'
     | moduleproto
     | vardecl
@@ -168,9 +168,12 @@ overloadeddef :
 tctype : bsvtype | functionproto ;
 typeclassinstance :
     'instance' typeclasside '#' '(' tctype (',' tctype)* ')' (provisos)? ';'
-    (varassign
+    overloadeddef* 'endinstance' (':' typeclasside)?
+    ;
+overloadeddef :
+    varassign
     | functiondef
-    | moduledef)* 'endinstance' (':' typeclasside)?
+    | moduledef
     ;
 moduledef :
     attributeinstance* moduleproto (modulestmt)* 'endmodule' (':' lowerCaseIdentifier)?

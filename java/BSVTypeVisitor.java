@@ -383,6 +383,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitOverloadeddef(BSVParser.OverloadeddefContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitOverloadeddecl(BSVParser.OverloadeddeclContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
          *

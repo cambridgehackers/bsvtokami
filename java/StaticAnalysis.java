@@ -102,6 +102,11 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 	    return identifier;
     }
 
+    public static String unescape(ParserRuleContext ctx) {
+	String identifier = ctx.getText();
+	return unescape(identifier);
+    }
+
     @Override public Void visitPackagedef(BSVParser.PackagedefContext ctx) {
         pushScope(ctx, SymbolTable.ScopeType.Package);
         pushScope(ctx, SymbolTable.ScopeType.Package);
@@ -178,8 +183,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     }
 
     @Override public Void visitTypeclassdecl(BSVParser.TypeclassdeclContext ctx) {
-
-	for (BSVParser.OverloadeddefContext def : ctx.overloadeddef()) {
+	for (BSVParser.OverloadeddeclContext def : ctx.overloadeddecl()) {
 	    BSVParser.FunctionprotoContext functionproto = def.functionproto();
 	    BSVParser.ModuleprotoContext moduleproto = def.moduleproto();
 	    BSVParser.VardeclContext vardecl = def.vardecl();
@@ -195,11 +199,30 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     }
 
     @Override public Void visitTypeclassinstance(BSVParser.TypeclassinstanceContext ctx) {
-        pushScope(ctx, SymbolTable.ScopeType.Declaration);
+	for (BSVParser.OverloadeddefContext def : ctx.overloadeddef()) {
+	    BSVParser.FunctiondefContext functiondef = def.functiondef();
+	    BSVParser.ModuledefContext moduledef = def.moduledef();
+	    BSVParser.VarassignContext varassign = def.varassign();
+	    // Add a scope to catch the symbol table entry
+	    pushScope(ctx, SymbolTable.ScopeType.Declaration);
+	    if (functiondef != null)
+		visit(functiondef);
+	    if (moduledef != null)
+		visit(moduledef);
+	    if (varassign != null)
+		visit(varassign);
 
-        //visitChildren(ctx);
+	    for (Map.Entry<String,SymbolTableEntry> ste: symbolTable.bindings.entrySet()) {
+		String instanceName = ste.getKey();
+		SymbolTableEntry instanceEntry = ste.getValue();
+		SymbolTableEntry classEntry = symbolTable.parent.lookup(instanceName);
+		assert classEntry != null : String.format("Instance var %s", instanceName);
+		System.err.println(String.format("Adding instance %s : %s", instanceName, instanceEntry.type));
+		classEntry.addInstance(instanceEntry);
+	    }
+	    popScope();
+	}
 
-        popScope();
         return null;
     }
 

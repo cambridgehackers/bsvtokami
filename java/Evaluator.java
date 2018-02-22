@@ -487,7 +487,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          */
         @Override public Value visitTypeclassdecl(BSVParser.TypeclassdeclContext ctx) {
             // FIXME
-            for (BSVParser.OverloadeddefContext def: ctx.overloadeddef()) {
+            for (BSVParser.OverloadeddeclContext def: ctx.overloadeddecl()) {
                 BSVParser.FunctionprotoContext functionproto = def.functionproto();
                 if (functionproto != null) {
                     SymbolTable functionScope = staticAnalyzer.getScope(ctx);
@@ -534,6 +534,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
+        @Override public Value visitOverloadeddecl(BSVParser.OverloadeddeclContext ctx) { return visitChildren(ctx); }
         @Override public Value visitOverloadeddef(BSVParser.OverloadeddefContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}

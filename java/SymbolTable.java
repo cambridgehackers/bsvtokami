@@ -6,6 +6,7 @@ class SymbolTableEntry {
     public final String name;
     public final BSVType type;
     public SymbolTable mappings; // for interfaces
+    public ArrayList<SymbolTableEntry> instances; // for type classes
     public Value value;
     public String instanceName;
     public String pkgName;
@@ -18,6 +19,11 @@ class SymbolTableEntry {
     }
     public void setValue(Value v) {
         value = v;
+    }
+    public void addInstance(SymbolTableEntry instanceEntry) {
+	if (instances == null)
+	    instances = new ArrayList<>();
+	instances.add(instanceEntry);
     }
 }
 
