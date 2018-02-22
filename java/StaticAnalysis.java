@@ -44,7 +44,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 
     private void pushScope(ParserRuleContext ctx, SymbolTable.ScopeType st) {
         symbolTable = new SymbolTable(symbolTable, st);
-        System.err.println("pushScope { " + ctx.getText());
+        System.err.println("pushScope { " + symbolTable);
         scopes.put(ctx, symbolTable);
         typeVisitor.pushScope(symbolTable);
     }
@@ -133,13 +133,14 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 
     @Override public Void visitTypedefenum(BSVParser.TypedefenumContext ctx) {
         String typedefname = ctx.upperCaseIdentifier().getText();
-        BSVType enumtype = typeVisitor.visit(ctx);
+        BSVType enumtype = new BSVType(typedefname);
         symbolTable.bind(packageName, typedefname,
                          new SymbolTableEntry(typedefname,
                                               enumtype));
         for (BSVParser.TypedefenumelementContext elt: ctx.typedefenumelement()) {
             String tagname = elt.upperCaseIdentifier().getText();
             symbolTable.bind(packageName, tagname, new SymbolTableEntry(tagname, enumtype));
+	    System.err.println(String.format("Enum tag %s : %s", tagname, enumtype));
         }
         return null;
     }
@@ -155,11 +156,13 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         symbolTable.bind(packageName, typedefname,
                          new SymbolTableEntry(typedefname,
                                               taggeduniontype));
+	System.err.println(String.format("tagged union %s : %s", typedefname, taggeduniontype));
         for (BSVParser.UnionmemberContext member: ctx.unionmember()) {
             BSVParser.UpperCaseIdentifierContext id = member.upperCaseIdentifier();
             if (id != null) {
                 String idname = id.getText();
                 symbolTable.bind(packageName, idname, new SymbolTableEntry(idname, taggeduniontype));
+		System.err.println(String.format("tagged union member %s : %s", idname, taggeduniontype));
             } else if (member.substruct() != null) {
             } else if (member.subunion() != null) {
             }

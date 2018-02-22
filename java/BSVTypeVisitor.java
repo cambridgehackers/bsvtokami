@@ -249,7 +249,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public BSVType visitTypedeftaggedunion(BSVParser.TypedeftaggedunionContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitTypedeftaggedunion(BSVParser.TypedeftaggedunionContext ctx) {
+	    return visit(ctx.typedeftype());
+	}
 	/**
 	 * {@inheritDoc}
 	 *
@@ -780,9 +782,12 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
 	@Override public BSVType visitUnopexpr(BSVParser.UnopexprContext ctx) {
-	    if (ctx.op == null)
-		return visit(ctx.exprprimary());
-	    System.err.println("UNhandled unopexpr " + ctx.getText());
+	    if (ctx.op == null) {
+		BSVType bsvtype = visit(ctx.exprprimary());
+		System.err.println("Unop expr " + ctx.exprprimary().getText() + " : " + bsvtype);
+		return bsvtype;
+	    }
+	    System.err.println("Unhandled unopexpr " + ctx.getText());
 	    return null;
 	}
 	/**
@@ -802,7 +807,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	    String varName = ctx.anyidentifier().getText();
 	    assert (ctx.pkg == null);
 	    SymbolTableEntry entry = scope.lookup(varName);
-	    System.err.println("var expr " + varName + " " + entry);
+	    System.err.println("var expr " + varName + " " + entry + " : " + ((entry != null) ? entry.type : ""));
 	    if (varName.startsWith("$"))
 		return new BSVType();
 	    else
@@ -922,7 +927,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public BSVType visitParenexpr(BSVParser.ParenexprContext ctx) { return visitChildren(ctx); }
+	@Override public BSVType visitParenexpr(BSVParser.ParenexprContext ctx) {
+	    return visit(ctx.expression());
+	}
 	/**
 	 * {@inheritDoc}
 	 *
@@ -997,7 +1004,12 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public BSVType visitArraysub(BSVParser.ArraysubContext ctx) { return visitChildren(ctx); }
+	@Override public BSVType visitArraysub(BSVParser.ArraysubContext ctx) {
+	    BSVType arraytype = visit(ctx.exprprimary());
+	    assert arraytype != null;
+	    assert !arraytype.isVar : arraytype;
+	    return arraytype.params.get(1);
+	}
 	/**
 	 * {@inheritDoc}
 	 *
