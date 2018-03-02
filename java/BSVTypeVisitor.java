@@ -15,8 +15,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
     private Stack<SymbolTable> scopeStack = new Stack<>();
     public void pushScope(SymbolTable newScope)
     {
-        scope = newScope;
         scopeStack.push(scope);
+        scope = newScope;
     }
     public void popScope() {
         scope = scopeStack.pop();
