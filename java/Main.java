@@ -13,6 +13,7 @@ class Main {
 
     static ParserRuleContext parsePackage(String pkgName, String filename) throws IOException {
 	File file = new File(filename);
+	System.err.println(String.format("Parsing %s %s", pkgName, filename));
 	CharStream charStream = CharStreams.fromFileName(filename);
 
         /*
@@ -46,10 +47,13 @@ class Main {
 	ParserRuleContext ctx = parsePackage(pkgName, filename);
 	BSVParser.PackagedefContext packagedef = (BSVParser.PackagedefContext)ctx;
 	for (BSVParser.PackagestmtContext stmt: packagedef.packagestmt()) {
-	    if (stmt.getRuleIndex() == BSVParser.RULE_importdecl) {
-		BSVParser.ImportdeclContext importdecl = stmt.importdecl();
+	    BSVParser.ImportdeclContext importdecl = stmt.importdecl();
+	    if (importdecl != null) {
 		for (BSVParser.ImportitemContext importitem: importdecl.importitem()) {
 		    String importedPkgName = importitem.pkgname.getText();
+		    System.err.println(String.format("import %s %s",
+						     importedPkgName,
+						     (packages.containsKey(importedPkgName) ? "previously seen" : "unseen")));
 		    if (!packages.containsKey(importedPkgName)) {
 			analyzePackage(importedPkgName, findPackageFile(importedPkgName));
 		    }
