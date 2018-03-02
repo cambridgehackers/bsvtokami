@@ -1,9 +1,11 @@
+`define BSVTOKAMI
 
 `ifdef BSVTOKAMI
 package Vector;
 `else
 package FooVector;
 import Vector::*;
+import FooMonad::*;
 `endif
 
 
@@ -12,16 +14,23 @@ interface Vector#(numeric type len, type element_type);
 endinterface
 
 typeclass VectorOps#(type index_type);
-    function Vector#(len, element_type) update(Vector#(len, element_type) vector, index_type offset, element_type v);
-    function element_type select(Vector#(len, element_type) vector, index_type offset);
+   function Vector#(len, element_type) \$vecnew (Integer size);
+   function Vector#(len, element_type) \$vecupdate (Vector#(len, element_type) vector, index_type offset, element_type v);
+   function element_type \$vecselect (Vector#(len, element_type) vector, index_type offset);
+
+   function Vector#(len, element_type) update(Vector#(len, element_type) vector, index_type offset, element_type v);
+   function element_type select(Vector#(len, element_type) vector, index_type offset);
  endtypeclass
 `endif
 
 function Vector#(len, element_type) genWith(function element_type func(Integer xi));
-   Vector#(len, element_type) vect;
-   for (Integer i = 0; i < valueOf(len); i = i + 1)
-      vect[i] = func(i);
-   return vect;
+   function Vector#(len, element_type) genWithRec(Vector#(len, element_type) vect, Integer i);
+       if (i < valueOf(len))
+	  return genWithRec($vecupdate(vect, i, func(i)), i + 1);
+       else
+	  return vect;
+   endfunction
+   return genWithRec($vecnew(valueOf(len)), 0);
 endfunction
 
 function Vector#(len, element_type) newVector();
@@ -30,7 +39,7 @@ function Vector#(len, element_type) newVector();
 endfunction
 
 function Vector#(len, Integer) genVector();
-   function Integer elt(Integer xi); return fromInteger(xi); endfunction
+   function Integer elt(Integer xi); return xi; endfunction
    return genWith(elt);
 endfunction
 
@@ -45,7 +54,7 @@ function Vector#(len_plus_1, element_type) cons(element_type v, Vector#(len, ele
    return genWith(elt);
 endfunction
 
-Vector#(0, element_type) nil = newVector();
+function Vector#(0, element_type) nil = newVector();
 
 function Vector#(vsize, element_type) append(Vector#(lena, element_type) vecta, Vector#(lenb, element_type) vectb)
    provisos (Add#(lena, lenb, vsize));
@@ -102,6 +111,16 @@ function Vector#(vsize, element_type) takeAt(Integer startPos, Vector#(vsize1, e
    provisos (Add#(vsize, a__, vsize1));
    function element_type elt(Integer xi); return vect[xi - startPos]; endfunction
    return genWith(elt);
+endfunction
+
+// Mapping Functions over Vectors
+
+function Vector#(vsize,b_type) map(function b_type func(a_type x),
+				   Vector#(vsize, a_type) vect);
+   function b_type funci(Integer i);
+      return func(vect[i]);
+   endfunction
+   return genWith(funci);
 endfunction
 
 // Vector to Vector Functions
@@ -176,18 +195,25 @@ endfunction
 // Fold Functions
 function b_type foldr(function b_type func(a_type x, b_type y),
 		       b_type seed, Vector#(vsize,a_type) vect);
-   b_type result = seed;
-   for (Integer i = 0; i < valueOf(vsize); i = i + 1)
-      result = func(vect[valueOf(vsize) - i - 1], result);
-   return result;
+   function b_type foldrec(Integer i, b_type v);
+      if (i < valueOf(vsize))
+	 return foldrec(i + 1, func(vect[valueOf(vsize) - i - 1], v));
+      else
+	 return v;
+   endfunction
+   return foldrec(0, seed);
 endfunction
 
 function b_type foldl(function b_type func(b_type y, a_type x),
                        b_type seed, Vector#(vsize,a_type) vect);
    b_type result = seed;
-   for (Integer i = 0; i < valueOf(vsize); i = i + 1)
-      result = func(result, vect[i]);
-   return result;
+   function b_type foldrec(Integer i, b_type v);
+      if (i < valueOf(vsize))
+	 return foldrec(i + 1, func(v, vect[i]));
+      else
+	 return v;
+   endfunction
+   return foldrec(0, seed);
 endfunction
 
 // function a_type fold(function b_type func(a_type y, a_type x),
@@ -355,9 +381,15 @@ endfunction
 function Action writeVReg ( Vector#(n, Reg#(a)) vr,
                             Vector#(n,a) vdin) ;
    action
-   for (Integer i = 0; i < valueOf(n); i = i + 1) begin
-      vr[i] <= vdin[i];
-   end
+      function Action loop(Integer i);
+	 action
+	    if (i < valueOf(n)) begin
+	       vr[i] <= vdin[i];
+	       loop(i + 1);
+	    end
+	 endaction
+      endfunction
+      loop(0);
    endaction
 endfunction
 
@@ -413,16 +445,6 @@ function Tuple2#(Vector#(vsize,a_type), Vector#(vsize, b_type))
    return tuple2(map(tpl_1, vectab), map(tpl_2, vectab));
 endfunction
 
-// Mapping Functions over Vectors
-
-function Vector#(vsize,b_type) map (function b_type func(a_type x),
-				    Vector#(vsize, a_type) vect);
-   function b_type funci(Integer i);
-      return func(vect[i]);
-   endfunction
-   return genWith(funci);
-endfunction
-
 // ZipWith Functions
 
 function Vector#(vsize,c_type)
@@ -473,23 +495,20 @@ function Vector#(vsize,d_type)
 endfunction
 // Monadic Operations
 
-typeclass FooMonad#(type m);
-   function m#(a) mret(a v);
-   function m#(b) mmap(m#(a) v0, function m#(b) f(a v));
-   function m#(b) mseq(m#(a) m0, m#(b) m1);
-endtypeclass
+function m#(Vector#(vsize, element_type)) genWithM(function m#(element_type) func(Integer x))
+   provisos (Monad#(m));
+   Vector#(vsize, Integer) indices = genVector;
+   Vector#(vsize, element_type) result = newVector;
 
-`ifdef BSVTOKAMI
-function Vector#(vsize, element_type) genWithM(function m#(element_type) func(Integer x))
-  provisos (Monad#(m));
-   m#(Vector#(vsize, element_type)) vect = mret(newVector);
-   for (Integer i = 0; i < valueOf(vsize); i = i + 1) begin
-      m#(element_type) v = mret(func(i));
-      vect = update(vect, i, v);
-   end
-   return vect;
-endfunction
+`ifdef MONAD
+   function m#(Vector#(vsize, element_type)) upd(element_type elt);
+      Integer i = 0;
+      return \return (update(result, i, elt));
+   endfunction
+
+   return \return (result);
 `endif
+endfunction
 
 function m#(Vector#(vsize, b_type)) mapM( function m#(b_type) func(a_type x),
 					 Vector#(vsize, a_type) vecta )

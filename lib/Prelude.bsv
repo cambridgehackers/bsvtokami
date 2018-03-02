@@ -33,14 +33,14 @@ typeclass Literal #(type data_t);
    function Bool   inLiteralRange(data_t target, Integer x);
 endtypeclass
 
-instance Literal(Bit#(bsz));
+instance Literal#(Bit#(bsz));
    function Bit#(bsz) fromInteger(Integer x); return (Bit#(bsz))'x; endfunction
 endinstance
-instance Literal(Int#(bsz));
-   function Int#(bsz) fromInteger(Integer x); return (Bit#(bsz))'x; endfunction
+instance Literal#(Int#(bsz));
+   function Int#(bsz) fromInteger(Integer x); return (Int#(bsz))'x; endfunction
 endinstance
-instance Literal(UInt#(bsz));
-   function UInt#(bsz) fromInteger(Integer x); return (Bit#(bsz))'x; endfunction
+instance Literal#(UInt#(bsz));
+   function UInt#(bsz) fromInteger(Integer x); return (UInt#(bsz))'x; endfunction
 endinstance
 
 typeclass RealLiteral #(type data_t);
@@ -176,18 +176,51 @@ typedef struct {
 		t2 tpl_2;
 		t3 tpl_3;
 		t4 tpl_4;
-   } Tuple3#(type t1, type t2, type t3, type t4) deriving (Bits);
+   } Tuple4#(type t1, type t2, type t3, type t4) deriving (Bits);
 
 function Tuple4#(t1, t2, t3, t4) tuple4(t1 x1, t2 x2, t3 x3, t4 x4);
-   return Tuple4 { tpl_1: x1, tpl_2: x2, tpl_3: x3, tpl_4 x4 };
+   return Tuple4 { tpl_1: x1, tpl_2: x2, tpl_3: x3, tpl_4: x4 };
 endfunction
 
-function t1 tpl_1(Tuple2#(t1,t2) tpl);
-   return tpl.tpl_1;
-endfunction
+typeclass TupleSelector#(type t, type t1, type t2, type t3, type t4);
+   function t1 tpl_1(t tpl);
+   function t2 tpl_2(t tpl);
+   function t3 tpl_3(t tpl);
+   function t4 tpl_4(t tpl);
+endtypeclass
 
-function t2 tpl_2(Tuple2#(t1,t2) tpl);
-   return tpl.tpl_2;
-endfunction
+instance TupleSelector#(Tuple2#(t1,t2), t1, t2, t3, t4);
+   function t1 tpl_1(Tuple2#(t1,t2) tpl);
+      return tpl.tpl_1;
+   endfunction
+   function t2 tpl_2(Tuple2#(t1,t2) tpl);
+      return tpl.tpl_2;
+   endfunction
+endinstance
+instance TupleSelector#(Tuple3#(t1,t2,t3), t1, t2, t3, t4);
+   function t1 tpl_1(Tuple3#(t1,t2,t3) tpl);
+      return tpl.tpl_1;
+   endfunction
+   function t2 tpl_2(Tuple3#(t1,t2,t3) tpl);
+      return tpl.tpl_2;
+   endfunction
+   function t3 tpl_3(Tuple3#(t1,t2,t3) tpl);
+      return tpl.tpl_3;
+   endfunction
+endinstance
+instance TupleSelector#(Tuple4#(t1,t2,t3,t4), t1, t2, t3, t4);
+   function t1 tpl_1(Tuple4#(t1,t2,t3,t4) tpl);
+      return tpl.tpl_1;
+   endfunction
+   function t2 tpl_2(Tuple4#(t1,t2,t3,t4) tpl);
+      return tpl.tpl_2;
+   endfunction
+   function t3 tpl_3(Tuple4#(t1,t2,t3,t4) tpl);
+      return tpl.tpl_3;
+   endfunction
+   function t4 tpl_3(Tuple4#(t1,t2,t3,t4) tpl);
+      return tpl.tpl_4;
+   endfunction
+endinstance
 
 endpackage
