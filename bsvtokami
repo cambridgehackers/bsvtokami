@@ -7,10 +7,11 @@ ppfiles=""
 doremove=0
 if [ -d $scriptdir/connectal ]; then
     for f in $*; do
-	$scriptdir/connectal/scripts/bsvpreprocess.py -I$scriptdir -I. $f > $f.pp
+	fdir=`dirname $f`
+	$scriptdir/connectal/scripts/bsvpreprocess.py -I$fdir -I$scriptdir -I. $f > $f.pp
 	ppfiles="$ppfiles $f.pp"
     done
-    doremove=1
+    doremove=0
 else
     ppfiles="$*"
 fi
