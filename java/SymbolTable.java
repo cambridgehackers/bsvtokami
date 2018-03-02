@@ -83,6 +83,10 @@ class SymbolTable {
         }
     }
 
+    void bindType(String key, SymbolTableEntry entry) {
+        System.err.println("binding type " + key + " with entry " + entry);
+        typeBindings.put(key, entry);
+    }
     void bindType(String key, BSVType bsvtype) {
         System.err.println("binding type " + key + " with type " + bsvtype);
         SymbolTableEntry entry = new SymbolTableEntry(key, bsvtype);

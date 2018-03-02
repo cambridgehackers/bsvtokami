@@ -38,7 +38,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         }
         for (Map.Entry<String,SymbolTableEntry> entry: pkgscope.typeBindings.entrySet()) {
             System.err.println(String.format("Importing %s::%s entry %s", pkgname, entry.getKey(), entry.getValue()));
-            importScope.bind(entry.getKey(), entry.getValue());
+            importScope.bindType(entry.getKey(), entry.getValue());
         }
     }
 
