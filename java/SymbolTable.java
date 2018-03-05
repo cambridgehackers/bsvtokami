@@ -33,7 +33,7 @@ class SymbolTable {
     public final Map<String,SymbolTableEntry> typeBindings;
     public final SymbolTable parent;
     public enum ScopeType {
-        Package, Module, Action, Declaration, Block
+        Package, Module, Action, Declaration, Block, TypeClassInstance
     }
     public final ScopeType scopeType;
 
