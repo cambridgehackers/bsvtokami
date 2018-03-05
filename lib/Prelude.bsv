@@ -28,6 +28,10 @@ typeclass Eq #(type data_t);
 endtypeclass
 
 
+function String integerToString(Integer m);
+   return (String)'m;
+endfunction
+
 typeclass Literal #(type data_t);
    function data_t fromInteger(Integer x);
    function Bool   inLiteralRange(data_t target, Integer x);
@@ -222,5 +226,11 @@ instance TupleSelector#(Tuple4#(t1,t2,t3,t4), t1, t2, t3, t4);
       return tpl.tpl_4;
    endfunction
 endinstance
+
+interface Empty;
+endinterface
+
+module errorM#(String s)(Empty);
+endmodule
 
 endpackage
