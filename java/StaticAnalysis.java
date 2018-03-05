@@ -291,6 +291,15 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         return null;
     }
 
+    @Override public Void visitImportbvi(BSVParser.ImportbviContext ctx) {
+        String modulename = ctx.moduleproto().name.getText();
+        BSVType moduletype = typeVisitor.visit(ctx.moduleproto());
+        System.err.println(String.format("Binding import BVI module %s", modulename));
+        symbolTable.bind(packageName, modulename,
+                         new SymbolTableEntry(modulename, moduletype));
+	return null;
+    }
+
     @Override public Void visitMethoddef(BSVParser.MethoddefContext ctx) {
         String methodName = ctx.name.getText();
         System.err.println("entering methoddef " + methodName + " {");
