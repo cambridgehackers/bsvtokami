@@ -5,6 +5,13 @@ scriptdir=`dirname $0`
 
 ppfiles=""
 doremove=0
+
+export BSVSEARCHPATH="$scriptdir/lib"
+for d in $BLUESPECDIR/BSVSource/*; do
+    BSVSEARCHPATH="$BSVSEARCHPATH:$d"
+done
+echo BSVSEARCHPATH="$BSVSEARCHPATH"
+
 if [ -d $scriptdir/connectal ]; then
     for f in $*; do
 	fdir=`dirname $f`

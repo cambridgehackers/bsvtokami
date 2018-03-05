@@ -10,6 +10,7 @@ import org.antlr.v4.runtime.tree.*;
 class Main {
     private static HashMap<String, ParserRuleContext> packages;
     static StaticAnalysis staticAnalyzer = new StaticAnalysis();
+    static String[] searchDirs = new String[0];
 
     static ParserRuleContext parsePackage(String pkgName, String filename) throws IOException {
 	File file = new File(filename);
@@ -35,7 +36,14 @@ class Main {
     }
 
     static String findPackageFile(String pkgName) {
-	return String.format("lib/%s.bsv", pkgName);
+	for (String path: searchDirs) {
+	    String filename = String.format("%s/%s.bsv", path, pkgName);
+	    File file = new File(filename);
+	    if (file.exists())
+		return filename;
+	}
+	assert false : "No file found for package " + pkgName;
+	return null;
     }
 
     static BSVParser.PackagedefContext analyzePackage(String pkgName, String filename) throws IOException {
@@ -67,6 +75,10 @@ class Main {
     }
 
     public static void main(String[] args) {
+	Map<String,String> env = System.getenv();
+	if (env.containsKey("BSVSEARCHPATH")) {
+	    searchDirs = env.get("BSVSEARCHPATH").split(":");
+	}
 	packages = new HashMap<>();
         for (String filename: args) {
             System.err.println("converting file " + filename);
