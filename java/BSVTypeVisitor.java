@@ -993,7 +993,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 		System.err.println(" entry.mappings " + entry.mappings);
             if (entry != null && entry.mappings != null) {
                 SymbolTableEntry subentry = entry.mappings.lookup(subname);
-                    System.err.println(" found subentry " + subentry);
+		System.err.println(String.format(" found %s subname %s subentry %s", entry.name, subname, subentry));
                 if (subentry != null) {
                     // FIXME: instantiate interface
                     System.err.println("expr field " + interfaceName + "." + subname + " : " + subentry.type);
@@ -1018,7 +1018,10 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitInterfaceexpr(BSVParser.InterfaceexprContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitInterfaceexpr(BSVParser.InterfaceexprContext ctx) {
+	    BSVType bsvtype = visit(ctx.bsvtype());
+	    return bsvtype;
+	}
         /**
          * {@inheritDoc}
          *
