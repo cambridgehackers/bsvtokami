@@ -961,7 +961,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitUndefinedexpr(BSVParser.UndefinedexprContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitUndefinedexpr(BSVParser.UndefinedexprContext ctx) {
+	    return new BSVType();
+	}
         /**
          * {@inheritDoc}
          *
