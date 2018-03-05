@@ -28,6 +28,7 @@ class SymbolTableEntry {
 }
 
 class SymbolTable {
+    public final String name;
     public final Map<String,SymbolTableEntry> bindings;
     public final Map<String,SymbolTableEntry> typeBindings;
     public final SymbolTable parent;
@@ -38,6 +39,15 @@ class SymbolTable {
 
     SymbolTable (SymbolTable parent, ScopeType st) {
         this.parent = parent;
+	this.name = "";
+        scopeType = st;
+        bindings = new TreeMap<String,SymbolTableEntry>();
+        typeBindings = new TreeMap<String,SymbolTableEntry>();
+    }
+
+    SymbolTable (SymbolTable parent, ScopeType st, String name) {
+        this.parent = parent;
+	this.name = name;
         scopeType = st;
         bindings = new TreeMap<String,SymbolTableEntry>();
         typeBindings = new TreeMap<String,SymbolTableEntry>();
@@ -63,12 +73,16 @@ class SymbolTable {
         }
     }
 
+    void bind(String key, BSVType bsvtype) {
+        System.err.println("binding " + key + " with type " + bsvtype + " in scope " + this + " " + this.name);
+        bindings.put(key, new SymbolTableEntry(key, bsvtype));
+    }
     void bind(String key, SymbolTableEntry entry) {
-        System.err.println("binding " + key + " with type " + entry.type + " in scope " + this);
+        System.err.println("binding " + key + " with type " + entry.type + " in scope " + this + " " + this.name);
         bindings.put(key, entry);
     }
     void bind(String pkgName, String key, SymbolTableEntry entry) {
-        System.err.println("binding " + key + " with type " + entry.type + " in scope " + this);
+        System.err.println("binding " + key + " with type " + entry.type + " in scope " + this + " " + this.name);
         entry.pkgName = pkgName;
         bindings.put(key, entry);
     }
@@ -77,6 +91,7 @@ class SymbolTable {
         if (typeBindings.containsKey(key)) {
             return (SymbolTableEntry)typeBindings.get(key);
         } else if (parent != null) {
+	    //System.err.println("lookupType chaining to parent " + parent);
             return parent.lookupType(key);
         } else {
             return null;
@@ -88,7 +103,7 @@ class SymbolTable {
         typeBindings.put(key, entry);
     }
     void bindType(String key, BSVType bsvtype) {
-        System.err.println("binding type " + key + " with type " + bsvtype);
+        System.err.println("binding type " + key + " with type " + bsvtype + " in scope " + this + " " + this.name);
         SymbolTableEntry entry = new SymbolTableEntry(key, bsvtype);
         typeBindings.put(key, entry);
     }
@@ -99,8 +114,8 @@ class SymbolTable {
         typeBindings.put(key, entry);
     }
     void bindType(String pkgName, String key, BSVType bsvtype, SymbolTable mappings) {
-        System.err.println("binding type " + key + " with type " + bsvtype);
         SymbolTableEntry entry = new SymbolTableEntry(key, bsvtype);
+        System.err.println("binding type " + key + " with type " + bsvtype + " and mappings " + mappings);
         entry.mappings = mappings;
         entry.pkgName = pkgName;
         typeBindings.put(key, entry);

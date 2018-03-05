@@ -27,28 +27,40 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitPackagedef(BSVParser.PackagedefContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitPackagedef(BSVParser.PackagedefContext ctx) {
+	    assert false;
+	    return null;
+	}
         /**
          * {@inheritDoc}
          *
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitPackagedecl(BSVParser.PackagedeclContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitPackagedecl(BSVParser.PackagedeclContext ctx) {
+	    assert false;
+	    return null;
+	}
         /**
          * {@inheritDoc}
          *
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitEndpackage(BSVParser.EndpackageContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitEndpackage(BSVParser.EndpackageContext ctx) {
+	    assert false;
+	    return null;
+	}
         /**
          * {@inheritDoc}
          *
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitLowerCaseIdentifier(BSVParser.LowerCaseIdentifierContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitLowerCaseIdentifier(BSVParser.LowerCaseIdentifierContext ctx) {
+	    assert false;
+	    return null;
+	}
         /**
          * {@inheritDoc}
          *
@@ -62,63 +74,90 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitIdentifier(BSVParser.IdentifierContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitIdentifier(BSVParser.IdentifierContext ctx) {
+	    assert false;
+	    return null;
+	}
         /**
          * {@inheritDoc}
          *
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitAnyidentifier(BSVParser.AnyidentifierContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitAnyidentifier(BSVParser.AnyidentifierContext ctx) {
+	    assert false;
+	    return null;
+	}
         /**
          * {@inheritDoc}
          *
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitExportdecl(BSVParser.ExportdeclContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitExportdecl(BSVParser.ExportdeclContext ctx) {
+	    assert false;
+	    return null;
+	}
         /**
          * {@inheritDoc}
          *
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitExportitem(BSVParser.ExportitemContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitExportitem(BSVParser.ExportitemContext ctx) {
+	    assert false;
+	    return null;
+	}
         /**
          * {@inheritDoc}
          *
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitImportdecl(BSVParser.ImportdeclContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitImportdecl(BSVParser.ImportdeclContext ctx) {
+	    assert false;
+	    return null;
+	}
         /**
          * {@inheritDoc}
          *
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitImportitem(BSVParser.ImportitemContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitImportitem(BSVParser.ImportitemContext ctx) {
+	    assert false;
+	    return null;
+	}
         /**
          * {@inheritDoc}
          *
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitPackagestmt(BSVParser.PackagestmtContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitPackagestmt(BSVParser.PackagestmtContext ctx) {
+	    assert false;
+	    return null;
+	}
         /**
          * {@inheritDoc}
          *
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitInterfacedecl(BSVParser.InterfacedeclContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitInterfacedecl(BSVParser.InterfacedeclContext ctx) {
+	    assert false;
+	    return null;
+	}
         /**
          * {@inheritDoc}
          *
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitInterfacememberdecl(BSVParser.InterfacememberdeclContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitInterfacememberdecl(BSVParser.InterfacememberdeclContext ctx) {
+	    assert false;
+	    return null;
+	}
         /**
          * {@inheritDoc}
          *
@@ -178,7 +217,10 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitSubinterfacedecl(BSVParser.SubinterfacedeclContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitSubinterfacedecl(BSVParser.SubinterfacedeclContext ctx) {
+	    assert false;
+	    return null;
+	}
         /**
          * {@inheritDoc}
          *
@@ -244,7 +286,21 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitTypedefstruct(BSVParser.TypedefstructContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitTypedefstruct(BSVParser.TypedefstructContext ctx) {
+	    BSVParser.TypedeftypeContext typedeftype = ctx.typedeftype();
+	    BSVType bsvtype = visit(typedeftype);
+	    System.err.println(String.format("typedefstruct %s", bsvtype.name));
+	    SymbolTable fieldMappings = new SymbolTable(scope, SymbolTable.ScopeType.Declaration, bsvtype.name);
+	    for (BSVParser.StructmemberContext member: ctx.structmember()) {
+		assert member.subunion() == null;
+		if (member.bsvtype() != null) {
+		    BSVType membertype = visit(member.bsvtype());
+		    fieldMappings.bind(member.lowerCaseIdentifier().getText(), membertype);
+		}
+	    }
+	    scope.bindType(null, bsvtype.name, bsvtype, fieldMappings);
+	    return bsvtype;
+	}
         /**
          * {@inheritDoc}
          *
@@ -818,7 +874,12 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             String varName = ctx.anyidentifier().getText();
             assert (ctx.pkg == null);
             SymbolTableEntry entry = scope.lookup(varName);
-            System.err.println("var expr " + varName + " " + entry + " : " + ((entry != null) ? entry.type : ""));
+            System.err.println("var expr " + varName + " entry " + entry + " : " + ((entry != null) ? entry.type : ""));
+            if (entry.instances != null) {
+                for (SymbolTableEntry instance: entry.instances) {
+                    System.err.println(String.format("    instance %s : %s", varName, instance.type));
+                }
+            }
             if (varName.startsWith("$"))
                 return new BSVType();
             else
@@ -838,8 +899,10 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitStructexpr(BSVParser.StructexprContext ctx) {
-            System.err.println("BSVTypeVisitor visitStructExpr");
-            return visitChildren(ctx);
+	    String structName = ctx.tag.getText();
+	    SymbolTableEntry entry = scope.lookupType(structName);
+	    assert entry != null : "No entry for struct " + structName + " in scope " + scope;
+            return entry.type;
         }
         /**
          * {@inheritDoc}
@@ -856,7 +919,10 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitRulesexpr(BSVParser.RulesexprContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitRulesexpr(BSVParser.RulesexprContext ctx) {
+	    assert false;
+	    return null;
+	}
         /**
          * {@inheritDoc}
          *
@@ -923,7 +989,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             String subname = ctx.exprfield.getText();
             SymbolTableEntry entry = scope.lookupType(interfaceName);
             System.err.println("expr field " + interfaceName + "." + subname + "    " + basetype);
-            if (entry != null) {
+	    if (entry != null)
+		System.err.println(" entry.mappings " + entry.mappings);
+            if (entry != null && entry.mappings != null) {
                 SymbolTableEntry subentry = entry.mappings.lookup(subname);
                     System.err.println(" found subentry " + subentry);
                 if (subentry != null) {
