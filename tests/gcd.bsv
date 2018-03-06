@@ -15,10 +15,10 @@ module mkReg#(a v)(Reg#(a));
     endmethod
 endmodule
 
-function Bit#(0) $methodready(Bit#(1) m);
+function Bit#(0) \$methodready (Bit#(1) m);
    return 1;
 endfunction
-function Bit#(0) $finish();
+function Bit#(0) \$finish ();
    return 1;
 endfunction
 
@@ -43,12 +43,12 @@ module mkGCD(GCD#(Bit#(32)));
 
    method Action set_n(Bit#(32) in_n) if (m == 0);
          n <= in_n;
-   endmethod:
+   endmethod
    method Action set_m(Bit#(32) in_m) if (m == 0);
       action
          m <= in_m;
       endaction
-   endmethod:
+   endmethod
 
    method Bit#(32) result() if (m == 0);
       return n;
@@ -70,4 +70,4 @@ module mkMain(Empty);
    endrule
 endmodule
 
-// endpackage: GCD
+endpackage: GCD
