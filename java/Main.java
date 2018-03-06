@@ -5,7 +5,154 @@ import java.io.InputStream;
 import java.util.*;
 
 import org.antlr.v4.runtime.*;
+import org.antlr.v4.runtime.atn.*;
+import org.antlr.v4.runtime.dfa.DFA;
 import org.antlr.v4.runtime.tree.*;
+import org.antlr.v4.runtime.misc.*;
+
+class BSVErrorListener implements ANTLRErrorListener {
+    @Override
+    public void syntaxError(Recognizer<?,?> recognizer, Object offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e) {
+	System.err.println(String.format("Syntax error: %s at line %s:%d:%d",
+					 msg, recognizer.getInputStream().getSourceName(), line, charPositionInLine));
+    }
+
+    @Override
+    public void reportAmbiguity(Parser recognizer, DFA dfa, int startIndex, int stopIndex, boolean exact, BitSet ambigAlts, ATNConfigSet configs) {
+    }
+
+    @Override
+    public void reportAttemptingFullContext(Parser recognizer, DFA dfa, int startIndex, int stopIndex, BitSet conflictingAlts, ATNConfigSet configs) {
+    }
+
+    @Override
+    public void reportContextSensitivity(Parser recognizer, DFA dfa, int startIndex, int stopIndex, int prediction, ATNConfigSet configs) {
+    }
+}
+
+class StackedTokenSource implements TokenSource {
+    Stack<TokenSource> tokenSources = new Stack<>();
+    Stack<Boolean> condStack = new Stack<>();
+    Stack<Boolean> validStack = new Stack<>();
+    HashMap<String,Token> defines = new HashMap<>();
+    TokenSource tokenSource = null;
+    static String[] searchDirs = new String[0];
+    
+    StackedTokenSource() {
+	condStack.push(true);
+	validStack.push(true);
+	Map<String,String> env = System.getenv();
+	if (env.containsKey("BSVSEARCHPATH")) {
+	    searchDirs = env.get("BSVSEARCHPATH").split(":");
+	}
+    }
+    void push(TokenSource tokenSource) {
+	System.err.println(String.format("pushing token source %s", tokenSource.getSourceName()));
+	this.tokenSource = tokenSource;
+	tokenSources.push(tokenSource);
+    }
+    void pop() {
+	assert tokenSources.size() > 1;
+	tokenSources.pop();
+	tokenSource = tokenSources.peek();
+	System.err.println(String.format("popped to source %s", tokenSource.getSourceName()));
+    }
+
+    static String findIncludeFile(String includeName) {
+	for (String path: searchDirs) {
+	    String filename = String.format("%s/%s", path, includeName);
+	    File file = new File(filename);
+	    if (file.exists())
+		return filename;
+	}
+	assert false : "No file found for include " + includeName;
+	return null;
+    }
+
+    @Override
+    public int getCharPositionInLine() {
+	return tokenSource.getCharPositionInLine();
+    }
+    @Override
+    public CharStream getInputStream() {
+	return tokenSource.getInputStream();
+    }
+    @Override
+    public int getLine() {
+	return tokenSource.getLine();
+    }
+    @Override
+    public String getSourceName() {
+	return tokenSource.getSourceName();
+    }
+    @Override
+    public TokenFactory<?> getTokenFactory() {
+	return tokenSource.getTokenFactory();
+    }
+    @Override
+    public Token nextToken() {
+	while (true) {
+	    Token token = tokenSource.nextToken();
+	    //System.err.println(String.format("token.type %d %s %s:%d", token.getType(), token.getText(), token.getTokenSource().getSourceName(), token.getLine()));
+	    if (token.getType() == Token.EOF && tokenSources.size() > 1) {
+		pop();
+		continue;
+	    }
+	    if (token.getChannel() == 2) {
+		String text = token.getText();
+		System.err.println(String.format("preprocessor channel %d token %s", token.getChannel(), text));
+		if (text.startsWith("`define")) {
+		    String[] tokens = text.split(" |\t");
+		    System.err.println(tokens.length);
+		    String identText = tokens[1];
+		    String valText = identText;
+		    if (tokens.length > 2) {
+			valText = tokens[2];
+		    }
+		    defines.put(identText, token);
+		} else if (text.equals("`ifdef") || text.equals("`ifndef")) {
+		    Token ident = tokenSource.nextToken();
+		    String identText = ident.getText();
+		    condStack.push(defines.containsKey(identText));
+		    validStack.push(condStack.peek() && validStack.peek());
+		    System.err.println(String.format("preprocessor ident %d %s cond %s valid %s", ident.getChannel(), identText, condStack.peek(), validStack.peek()));
+		} else if (text.equals("`else")) {
+		    condStack.push(!condStack.pop());
+		    validStack.pop();
+		    validStack.push(condStack.peek() && validStack.peek());
+		    System.err.println(String.format("preprocessor else cond %s valid %s", condStack.peek(), validStack.peek()));
+		} else if (text.equals("`endif")) {
+		    condStack.pop();
+		    validStack.pop();
+		    System.err.println(String.format("preprocessor endif cond %s valid %s", condStack.peek(), validStack.peek()));
+		} else if (text.equals("`include")) {
+		    Token filenameToken = tokenSource.nextToken();
+		    String filename = filenameToken.getText();
+		    filename = filename.substring(1,filename.length()-1);
+		    filename = findIncludeFile(filename);
+		    try {
+			CharStream charStream = CharStreams.fromFileName(filename);
+			Lexer lexer = new BSVLexer(charStream);
+			push(lexer);
+		    } catch (IOException ex) {
+			System.err.println(ex);
+		    }
+		} else {
+		    // substitute
+		    assert false;
+		}
+	    } else if (!validStack.peek()) {
+		continue;
+	    } else {
+		return token;
+	    }
+	}
+    }
+    @Override
+    public void setTokenFactory(TokenFactory<?> factory) {
+	tokenSource.setTokenFactory(factory);
+    }
+}
 
 class Main {
     private static HashMap<String, ParserRuleContext> packages;
@@ -22,10 +169,16 @@ class Main {
          */
         Lexer lexer = new BSVLexer(charStream);
 
+	StackedTokenSource stackedTokenSource = new StackedTokenSource();
+	stackedTokenSource.push(lexer);
+
+	CommonTokenStream commonTokenStream = new CommonTokenStream(stackedTokenSource);
+
         /*
          * make a Parser on the token stream
          */
-        BSVParser parser = new BSVParser(new CommonTokenStream(lexer));
+        BSVParser parser = new BSVParser(commonTokenStream);
+	parser.addErrorListener(new BSVErrorListener());
 
 	/*
 	 * get the top node of the AST. This corresponds to the topmost rule of BSV.g4, "start"
