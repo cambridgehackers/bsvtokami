@@ -10,8 +10,7 @@ packagedecl : 'package' pkgname=upperCaseIdentifier ';'
 endpackage : 'endpackage' ( ':' upperCaseIdentifier )?
     ;
 
-PPDEF : '`define' .*? '\r'? '\n' -> channel(2) ;
-PPTOK : '`'[A-Za-z0-9_]+ -> channel(2) ;
+PPTOK : '`'[a-zA-Z0-9_]+ -> channel(2) ;
 
 UpperCaseIdentifier :
     [A-Z][a-zA-Z0-9_]*

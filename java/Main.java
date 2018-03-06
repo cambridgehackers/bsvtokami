@@ -3,6 +3,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.atn.*;
@@ -100,31 +102,47 @@ class StackedTokenSource implements TokenSource {
 	    }
 	    if (token.getChannel() == 2) {
 		String text = token.getText();
-		System.err.println(String.format("preprocessor channel %d token %s", token.getChannel(), text));
-		if (text.startsWith("`define")) {
-		    String[] tokens = text.split(" |\t");
-		    System.err.println(tokens.length);
-		    String identText = tokens[1];
-		    String valText = identText;
-		    if (tokens.length > 2) {
-			valText = tokens[2];
+		if (text.equals("`define")) {
+		    Token identtoken = tokenSource.nextToken();
+		    String identtext = identtoken.getText();
+		    Token valtoken = tokenSource.nextToken();
+		    if (identtoken.getLine() == valtoken.getLine()) {
+			//System.err.println(String.format("Defining preprocessor symbol %s %s", identtext, valtoken.getText()));
+			defines.put(identtext, valtoken);
+			continue;
+		    } else {
+			//System.err.println(String.format("Defining preprocessor symbol %s", identtext));
+			defines.put(identtext, null);
+			if (valtoken.getChannel() != 2)
+			    return valtoken;
+			token = valtoken;
 		    }
-		    defines.put(identText, token);
-		} else if (text.equals("`ifdef") || text.equals("`ifndef")) {
+		}
+
+		text = token.getText();
+		//System.err.println(String.format("preprocessor channel %d token %s", token.getChannel(), text));
+		if (text.equals("`ifdef") || text.equals("`ifndef")) {
 		    Token ident = tokenSource.nextToken();
 		    String identText = ident.getText();
+
 		    condStack.push(defines.containsKey(identText));
 		    validStack.push(condStack.peek() && validStack.peek());
-		    System.err.println(String.format("preprocessor ident %d %s cond %s valid %s", ident.getChannel(), identText, condStack.peek(), validStack.peek()));
+
+		    System.err.println(String.format("preprocessor ifdef %d %s cond %s valid %s %d",
+						     ident.getChannel(), identText, condStack.peek(), validStack.peek(), validStack.size()));
 		} else if (text.equals("`else")) {
+
 		    condStack.push(!condStack.pop());
 		    validStack.pop();
 		    validStack.push(condStack.peek() && validStack.peek());
-		    System.err.println(String.format("preprocessor else cond %s valid %s", condStack.peek(), validStack.peek()));
+
+		    System.err.println(String.format("preprocessor else cond %s valid %s %d",
+						     condStack.peek(), validStack.peek(), validStack.size()));
 		} else if (text.equals("`endif")) {
 		    condStack.pop();
 		    validStack.pop();
-		    System.err.println(String.format("preprocessor endif cond %s valid %s", condStack.peek(), validStack.peek()));
+		    System.err.println(String.format("preprocessor endif cond %s valid %s %d",
+						     condStack.peek(), validStack.peek(), validStack.size()));
 		} else if (text.equals("`include")) {
 		    Token filenameToken = tokenSource.nextToken();
 		    String filename = filenameToken.getText();
@@ -139,7 +157,11 @@ class StackedTokenSource implements TokenSource {
 		    }
 		} else {
 		    // substitute
-		    assert false;
+		    String identifier = token.getText().substring(1);
+		    //System.err.println(String.format("defined %s %s", identifier, defines.containsKey(identifier)));
+		    assert defines.containsKey(identifier);
+		    Token valtoken = defines.get(identifier);
+		    return valtoken;
 		}
 	    } else if (!validStack.peek()) {
 		continue;
