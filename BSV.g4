@@ -10,6 +10,9 @@ packagedecl : 'package' pkgname=upperCaseIdentifier ';'
 endpackage : 'endpackage' ( ':' upperCaseIdentifier )?
     ;
 
+PPDEF : '`define' .*? '\r'? '\n' -> channel(2) ;
+PPTOK : '`'[A-Za-z0-9_]+ -> channel(2) ;
+
 UpperCaseIdentifier :
     [A-Z][a-zA-Z0-9_]*
     ;
@@ -563,5 +566,5 @@ bvischedule :
     ;
 
 WS : [ \r\t\n]+ -> skip ;
-ONE_LINE_COMMENT   : '//' .*? '\r'? '\n' -> channel (HIDDEN) ;
-INLINE_COMMENT : '/*' .*? '*/' -> channel (HIDDEN) ;
+ONE_LINE_COMMENT   : '//' .*? '\r'? '\n' -> channel (3) ;
+INLINE_COMMENT : '/*' .*? '*/' -> channel (3) ;
