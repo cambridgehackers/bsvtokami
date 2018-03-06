@@ -7,6 +7,11 @@ ppfiles=""
 doremove=0
 
 export BSVSEARCHPATH="$scriptdir/lib"
+for f in $*; do
+    if [ -d $f ]; then
+	BSVSEARCHPATH="$BSVSEARCHPATH:$f"
+    fi
+done
 for d in $BLUESPECDIR/BSVSource/*; do
     BSVSEARCHPATH="$BSVSEARCHPATH:$d"
 done
@@ -14,9 +19,13 @@ echo BSVSEARCHPATH="$BSVSEARCHPATH"
 
 if [ -d $scriptdir/connectal ]; then
     for f in $*; do
-	fdir=`dirname $f`
-	$scriptdir/connectal/scripts/bsvpreprocess.py -I$fdir -I$scriptdir -I. $f > $f.pp
-	ppfiles="$ppfiles $f.pp"
+	if [ -d $f ]; then
+	    true
+	elif [ -f $f ]; then
+	    fdir=`dirname $f`
+	    $scriptdir/connectal/scripts/bsvpreprocess.py -DBSVTOKAMI -I$fdir -I$scriptdir -I. $f > $f.pp
+	    ppfiles="$ppfiles $f.pp"
+	fi
     done
     doremove=0
 else
