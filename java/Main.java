@@ -32,21 +32,24 @@ class BSVErrorListener implements ANTLRErrorListener {
     }
 }
 
-class StackedTokenSource implements TokenSource {
+class PreprocessedTokenSource implements TokenSource {
     Stack<TokenSource> tokenSources = new Stack<>();
     Stack<Boolean> condStack = new Stack<>();
     Stack<Boolean> validStack = new Stack<>();
     HashMap<String,Token> defines = new HashMap<>();
     TokenSource tokenSource = null;
-    static String[] searchDirs = new String[0];
+    String[] searchDirs = new String[0];
     
-    StackedTokenSource() {
+    PreprocessedTokenSource() {
 	condStack.push(true);
 	validStack.push(true);
 	Map<String,String> env = System.getenv();
 	if (env.containsKey("BSVSEARCHPATH")) {
 	    searchDirs = env.get("BSVSEARCHPATH").split(":");
 	}
+    }
+    void define(String ident) {
+	defines.put(ident, null);
     }
     void push(TokenSource tokenSource) {
 	System.err.println(String.format("pushing token source %s", tokenSource.getSourceName()));
@@ -60,10 +63,11 @@ class StackedTokenSource implements TokenSource {
 	System.err.println(String.format("popped to source %s", tokenSource.getSourceName()));
     }
 
-    static String findIncludeFile(String includeName) {
+    String findIncludeFile(String includeName) {
 	for (String path: searchDirs) {
 	    String filename = String.format("%s/%s", path, includeName);
 	    File file = new File(filename);
+	    System.err.println(String.format("Trying %s %s", filename, file.exists()));
 	    if (file.exists())
 		return filename;
 	}
@@ -126,22 +130,25 @@ class StackedTokenSource implements TokenSource {
 		    String identText = ident.getText();
 
 		    condStack.push(defines.containsKey(identText));
-		    validStack.push(condStack.peek() && validStack.peek());
+		    if (text.equals("`ifdef"))
+			validStack.push(condStack.peek() && validStack.peek());
+		    else
+			validStack.push(!condStack.peek() && validStack.peek());
 
-		    System.err.println(String.format("preprocessor ifdef %d %s cond %s valid %s %d",
-						     ident.getChannel(), identText, condStack.peek(), validStack.peek(), validStack.size()));
+		    System.err.println(String.format("preprocessor %s %d %s cond %s valid %s %d",
+						     text, ident.getChannel(), identText, condStack.peek(), validStack.peek(), validStack.size()));
 		} else if (text.equals("`else")) {
 
 		    condStack.push(!condStack.pop());
 		    validStack.pop();
 		    validStack.push(condStack.peek() && validStack.peek());
 
-		    System.err.println(String.format("preprocessor else cond %s valid %s %d",
+		    System.err.println(String.format("preprocessor `else cond %s valid %s %d",
 						     condStack.peek(), validStack.peek(), validStack.size()));
 		} else if (text.equals("`endif")) {
 		    condStack.pop();
 		    validStack.pop();
-		    System.err.println(String.format("preprocessor endif cond %s valid %s %d",
+		    System.err.println(String.format("preprocessor `endif cond %s valid %s %d",
 						     condStack.peek(), validStack.peek(), validStack.size()));
 		} else if (text.equals("`include")) {
 		    Token filenameToken = tokenSource.nextToken();
@@ -191,10 +198,11 @@ class Main {
          */
         Lexer lexer = new BSVLexer(charStream);
 
-	StackedTokenSource stackedTokenSource = new StackedTokenSource();
-	stackedTokenSource.push(lexer);
+	PreprocessedTokenSource preprocessedTokenSource = new PreprocessedTokenSource();
+	preprocessedTokenSource.push(lexer);
+	preprocessedTokenSource.define("BSVTOKAMI");
 
-	CommonTokenStream commonTokenStream = new CommonTokenStream(stackedTokenSource);
+	CommonTokenStream commonTokenStream = new CommonTokenStream(preprocessedTokenSource);
 
         /*
          * make a Parser on the token stream
