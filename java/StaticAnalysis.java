@@ -208,6 +208,8 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 	    BSVParser.FunctionprotoContext functionproto = def.functionproto();
 	    BSVParser.ModuleprotoContext moduleproto = def.moduleproto();
 	    BSVParser.VardeclContext vardecl = def.vardecl();
+	    if (ctx.provisos() != null)
+		visit(ctx.provisos());
 	    if (functionproto != null)
 		visit(functionproto);
 	    if (moduleproto != null)
@@ -226,6 +228,9 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 	    BSVParser.VarassignContext varassign = def.varassign();
 	    // Add a scope to catch the symbol table entry
 	    pushScope(ctx, SymbolTable.ScopeType.TypeClassInstance, ctx.typeclasside(0).getText());
+
+	    if (ctx.provisos() != null)
+		visit(ctx.provisos());
 	    if (functiondef != null)
 		visit(functiondef);
 	    if (moduledef != null)
@@ -267,6 +272,8 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         symbolTable.bind(packageName, modulename,
                          new SymbolTableEntry(modulename, moduletype));
         pushScope(ctx, SymbolTable.ScopeType.Module, modulename);
+	if (ctx.moduleproto().provisos() != null)
+	    visit(ctx.moduleproto().provisos());
 
 	BSVParser.MethodprotoformalsContext formals = ctx.moduleproto().methodprotoformals();
 	if (formals != null) {
@@ -306,6 +313,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         BSVType methodType = new BSVType(); // FIXME
         symbolTable.bind(methodName, new SymbolTableEntry(methodName, methodType));
         pushScope(ctx, SymbolTable.ScopeType.Action, methodName);
+
         if (ctx.methodformals() != null) {
             for (BSVParser.MethodformalContext methodformal: ctx.methodformals().methodformal()) {
                 // FIXME: if type is not here, get it from the interface decl
@@ -323,6 +331,8 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         }
         if (ctx.methodcond() != null)
             visit(ctx.methodcond());
+	if (ctx.provisos() != null)
+	    visit(ctx.provisos());
         for (BSVParser.StmtContext stmt: ctx.stmt())
             visit(stmt);
         if (ctx.expression() != null)
@@ -390,6 +400,8 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         System.err.println(String.format("entering functiondef %s {", functionname));
         // save the lexical scope
         pushScope(ctx, SymbolTable.ScopeType.Action, functionname);
+	if (ctx.functionproto().provisos() != null)
+	    visit(ctx.functionproto().provisos());
 	if (functionproto.methodprotoformals() != null) {
 	    for (BSVParser.MethodprotoformalContext formal: functionproto.methodprotoformals().methodprotoformal()) {
 		visit(formal);
@@ -528,4 +540,33 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         typeVisitor.visit(ctx.binopexpr());
         return null;
     }
+
+    @Override public Void visitProvisos(BSVParser.ProvisosContext ctx) {
+	return visitChildren(ctx);
+    }
+
+    private void bindFreeTypeVars(BSVType t) {
+	System.err.println(String.format("bindFreeTypeVars %s %s entry %s", t, t.isVar, symbolTable.lookupType(t.name)));
+	if (t.isVar) {
+	    SymbolTableEntry entry = symbolTable.lookupType(t.name);
+	    if (entry == null) {
+		symbolTable.bindType(t.name, t);
+	    }
+	} else {
+	    for (BSVType p : t.params) {
+		bindFreeTypeVars(p);
+	    }
+	}
+    }
+
+    @Override public Void visitProviso(BSVParser.ProvisoContext proviso) {
+	System.err.println("visiting proviso " + proviso.getText());
+	String varName = proviso.var.getText();
+	for (BSVParser.BsvtypeContext t : proviso.bsvtype()) {
+	    BSVType bsvtype = typeVisitor.visit(t);
+	    bindFreeTypeVars(bsvtype);
+	}
+	return null;
+    }
+
 }
