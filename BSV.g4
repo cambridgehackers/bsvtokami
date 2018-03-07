@@ -325,7 +325,7 @@ exprprimary :
     | 'reset_by' exprprimary #resetbyexpr
     | bsvtype '’' ( ( '{' expression (',' expression)* '}' ) | ( '(' expression ')' )) #typeassertion
     | tag=upperCaseIdentifier '{' memberbinds '}' #structexpr
-    | 'tagged' upperCaseIdentifier (('{' memberbinds '}' ) | (exprprimary) | ) #taggedunionexpr
+    | 'tagged' tag=upperCaseIdentifier (('{' memberbinds '}' ) | (exprprimary) | ) #taggedunionexpr
     | 'interface' bsvtype (';')? (interfacestmt)* 'endinterface' (':' typeide)? #interfaceexpr
     | attributeinstance* 'rules' (':' lowerCaseIdentifier)? (rulesstmt)* 'endrules' (':' lowerCaseIdentifier)?
       #rulesexpr
@@ -385,8 +385,8 @@ ifstmt :
     'if' '(' condpredicate ')' stmt ('else' stmt)?
     ;
 casestmt :
-    'case' '(' expression ')' (casestmtitem)* (bigdefaultitem)? 'endcase'
-    | 'case' '(' expression ')' 'matches' (casestmtpatitem)* (bigdefaultitem)? 'endcase'
+    'case' '(' expression ')' (casestmtitem)* (casestmtdefaultitem)? 'endcase'
+    | 'case' '(' expression ')' 'matches' (casestmtpatitem)* (casestmtdefaultitem)? 'endcase'
     ;
 casestmtitem :
     expression (',' expression)* ':' stmt
@@ -394,7 +394,7 @@ casestmtitem :
 casestmtpatitem :
     pattern ('&&&' expression)* ':' stmt
     ;
-bigdefaultitem :
+casestmtdefaultitem :
     'default' (':')? stmt
     ;
 whilestmt :
@@ -411,13 +411,13 @@ foroldinit :
     simplevarassign (',' simplevarassign)*
     ;
 simplevarassign :
-    lowerCaseIdentifier '=' expression
+    var=lowerCaseIdentifier '=' expression
     ;
 fornewinit :
-    bsvtype lowerCaseIdentifier '=' expression (',' simplevardeclassign)*
+    bsvtype var=lowerCaseIdentifier '=' expression (',' simplevardeclassign)*
     ;
 simplevardeclassign :
-    bsvtype? lowerCaseIdentifier '=' expression
+    bsvtype? var=lowerCaseIdentifier '=' expression
     ;
 fortest :
     expression
@@ -432,7 +432,7 @@ condpredicate :
     matchee=expression ('&&&' condpredicate)?
     ;
 pattern :
-    '.' lowerCaseIdentifier
+    '.' var=lowerCaseIdentifier
     | '.*'
     | constantpattern
     | taggedunionpattern
@@ -454,10 +454,10 @@ RealLiteral : [0-9]+'.'[0-9]+ ;
 StringLiteral : '"' (~ [\n\r])* '"'
     ;
 taggedunionpattern :
-    'tagged' upperCaseIdentifier (pattern)?
+    'tagged' tag=upperCaseIdentifier (pattern)?
     ;
 structpattern :
-    'tagged' upperCaseIdentifier '{' lowerCaseIdentifier ':' pattern (',' lowerCaseIdentifier ':' pattern)* '}'
+    'tagged' tag=upperCaseIdentifier '{' lowerCaseIdentifier ':' pattern (',' lowerCaseIdentifier ':' pattern)* '}'
     ;
 tuplepattern :
     '{' pattern (',' pattern)* '}'

@@ -37,8 +37,13 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
         registers = new ArrayList<>();
     }
 
-    public Value evaluate(String modulename, ParserRuleContext pkgdef) {
+    public void evaluate(ParserRuleContext pkgdef) {
         visit(pkgdef);
+    }
+
+    public Value evaluateModule(String modulename, ParserRuleContext pkgdef) {
+        visit(pkgdef);
+
         this.modulename = modulename;
         isElaborating = true;
         finishCalled = false;
@@ -130,7 +135,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 
     private void pushScope(ParserRuleContext ctx) {
         SymbolTable newScope = staticAnalyzer.getScope(ctx);
-        System.err.println("pushScope { " + newScope);
+        System.err.println(String.format("pushScope { %s-%s", newScope.name, newScope));
         pushScope(newScope);
     }
     private void pushScope(Rule rule) {
@@ -558,14 +563,20 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          */
         @Override public Value visitModuledef(BSVParser.ModuledefContext ctx) {
             String moduleName = ctx.moduleproto().name.getText();
+	    System.err.println(String.format("Evaluating module def %s %s:%d",
+					     moduleName,
+					     ctx.start.getTokenSource().getSourceName(),
+					     ctx.start.getLine()));
             SymbolTable moduleScope = staticAnalyzer.getScope(ctx); //.copy(scope);
             FunctionValue constructor = new FunctionValue(moduleName, ctx, moduleScope, scope);
             SymbolTableEntry entry = scope.lookup(moduleName);
+	    assert entry != null : String.format("failed to find symbol table entry for %s", moduleName);
             entry.value = constructor;
             return constructor;
         }
 
     public Value instantiateModule(String instanceName, FunctionValue constructor) {
+	assert constructor != null;
         System.err.println("Instantiating module " + constructor.name);
         if (constructor.name.equals("mkReg")) {
             RegValue reg = new RegValue(instanceName, constructor.args.get(0));
@@ -1254,7 +1265,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public Value visitBigdefaultitem(BSVParser.BigdefaultitemContext ctx) { return visitChildren(ctx); }
+        @Override public Value visitCasestmtdefaultitem(BSVParser.CasestmtdefaultitemContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
          *
@@ -1471,7 +1482,21 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public Value visitImportbvi(BSVParser.ImportbviContext ctx) { return visitChildren(ctx); }
+        @Override public Value visitImportbvi(BSVParser.ImportbviContext ctx) {
+            String moduleName = ctx.moduleproto().name.getText();
+	    System.err.println(String.format("Evaluating module def %s %s:%d",
+					     moduleName,
+					     ctx.start.getTokenSource().getSourceName(),
+					     ctx.start.getLine()));
+            SymbolTable moduleScope = staticAnalyzer.getScope(ctx); //.copy(scope);
+	    int argCount = (ctx.moduleproto().methodprotoformals() == null) ? 0 : ctx.moduleproto().methodprotoformals().methodprotoformal().size();
+	    // fixme
+            FunctionValue constructor = new FunctionValue(moduleName, argCount, moduleScope, scope);
+            SymbolTableEntry entry = scope.lookup(moduleName);
+	    assert entry != null : String.format("failed to find symbol table entry for %s", moduleName);
+            entry.value = constructor;
+	    return constructor;
+	}
         /**
          * {@inheritDoc}
          *

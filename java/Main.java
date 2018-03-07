@@ -253,7 +253,7 @@ class Main {
 	}
 	staticAnalyzer.visitPackage(pkgName, packagedef);
 	Evaluator evaluator = new Evaluator(staticAnalyzer);
-	evaluator.evaluate(pkgName, packagedef);
+	evaluator.evaluate(packagedef);
 	return packagedef;
     }
 
@@ -281,7 +281,7 @@ class Main {
 		System.err.println("finished processing package " + pkgName);
 
 		System.err.println("Evaluating module mkMain"); Evaluator evaluator = new Evaluator(staticAnalyzer);
-		evaluator.evaluate("mkMain", packagedef);
+		evaluator.evaluateModule("mkMain", packagedef);
 		while (!evaluator.isFinished()) {
 		    evaluator.runRulesOnce();
 		}

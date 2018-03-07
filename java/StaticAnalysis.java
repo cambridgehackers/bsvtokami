@@ -59,6 +59,12 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         symbolTable = symbolTable.parent;
     }
 
+    private String sourceLocation(ParserRuleContext ctx) {
+	Token start = ctx.start;
+	TokenSource source = start.getTokenSource();
+	return String.format("%s:%d", source.getSourceName(), start.getLine());
+    }
+
     private boolean isModuleContext() {
         SymbolTable s = symbolTable;
         while (s != null) {
@@ -354,8 +360,6 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     @Override public Void visitStmt(BSVParser.StmtContext ctx) {
         System.err.println("visit stmt");
         return visitChildren(ctx);
-        //System.err.println("unhandled visitStmt " + ctx.getText());
-        //return null;
     }
     @Override public Void visitMethodproto(BSVParser.MethodprotoContext ctx) {
         String methodname = ctx.name.getText();
@@ -394,8 +398,8 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 
     @Override public Void visitFunctiondef(BSVParser.FunctiondefContext ctx) {
         BSVParser.FunctionprotoContext functionproto = ctx.functionproto();
-        System.err.println("visit functiondef " + functionproto);
         String functionname = functionproto.name.getText();
+        System.err.println("visit functiondef " + functionname);
 	visit(functionproto);
         System.err.println(String.format("entering functiondef %s {", functionname));
         // save the lexical scope
@@ -526,6 +530,108 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         }
         return null;
     }
+    @Override public Void visitIfstmt(BSVParser.IfstmtContext ctx) {
+	return visitChildren(ctx);
+    }
+    @Override public Void visitCasestmt(BSVParser.CasestmtContext ctx) {
+	return visitChildren(ctx);
+    }
+    @Override public Void visitCasestmtitem(BSVParser.CasestmtitemContext ctx)  {
+	return visitChildren(ctx);
+    }
+
+    @Override public Void visitCasestmtpatitem(BSVParser.CasestmtpatitemContext ctx)  {
+	pushScope(ctx, SymbolTable.ScopeType.CaseStmt, ctx.pattern().getText());
+	visit(ctx.pattern());
+	for (BSVParser.ExpressionContext expr: ctx.expression())
+	    visit(expr);
+	visit(ctx.stmt());
+	popScope();
+	return null;
+    }
+
+    @Override public Void visitCasestmtdefaultitem(BSVParser.CasestmtdefaultitemContext ctx)  {
+	return visitChildren(ctx);
+    }
+    @Override public Void visitWhilestmt(BSVParser.WhilestmtContext ctx)  {
+	assert false : "Unimplemented while stmt" + sourceLocation(ctx);
+	return visitChildren(ctx);
+    }
+    @Override public Void visitForstmt(BSVParser.ForstmtContext ctx)  {
+	pushScope(ctx, SymbolTable.ScopeType.Loop, sourceLocation(ctx));
+	visit(ctx.forinit());
+	visit(ctx.fortest());
+	visit(ctx.forincr());
+	visit(ctx.stmt());
+	popScope();
+	return null;
+    }
+    @Override public Void visitForinit(BSVParser.ForinitContext ctx)  {
+	return visitChildren(ctx);
+    }
+    @Override public Void visitFornewinit(BSVParser.FornewinitContext ctx) {
+	BSVType bsvtype = typeVisitor.visit(ctx.bsvtype());
+	String varname = ctx.var.getText();
+	symbolTable.bind(varname, bsvtype);
+	typeVisitor.visit(ctx.expression()); //FIXME
+	for (BSVParser.SimplevardeclassignContext vardecl: ctx.simplevardeclassign()) {
+	    if (vardecl.bsvtype() != null)
+		bsvtype = typeVisitor.visit(vardecl.bsvtype());
+	    varname = vardecl.var.getText();
+	    symbolTable.bind(varname, bsvtype);
+	    typeVisitor.visit(vardecl.expression());
+	}
+	return null;
+    }
+    @Override public Void visitForoldinit(BSVParser.ForoldinitContext ctx) {
+	assert false : "Unimplemented for old init " + sourceLocation(ctx);
+	return visitChildren(ctx);
+    }
+
+    @Override public Void visitSimplevardeclassign(BSVParser.SimplevardeclassignContext ctx) {
+	assert false : "Unimplemented simple var decl assign " + sourceLocation(ctx);
+	return null;
+    }
+    @Override public Void visitFortest(BSVParser.FortestContext ctx) {
+	return visitChildren(ctx);
+    }
+    @Override public Void visitForincr(BSVParser.ForincrContext ctx) {
+	return visitChildren(ctx);
+    }
+    @Override public Void visitVarincr(BSVParser.VarincrContext ctx) {
+	return visitChildren(ctx);
+    }
+
+    @Override public Void visitPattern(BSVParser.PatternContext ctx)  {
+	if (ctx.var != null) {
+	    String varname = ctx.var.getText();
+	    symbolTable.bind(varname, new BSVType());
+	} else {
+	    visitChildren(ctx);
+	}
+	return null;
+    }
+    @Override public Void visitConstantpattern(BSVParser.ConstantpatternContext ctx) {
+	return null;
+    }
+    @Override public Void visitTaggedunionpattern(BSVParser.TaggedunionpatternContext ctx)  {
+	String tag = ctx.tag.getText();
+	if (ctx.pattern() != null)
+	    visit(ctx.pattern());
+	return null;
+    }
+    @Override public Void visitStructpattern(BSVParser.StructpatternContext ctx)  {
+	String tag = ctx.tag.getText();
+	for (BSVParser.PatternContext pat: ctx.pattern())
+	    visit(pat);
+	return null;
+    }
+    @Override public Void visitTuplepattern(BSVParser.TuplepatternContext ctx)  {
+	for (BSVParser.PatternContext pat: ctx.pattern())
+	    visit(pat);
+	return visitChildren(ctx);
+    }
+
     @Override public Void visitBeginendblock(BSVParser.BeginendblockContext block) {
         System.err.println("entering block {");
         pushScope(block, symbolTable.scopeType, "begin");

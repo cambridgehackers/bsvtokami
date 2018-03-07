@@ -28,6 +28,7 @@ if [ -d $scriptdir/connectal ]; then
 	fi
     done
     doremove=0
+    ppfiles="$*"
 else
     ppfiles="$*"
 fi

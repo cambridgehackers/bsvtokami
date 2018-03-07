@@ -1,15 +1,5 @@
-`define BSVTOKAMI
-
-`ifdef BSVTOKAMI
 package Vector;
-`else
-package FooVector;
-import Vector::*;
-import FooMonad::*;
-`endif
 
-
-`ifdef BSVTOKAMI
 interface Vector#(numeric type len, type element_type);
 endinterface
 
@@ -21,7 +11,6 @@ typeclass VectorOps#(type index_type);
    function Vector#(len, element_type) update(Vector#(len, element_type) vector, index_type offset, element_type v);
    function element_type select(Vector#(len, element_type) vector, index_type offset);
  endtypeclass
-`endif
 
 function Vector#(len, element_type) genWith(function element_type func(Integer xi));
    function Vector#(len, element_type) genWithRec(Vector#(len, element_type) vect, Integer i);
@@ -500,14 +489,12 @@ function m#(Vector#(vsize, element_type)) genWithM(function m#(element_type) fun
    Vector#(vsize, Integer) indices = genVector;
    Vector#(vsize, element_type) result = newVector;
 
-`ifdef MONAD
    function m#(Vector#(vsize, element_type)) upd(element_type elt);
       Integer i = 0;
-      return \return (update(result, i, elt));
+      //return \return (update(result, i, elt));
    endfunction
 
-   return \return (result);
-`endif
+   //return \return (result);
 endfunction
 
 function m#(Vector#(vsize, b_type)) mapM( function m#(b_type) func(a_type x),

@@ -149,6 +149,15 @@ typedef union tagged {
    Void Invalid;
    } Maybe#(type a) deriving (Bits,Eq);
 
+function Bool isValid(Maybe#(data_t) m);
+   return (case (m) matches tagged Valid: return True; default: return False; endcase); 
+endfunction
+
+function data_t fromMaybe( data_t defaultval,
+                           Maybe#(data_t) val ) ;
+   return (case (m) matches tagged Valid .val: return val; default: return defaultval; endcase); 
+endfunction
+
 function Bit#(0) \$methodready (Bit#(1) m);
    return 1;
 endfunction
@@ -232,5 +241,7 @@ endinterface
 
 module errorM#(String s)(Empty);
 endmodule
+
+function Action noAction(); endfunction
 
 endpackage

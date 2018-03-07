@@ -140,6 +140,8 @@ public class BSVType {
 	if (name.equals("Function")) {
 	    String result = "";
 	    BSVType p0 = params.get(0);
+	    assert p0 != null;
+	    assert p0.name != null;
 	    if (p0.name.equals("Function"))
 		result += "(" + p0.toString() + ")";
 	    else

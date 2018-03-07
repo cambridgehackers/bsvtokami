@@ -15,4 +15,16 @@ endinterface
 module mkFIFOF(FIFOF#(a));
 endmodule
 
+module mkUGFIFOF#(FIFOF#(element_type))
+   provisos (Bits#(element_type, width_any));
+endmodule
+
+module mkUGFIFO1#(FIFOF#(element_type))
+   provisos (Bits#(element_type, width_any));
+endmodule
+
+module mkUGSizedFIFOF#(Integer n)(FIFOF#(element_type))
+   provisos (Bits#(element_type, width_any));
+endmodule
+
 endpackage

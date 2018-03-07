@@ -713,6 +713,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 String typeide = ctx.typeide().getText();
                 // is type variable?
                 if (typeide.matches("[a-z].*")) {
+		    assert typeide != null;
+		    assert scope != null;
                     SymbolTableEntry entry = scope.lookupType(typeide);
                     BSVType bsvtype;
                     if (entry == null) {
@@ -1085,7 +1087,14 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitTaggedunionexpr(BSVParser.TaggedunionexprContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitTaggedunionexpr(BSVParser.TaggedunionexprContext ctx) {
+	    String tagname = ctx.tag.getText();
+	    SymbolTableEntry tagentry = scope.lookup(tagname);
+	    assert tagentry != null : String.format("Failed to lookup tag %s", tagname);
+	    BSVType tagtype = tagentry.type;
+	    //FIXME: check type of memberbinds here or in StaticAnalysis
+	    return tagtype;
+	}
         /**
          * {@inheritDoc}
          *
@@ -1214,7 +1223,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitBigdefaultitem(BSVParser.BigdefaultitemContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitCasestmtdefaultitem(BSVParser.CasestmtdefaultitemContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
          *
@@ -1347,14 +1356,18 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitProvisos(BSVParser.ProvisosContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitProvisos(BSVParser.ProvisosContext ctx) {
+	    return null;
+	}
         /**
          * {@inheritDoc}
          *
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitProviso(BSVParser.ProvisoContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitProviso(BSVParser.ProvisoContext ctx) {
+	    return null;
+        }
         /**
          * {@inheritDoc}
          *
