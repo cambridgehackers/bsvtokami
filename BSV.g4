@@ -136,15 +136,15 @@ derives :
     ;
 vardecl :
     attributeinstance* t=bsvtype varinit (',' varinit)*  ';' #VarBinding
-    | attributeinstance* t=bsvtype var=lowerCaseIdentifier arraydims '<-' rhs=expression ';' #ActionBinding
+    | attributeinstance* t=bsvtype var=lowerCaseIdentifier arraydim* '<-' rhs=expression ';' #ActionBinding
     | attributeinstance* 'let' (lowerCaseIdentifier | ('{' lowerCaseIdentifier (',' lowerCaseIdentifier )* '}'))  (op=('='|'<-') rhs=expression)? ';' #LetBinding
     | attributeinstance* 'match' pattern op=('='|'<-') rhs=expression ';' #PatternBinding
     ;
 varinit :
-    var=lowerCaseIdentifier arraydims ('=' rhs=expression)?
+    var=lowerCaseIdentifier arraydim* ('=' rhs=expression)?
     ;
-arraydims :
-    ('[' expression ']')*
+arraydim :
+    ('[' expression ']')
     ;
 typeclassdecl :
     'typeclass' typeclasside typeformals (provisos)? (typedepends)? ';' overloadeddecl* 'endtypeclass' (':' typeclasside)?
@@ -281,8 +281,8 @@ expression :
     ;
 
 caseexpritem :
-    pattern ('&&&' expression)* ':' expression ';'
-    | expression (',' expression)* ':' expression ';'
+    pattern ('&&&' expression)* ':' body=expression ';'
+    | expression (',' expression)* ':' body=expression ';'
     ;
 caseexprdefaultitem :
     'default' (':')? expression ';'
