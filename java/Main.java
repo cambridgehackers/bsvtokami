@@ -67,12 +67,17 @@ class PreprocessedTokenSource implements TokenSource {
 	for (String path: searchDirs) {
 	    String filename = String.format("%s/%s", path, includeName);
 	    File file = new File(filename);
-	    System.err.println(String.format("Trying %s %s", filename, file.exists()));
+	    //System.err.println(String.format("Trying %s %s", filename, file.exists()));
 	    if (file.exists())
 		return filename;
 	}
 	assert false : "No file found for include " + includeName;
 	return null;
+    }
+
+    static String sourceLocation(Token token) {
+	TokenSource source = token.getTokenSource();
+	return String.format("%s:%d", source.getSourceName(), token.getLine());
     }
 
     @Override
@@ -166,7 +171,8 @@ class PreprocessedTokenSource implements TokenSource {
 		    // substitute
 		    String identifier = token.getText().substring(1);
 		    //System.err.println(String.format("defined %s %s", identifier, defines.containsKey(identifier)));
-		    assert defines.containsKey(identifier);
+		    assert defines.containsKey(identifier) : String.format("No definition for %s at %s",
+									   token.getText(), sourceLocation(token));
 		    Token valtoken = defines.get(identifier);
 		    return valtoken;
 		}

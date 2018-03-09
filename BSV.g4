@@ -5,9 +5,9 @@ packagedef :
        | packagestmt* EOF
        ;
 
-packagedecl : 'package' pkgname=upperCaseIdentifier ';'
+packagedecl : 'package' pkgname=packageide ';'
     ;
-endpackage : 'endpackage' ( ':' upperCaseIdentifier )?
+endpackage : 'endpackage' ( ':' pkgname=packageide )?
     ;
 
 PPTOK : '`'[a-zA-Z0-9_]+ -> channel(2) ;
@@ -40,7 +40,7 @@ exportdecl :
     ;
 
 exportitem :
-    upperCaseIdentifier '::' '*'
+    packageide '::' '*'
     | identifier ('(' '..' ')')?
     ;
 
@@ -62,6 +62,9 @@ packagestmt :
     | importbvi
     | importdecl
     | exportdecl
+    ;
+packageide :
+    upperCaseIdentifier
     ;
 interfacedecl :
     attributeinstance* 'interface' typedeftype ';' (interfacememberdecl)* 'endinterface' (':' typeide)?
@@ -136,18 +139,18 @@ derives :
     ;
 vardecl :
     attributeinstance* t=bsvtype varinit (',' varinit)*  ';' #VarBinding
-    | attributeinstance* t=bsvtype var=lowerCaseIdentifier arraydim* '<-' rhs=expression ';' #ActionBinding
-    | attributeinstance* 'let' (lowerCaseIdentifier | ('{' lowerCaseIdentifier (',' lowerCaseIdentifier )* '}'))  (op=('='|'<-') rhs=expression)? ';' #LetBinding
-    | attributeinstance* 'match' pattern op=('='|'<-') rhs=expression ';' #PatternBinding
+    | attributeinstance* t=bsvtype var=lowerCaseIdentifier arraydims '<-' rhs=expression ';' #ActionBinding
+    | attributeinstance* 'let' (lowerCaseIdentifier arraydims | ('{' lowerCaseIdentifier (',' lowerCaseIdentifier )* '}'))  (op=('='|'<-') rhs=expression)? ';' #LetBinding
+    | attributeinstance* 'match' pattern op=('<-'|'=') rhs=expression ';' #PatternBinding
     ;
 varinit :
-    var=lowerCaseIdentifier arraydim* ('=' rhs=expression)?
+    var=lowerCaseIdentifier arraydims ('=' rhs=expression)?
     ;
-arraydim :
-    ('[' expression ']')
+arraydims :
+    ('[' expression ']')*
     ;
 typeclassdecl :
-    'typeclass' typeclasside typeformals (provisos)? (typedepends)? ';' overloadeddecl* 'endtypeclass' (':' typeclasside)?
+    'typeclass' typeclasside typeformals provisos? (typedepends)? ';' overloadeddecl* 'endtypeclass' (':' typeclasside)?
     ;
 typeclasside :
     upperCaseIdentifier
@@ -169,7 +172,7 @@ overloadeddecl :
     ;
 tctype : bsvtype | functionproto ;
 typeclassinstance :
-    'instance' typeclasside '#' '(' tctype (',' tctype)* ')' (provisos)? ';'
+    'instance' typeclasside '#' '(' tctype (',' tctype)* ')' provisos? ';'
     overloadeddef* 'endinstance' (':' typeclasside)?
     ;
 overloadeddef :
@@ -226,26 +229,29 @@ subinterfacedef :
     | 'interface' bsvtype? lowerCaseIdentifier '=' expression ';'
     ;
 ruledef :
-    attributeinstance* 'rule' name=lowerCaseIdentifier rulecond? ';' stmt* 'endrule' (':' lowerCaseIdentifier)?
+    attributeinstance* 'rule' name=lowerCaseIdentifier rulecond? ';' rulebody 'endrule' (':' lowerCaseIdentifier)?
     ;
 rulecond :
     ('if')? '(' condpredicate ')'
+    ;
+rulebody :
+    stmt*
     ;
 functiondef :
     attributeinstance* functionproto (( ';' (stmt)* 'endfunction' (':' lowerCaseIdentifier)? )
                                      |( '=' expression ';' ))
     ;
 functionproto :
-    'function' bsvtype? name=lowerCaseIdentifier ('(' methodprotoformals? ')')? (provisos)?
+    'function' bsvtype? name=lowerCaseIdentifier ('(' methodprotoformals? ')')? provisos?
     ;
 externcimport :
-    'import' '"BDPI"' (lowerCaseIdentifier '=')? 'function' bsvtype lowerCaseIdentifier '(' (bigcfuncargs)? ')' (provisos)? ';'
+    'import' '"BDPI"' (lowerCaseIdentifier '=')? 'function' bsvtype lowerCaseIdentifier '(' (externcfuncargs)? ')' provisos? ';'
     ;
 
-bigcfuncargs :
-    bigcfuncarg (',' bigcfuncarg)*
+externcfuncargs :
+    externcfuncarg (',' externcfuncarg)*
     ;
-bigcfuncarg :
+externcfuncarg :
     bsvtype (lowerCaseIdentifier)?
     ;
 varassign :
@@ -265,27 +271,23 @@ bsvtype :
     | typenat
     ;
 typeide :
-    (pkg=upperCaseIdentifier '::')? typename=upperCaseIdentifier
-    | typevar=lowerCaseIdentifier
+    (pkg=upperCaseIdentifier '::')? name=upperCaseIdentifier
+    | var=lowerCaseIdentifier
     | 'SizeOf'
     ;
 typenat :
     IntLiteral
     ;
 expression :
-       pred=expression '?' expression ':' expression #CondExpr
+       '(' pred=expression ')' '?' expression ':' expression #CondExpr
     |  expression 'matches' pattern #MatchesExpr
-    | 'case' '(' expression ')' 'matches'? (caseexpritem)* (caseexprdefaultitem)? 'endcase' #CaseExpr
+    | 'case' '(' expression ')' 'matches'? caseexpritem* 'endcase' #CaseExpr
     | binopexpr '?' expression ':' expression #SimpleCondExpr
     | binopexpr #OperatorExpr
     ;
 
 caseexpritem :
-    pattern ('&&&' expression)* ':' body=expression ';'
-    | expression (',' expression)* ':' body=expression ';'
-    ;
-caseexprdefaultitem :
-    'default' (':')? expression ';'
+    ('default' | (pattern (',' pattern )* ('&&&' expression)* )) ':' expression ';'
     ;
 
 binopexpr :
@@ -325,7 +327,7 @@ exprprimary :
     | 'reset_by' exprprimary #resetbyexpr
     | bsvtype '’' ( ( '{' expression (',' expression)* '}' ) | ( '(' expression ')' )) #typeassertion
     | tag=upperCaseIdentifier '{' memberbinds '}' #structexpr
-    | 'tagged' tag=upperCaseIdentifier (('{' memberbinds '}' ) | (exprprimary) | ) #taggedunionexpr
+    | taggedunionexpr  #taggedunionexprprimary
     | 'interface' bsvtype (';')? (interfacestmt)* 'endinterface' (':' typeide)? #interfaceexpr
     | attributeinstance* 'rules' (':' lowerCaseIdentifier)? (rulesstmt)* 'endrules' (':' lowerCaseIdentifier)?
       #rulesexpr
@@ -334,6 +336,10 @@ exprprimary :
     | actionvalueblock #actionvalueblockexpr
     | seqfsmstmt #seqfsmstmtexpr
     | parfsmstmt #parfsmstmtexpr
+    ;
+taggedunionexpr :
+    'tagged' tag=upperCaseIdentifier '{' memberbinds '}'
+    | 'tagged' tag=upperCaseIdentifier exprprimary?
     ;
 memberbinds :
     memberbind (',' memberbind)*
@@ -517,8 +523,12 @@ loopbodyfsmstmt :
     | 'continue' ';'
     ;
 
+portide : 
+       (lowerCaseIdentifier|upperCaseIdentifier)
+       ;
+
 importbvi :
-    'import' '"BVI"' identifier '=' moduleproto modulestmt* bvistmt* bvischedule* 'endmodule' (':' identifier)?
+    'import' '"BVI"' portide '=' moduleproto modulestmt* bvistmt* bvischedule* 'endmodule' (':' identifier)?
     ;
 
 bvistmt :

@@ -6,6 +6,7 @@ JARS = jars/antlr-4.7.1-complete.jar
 test: classes/Main.class connectal
 	./bsvparse tests/*.bsv
 	./bsvparse connectal/bsv/*.bsv
+	if [-d ssith-riscv ]; then ./bsvparser ssith-riscv/procs/lib/*.bsv ; fi
 
 classes/Main.class: java/Main.java generated/BSVParser.java generated/BSVLexer.java java/BSVToKami.java java/StaticAnalysis.java java/SymbolTable.java java/BSVTypeVisitor.java java/BSVType.java java/Evaluator.java java/Value.java $(JARS)
 	mkdir -p classes

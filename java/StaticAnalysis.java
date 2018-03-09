@@ -15,7 +15,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     StaticAnalysis() {
         scopes = new HashMap<ParserRuleContext, SymbolTable>();
         packages = new HashMap<String, SymbolTable>();
-        typeVisitor = new BSVTypeVisitor();
+        typeVisitor = new BSVTypeVisitor(this);
 	symbolTable = new SymbolTable(null, SymbolTable.ScopeType.Package, "Global");
         typeVisitor.pushScope(symbolTable);
     }
@@ -59,7 +59,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         symbolTable = symbolTable.parent;
     }
 
-    private String sourceLocation(ParserRuleContext ctx) {
+    static String sourceLocation(ParserRuleContext ctx) {
 	Token start = ctx.start;
 	TokenSource source = start.getTokenSource();
 	return String.format("%s:%d", source.getSourceName(), start.getLine());
@@ -266,8 +266,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
             bsvtype = typeVisitor.visit(ctx.bsvtype());
         else
             bsvtype = typeVisitor.visit(ctx.functionproto());
-        symbolTable.bind(packageName, typedefname,
-                         new SymbolTableEntry(typedefname, bsvtype));
+        symbolTable.bindType(packageName, typedefname, bsvtype);
         return null;
     }
 
@@ -358,7 +357,6 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         return null;
     }
     @Override public Void visitStmt(BSVParser.StmtContext ctx) {
-        System.err.println("visit stmt");
         return visitChildren(ctx);
     }
     @Override public Void visitMethodproto(BSVParser.MethodprotoContext ctx) {
@@ -440,6 +438,8 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
             String varName = varinit.var.getText();
             if (varinit.rhs != null) {
                 BSVType rhstype = typeVisitor.visit(varinit.rhs);
+		assert rhstype != null : "Null rhstype " + varinit.getText() + " at " + sourceLocation(varinit.rhs);
+		System.err.println("varbinding " + rhstype + " " + varinit.getText());
                 try {
                     bsvtype.unify(rhstype);
                 } catch (InferenceError e) {
@@ -541,6 +541,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     }
 
     @Override public Void visitCasestmtpatitem(BSVParser.CasestmtpatitemContext ctx)  {
+	System.err.println("visit case stmt pat item " + ctx.getText());
 	pushScope(ctx, SymbolTable.ScopeType.CaseStmt, ctx.pattern().getText());
 	visit(ctx.pattern());
 	for (BSVParser.ExpressionContext expr: ctx.expression())
@@ -605,8 +606,10 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     @Override public Void visitPattern(BSVParser.PatternContext ctx)  {
 	if (ctx.var != null) {
 	    String varname = ctx.var.getText();
+	    System.err.println(String.format("binding pattern var %s", varname));
 	    symbolTable.bind(varname, new BSVType());
 	} else {
+	    System.err.println(String.format("visiting pattern %s", ctx.getText()));
 	    visitChildren(ctx);
 	}
 	return null;
@@ -643,8 +646,30 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         return null;
     }
     @Override public Void visitOperatorExpr(BSVParser.OperatorExprContext ctx) {
-        typeVisitor.visit(ctx.binopexpr());
+        visit(ctx.binopexpr());
         return null;
+    }
+
+    @Override public Void visitMatchesExpr(BSVParser.MatchesExprContext ctx) { return visitChildren(ctx); }
+    @Override public Void visitCaseExpr(BSVParser.CaseExprContext ctx) {
+	visit(ctx.expression());
+	for (BSVParser.CaseexpritemContext item: ctx.caseexpritem()) {
+	    System.err.println("visit case expr item " + item.getText());
+	    pushScope(ctx, SymbolTable.ScopeType.CaseStmt, "caseexpr");
+	    for (BSVParser.PatternContext pattern : item.pattern()) {
+		visit(pattern);
+	    }
+	    for (BSVParser.ExpressionContext expr: item.expression()) {
+		visit(expr);
+	    }
+	    popScope();
+	}
+	return null;
+    }
+
+    @Override public Void visitReturnexpr(BSVParser.ReturnexprContext ctx) {
+	visit(ctx.expression());
+	return null;
     }
 
     @Override public Void visitProvisos(BSVParser.ProvisosContext ctx) {

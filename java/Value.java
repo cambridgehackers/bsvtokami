@@ -1,4 +1,6 @@
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 class Value {
@@ -18,7 +20,53 @@ class VoidValue extends Value {
 
 class IntValue extends Value {
     final int value;
-    IntValue(int x) { value = x;}
+    final int width;
+    final static Pattern verilogIntPattern = Pattern.compile("([0-9]*)'([bdho])?([A-Za-z0-9]+)");
+
+    IntValue(int x) {
+	value = x;
+	width = 0;
+    }
+    IntValue(int x, int width) {
+	value = x;
+	this.width = 0;
+    }
+
+    void tryMatch(String pat, String x) {
+	System.err.println(String.format("Match %s %s %s", pat, x, Pattern.matches(pat, x)));
+    }
+
+    IntValue(String x) {
+	Matcher m = verilogIntPattern.matcher(x);
+	//tryMatch("[0-9]*.*", x);
+	//tryMatch("[0-9]*'.*", x);
+	//tryMatch("[0-9]*'[bdho]?.*", x);
+	//tryMatch("[0-9]*'[bdho]?[A-Za-z0-9]+.*", x);
+	//tryMatch("[0-9]*'[bdho]?[A-Za-z0-9]+", x);
+	if (m.matches()) {
+	    String widthspec = m.group(1);
+	    String basespec = m.group(2);
+	    int base = 10;
+	    if (basespec.equals("b")) {
+		base = 2;
+	    } else if (basespec.equals("o")) {
+		base = 8;
+	    } else if (basespec.equals("h")) {
+		base = 16;
+	    } else {
+		assert basespec.length() == 0;
+		base = 10;
+	    }
+	    if (widthspec.length() > 0)
+		width = Integer.parseInt(widthspec);
+	    else
+		width = 0;
+	    value = Integer.parseInt(m.group(3), base);
+	} else {
+	    value = Integer.parseInt(x);
+	    width = 0;
+	}
+    }
 
     @Override
     public Value unop(String op) {
@@ -238,7 +286,7 @@ class Rule extends Value {
             this.condpredicate = ruledef.rulecond().condpredicate();
         else
             this.condpredicate = null;
-        this.body = ruledef.stmt();
+        this.body = ruledef.rulebody().stmt();
         this.context = context;
     }
     public String toString() {

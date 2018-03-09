@@ -31,7 +31,14 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 
     Evaluator(StaticAnalysis staticAnalyzer) {
         this.staticAnalyzer = staticAnalyzer;
-        typeVisitor = new BSVTypeVisitor();
+        typeVisitor = new BSVTypeVisitor(staticAnalyzer);
+        scopeStack = new Stack<>();
+        rules = new ArrayList<>();
+        registers = new ArrayList<>();
+    }
+    Evaluator(StaticAnalysis staticAnalyzer, BSVTypeVisitor typeVisitor) {
+        this.staticAnalyzer = staticAnalyzer;
+        this.typeVisitor = typeVisitor;
         scopeStack = new Stack<>();
         rules = new ArrayList<>();
         registers = new ArrayList<>();
@@ -260,6 +267,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
+	@Override public Value visitPackageide(BSVParser.PackageideContext ctx) { return visitChildren(ctx); }
         @Override public Value visitInterfacedecl(BSVParser.InterfacedeclContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
@@ -394,22 +402,26 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public Value visitDerives(BSVParser.DerivesContext ctx) { return visitChildren(ctx); }
-        /**
-         * {@inheritDoc}
-         *
-         * <p>The default implementation returns the result of calling
-         * {@link #visitChildren} on {@code ctx}.</p>
-         */
-        @Override public Value visitVarBinding(BSVParser.VarBindingContext ctx) {
-            assert false : ctx.getText();
-            return visitChildren(ctx);
+
+    @Override public Value visitVarBinding(BSVParser.VarBindingContext ctx) {
+	    try {
+		for (BSVParser.VarinitContext varinit: ctx.varinit()) {
+		    String varname = varinit.var.getText();
+		    SymbolTableEntry entry = scope.lookup(varname);
+		    assert entry != null : String.format("Could not find entry for %s at %s",
+							 varname, StaticAnalysis.sourceLocation(ctx));
+		    assert varinit.arraydims() == null : String.format("Unimplemented arraydims %s at %s",
+								       varinit.getText(),
+								       StaticAnalysis.sourceLocation(ctx));
+		    entry.value = visit(varinit.rhs);
+		}
+	    } catch (Exception e) {
+		System.err.println(String.format("ERROR: Failed to evaluate varbinding %s at %s: %s",
+						 ctx.getText(), StaticAnalysis.sourceLocation(ctx), e));
+	    }
+	    return new VoidValue();
         }
-        /**
-         * {@inheritDoc}
-         *
-         * <p>The default implementation returns the result of calling
-         * {@link #visitChildren} on {@code ctx}.</p>
-         */
+
         @Override public Value visitActionBinding(BSVParser.ActionBindingContext ctx) {
             String var = ctx.var.getText();
             SymbolTableEntry entry = scope.lookup(var);
@@ -695,6 +707,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public Value visitRulecond(BSVParser.RulecondContext ctx) { return visitChildren(ctx); }
+	@Override public Value visitRulebody(BSVParser.RulebodyContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
          *
@@ -706,7 +719,11 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
             String functionName = StaticAnalysis.unescape(ctx.functionproto().name.getText());
             System.err.println("function " + functionName + " scope " + functionScope);
             FunctionValue function = new FunctionValue(functionName, ctx, functionScope, scope);
-            scope.lookup(functionName).setValue(function);
+            SymbolTableEntry entry = scope.lookup(functionName);
+	    if (entry == null)
+		System.err.println(ctx.functionproto().getText());
+	    assert entry != null : String.format("No entry for %s at %s", functionName, StaticAnalysis.sourceLocation(ctx));
+	    entry.setValue(function);
             return function;
         }
         /**
@@ -729,14 +746,14 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public Value visitBigcfuncargs(BSVParser.BigcfuncargsContext ctx) { return visitChildren(ctx); }
+        @Override public Value visitExterncfuncargs(BSVParser.ExterncfuncargsContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
          *
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public Value visitBigcfuncarg(BSVParser.BigcfuncargContext ctx) { return visitChildren(ctx); }
+        @Override public Value visitExterncfuncarg(BSVParser.ExterncfuncargContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
          *
@@ -824,13 +841,6 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public Value visitCaseexpritem(BSVParser.CaseexpritemContext ctx) { return visitChildren(ctx); }
-        /**
-         * {@inheritDoc}
-         *
-         * <p>The default implementation returns the result of calling
-         * {@link #visitChildren} on {@code ctx}.</p>
-         */
-        @Override public Value visitCaseexprdefaultitem(BSVParser.CaseexprdefaultitemContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
          *
@@ -927,7 +937,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public Value visitIntliteral(BSVParser.IntliteralContext ctx) {
-            return new IntValue(Integer.parseInt(ctx.IntLiteral().getText()));
+            return new IntValue(ctx.IntLiteral().getText());
         }
         /**
          * {@inheritDoc}
@@ -1111,7 +1121,10 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
             BSVType bsvtype = typeVisitor.visit(ctx.bsvtype());
             assert bsvtype != null : ctx.bsvtype().getText();
             bsvtype = bsvtype.prune();
+	    bsvtype = typeVisitor.dereferenceTypedef(bsvtype);
             assert !bsvtype.isVar : ctx.bsvtype().getText();
+	    System.err.println(String.format("eval valueOf(%s) with type %s at %s",
+					     ctx.bsvtype().getText(), bsvtype, StaticAnalysis.sourceLocation(ctx)));
             return new IntValue((int)Long.parseLong(bsvtype.name));
         }
         /**
@@ -1127,6 +1140,9 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
+	@Override public Value visitTaggedunionexprprimary(BSVParser.TaggedunionexprprimaryContext ctx) {
+	    return visit(ctx.taggedunionexpr());
+	}
         @Override public Value visitTaggedunionexpr(BSVParser.TaggedunionexprContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
@@ -1476,12 +1492,10 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public Value visitLoopbodyfsmstmt(BSVParser.LoopbodyfsmstmtContext ctx) { return visitChildren(ctx); }
-        /**
-         * {@inheritDoc}
-         *
-         * <p>The default implementation returns the result of calling
-         * {@link #visitChildren} on {@code ctx}.</p>
-         */
+	@Override public Value visitPortide(BSVParser.PortideContext ctx) {
+	    assert false : "Unused";
+	    return null;
+	}
         @Override public Value visitImportbvi(BSVParser.ImportbviContext ctx) {
             String moduleName = ctx.moduleproto().name.getText();
 	    System.err.println(String.format("Evaluating module def %s %s:%d",

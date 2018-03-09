@@ -30,7 +30,7 @@ public class BSVType {
 	    name  = "Bit";
 	    params.add(new BSVType("1"));
 	}
-	numeric = name.matches("[0-9]+");
+	numeric = numeric || name.matches("[0-9]+");
 	isVar = name.matches("[a-z].*");
 	this.name = name;
     }
@@ -42,6 +42,9 @@ public class BSVType {
     }
     BSVType(String name, boolean numeric) {
 	init(name, numeric);
+    }
+    BSVType(int num) {
+	init(String.format("%d", num), true);
     }
     BSVType(String name, List<BSVType> params) {
 	init(name, false);

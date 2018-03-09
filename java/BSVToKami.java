@@ -306,7 +306,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         printstream.println("Rule ^\"" + ruleName + "\" :=");
         RegReadVisitor regReadVisitor = new RegReadVisitor(scope);
         if (rulecond != null) regReadVisitor.visit(rulecond);
-        for (BSVParser.StmtContext stmt: ruledef.stmt()) {
+        for (BSVParser.StmtContext stmt: ruledef.rulebody().stmt()) {
             regReadVisitor.visit(stmt);
         }
         for (Map.Entry<String,BSVType> entry: regReadVisitor.regs.entrySet()) {
@@ -319,7 +319,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
             visit(rulecond);
             printstream.println(");");
         }
-        for (BSVParser.StmtContext stmt: ruledef.stmt()) {
+        for (BSVParser.StmtContext stmt: ruledef.rulebody().stmt()) {
             visit(stmt);
         }
         printstream.println("        Retv (* rule " + ruledef.name.getText() + " *)" + "\n");
