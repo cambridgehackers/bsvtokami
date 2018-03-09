@@ -12,5 +12,7 @@ endinterface
 `endif
 module mkFIFO(FIFO#(element_type));
 endmodule
+module mkFIFO1(FIFO#(element_type));
+endmodule
 
 endpackage

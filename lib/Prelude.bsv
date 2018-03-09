@@ -8,14 +8,50 @@ interface Reg#(type a);
   method a _read();
   method Action _write(a v);
 endinterface
+interface Wire#(type a);
+  method a _read();
+  method Action _write(a v);
+endinterface
+
+function Reg#(a_type) asReg(Reg#(a_type) regIfc);
+   return regIfc;
+endfunction
+
+function a_type readReg(Reg#(a_type) regIfc);
+   return regIfc._read();
+endfunction
+
+function Action writeReg(Reg#(a_atype) regIfc, a_type din);
+   regIfc._write(din);
+endfunction
 
 //`ifdef BSVTOKAMI
 (* nogen *)
 //`endif
-module mkReg#(a v)(Reg#(a));
-    method Action _write(a v);
+module mkReg#(data_t v)(Reg#(data_t));
+    method Action _write(data_t v);
     endmethod
 endmodule
+module mkRegU(Reg#(data_t)) provisos (Bits#(data_t));
+    method Action _write(data_t v);
+    endmethod
+endmodule
+
+module mkBypassWire(Wire#(element_type))
+   provisos (Bits#(element_type, element_width));
+endmodule
+
+function a id(a x);
+   return x;
+endfunction
+
+function Bool \$guard(Bool cond);
+endfunction
+
+function a when(Bool cond, a expr);
+   $guard(cond);
+   return expr;
+endfunction
 
 typeclass Bits #(type a, numeric type n);
    function Bit#(n) pack(a x);
@@ -118,6 +154,16 @@ typeclass BitExtend #(numeric type m, numeric type n, type x);  // n > m
    function x#(m) truncate (x#(n) d);
 endtypeclass
 
+function Bool signedLT(a x, a y);
+   return x < y;
+endfunction
+function Bool signedGE(a x, a y);
+   return x >= y;
+endfunction
+function Bit#(asz) signedShiftRight(Bit#(asz) x, Bit#(bsz) shift);
+   return x >> shift;
+endfunction
+
 // typedef enum { Sat_Wrap
 // 	      ,Sat_Bound
 // 	      ,Sat_Zero
@@ -150,16 +196,29 @@ typedef union tagged {
    } Maybe#(type a) deriving (Bits,Eq);
 
 function Bool isValid(Maybe#(data_t) m);
-   return (case (m) matches tagged Valid: return True; default: return False; endcase); 
+   case (m) matches tagged Valid: return True; default: return False; endcase
 endfunction
 
 function data_t fromMaybe( data_t defaultval,
                            Maybe#(data_t) val ) ;
-   return (case (m) matches tagged Valid .val: return val; default: return defaultval; endcase); 
+   return (case (val) matches
+	   tagged Valid .validval: validval;
+	   tagged Invalid: defaultval;
+      endcase);
+endfunction
+
+function data_t validValue(Maybe#(data_t) val ) ;
+   return (case (val) matches
+	   tagged Valid .validval: validval;
+	   tagged Invalid: ?;
+      endcase);
 endfunction
 
 function Bit#(0) \$methodready (Bit#(1) m);
    return 1;
+endfunction
+
+function Void \$display ( a x);
 endfunction
 
 function Void \$finish ();
