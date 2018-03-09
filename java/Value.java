@@ -266,7 +266,9 @@ class FunctionValue extends Value {
             nfv = new FunctionValue(name, module, context, parentFrame);
         else
             nfv = new FunctionValue(name, method, context, parentFrame);
-        nfv.args = (ArrayList<Value>)args.clone();
+	@SuppressWarnings("unchecked")
+	ArrayList<Value> alv = (ArrayList<Value>)(args.clone());
+	nfv.args = alv;
         return nfv;
     }
     int remainingArgCount() {

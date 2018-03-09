@@ -21,11 +21,13 @@ LowerCaseIdentifier :
 DollarIdentifier :
     [$][a-z][a-zA-Z0-9_$]*
     ;
+
 EscapedOperator :
     [\\][-A-Za-z0-9=+_*&^%$#@!~<>?/|]+
     ;
+
 lowerCaseIdentifier :
-    LowerCaseIdentifier | 'default_clock' | 'default_reset' | 'enable' | 'no_reset' | 'path' | 'port' | 'ready' | 'same_family' | EscapedOperator
+    LowerCaseIdentifier | 'default_clock' | 'default_reset' | 'enable' | 'module' | 'no_reset' | 'path' | 'port' | 'ready' | 'same_family' | EscapedOperator
     ;
 
 upperCaseIdentifier :
@@ -184,13 +186,18 @@ moduledef :
     attributeinstance* moduleproto (modulestmt)* 'endmodule' (':' lowerCaseIdentifier)?
     ;
 moduleproto :
-    'module' modulecontext? name=lowerCaseIdentifier
-    (  ( ('#' '(' methodprotoformals ')' )? '(' attributeinstance * bsvtype ')' )
-     | ( '(' methodprotoformals ')' ) )
-    provisos? ';'
+    'module' ('[' bsvtype ']')? name=lowerCaseIdentifier (moduleformalparams)? '(' (moduleformalargs)? ')' provisos? ';'
     ;
-modulecontext :
-    '[' bsvtype ']'
+moduleformalparams :
+    '#' '(' moduleformalparam (',' moduleformalparam)* ')'
+    ;
+moduleformalparam :
+    attributeinstance* ('parameter')? bsvtype lowerCaseIdentifier
+    | attributeinstance* ('parameter')? functionproto
+    ;
+moduleformalargs :
+    attributeinstance* bsvtype
+    | attributeinstance* bsvtype lowerCaseIdentifier (',' attributeinstance* bsvtype lowerCaseIdentifier)*
     ;
 modulestmt :
     methoddef
@@ -238,11 +245,18 @@ rulebody :
     stmt*
     ;
 functiondef :
-    attributeinstance* functionproto (( ';' (stmt)* 'endfunction' (':' lowerCaseIdentifier)? )
-                                     |( '=' expression ';' ))
+    attributeinstance* functionproto ';' (stmt)* 'endfunction' (':' lowerCaseIdentifier)?
+    | functionproto '=' expression ';'
     ;
 functionproto :
-    'function' bsvtype? name=lowerCaseIdentifier ('(' methodprotoformals? ')')? provisos?
+    'function' bsvtype? name=lowerCaseIdentifier ('(' functionformals? ')')? provisos?
+    ;
+functionformals :
+    functionformal (',' functionformal)*
+    ;
+functionformal :
+    bsvtype? lowerCaseIdentifier
+    | functionproto
     ;
 externcimport :
     'import' '"BDPI"' (lowerCaseIdentifier '=')? 'function' bsvtype lowerCaseIdentifier '(' (externcfuncargs)? ')' provisos? ';'
@@ -279,17 +293,22 @@ typenat :
     IntLiteral
     ;
 expression :
-       '(' pred=expression ')' '?' expression ':' expression #CondExpr
-    |  expression 'matches' pattern #MatchesExpr
-    | 'case' '(' expression ')' 'matches'? caseexpritem* 'endcase' #CaseExpr
+    '(' condpredicate ')' '?' expression ':' expression #CondExpr
+    | expression 'matches' pattern #MatchesExpr
+    | 'case' '(' expression ')' 'matches'? caseexpritem* 'endcase' #caseexpr
     | binopexpr '?' expression ':' expression #SimpleCondExpr
     | binopexpr #OperatorExpr
     ;
 
 caseexpritem :
-    ('default' | (pattern (',' pattern )* ('&&&' expression)* )) ':' expression ';'
+    ('default'
+    | (pattern patterncond?)
+    | (exprprimary (',' exprprimary )* )) ':' body=expression ';'
     ;
 
+patterncond :
+    ('&&&' expression)*
+    ;
 binopexpr :
        left=binopexpr op=('**' | '**') right=binopexpr
     |  left=binopexpr op=('*' | '/' | '%' | '**') right=binopexpr
@@ -305,64 +324,114 @@ binopexpr :
     ;
 unopexpr : 
      op=('!' | '~' | '&' | '~&' | '|' | '~|' | '^' | '^~' | '~^') exprprimary
-    | op=('+' | '-') unopexpr
+    | op=('+' | '-') right=unopexpr
     | exprprimary
     ;
 
+unop :
+    '+'
+    | '-'
+    | '!'
+    | '~'
+    | '&'
+    | '~&'
+    | '|'
+    | '~|'
+    | '^'
+    | '^~'
+    | '~^'
+    ;
+binop :
+    '*'
+    | '|'
+    | '%'
+    | '+'
+    | '-'
+    | '<<'
+    | '>>'
+    | '<='
+    | '>='
+    | '<'
+    | '>'
+    | '=='
+    | '!='
+    | '&'
+    | '^'
+    | '^~'
+    | '~^'
+    | '|'
+    | '&&'
+    | '||'
+    ;
+
 exprprimary :
-    '(' expression ')' #parenexpr
-    | exprprimary '.' exprfield=lowerCaseIdentifier #fieldexpr
-    | ( bsvtype | ( '(' bsvtype ')' ) ) '\'' exprprimary #castexpr
-    | (pkg=upperCaseIdentifier '::')? anyidentifier #varexpr
-    | IntLiteral #intliteral
-    | RealLiteral #realliteral
-    | StringLiteral #stringliteral
-    | '?' #undefinedexpr
-    | ('valueof' | 'valueOf') '(' bsvtype ')' #valueofexpr
-    | 'return' expression #returnexpr
-    | '{' expression (',' expression)* '}' #bitconcat
-    | array=exprprimary  '[' expression (':' expression)? ']' #arraysub
-    | fcn=exprprimary '(' (expression (',' expression)*)? ')' #callexpr
-    | 'clocked_by' exprprimary #clockedbyexpr
-    | 'reset_by' exprprimary #resetbyexpr
-    | bsvtype '’' ( ( '{' expression (',' expression)* '}' ) | ( '(' expression ')' )) #typeassertion
-    | tag=upperCaseIdentifier '{' memberbinds '}' #structexpr
-    | taggedunionexpr  #taggedunionexprprimary
-    | 'interface' bsvtype (';')? (interfacestmt)* 'endinterface' (':' typeide)? #interfaceexpr
-    | attributeinstance* 'rules' (':' lowerCaseIdentifier)? (rulesstmt)* 'endrules' (':' lowerCaseIdentifier)?
-      #rulesexpr
-    | beginendblock #blockexpr
-    | actionblock #actionblockexpr
-    | actionvalueblock #actionvalueblockexpr
-    | seqfsmstmt #seqfsmstmtexpr
-    | parfsmstmt #parfsmstmtexpr
+    '(' expression ')' #ParenExpr
+    | exprprimary '.' lowerCaseIdentifier #FieldExpr
+    | ( bsvtype | ( '(' bsvtype ')' ) ) '\'' exprprimary #CastExpr
+    | (pkg=upperCaseIdentifier '::')? var=anyidentifier #VarExpr
+    | IntLiteral #IntLiteral
+    | RealLiteral #RealLiteral
+    | StringLiteral #StringLiteral
+    | '?' #UndefExpr
+    | ('valueOf'|'valueof') '(' bsvtype ')' #ValueOfExpr
+    | 'return' expression #ReturnExpr
+    | bitconcat #BitConcatExpr
+    | array=exprprimary '[' msb=expression (':' lsb=expression)? ']' #ArraySub
+    | fcn=exprprimary '(' (expression (',' expression)*)? ')' #CallExpr
+    | 'clocked_by' exprprimary #ClockedByExpr
+    | 'reset_by' exprprimary #ResetByExpr
+    | typeassertion #TypeAssertionExpr
+    | structexpr #StructExprPrimary
+    | taggedunionexpr #TaggedUnionExprPrimary
+    | interfaceexpr #interfaceExprPrimary
+    | rulesexpr #RulesExprPrimary
+    | beginendblock #BlockExpr
+    | actionblock #ActionExpr
+    | actionvalueblock #ActionValueExpr
+    | seqfsmstmt #SeqFsmExpr
+    | parfsmstmt #ParFsmExpr
+    ;
+bitconcat :
+    '{' expression (',' expression)* '}'
+    ;
+typeassertion :
+    bsvtype '’' bitconcat
+    | bsvtype '’' '(' expression ')'
+    ;
+structexpr :
+    tag=upperCaseIdentifier '{' memberbinds '}'
+    ;
+memberbinds :
+    memberbind (',' memberbind)*
     ;
 taggedunionexpr :
     'tagged' tag=upperCaseIdentifier '{' memberbinds '}'
     | 'tagged' tag=upperCaseIdentifier exprprimary?
     ;
-memberbinds :
-    memberbind (',' memberbind)*
-    ;
 memberbind :
     field=lowerCaseIdentifier ':' expression
     ;
-
+interfaceexpr :
+    'interface' bsvtype (';')? (interfacestmt)* 'endinterface' (':' typeide)?
+    ;
 interfacestmt :
     methoddef
     | subinterfacedef
     | vardecl
     | varassign
     ;
+rulesexpr :
+    attributeinstance* 'rules' (':' lowerCaseIdentifier)? (rulesstmt)* 'endrules' (':' lowerCaseIdentifier)?
+    ;
 rulesstmt :
     ruledef
     | expression
     ;
 beginendblock :
-    'begin' (':' lowerCaseIdentifier)? (stmt)* 'end' (':' lowerCaseIdentifier)?
+    attributeinstance* 'begin' (':' lowerCaseIdentifier)? (stmt)* 'end' (':' lowerCaseIdentifier)?
     ;
 actionblock :
-    'action' (':' lowerCaseIdentifier)? (stmt)* 'endaction' (':' lowerCaseIdentifier)?
+    attributeinstance* 'action' (':' lowerCaseIdentifier)? (stmt)* 'endaction' (':' lowerCaseIdentifier)?
     ;
 actionvalueblock :
     'actionvalue' (':' lowerCaseIdentifier)? (stmt)* 'endactionvalue' (':' lowerCaseIdentifier)?
@@ -398,7 +467,7 @@ casestmtitem :
     expression (',' expression)* ':' stmt
     ;
 casestmtpatitem :
-    pattern ('&&&' expression)* ':' stmt
+    pattern patterncond? ':' stmt
     ;
 casestmtdefaultitem :
     'default' (':')? stmt
@@ -435,7 +504,9 @@ varincr :
     lowerCaseIdentifier '=' expression
     ;
 condpredicate :
-    matchee=expression ('&&&' condpredicate)?
+    matchee=condpredicate '&&&' condpredicate
+    | expression 'matches' pattern
+    | expression
     ;
 pattern :
     '.' var=lowerCaseIdentifier
@@ -443,6 +514,7 @@ pattern :
     | constantpattern
     | taggedunionpattern
     | structpattern
+    | tuplepattern
     | tuplepattern
     | '(' pattern ')'
     ;
@@ -453,14 +525,14 @@ constantpattern :
     | upperCaseIdentifier
     ;
 
-IntLiteral : ([1-9][0-9]*)?('\''[hdob]?)?[0-9a-fA-F_?]+ ;
+IntLiteral : ([1-9][0-9]*)?('\''[hdob]?)?[0-9a-fA-F_]+ ;
 
 RealLiteral : [0-9]+'.'[0-9]+ ;
 
-StringLiteral : '"' (~ [\n\r])* '"'
+StringLiteral : '"' (~ [\f\n\r\t"])* '"'
     ;
 taggedunionpattern :
-    'tagged' tag=upperCaseIdentifier (pattern)?
+    'tagged' tag=upperCaseIdentifier pattern?
     ;
 structpattern :
     'tagged' tag=upperCaseIdentifier '{' lowerCaseIdentifier ':' pattern (',' lowerCaseIdentifier ':' pattern)* '}'
@@ -472,7 +544,11 @@ attributeinstance :
     '(*' attrspec (',' attrspec)* '*)'
     ;
 attrspec :
-    identifier ('=' expression)?
+    attrname ('=' expression)?
+    ;
+attrname :
+    lowerCaseIdentifier
+    | upperCaseIdentifier
     ;
 provisos :
     'provisos' '(' proviso (',' proviso)* ')'
@@ -528,41 +604,41 @@ portide :
        ;
 
 importbvi :
-    'import' '"BVI"' portide '=' moduleproto modulestmt* bvistmt* bvischedule* 'endmodule' (':' identifier)?
+    'import' '"BVI"' portide '=' moduleproto modulestmt* bvistmt* bvischedule* 'endmodule' (':' (lowerCaseIdentifier|upperCaseIdentifier))?
     ;
 
 bvistmt :
-    'parameter' identifier '=' expression ';'
+    'parameter' portide '=' expression ';'
     | 'no_reset' ';'
-    | 'default_clock' lowerCaseIdentifier? ( '(' identifier? ')' ('=' expression )? )? ';'
-    | 'default_reset' lowerCaseIdentifier? ( '(' identifier? ')' ('=' expression )? )? ';'
-    | 'input_clock' lowerCaseIdentifier? '(' (identifier (',' attributeinstance* identifier )? )? ')' ('=' expression )? ';'
-    | 'input_reset' lowerCaseIdentifier? '(' identifier? ')' bviportopt* ('=' expression )? ';'
-    | 'output_clock' lowerCaseIdentifier '(' identifier? (',' attributeinstance* identifier )? ')' ';'
-    | 'output_reset' lowerCaseIdentifier '(' identifier? ')' bviportopt* ';'
-    | 'method' identifier? lowerCaseIdentifier ('(' ( identifier (',' identifier)*)? ')' )? bvimethodopt* ';'
-    | 'port' identifier bviportopt* '=' expression ';'
-    | 'inout' identifier bviportopt* ( '(' identifier? ')' )? ( '=' expression ) ';'
-    | 'ifc_inout' identifier bviportopt* ( '(' identifier? ')' )? ( '=' expression)? ';'
-    | 'path' '(' identifier ',' identifier ')' ';' 
-    | 'same_family' '(' identifier ',' identifier ')' ';' 
+    | 'default_clock' lowerCaseIdentifier? ( '(' portide? ')' (op=('='|'<-') expression )? )? ';'
+    | 'default_reset' lowerCaseIdentifier? ( '(' portide? ')' (op=('='|'<-') expression )? )? ';'
+    | 'input_clock' lowerCaseIdentifier? '(' (portide (',' attributeinstance* portide )? )? ')' (op=('='|'<-') expression )? ';'
+    | 'input_reset' lowerCaseIdentifier? '(' portide? ')' bviportopt* (op=('='|'<-') expression )? ';'
+    | 'output_clock' lowerCaseIdentifier '(' portide? (',' attributeinstance* portide )? ')' ';'
+    | 'output_reset' lowerCaseIdentifier '(' portide? ')' bviportopt* ';'
+    | 'method' portide? lowerCaseIdentifier ('(' ( portide (',' portide)*)? ')' )? bvimethodopt* ';'
+    | 'port' portide bviportopt* op=('='|'<-') expression ';'
+    | 'inout' portide bviportopt* ( '(' portide? ')' )? ( '=' expression ) ';'
+    | 'ifc_inout' portide bviportopt* ( '(' portide? ')' )? ( '=' expression)? ';'
+    | 'path' '(' portide ',' portide ')' ';' 
+    | 'same_family' '(' portide ',' portide ')' ';' 
     | 'interface' upperCaseIdentifier lowerCaseIdentifier ';' bvistmt* 'endinterface'
     ;
 
 bviportopt :
-    'clocked_by' '(' attributeinstance* identifier ')'
-    | 'reset_by' '(' attributeinstance* identifier ')'
+    'clocked_by' '(' attributeinstance* portide ')'
+    | 'reset_by' '(' attributeinstance* portide ')'
     ;
 bvimethodopt :
-    'clocked_by' '(' identifier ')'
-    | 'reset_by' '(' identifier ')'
-    | 'ready' '(' attributeinstance* identifier ')'
-    | 'enable' '(' attributeinstance* identifier ')'
+    'clocked_by' '(' portide ')'
+    | 'reset_by' '(' portide ')'
+    | 'ready' '(' attributeinstance* portide ')'
+    | 'enable' '(' attributeinstance* portide ')'
     ;
 
 bvimethodname :
-    bvimethodname '.' identifier
-    | identifier
+    bvimethodname '.' portide
+    | portide
     ;
 
 bvimethodnames :
@@ -574,6 +650,6 @@ bvischedule :
     'schedule' bvimethodnames ('CF' | 'SB' | 'C') bvimethodnames ';'
     ;
 
-WS : [ \r\t\n]+ -> skip ;
+WS : [ \f\n\r\t]+ -> skip ;
 ONE_LINE_COMMENT   : '//' .*? '\r'? '\n' -> channel (3) ;
 INLINE_COMMENT : '/*' .*? '*/' -> channel (3) ;

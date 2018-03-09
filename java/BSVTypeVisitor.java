@@ -849,11 +849,19 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 
     @Override public BSVType visitCaseexpritem(BSVParser.CaseexpritemContext ctx) {
 	int numExpressions = ctx.expression().size();
-	for (BSVParser.PatternContext pattern : ctx.pattern())
-	    visit(pattern);
-	BSVType bodyType = new BSVType();
-	for (BSVParser.ExpressionContext expr : ctx.expression())
-	    bodyType = visit(expr);
+	if (ctx.pattern() != null)
+	    visit(ctx.pattern());
+	BSVType matchType = new BSVType();
+	for (BSVParser.ExprprimaryContext matchExpr : ctx.exprprimary())
+	    matchType = visit(expr);
+	BSVType boolType = new BSVType("Bool");
+	if (ctx.patterncond() != null) {
+	    for (BSVParser.ExpressionContext condExpr : ctx.patterncond().expression()) {
+		BSVType condType = visit(condExpr);
+		// boolType.unify(condType);
+	    }
+	}
+	BSVType bodyType = visit(ctx.body);
 	return bodyType;
     }
         /**
