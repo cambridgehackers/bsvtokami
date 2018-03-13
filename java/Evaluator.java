@@ -178,7 +178,12 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
         @Override public Value visitPackagedef(BSVParser.PackagedefContext ctx) {
             pushScope(ctx);
             System.err.println("packagedef scope " + scope);
-            Value v = visitChildren(ctx);
+            Value v = new VoidValue();
+	    for (BSVParser.PackagestmtContext stmt: ctx.packagestmt()) {
+		v = visit(stmt);
+		assert scope != null : String.format("Popped too many scopes evaluating line %s",
+						     StaticAnalysis.sourceLocation(stmt));
+	    }
             popScope();
             return v;
         }
@@ -419,6 +424,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 	    } catch (Exception e) {
 		System.err.println(String.format("ERROR: Failed to evaluate varbinding %s at %s: %s",
 						 ctx.getText(), StaticAnalysis.sourceLocation(ctx), e));
+		e.printStackTrace();
 	    }
 	    return new VoidValue();
         }
@@ -1031,8 +1037,9 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public Value visitCallexpr(BSVParser.CallexprContext ctx) {
-            FunctionValue closure = (FunctionValue)visit(ctx.fcn);
-            assert closure != null : ctx.fcn.getText();
+	    Value fcn = visit(ctx.fcn);
+            FunctionValue closure = (FunctionValue)fcn;
+            assert closure != null : ctx.fcn.getText() + " value " + fcn + " at " + StaticAnalysis.sourceLocation(ctx.fcn);
             ArrayList<Value> argValues = new ArrayList<>();
             for (BSVParser.ExpressionContext argExpr: ctx.expression()) {
                 argValues.add(visit(argExpr));
@@ -1060,6 +1067,12 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
             System.err.println("calling " + closure.name + " fcn (" + closure.name + ") scope " + scope);
             //functionScope = functionScope.copy(closure.parentFrame);
             pushScope(defcontext);
+	    if (closure.provisos() != null) {
+		assert closure.provisos() == null
+		    : String.format("Need to evaluate provisos %s at %s",
+				    closure.provisos().getText(),
+				    StaticAnalysis.sourceLocation(closure.provisos()));
+	    }
             if (argValues.size() > 0) {
                 List<String> formalVars = (closure.function != null)
                     ? getFormalVars(closure.function)
@@ -1099,19 +1112,49 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
             popScope();
             return v;
         }
-        /**
-         * {@inheritDoc}
-         *
-         * <p>The default implementation returns the result of calling
-         * {@link #visitChildren} on {@code ctx}.</p>
-         */
+
+    long log2(long x) {
+	long logx = 0;
+	while (x > 1) {
+	    x /= 2;
+	    logx += 1;
+	}
+	return logx;
+    }
+
+    BSVType evaluateType(BSVType bsvtype) {
+	bsvtype = typeVisitor.dereferenceTypedef(bsvtype);
+	System.err.println("evaluateType " + bsvtype);
+	if (bsvtype.name.equals("TLog")) {
+	    assert bsvtype.params.size() == 1;
+	    BSVType paramtype = evaluateType(bsvtype.params.get(0));
+	    System.err.println("TLog " + paramtype);
+	    if (paramtype.numeric) {
+		long v = paramtype.asLong();
+		long log2v = log2(v);
+		System.err.println(String.format("log2(%d) = %d", v, log2v));
+		return new BSVType(log2v);
+	    }
+	} else if (bsvtype.name.equals("TDiv")) {
+	    assert bsvtype.params.size() == 2;
+	    BSVType numtype = evaluateType(bsvtype.params.get(0));
+	    BSVType denomtype = evaluateType(bsvtype.params.get(1));
+	    long div = numtype.asLong() / denomtype.asLong();
+	    System.err.println(String.format("TDiv(%d, %d) = %d", numtype.asLong(), denomtype.asLong(), div));
+	    return new BSVType(div);
+	}
+	return bsvtype;
+    }
+
         @Override public Value visitValueofexpr(BSVParser.ValueofexprContext ctx) {
             assert ctx.bsvtype() != null;
             BSVType bsvtype = typeVisitor.visit(ctx.bsvtype());
             assert bsvtype != null : ctx.bsvtype().getText();
             bsvtype = bsvtype.prune();
-	    bsvtype = typeVisitor.dereferenceTypedef(bsvtype);
-            assert !bsvtype.isVar : ctx.bsvtype().getText();
+	    bsvtype = evaluateType(bsvtype);
+            assert !bsvtype.isVar
+		: String.format("%s has type %s at %s",
+				ctx.getText(), bsvtype, StaticAnalysis.sourceLocation(ctx));
 	    System.err.println(String.format("eval valueOf(%s) with type %s at %s",
 					     ctx.bsvtype().getText(), bsvtype, StaticAnalysis.sourceLocation(ctx)));
             return new IntValue((int)Long.parseLong(bsvtype.name));
