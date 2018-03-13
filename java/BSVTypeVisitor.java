@@ -16,29 +16,29 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
     private Stack<SymbolTable> scopeStack = new Stack<>();
 
     BSVTypeVisitor(StaticAnalysis staticAnalyzer) {
-	this.staticAnalyzer = staticAnalyzer;
+        this.staticAnalyzer = staticAnalyzer;
     }
 
     public void pushScope(SymbolTable newScope)
     {
-	System.err.println("BSVTypeVisitor.pushScope() {");
+        System.err.println("BSVTypeVisitor.pushScope() {");
         scopeStack.push(scope);
         scope = newScope;
     }
     public void popScope() {
-	System.err.println("} BSVTypeVisitor.popScope()");
+        System.err.println("} BSVTypeVisitor.popScope()");
         scope = scopeStack.pop();
     }
 
     BSVType dereferenceTypedef(BSVType bsvtype) {
-	assert scope != null;
-	assert bsvtype != null;
-	SymbolTableEntry entry = scope.lookupType(bsvtype.name);
-	if (entry != null) {
-	    //fixme
-	    return entry.type;
-	}
-	return bsvtype;
+        assert scope != null;
+        assert bsvtype != null;
+        SymbolTableEntry entry = scope.lookupType(bsvtype.name);
+        if (entry != null) {
+            //fixme
+            return entry.type;
+        }
+        return bsvtype;
     }
         /**
          * {@inheritDoc}
@@ -47,9 +47,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitPackagedef(BSVParser.PackagedefContext ctx) {
-	    assert false;
-	    return null;
-	}
+            assert false;
+            return null;
+        }
         /**
          * {@inheritDoc}
          *
@@ -57,9 +57,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitPackagedecl(BSVParser.PackagedeclContext ctx) {
-	    assert false;
-	    return null;
-	}
+            assert false;
+            return null;
+        }
         /**
          * {@inheritDoc}
          *
@@ -67,9 +67,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitEndpackage(BSVParser.EndpackageContext ctx) {
-	    assert false;
-	    return null;
-	}
+            assert false;
+            return null;
+        }
         /**
          * {@inheritDoc}
          *
@@ -77,9 +77,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitLowerCaseIdentifier(BSVParser.LowerCaseIdentifierContext ctx) {
-	    assert false;
-	    return null;
-	}
+            assert false;
+            return null;
+        }
         /**
          * {@inheritDoc}
          *
@@ -94,9 +94,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitIdentifier(BSVParser.IdentifierContext ctx) {
-	    assert false;
-	    return null;
-	}
+            assert false;
+            return null;
+        }
         /**
          * {@inheritDoc}
          *
@@ -104,9 +104,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitAnyidentifier(BSVParser.AnyidentifierContext ctx) {
-	    assert false;
-	    return null;
-	}
+            assert false;
+            return null;
+        }
         /**
          * {@inheritDoc}
          *
@@ -114,9 +114,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitExportdecl(BSVParser.ExportdeclContext ctx) {
-	    assert false;
-	    return null;
-	}
+            assert false;
+            return null;
+        }
         /**
          * {@inheritDoc}
          *
@@ -124,9 +124,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitExportitem(BSVParser.ExportitemContext ctx) {
-	    assert false;
-	    return null;
-	}
+            assert false;
+            return null;
+        }
         /**
          * {@inheritDoc}
          *
@@ -134,9 +134,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitImportdecl(BSVParser.ImportdeclContext ctx) {
-	    assert false;
-	    return null;
-	}
+            assert false;
+            return null;
+        }
         /**
          * {@inheritDoc}
          *
@@ -144,9 +144,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitImportitem(BSVParser.ImportitemContext ctx) {
-	    assert false;
-	    return null;
-	}
+            assert false;
+            return null;
+        }
         /**
          * {@inheritDoc}
          *
@@ -154,20 +154,20 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitPackagestmt(BSVParser.PackagestmtContext ctx) {
-	    assert false;
-	    return null;
-	}
+            assert false;
+            return null;
+        }
         /**
          * {@inheritDoc}
          *
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-	@Override public BSVType visitPackageide(BSVParser.PackageideContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitPackageide(BSVParser.PackageideContext ctx) { return visitChildren(ctx); }
         @Override public BSVType visitInterfacedecl(BSVParser.InterfacedeclContext ctx) {
-	    assert false;
-	    return null;
-	}
+            assert false;
+            return null;
+        }
         /**
          * {@inheritDoc}
          *
@@ -175,9 +175,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitInterfacememberdecl(BSVParser.InterfacememberdeclContext ctx) {
-	    assert false;
-	    return null;
-	}
+            assert false;
+            return null;
+        }
         /**
          * {@inheritDoc}
          *
@@ -238,9 +238,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitSubinterfacedecl(BSVParser.SubinterfacedeclContext ctx) {
-	    assert false;
-	    return null;
-	}
+            assert false;
+            return null;
+        }
         /**
          * {@inheritDoc}
          *
@@ -307,20 +307,20 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitTypedefstruct(BSVParser.TypedefstructContext ctx) {
-	    BSVParser.TypedeftypeContext typedeftype = ctx.typedeftype();
-	    BSVType bsvtype = visit(typedeftype);
-	    System.err.println(String.format("typedefstruct %s", bsvtype.name));
-	    SymbolTable fieldMappings = new SymbolTable(scope, SymbolTable.ScopeType.Declaration, bsvtype.name);
-	    for (BSVParser.StructmemberContext member: ctx.structmember()) {
-		assert member.subunion() == null;
-		if (member.bsvtype() != null) {
-		    BSVType membertype = visit(member.bsvtype());
-		    fieldMappings.bind(member.lowerCaseIdentifier().getText(), membertype);
-		}
-	    }
-	    scope.bindType(null, bsvtype.name, bsvtype, fieldMappings);
-	    return bsvtype;
-	}
+            BSVParser.TypedeftypeContext typedeftype = ctx.typedeftype();
+            BSVType bsvtype = visit(typedeftype);
+            System.err.println(String.format("typedefstruct %s", bsvtype.name));
+            SymbolTable fieldMappings = new SymbolTable(scope, SymbolTable.ScopeType.Declaration, bsvtype.name);
+            for (BSVParser.StructmemberContext member: ctx.structmember()) {
+                assert member.subunion() == null;
+                if (member.bsvtype() != null) {
+                    BSVType membertype = visit(member.bsvtype());
+                    fieldMappings.bind(member.lowerCaseIdentifier().getText(), membertype);
+                }
+            }
+            scope.bindType(null, bsvtype.name, bsvtype, fieldMappings);
+            return bsvtype;
+        }
         /**
          * {@inheritDoc}
          *
@@ -491,7 +491,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitModuleproto(BSVParser.ModuleprotoContext ctx) {
-	    //FIXME: modulecontext
+            //FIXME: modulecontext
             BSVType moduleInterface =
                 (ctx.moduleinterface != null)
                 ? visit(ctx.moduleinterface)
@@ -602,7 +602,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitRulecond(BSVParser.RulecondContext ctx) { return visitChildren(ctx); }
-	@Override public BSVType visitRulebody(BSVParser.RulebodyContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitRulebody(BSVParser.RulebodyContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
          *
@@ -727,8 +727,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 String typeide = ctx.typeide().getText();
                 // is type variable?
                 if (typeide.matches("[a-z].*")) {
-		    assert typeide != null;
-		    assert scope != null : "must have called popScope() too many times";
+                    assert typeide != null;
+                    assert scope != null : "must have called popScope() too many times";
                     SymbolTableEntry entry = scope.lookupType(typeide);
                     BSVType bsvtype;
                     if (entry == null) {
@@ -777,8 +777,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitTypenat(BSVParser.TypenatContext ctx) {
-	    return new BSVType(ctx.getText(), true);
-	}
+            return new BSVType(ctx.getText(), true);
+        }
         /**
          * {@inheritDoc}
          *
@@ -801,19 +801,19 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-	@Override public BSVType visitCaseexpr(BSVParser.CaseexprContext ctx) {
-	    visit(ctx.expression());
-	    BSVType returnType = new BSVType();
-	    try {
-		for (BSVParser.CaseexpritemContext item: ctx.caseexpritem()) {
-		    BSVType itemtype = visit(item);
-		    returnType.unify(itemtype);
-		}
-	    } catch (InferenceError e) {
-		System.err.println(e);
-	    }
-	    return returnType;
-	}
+        @Override public BSVType visitCaseexpr(BSVParser.CaseexprContext ctx) {
+            visit(ctx.expression());
+            BSVType returnType = new BSVType();
+            try {
+                for (BSVParser.CaseexpritemContext item: ctx.caseexpritem()) {
+                    BSVType itemtype = visit(item);
+                    returnType.unify(itemtype);
+                }
+            } catch (InferenceError e) {
+                System.err.println(e);
+            }
+            return returnType;
+        }
         /**
          * {@inheritDoc}
          *
@@ -821,35 +821,35 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitCondexpr(BSVParser.CondexprContext ctx) {
-	    BSVType boolType = new BSVType("Bool");
-	    BSVType resultType = new BSVType();
-	    try {
-		boolType.unify(visit(ctx.expression(0)));
-		resultType.unify(visit(ctx.expression(1)));
-		resultType.unify(visit(ctx.expression(2)));
-	    } catch (InferenceError e) {
-		System.err.println(e);
-	    }
-	    return resultType;
-	}
+            BSVType boolType = new BSVType("Bool");
+            BSVType resultType = new BSVType();
+            try {
+                boolType.unify(visit(ctx.expression(0)));
+                resultType.unify(visit(ctx.expression(1)));
+                resultType.unify(visit(ctx.expression(2)));
+            } catch (InferenceError e) {
+                System.err.println(e);
+            }
+            return resultType;
+        }
 
     @Override public BSVType visitTripleandexpr(BSVParser.TripleandexprContext ctx) { return visitChildren(ctx); }
     @Override public BSVType visitCaseexpritem(BSVParser.CaseexpritemContext ctx) {
-	int numExpressions = ctx.exprprimary().size();
-	if (ctx.pattern() != null)
-	    visit(ctx.pattern());
-	BSVType matchType = new BSVType();
-	for (BSVParser.ExprprimaryContext matchExpr : ctx.exprprimary())
-	    matchType = visit(matchExpr);
-	BSVType boolType = new BSVType("Bool");
-	if (ctx.patterncond() != null) {
-	    for (BSVParser.ExpressionContext condExpr : ctx.patterncond().expression()) {
-		BSVType condType = visit(condExpr);
-		// boolType.unify(condType);
-	    }
-	}
-	BSVType bodyType = visit(ctx.body);
-	return bodyType;
+        int numExpressions = ctx.exprprimary().size();
+        if (ctx.pattern() != null)
+            visit(ctx.pattern());
+        BSVType matchType = new BSVType();
+        for (BSVParser.ExprprimaryContext matchExpr : ctx.exprprimary())
+            matchType = visit(matchExpr);
+        BSVType boolType = new BSVType("Bool");
+        if (ctx.patterncond() != null) {
+            for (BSVParser.ExpressionContext condExpr : ctx.patterncond().expression()) {
+                BSVType condType = visit(condExpr);
+                // boolType.unify(condType);
+            }
+        }
+        BSVType bodyType = visit(ctx.body);
+        return bodyType;
     }
         /**
          * {@inheritDoc}
@@ -857,7 +857,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-	@Override public BSVType visitPatterncond(BSVParser.PatterncondContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitPatterncond(BSVParser.PatterncondContext ctx) { return visitChildren(ctx); }
         @Override public BSVType visitBinopexpr(BSVParser.BinopexprContext ctx) {
             if (ctx.unopexpr() != null) {
                 return visit(ctx.unopexpr());
@@ -866,9 +866,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 BSVType rhstype = visit(ctx.right);
                 String op = ctx.op.getText();
                 assert lhstype != null : String.format("Binopexpr lhstype is null for expr %s at %s",
-						       ctx.left.getText(), StaticAnalysis.sourceLocation(ctx.left));
+                                                       ctx.left.getText(), StaticAnalysis.sourceLocation(ctx.left));
                 assert rhstype != null : String.format("Binopexpr rhstype is null for expr %s at %s",
-						       ctx.right.getText(), StaticAnalysis.sourceLocation(ctx.right));
+                                                       ctx.right.getText(), StaticAnalysis.sourceLocation(ctx.right));
                 try {
                     if (lhstype.prune() != rhstype.prune())
                         lhstype.unify(rhstype);
@@ -891,28 +891,28 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitUnopexpr(BSVParser.UnopexprContext ctx) {
-	    BSVType bsvtype = visit(ctx.exprprimary());
+            BSVType bsvtype = visit(ctx.exprprimary());
             if (ctx.op == null) {
                 System.err.println("Unop expr " + ctx.exprprimary().getText() + " : " + bsvtype);
                 return bsvtype;
             }
-	    String op = ctx.op.getText();
-	    if (op.equals("!")) {
-		try {
-		    bsvtype.unify(new BSVType("Bool"));
-		} catch (InferenceError e) {
-		    System.err.println(e);
-		}
-	    }
-	    if (op.equals("&") || op.equals("|") || op.equals("~&") || op.equals("~|")
-		|| op.equals("^") || op.equals("^~") || op.equals("~^")) {
-		try {
-		    bsvtype.unify(new BSVType("Bit", new BSVType(null, true)));
-		} catch (InferenceError e) {
-		    System.err.println(e);
-		}
-		return new BSVType("Bit", new BSVType(1));
-	    }
+            String op = ctx.op.getText();
+            if (op.equals("!")) {
+                try {
+                    bsvtype.unify(new BSVType("Bool"));
+                } catch (InferenceError e) {
+                    System.err.println(e);
+                }
+            }
+            if (op.equals("&") || op.equals("|") || op.equals("~&") || op.equals("~|")
+                || op.equals("^") || op.equals("^~") || op.equals("~^")) {
+                try {
+                    bsvtype.unify(new BSVType("Bit", new BSVType(null, true)));
+                } catch (InferenceError e) {
+                    System.err.println(e);
+                }
+                return new BSVType("Bit", new BSVType(1));
+            }
             return bsvtype;
         }
         /**
@@ -922,32 +922,37 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitBitconcat(BSVParser.BitconcatContext ctx) {
-	    int width = 0;
-	    boolean widthKnown = true;
-	    for (BSVParser.ExpressionContext expr: ctx.expression()) {
-		BSVType exprtype = visit(expr).prune();
-		if (exprtype.isVar) {
-		    widthKnown = false;
-		    continue;
-		}
-		exprtype = dereferenceTypedef(exprtype);
-		System.err.println(String.format("bitconcat %s type %s", expr.getText(), exprtype));
-		BSVType widthtype = exprtype.params.get(0).prune();
-		if (widthtype.isVar || !widthtype.numeric) {
-		    widthKnown = false;
-		    continue;
-		}
-		widthtype = dereferenceTypedef(widthtype);
-		System.err.println(String.format("bitconcat %s type %s", expr.getText(), widthtype));
-		width += Integer.parseInt(widthtype.name);
-	    }
-	    System.err.println(String.format("bitconcat %s width %d known %s at %s",
-					     ctx.getText(), width, widthKnown, StaticAnalysis.sourceLocation(ctx)));
-	    if (widthKnown)
-		return new BSVType("Bit", new BSVType(width));
-	    else
-		return new BSVType("Bit", new BSVType(null, true));
-	}
+            int width = 0;
+            boolean widthKnown = true;
+            for (BSVParser.ExpressionContext expr: ctx.expression()) {
+                BSVType exprtype = visit(expr).prune();
+                if (exprtype.isVar) {
+                    widthKnown = false;
+                    continue;
+                }
+                exprtype = dereferenceTypedef(exprtype);
+                System.err.println(String.format("bitconcat %s type %s", expr.getText(), exprtype));
+                if (exprtype.params.size() == 0) {
+                    widthKnown = false;
+                    continue;
+                }
+
+                BSVType widthtype = exprtype.params.get(0).prune();
+                if (widthtype.isVar || !widthtype.numeric) {
+                    widthKnown = false;
+                    continue;
+                }
+                widthtype = dereferenceTypedef(widthtype);
+                System.err.println(String.format("bitconcat %s type %s", expr.getText(), widthtype));
+                width += Integer.parseInt(widthtype.name);
+            }
+            System.err.println(String.format("bitconcat %s width %d known %s at %s",
+                                             ctx.getText(), width, widthKnown, StaticAnalysis.sourceLocation(ctx)));
+            if (widthKnown)
+                return new BSVType("Bit", new BSVType(width));
+            else
+                return new BSVType("Bit", new BSVType(null, true));
+        }
         /**
          * {@inheritDoc}
          *
@@ -956,12 +961,12 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          */
         @Override public BSVType visitVarexpr(BSVParser.VarexprContext ctx) {
             String varName = ctx.anyidentifier().getText();
-	    if (varName.startsWith("\\"))
-		varName = varName.substring(1);
+            if (varName.startsWith("\\"))
+                varName = varName.substring(1);
             assert (ctx.pkg == null);
             SymbolTableEntry entry = scope.lookup(varName);
             System.err.println("var expr " + varName + " entry " + entry + " : " + ((entry != null) ? entry.type : ""));
-	    assert entry != null : String.format("No symbol table entry for %s at %s", varName, StaticAnalysis.sourceLocation(ctx));
+            assert entry != null : String.format("No symbol table entry for %s at %s", varName, StaticAnalysis.sourceLocation(ctx));
             if (entry.instances != null) {
                 for (SymbolTableEntry instance: entry.instances) {
                     System.err.println(String.format("    instance %s : %s", varName, instance.type));
@@ -986,9 +991,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitStructexpr(BSVParser.StructexprContext ctx) {
-	    String structName = ctx.tag.getText();
-	    SymbolTableEntry entry = scope.lookupType(structName);
-	    assert entry != null : "No entry for struct " + structName + " in scope " + scope;
+            String structName = ctx.tag.getText();
+            SymbolTableEntry entry = scope.lookupType(structName);
+            assert entry != null : "No entry for struct " + structName + " in scope " + scope;
             return entry.type;
         }
         /**
@@ -1007,9 +1012,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitRulesexpr(BSVParser.RulesexprContext ctx) {
-	    assert false;
-	    return null;
-	}
+            return new BSVType("Rule");
+        }
         /**
          * {@inheritDoc}
          *
@@ -1017,10 +1021,10 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitIntliteral(BSVParser.IntliteralContext ctx) {
-	    String literal = ctx.getText();
-	    IntValue value = new IntValue(literal);
-	    if (value.width != 0)
-		return new BSVType("Bit", new BSVType(value.width));
+            String literal = ctx.getText();
+            IntValue value = new IntValue(literal);
+            if (value.width != 0)
+                return new BSVType("Bit", new BSVType(value.width));
             return new BSVType("Integer");
         }
         /**
@@ -1053,8 +1057,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitUndefinedexpr(BSVParser.UndefinedexprContext ctx) {
-	    return new BSVType();
-	}
+            return new BSVType();
+        }
         /**
          * {@inheritDoc}
          *
@@ -1082,11 +1086,11 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             String subname = ctx.field.getText();
             SymbolTableEntry entry = scope.lookupType(interfaceName);
             System.err.println("expr field " + interfaceName + "." + subname + "    " + basetype);
-	    if (entry != null)
-		System.err.println(" entry.mappings " + entry.mappings);
+            if (entry != null)
+                System.err.println(" entry.mappings " + entry.mappings);
             if (entry != null && entry.mappings != null) {
                 SymbolTableEntry subentry = entry.mappings.lookup(subname);
-		System.err.println(String.format(" found %s subname %s subentry %s", entry.name, subname, subentry));
+                System.err.println(String.format(" found %s subname %s subentry %s", entry.name, subname, subentry));
                 if (subentry != null) {
                     // FIXME: instantiate interface
                     System.err.println("expr field " + interfaceName + "." + subname + " : " + subentry.type);
@@ -1103,7 +1107,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitParenexpr(BSVParser.ParenexprContext ctx) {
-	    System.err.println("paren expr " + ctx.getText());
+            System.err.println("paren expr " + ctx.getText());
             return visit(ctx.expression());
         }
         /**
@@ -1113,9 +1117,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitInterfaceexpr(BSVParser.InterfaceexprContext ctx) {
-	    BSVType bsvtype = visit(ctx.bsvtype());
-	    return bsvtype;
-	}
+            BSVType bsvtype = visit(ctx.bsvtype());
+            return bsvtype;
+        }
         /**
          * {@inheritDoc}
          *
@@ -1139,13 +1143,13 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         @Override public BSVType visitCallexpr(BSVParser.CallexprContext ctx) {
             System.err.println("call " + ctx.fcn.getText());
             BSVType fcntype = visit(ctx.fcn);
-	    assert fcntype != null : String.format("Null type for %s at %s", ctx.fcn.getText(), StaticAnalysis.sourceLocation(ctx));
+            assert fcntype != null : String.format("Null type for %s at %s", ctx.fcn.getText(), StaticAnalysis.sourceLocation(ctx));
             BSVType resulttype;
             for (BSVParser.ExpressionContext expr: ctx.expression()) {
                 resulttype = new BSVType();
                 try {
                     BSVType argtype = visit(expr);
-		    assert argtype != null : String.format("Null type for %s at %s", expr.getText(), StaticAnalysis.sourceLocation(ctx));
+                    assert argtype != null : String.format("Null type for %s at %s", expr.getText(), StaticAnalysis.sourceLocation(ctx));
                     BSVType ftype = new BSVType("Function", argtype, resulttype);
                     System.err.println("Apply (" + fcntype + ") to (" + ftype + ")");
                     fcntype.unify(ftype);
@@ -1166,7 +1170,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         @Override public BSVType visitValueofexpr(BSVParser.ValueofexprContext ctx) {
             BSVType bsvtype = visit(ctx.bsvtype());
             return new BSVType("Integer");
-	}
+        }
         /**
          * {@inheritDoc}
          *
@@ -1176,13 +1180,13 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         @Override public BSVType visitSeqfsmexpr(BSVParser.SeqfsmexprContext ctx) { return visitChildren(ctx); }
 
         @Override public BSVType visitTaggedunionexpr(BSVParser.TaggedunionexprContext ctx) {
-	    String tagname = ctx.tag.getText();
-	    SymbolTableEntry tagentry = scope.lookup(tagname);
-	    assert tagentry != null : String.format("Failed to lookup tag %s", tagname);
-	    BSVType tagtype = tagentry.type;
-	    //FIXME: check type of memberbinds here or in StaticAnalysis
-	    return tagtype;
-	}
+            String tagname = ctx.tag.getText();
+            SymbolTableEntry tagentry = scope.lookup(tagname);
+            assert tagentry != null : String.format("Failed to lookup tag %s", tagname);
+            BSVType tagtype = tagentry.type;
+            //FIXME: check type of memberbinds here or in StaticAnalysis
+            return tagtype;
+        }
         /**
          * {@inheritDoc}
          *
@@ -1196,19 +1200,19 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             if (arraytype.name.equals("Vector"))
                 return arraytype.params.get(1);
             else {
-		if (ctx.expression().size() == 1)
-		    return new BSVType("Bit", new BSVType("1"));
-		    assert scope != null;
-		Evaluator eval = new Evaluator(staticAnalyzer, this);
-		try {
-		    IntValue msbValue = (IntValue)eval.evaluate(ctx.expression(0), scope);
-		    IntValue lsbValue = (IntValue)eval.evaluate(ctx.expression(1), scope);
-		    return new BSVType("Bit", new BSVType(msbValue.value - lsbValue.value + 1));
-		} catch (Exception e) {
-		    System.err.println("Failed to evaluate msb or lsb " + e);
-		}
- 		return new BSVType("Bit", new BSVType());
-	    }
+                if (ctx.expression().size() == 1)
+                    return new BSVType("Bit", new BSVType("1"));
+                    assert scope != null;
+                Evaluator eval = new Evaluator(staticAnalyzer, this);
+                try {
+                    IntValue msbValue = (IntValue)eval.evaluate(ctx.expression(0), scope);
+                    IntValue lsbValue = (IntValue)eval.evaluate(ctx.expression(1), scope);
+                    return new BSVType("Bit", new BSVType(msbValue.value - lsbValue.value + 1));
+                } catch (Exception e) {
+                    System.err.println("Failed to evaluate msb or lsb " + e);
+                }
+                return new BSVType("Bit", new BSVType());
+            }
         }
         /**
          * {@inheritDoc}
@@ -1401,12 +1405,12 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitPattern(BSVParser.PatternContext ctx) {
-	    if (ctx.var != null) {
-		return new BSVType();
-	    } else {
-		return visitChildren(ctx);
-	    }
-	}
+            if (ctx.var != null) {
+                return new BSVType();
+            } else {
+                return visitChildren(ctx);
+            }
+        }
         /**
          * {@inheritDoc}
          *
@@ -1414,9 +1418,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitConstantpattern(BSVParser.ConstantpatternContext ctx) {
-	    // fixme
-	    return visitChildren(ctx);
-	}
+            // fixme
+            return visitChildren(ctx);
+        }
         /**
          * {@inheritDoc}
          *
@@ -1424,13 +1428,13 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitTaggedunionpattern(BSVParser.TaggedunionpatternContext ctx) {
-	    String tagname = ctx.tag.getText();
-	    SymbolTableEntry entry = scope.lookup(tagname);
-	    assert entry != null : String.format("No binding for tagged union tag %s at %s", tagname, StaticAnalysis.sourceLocation(ctx));
-	    if (ctx.pattern() != null)
-		visit(ctx.pattern());
-	    return entry.type.fresh(new ArrayList<>());
-	}
+            String tagname = ctx.tag.getText();
+            SymbolTableEntry entry = scope.lookup(tagname);
+            assert entry != null : String.format("No binding for tagged union tag %s at %s", tagname, StaticAnalysis.sourceLocation(ctx));
+            if (ctx.pattern() != null)
+                visit(ctx.pattern());
+            return entry.type.fresh(new ArrayList<>());
+        }
         /**
          * {@inheritDoc}
          *
@@ -1466,8 +1470,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitProvisos(BSVParser.ProvisosContext ctx) {
-	    return null;
-	}
+            return null;
+        }
         /**
          * {@inheritDoc}
          *
@@ -1475,7 +1479,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitProviso(BSVParser.ProvisoContext ctx) {
-	    return null;
+            return null;
         }
         /**
          * {@inheritDoc}
@@ -1547,7 +1551,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitLoopbodyfsmstmt(BSVParser.LoopbodyfsmstmtContext ctx) { return visitChildren(ctx); }
-	@Override public BSVType visitPortide(BSVParser.PortideContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitPortide(BSVParser.PortideContext ctx) { return visitChildren(ctx); }
         @Override public BSVType visitImportbvi(BSVParser.ImportbviContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
