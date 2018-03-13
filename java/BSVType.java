@@ -15,7 +15,6 @@ public class BSVType {
 
     private void init(String name, boolean numeric) {
 	params = new ArrayList<BSVType>();
-	numeric = false;
 	if (name == null) {
 	    name = "tvar" + count;
 	    count++;
@@ -30,7 +29,7 @@ public class BSVType {
 	    name  = "Bit";
 	    params.add(new BSVType("1"));
 	}
-	numeric = numeric || name.matches("[0-9]+");
+	this.numeric = numeric || name.matches("[0-9]+");
 	isVar = name.matches("[a-z].*");
 	this.name = name;
     }
@@ -44,6 +43,9 @@ public class BSVType {
 	init(name, numeric);
     }
     BSVType(int num) {
+	init(String.format("%d", num), true);
+    }
+    BSVType(long num) {
 	init(String.format("%d", num), true);
     }
     BSVType(String name, List<BSVType> params) {
@@ -66,6 +68,10 @@ public class BSVType {
 	} else {
 	    return this;
 	}
+    }
+    public long asLong() {
+	assert numeric : this + " should be numeric " + name.matches("[0-9]+");
+	return Long.parseLong(name);
     }
     private BSVType freshrec(BSVType tp, List<BSVType> non_generics, Map<BSVType, BSVType> mappings) {
 	    tp = tp.prune();
