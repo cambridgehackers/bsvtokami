@@ -278,16 +278,16 @@ class FunctionValue extends Value {
 
 class Rule extends Value {
     final public String name;
-    final public BSVParser.CondpredicateContext condpredicate;
+    final public BSVParser.ExpressionContext guard;
     final public List<BSVParser.StmtContext> body;
     final public SymbolTable context;
 
     public Rule(String name, BSVParser.RuledefContext ruledef, SymbolTable context) {
         this.name = name;
         if (ruledef.rulecond() != null)
-            this.condpredicate = ruledef.rulecond().condpredicate();
+            this.guard = ruledef.rulecond().expression();
         else
-            this.condpredicate = null;
+            this.guard = null;
         this.body = ruledef.rulebody().stmt();
         this.context = context;
     }

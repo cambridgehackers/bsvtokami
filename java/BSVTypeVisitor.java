@@ -491,9 +491,10 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitModuleproto(BSVParser.ModuleprotoContext ctx) {
+	    //FIXME: modulecontext
             BSVType moduleInterface =
-                (ctx.bsvtype() != null)
-                ? visit(ctx.bsvtype())
+                (ctx.moduleinterface != null)
+                ? visit(ctx.moduleinterface)
                 : (new BSVType("Empty"));
             List<BSVType> params = new ArrayList<BSVType>();
             if (ctx.methodprotoformals() != null) {
@@ -512,14 +513,6 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             System.err.println("moduleproto " + ctx.name.getText() + " : " + moduletype);
             return moduletype;
         }
-        /**
-         * {@inheritDoc}
-         *
-         * <p>The default implementation returns the result of calling
-         * {@link #visitChildren} on {@code ctx}.</p>
-         */
-        @Override public BSVType visitModulecontext(BSVParser.ModulecontextContext ctx) { return visitChildren(ctx); }
-
         /**
          * {@inheritDoc}
          *
@@ -792,7 +785,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitOperatorExpr(BSVParser.OperatorExprContext ctx) {
+        @Override public BSVType visitOperatorexpr(BSVParser.OperatorexprContext ctx) {
             return visit(ctx.binopexpr());
         }
         /**
@@ -801,21 +794,14 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitMatchesExpr(BSVParser.MatchesExprContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitMatchesexpr(BSVParser.MatchesexprContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
          *
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitSimpleCondExpr(BSVParser.SimpleCondExprContext ctx) { return visitChildren(ctx); }
-        /**
-         * {@inheritDoc}
-         *
-         * <p>The default implementation returns the result of calling
-         * {@link #visitChildren} on {@code ctx}.</p>
-         */
-	@Override public BSVType visitCaseExpr(BSVParser.CaseExprContext ctx) {
+	@Override public BSVType visitCaseexpr(BSVParser.CaseexprContext ctx) {
 	    visit(ctx.expression());
 	    BSVType returnType = new BSVType();
 	    try {
@@ -834,7 +820,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitCondExpr(BSVParser.CondExprContext ctx) {
+        @Override public BSVType visitCondexpr(BSVParser.CondexprContext ctx) {
 	    BSVType boolType = new BSVType("Bool");
 	    BSVType resultType = new BSVType();
 	    try {
@@ -847,13 +833,14 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	    return resultType;
 	}
 
+    @Override public BSVType visitTripleandexpr(BSVParser.TripleandexprContext ctx) { return visitChildren(ctx); }
     @Override public BSVType visitCaseexpritem(BSVParser.CaseexpritemContext ctx) {
-	int numExpressions = ctx.expression().size();
+	int numExpressions = ctx.exprprimary().size();
 	if (ctx.pattern() != null)
 	    visit(ctx.pattern());
 	BSVType matchType = new BSVType();
 	for (BSVParser.ExprprimaryContext matchExpr : ctx.exprprimary())
-	    matchType = visit(expr);
+	    matchType = visit(matchExpr);
 	BSVType boolType = new BSVType("Bool");
 	if (ctx.patterncond() != null) {
 	    for (BSVParser.ExpressionContext condExpr : ctx.patterncond().expression()) {
@@ -870,6 +857,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
+	@Override public BSVType visitPatterncond(BSVParser.PatterncondContext ctx) { return visitChildren(ctx); }
         @Override public BSVType visitBinopexpr(BSVParser.BinopexprContext ctx) {
             if (ctx.unopexpr() != null) {
                 return visit(ctx.unopexpr());
@@ -1091,7 +1079,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             System.err.println("computing type of field " + ctx.getText());
             BSVType basetype = visit(ctx.exprprimary());
             String interfaceName = basetype.name;
-            String subname = ctx.exprfield.getText();
+            String subname = ctx.field.getText();
             SymbolTableEntry entry = scope.lookupType(interfaceName);
             System.err.println("expr field " + interfaceName + "." + subname + "    " + basetype);
 	    if (entry != null)
@@ -1141,7 +1129,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitParfsmstmtexpr(BSVParser.ParfsmstmtexprContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitParfsmexpr(BSVParser.ParfsmexprContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
          *
@@ -1185,11 +1173,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitSeqfsmstmtexpr(BSVParser.SeqfsmstmtexprContext ctx) { return visitChildren(ctx); }
-
-	@Override public BSVType visitTaggedunionexprprimary(BSVParser.TaggedunionexprprimaryContext ctx) {
-	    return visit(ctx.taggedunionexpr());
-	}
+        @Override public BSVType visitSeqfsmexpr(BSVParser.SeqfsmexprContext ctx) { return visitChildren(ctx); }
 
         @Override public BSVType visitTaggedunionexpr(BSVParser.TaggedunionexprContext ctx) {
 	    String tagname = ctx.tag.getText();
@@ -1239,7 +1223,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitTypeassertion(BSVParser.TypeassertionContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitTypeassertionexpr(BSVParser.TypeassertionexprContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
          *
@@ -1410,13 +1394,6 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitVarincr(BSVParser.VarincrContext ctx) { return visitChildren(ctx); }
-        /**
-         * {@inheritDoc}
-         *
-         * <p>The default implementation returns the result of calling
-         * {@link #visitChildren} on {@code ctx}.</p>
-         */
-        @Override public BSVType visitCondpredicate(BSVParser.CondpredicateContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
          *

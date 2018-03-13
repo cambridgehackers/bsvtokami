@@ -544,7 +544,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 	System.err.println("visit case stmt pat item " + ctx.getText());
 	pushScope(ctx, SymbolTable.ScopeType.CaseStmt, ctx.pattern().getText());
 	visit(ctx.pattern());
-	for (BSVParser.ExpressionContext expr: ctx.expression())
+	for (BSVParser.ExpressionContext expr: ctx.patterncond().expression())
 	    visit(expr);
 	visit(ctx.stmt());
 	popScope();
@@ -645,21 +645,22 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         System.err.println("} exited block");
         return null;
     }
-    @Override public Void visitOperatorExpr(BSVParser.OperatorExprContext ctx) {
+    @Override public Void visitOperatorexpr(BSVParser.OperatorexprContext ctx) {
         visit(ctx.binopexpr());
         return null;
     }
 
-    @Override public Void visitMatchesExpr(BSVParser.MatchesExprContext ctx) { return visitChildren(ctx); }
-    @Override public Void visitCaseExpr(BSVParser.CaseExprContext ctx) {
+    @Override public Void visitMatchesexpr(BSVParser.MatchesexprContext ctx) { return visitChildren(ctx); }
+    @Override public Void visitCaseexpr(BSVParser.CaseexprContext ctx) {
 	visit(ctx.expression());
 	for (BSVParser.CaseexpritemContext item: ctx.caseexpritem()) {
 	    System.err.println("visit case expr item " + item.getText());
 	    pushScope(ctx, SymbolTable.ScopeType.CaseStmt, "caseexpr");
-	    for (BSVParser.PatternContext pattern : item.pattern()) {
-		visit(pattern);
-	    }
-	    for (BSVParser.ExpressionContext expr: item.expression()) {
+	    if (item.pattern() != null)
+		visit(item.pattern());
+	    if (item.patterncond() != null)
+		visit(item.patterncond());
+	    for (BSVParser.ExprprimaryContext expr: item.exprprimary()) {
 		visit(expr);
 	    }
 	    popScope();

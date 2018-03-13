@@ -14,7 +14,7 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
         this.scope = scope;
         methodsUsed = new TreeMap<>();
     }
-    @Override public String visitOperatorExpr(BSVParser.OperatorExprContext ctx) {
+    @Override public String visitOperatorexpr(BSVParser.OperatorexprContext ctx) {
         String instanceName = visit(ctx.binopexpr());
         System.err.println("visitOperatorExpr " + ctx.getRuleIndex() + " " + ctx.getText() + " " + instanceName);
         return instanceName;
@@ -40,7 +40,7 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
     @Override public String visitFieldexpr(BSVParser.FieldexprContext ctx) {
         String instanceName = visit(ctx.exprprimary());
         if (instanceName != null) {
-            String fieldName = ctx.exprfield.getText();
+            String fieldName = ctx.field.getText();
             String methodName = String.format("%s.%s", instanceName, fieldName);
             System.err.println("methodName " + methodName);
             if (!methodsUsed.containsKey(instanceName))
@@ -403,7 +403,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
     @Override
     public Void visitIfstmt(BSVParser.IfstmtContext ctx) {
         printstream.print("        (If ");
-        visit(ctx.condpredicate());
+        visit(ctx.expression());
         printstream.println("");
         printstream.print("        then ");
         visit(ctx.stmt(0));
@@ -428,19 +428,6 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         return null;
     }
 
-    @Override
-    public Void visitCondpredicate(BSVParser.CondpredicateContext ctx) {
-        visit(ctx.expression());
-        // if (ctx.pattern() != null) {
-        //     printstream.print(" matches ");
-        //     visit(ctx.pattern());
-        // }
-        if (ctx.condpredicate() != null) {
-            printstream.print(" && ");
-            visit(ctx.condpredicate());
-        }
-        return null;
-    }
     @Override public Void visitBinopexpr(BSVParser.BinopexprContext expr) {
         if (expr.right != null) {
             printstream.print("(");

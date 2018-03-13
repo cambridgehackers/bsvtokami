@@ -87,10 +87,10 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
     }
 
     private boolean isRuleReady(Rule rule) {
-        if (rule.condpredicate == null)
+        if (rule.guard == null)
             return true;
         pushScope(rule);
-        Value v = visit(rule.condpredicate);
+        Value v = visit(rule.guard);
         popScope();
         BoolValue bv = (BoolValue)v;
         if (bv == null) {
@@ -107,7 +107,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
             return true;
 
         pushScope(mv.context);
-        Value v = visit(methodcond.condpredicate());
+        Value v = visit(methodcond.expression());
         popScope();
         BoolValue bv = (BoolValue)v;
         return bv.value;
@@ -621,13 +621,6 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public Value visitModulecontext(BSVParser.ModulecontextContext ctx) { return visitChildren(ctx); }
-        /**
-         * {@inheritDoc}
-         *
-         * <p>The default implementation returns the result of calling
-         * {@link #visitChildren} on {@code ctx}.</p>
-         */
         @Override public Value visitModulestmt(BSVParser.ModulestmtContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
@@ -805,41 +798,35 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public Value visitTypenat(BSVParser.TypenatContext ctx) { return visitChildren(ctx); }
-        @Override public Value visitOperatorExpr(BSVParser.OperatorExprContext ctx) { return visitChildren(ctx); }
+        @Override public Value visitOperatorexpr(BSVParser.OperatorexprContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
          *
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public Value visitMatchesExpr(BSVParser.MatchesExprContext ctx) { return visitChildren(ctx); }
+        @Override public Value visitMatchesexpr(BSVParser.MatchesexprContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
          *
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public Value visitSimpleCondExpr(BSVParser.SimpleCondExprContext ctx) { return visitChildren(ctx); }
+        @Override public Value visitCaseexpr(BSVParser.CaseexprContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
          *
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public Value visitCaseExpr(BSVParser.CaseExprContext ctx) { return visitChildren(ctx); }
+        @Override public Value visitCondexpr(BSVParser.CondexprContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
          *
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public Value visitCondExpr(BSVParser.CondExprContext ctx) { return visitChildren(ctx); }
-        /**
-         * {@inheritDoc}
-         *
-         * <p>The default implementation returns the result of calling
-         * {@link #visitChildren} on {@code ctx}.</p>
-         */
+	@Override public Value visitTripleandexpr(BSVParser.TripleandexprContext ctx) { return visitChildren(ctx); }
         @Override public Value visitCaseexpritem(BSVParser.CaseexpritemContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
@@ -847,6 +834,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
+	@Override public Value visitPatterncond(BSVParser.PatterncondContext ctx) { return visitChildren(ctx); }
         @Override public Value visitBinopexpr(BSVParser.BinopexprContext ctx) {
             if (ctx.left == null)
                 return visit(ctx.unopexpr());
@@ -997,7 +985,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          */
         @Override public Value visitFieldexpr(BSVParser.FieldexprContext ctx) {
             Value v = visit(ctx.exprprimary());
-            String fieldName = ctx.exprfield.getText();
+            String fieldName = ctx.field.getText();
             System.err.println("field expr " + v + " . " + fieldName);
             ModuleInstance instance = (ModuleInstance)v;
             SymbolTableEntry entry = instance.context.lookup(fieldName);
@@ -1034,7 +1022,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public Value visitParfsmstmtexpr(BSVParser.ParfsmstmtexprContext ctx) { return visitChildren(ctx); }
+        @Override public Value visitParfsmexpr(BSVParser.ParfsmexprContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
          *
@@ -1133,16 +1121,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public Value visitSeqfsmstmtexpr(BSVParser.SeqfsmstmtexprContext ctx) { return visitChildren(ctx); }
-        /**
-         * {@inheritDoc}
-         *
-         * <p>The default implementation returns the result of calling
-         * {@link #visitChildren} on {@code ctx}.</p>
-         */
-	@Override public Value visitTaggedunionexprprimary(BSVParser.TaggedunionexprprimaryContext ctx) {
-	    return visit(ctx.taggedunionexpr());
-	}
+        @Override public Value visitSeqfsmexpr(BSVParser.SeqfsmexprContext ctx) { return visitChildren(ctx); }
         @Override public Value visitTaggedunionexpr(BSVParser.TaggedunionexprContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
@@ -1164,7 +1143,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public Value visitTypeassertion(BSVParser.TypeassertionContext ctx) { return visitChildren(ctx); }
+        @Override public Value visitTypeassertionexpr(BSVParser.TypeassertionexprContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
          *
@@ -1352,13 +1331,6 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public Value visitVarincr(BSVParser.VarincrContext ctx) { return visitChildren(ctx); }
-        /**
-         * {@inheritDoc}
-         *
-         * <p>The default implementation returns the result of calling
-         * {@link #visitChildren} on {@code ctx}.</p>
-         */
-        @Override public Value visitCondpredicate(BSVParser.CondpredicateContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
          *

@@ -82,8 +82,8 @@ methodprotoformals :
     methodprotoformal (',' methodprotoformal)*
     ;
 methodprotoformal :
-    attributeinstance* bsvtype name=lowerCaseIdentifier
-    | functionproto
+    attributeinstance* bsvtype? name=lowerCaseIdentifier
+    | attributeinstance* functionproto
     ;
 subinterfacedecl :
     attributeinstance* 'interface' bsvtype lowerCaseIdentifier ';'
@@ -95,7 +95,7 @@ typedecl :
     | typedeftaggedunion
     ;
 typedeftype :
-    typeide (typeformals)?
+    typeide typeformals?
     ;
 typeformals :
     '#' '(' typeformal (',' typeformal)* ')'
@@ -108,7 +108,7 @@ typedefsynonym :
     | 'typedef' functionproto typedeftype ';'
     ;
 typedefenum :
-    'typedef' 'enum' '{' typedefenumelement (',' typedefenumelement)* '}' upperCaseIdentifier (derives)? ';'
+    'typedef' 'enum' '{' typedefenumelement (',' typedefenumelement)* '}' upperCaseIdentifier derives? ';'
     ;
 typedefenumelement :
     upperCaseIdentifier '(' IntLiteral ':' IntLiteral ')?' ('=' IntLiteral)?
@@ -116,10 +116,10 @@ typedefenumelement :
     | upperCaseIdentifier ('=' IntLiteral)?
     ;
 typedefstruct :
-    'typedef' 'struct' '{' (structmember)* '}' typedeftype (derives)? ';'
+    'typedef' 'struct' '{' (structmember)* '}' typedeftype derives? ';'
     ;
 typedeftaggedunion :
-    'typedef' 'union' 'tagged' '{' (unionmember)* '}' typedeftype (derives)? ';'
+    'typedef' 'union' 'tagged' '{' (unionmember)* '}' typedeftype derives? ';'
     ;
 structmember :
     bsvtype lowerCaseIdentifier ';'
@@ -152,7 +152,7 @@ arraydims :
     ('[' expression ']')*
     ;
 typeclassdecl :
-    'typeclass' typeclasside typeformals provisos? (typedepends)? ';' overloadeddecl* 'endtypeclass' (':' typeclasside)?
+    'typeclass' typeclasside typeformals provisos? typedepends? ';' overloadeddecl* 'endtypeclass' (':' typeclasside)?
     ;
 typeclasside :
     upperCaseIdentifier
@@ -186,18 +186,10 @@ moduledef :
     attributeinstance* moduleproto (modulestmt)* 'endmodule' (':' lowerCaseIdentifier)?
     ;
 moduleproto :
-    'module' ('[' bsvtype ']')? name=lowerCaseIdentifier (moduleformalparams)? '(' (moduleformalargs)? ')' provisos? ';'
-    ;
-moduleformalparams :
-    '#' '(' moduleformalparam (',' moduleformalparam)* ')'
-    ;
-moduleformalparam :
-    attributeinstance* ('parameter')? bsvtype lowerCaseIdentifier
-    | attributeinstance* ('parameter')? functionproto
-    ;
-moduleformalargs :
-    attributeinstance* bsvtype
-    | attributeinstance* bsvtype lowerCaseIdentifier (',' attributeinstance* bsvtype lowerCaseIdentifier)*
+    'module' ('[' modulecontext=bsvtype ']')? name=lowerCaseIdentifier
+    (  ( ('#' '(' methodprotoformals ')' )? '(' attributeinstance * moduleinterface=bsvtype ')' )
+     | ( '(' methodprotoformals? ')' ) )
+    provisos? ';'
     ;
 modulestmt :
     methoddef
@@ -229,7 +221,7 @@ methodformal :
     | attributeinstance* functionproto
     ;
 methodcond :
-    'if' '(' condpredicate ')'
+    'if' '(' expression ')'
     ;
 subinterfacedef :
     'interface' upperCaseIdentifier lowerCaseIdentifier ';' (interfacestmt)* 'endinterface' (':' lowerCaseIdentifier)?
@@ -239,7 +231,7 @@ ruledef :
     attributeinstance* 'rule' name=lowerCaseIdentifier rulecond? ';' rulebody 'endrule' (':' lowerCaseIdentifier)?
     ;
 rulecond :
-    ('if')? '(' condpredicate ')'
+    ('if')? '(' expression ')'
     ;
 rulebody :
     stmt*
@@ -249,24 +241,17 @@ functiondef :
     | functionproto '=' expression ';'
     ;
 functionproto :
-    'function' bsvtype? name=lowerCaseIdentifier ('(' functionformals? ')')? provisos?
-    ;
-functionformals :
-    functionformal (',' functionformal)*
-    ;
-functionformal :
-    bsvtype? lowerCaseIdentifier
-    | functionproto
+    'function' bsvtype? name=lowerCaseIdentifier ('(' methodprotoformals? ')')? provisos?
     ;
 externcimport :
-    'import' '"BDPI"' (lowerCaseIdentifier '=')? 'function' bsvtype lowerCaseIdentifier '(' (externcfuncargs)? ')' provisos? ';'
+    'import' '"BDPI"' (lowerCaseIdentifier '=')? 'function' bsvtype lowerCaseIdentifier '(' externcfuncargs? ')' provisos? ';'
     ;
 
 externcfuncargs :
     externcfuncarg (',' externcfuncarg)*
     ;
 externcfuncarg :
-    bsvtype (lowerCaseIdentifier)?
+    bsvtype lowerCaseIdentifier?
     ;
 varassign :
     lvalue op=('='|'<-') expression ';'
@@ -281,8 +266,9 @@ lvalue :
 bsvtype :
     typeide ('#' '(' bsvtype (',' bsvtype)* ')')?
     | '(' typeide ('#' '(' bsvtype (',' bsvtype)* ')')? ')'
-    | '(' functionproto ')'
+    | functionproto
     | typenat
+    | '(' bsvtype ')'
     ;
 typeide :
     (pkg=upperCaseIdentifier '::')? name=upperCaseIdentifier
@@ -293,16 +279,16 @@ typenat :
     IntLiteral
     ;
 expression :
-    '(' condpredicate ')' '?' expression ':' expression #CondExpr
-    | expression 'matches' pattern #MatchesExpr
+      expression ('&&&' expression)+ #tripleandexpr
+    | pred=expression '?' expression ':' expression #condexpr
+    | expression 'matches' pattern #matchesexpr
     | 'case' '(' expression ')' 'matches'? caseexpritem* 'endcase' #caseexpr
-    | binopexpr '?' expression ':' expression #SimpleCondExpr
-    | binopexpr #OperatorExpr
+    | binopexpr #operatorexpr
     ;
 
 caseexpritem :
     ('default'
-    | (pattern patterncond?)
+    | (pattern patterncond)
     | (exprprimary (',' exprprimary )* )) ':' body=expression ';'
     ;
 
@@ -327,101 +313,44 @@ unopexpr :
     | op=('+' | '-') right=unopexpr
     | exprprimary
     ;
-
-unop :
-    '+'
-    | '-'
-    | '!'
-    | '~'
-    | '&'
-    | '~&'
-    | '|'
-    | '~|'
-    | '^'
-    | '^~'
-    | '~^'
-    ;
-binop :
-    '*'
-    | '|'
-    | '%'
-    | '+'
-    | '-'
-    | '<<'
-    | '>>'
-    | '<='
-    | '>='
-    | '<'
-    | '>'
-    | '=='
-    | '!='
-    | '&'
-    | '^'
-    | '^~'
-    | '~^'
-    | '|'
-    | '&&'
-    | '||'
-    ;
-
 exprprimary :
-    '(' expression ')' #ParenExpr
-    | exprprimary '.' lowerCaseIdentifier #FieldExpr
-    | ( bsvtype | ( '(' bsvtype ')' ) ) '\'' exprprimary #CastExpr
-    | (pkg=upperCaseIdentifier '::')? var=anyidentifier #VarExpr
-    | IntLiteral #IntLiteral
-    | RealLiteral #RealLiteral
-    | StringLiteral #StringLiteral
-    | '?' #UndefExpr
-    | ('valueOf'|'valueof') '(' bsvtype ')' #ValueOfExpr
-    | 'return' expression #ReturnExpr
-    | bitconcat #BitConcatExpr
-    | array=exprprimary '[' msb=expression (':' lsb=expression)? ']' #ArraySub
-    | fcn=exprprimary '(' (expression (',' expression)*)? ')' #CallExpr
-    | 'clocked_by' exprprimary #ClockedByExpr
-    | 'reset_by' exprprimary #ResetByExpr
-    | typeassertion #TypeAssertionExpr
-    | structexpr #StructExprPrimary
-    | taggedunionexpr #TaggedUnionExprPrimary
-    | interfaceexpr #interfaceExprPrimary
-    | rulesexpr #RulesExprPrimary
-    | beginendblock #BlockExpr
-    | actionblock #ActionExpr
-    | actionvalueblock #ActionValueExpr
-    | seqfsmstmt #SeqFsmExpr
-    | parfsmstmt #ParFsmExpr
-    ;
-bitconcat :
-    '{' expression (',' expression)* '}'
-    ;
-typeassertion :
-    bsvtype '’' bitconcat
-    | bsvtype '’' '(' expression ')'
-    ;
-structexpr :
-    tag=upperCaseIdentifier '{' memberbinds '}'
+    '(' expression ')' #parenexpr
+    | exprprimary '.' field=lowerCaseIdentifier #fieldexpr
+    | ( bsvtype | ( '(' bsvtype ')' ) ) '\'' exprprimary #castexpr
+    | (pkg=upperCaseIdentifier '::')? var=anyidentifier #varexpr
+    | IntLiteral #intliteral
+    | RealLiteral #realliteral
+    | StringLiteral #stringliteral
+    | '?' #undefinedexpr
+    | ('valueOf'|'valueof') '(' bsvtype ')' #valueofexpr
+    | 'return' expression #returnexpr
+    | '{' expression (',' expression)* '}' #bitconcat
+    | array=exprprimary '[' msb=expression (':' lsb=expression)? ']' #arraysub
+    | fcn=exprprimary '(' (expression (',' expression)*)? ')' #callexpr
+    | 'clocked_by' exprprimary #clockedbyexpr
+    | 'reset_by' exprprimary #resetbyexpr
+    | bsvtype '’' ( ('{' expression (',' expression)* '}' ) | ( '(' expression ')' ) ) #typeassertionexpr
+    | tag=upperCaseIdentifier '{' memberbinds '}' #structexpr
+    | 'tagged' tag=upperCaseIdentifier (('{' memberbinds '}')|exprprimary|) #taggedunionexpr
+    | 'interface' bsvtype (';')? (interfacestmt)* 'endinterface' (':' typeide)? #interfaceexpr
+    | attributeinstance* 'rules' (':' lowerCaseIdentifier)? (rulesstmt)* 'endrules' (':' lowerCaseIdentifier)? #rulesexpr
+    | beginendblock #blockexpr
+    | actionblock #actionblockexpr
+    | actionvalueblock #actionvalueblockexpr
+    | seqfsmstmt #seqfsmexpr
+    | parfsmstmt #parfsmexpr
     ;
 memberbinds :
     memberbind (',' memberbind)*
     ;
-taggedunionexpr :
-    'tagged' tag=upperCaseIdentifier '{' memberbinds '}'
-    | 'tagged' tag=upperCaseIdentifier exprprimary?
-    ;
 memberbind :
     field=lowerCaseIdentifier ':' expression
-    ;
-interfaceexpr :
-    'interface' bsvtype (';')? (interfacestmt)* 'endinterface' (':' typeide)?
     ;
 interfacestmt :
     methoddef
     | subinterfacedef
     | vardecl
     | varassign
-    ;
-rulesexpr :
-    attributeinstance* 'rules' (':' lowerCaseIdentifier)? (rulesstmt)* 'endrules' (':' lowerCaseIdentifier)?
     ;
 rulesstmt :
     ruledef
@@ -457,17 +386,17 @@ stmt :
     | expression ';'
     ;
 ifstmt :
-    'if' '(' condpredicate ')' stmt ('else' stmt)?
+    'if' '(' expression ')' stmt ('else' stmt)?
     ;
 casestmt :
-    'case' '(' expression ')' (casestmtitem)* (casestmtdefaultitem)? 'endcase'
-    | 'case' '(' expression ')' 'matches' (casestmtpatitem)* (casestmtdefaultitem)? 'endcase'
+    'case' '(' expression ')' casestmtitem* casestmtdefaultitem? 'endcase'
+    | 'case' '(' expression ')' 'matches' casestmtpatitem* casestmtdefaultitem? 'endcase'
     ;
 casestmtitem :
     expression (',' expression)* ':' stmt
     ;
 casestmtpatitem :
-    pattern patterncond? ':' stmt
+    pattern patterncond ':' stmt
     ;
 casestmtdefaultitem :
     'default' (':')? stmt
@@ -503,18 +432,12 @@ forincr :
 varincr :
     lowerCaseIdentifier '=' expression
     ;
-condpredicate :
-    matchee=condpredicate '&&&' condpredicate
-    | expression 'matches' pattern
-    | expression
-    ;
 pattern :
     '.' var=lowerCaseIdentifier
     | '.*'
     | constantpattern
     | taggedunionpattern
     | structpattern
-    | tuplepattern
     | tuplepattern
     | '(' pattern ')'
     ;
@@ -544,11 +467,7 @@ attributeinstance :
     '(*' attrspec (',' attrspec)* '*)'
     ;
 attrspec :
-    attrname ('=' expression)?
-    ;
-attrname :
-    lowerCaseIdentifier
-    | upperCaseIdentifier
+    attrname=identifier ('=' expression)?
     ;
 provisos :
     'provisos' '(' proviso (',' proviso)* ')'

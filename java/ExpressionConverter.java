@@ -6,16 +6,10 @@ class ExpressionConverter extends BSVBaseVisitor<Expression>
             return new VariableRead(ctx.getText());
         }
         @Override
-        public Expression visitCondExpr(BSVParser.CondExprContext ctx) {
+        public Expression visitCondexpr(BSVParser.CondexprContext ctx) {
             return new CondExpression(visit(ctx.pred),
-                                      visit(ctx.expression(0)),
-                                      visit(ctx.expression(1)));
-        }
-        @Override
-        public Expression visitSimpleCondExpr(BSVParser.SimpleCondExprContext ctx) {
-            return new CondExpression(visit(ctx.binopexpr()),
-                                      visit(ctx.expression(0)),
-                                      visit(ctx.expression(1)));
+                                      visit(ctx.expression(1)),
+                                      visit(ctx.expression(2)));
         }
         @Override public Expression visitBinopexpr(BSVParser.BinopexprContext ctx) {
             if (ctx.left == null) {
