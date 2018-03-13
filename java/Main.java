@@ -153,6 +153,18 @@ class PreprocessedTokenSource implements TokenSource {
 
 		    System.err.println(String.format("preprocessor `else cond %s valid %s %d",
 						     condStack.peek(), validStack.peek(), validStack.size()));
+		} else if (text.equals("`elsif")) {
+
+		    condStack.pop();
+		    validStack.pop();
+
+		    Token ident = tokenSource.nextToken();
+		    String identText = ident.getText();
+		    condStack.push(defines.containsKey(identText));
+		    validStack.push(condStack.peek() && validStack.peek());
+
+		    System.err.println(String.format("preprocessor `elsif %s cond %s valid %s %d",
+						     identText, condStack.peek(), validStack.peek(), validStack.size()));
 		} else if (text.equals("`endif")) {
 		    condStack.pop();
 		    validStack.pop();
@@ -252,9 +264,10 @@ class Main {
 	    if (importdecl != null) {
 		for (BSVParser.ImportitemContext importitem: importdecl.importitem()) {
 		    String importedPkgName = importitem.pkgname.getText();
-		    System.err.println(String.format("import %s %s",
+		    System.err.println(String.format("import %s %s at %s",
 						     importedPkgName,
-						     (packages.containsKey(importedPkgName) ? "previously seen" : "unseen")));
+						     (packages.containsKey(importedPkgName) ? "previously seen" : "unseen"),
+						     StaticAnalysis.sourceLocation(importitem)));
 		    if (!packages.containsKey(importedPkgName)) {
 			analyzePackage(importedPkgName, findPackageFile(importedPkgName));
 		    }
