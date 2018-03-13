@@ -4,10 +4,49 @@ typedef enum {
    VoidValue
    } Void;
 
+// B.2.20
+
+interface Rule;
+endinterface
+
+interface Rules;
+endinterface
+
+function Rules emptyRules;
+endfunction
+
+module addRules#(Rules r) (Empty);
+endmodule
+
+function Rules rJoin(Rules x, Rules y);
+endfunction
+
+function Rules rJoin(Rules x, Rules y);
+endfunction
+
+function Rules rJoinDescendingUrgency(Rules x, Rules y);
+endfunction
+
+function Rules rJoinMutuallyExclusive(Rules x, Rules y);
+endfunction
+
+function Rules rJoinExecutionOrder(Rules x, Rules y);
+endfunction
+
+function Rules rJoinConflictFree(Rules x, Rules y);
+endfunction
+
+// B.something
+
+interface ReadOnly#(type a);
+  method a _read();
+endinterface
+
 interface Reg#(type a);
   method a _read();
   method Action _write(a v);
 endinterface
+
 interface Wire#(type a);
   method a _read();
   method Action _write(a v);
@@ -32,13 +71,42 @@ module mkReg#(data_t v)(Reg#(data_t));
     method Action _write(data_t v);
     endmethod
 endmodule
+module mkRegA#(data_t v)(Reg#(data_t));
+    method Action _write(data_t v);
+    endmethod
+endmodule
 module mkRegU(Reg#(data_t)) provisos (Bits#(data_t));
     method Action _write(data_t v);
     endmethod
 endmodule
 
+//FIXME
+module mkCReg#(Integer depth, data_t v)(Reg#(data_t));
+endmodule
+
+module mkWire(Wire#(element_type))
+   provisos (Bits#(element_type, element_width)) ;
+endmodule
 module mkBypassWire(Wire#(element_type))
    provisos (Bits#(element_type, element_width));
+endmodule
+
+// D.4.6
+
+module mkDWire#(a_type defaultval)(Wire#(element_type))
+   provisos (Bits#(element_type, element_width));
+endmodule
+
+module mkUnsafeDWire#(a_type defaultval)(Wire#(element_type))
+   provisos (Bits#(element_type, element_width));
+endmodule
+
+interface PulseWire;
+     method Action send();
+     method Bool _read();
+endinterface
+
+module mkPulseWire(PulseWire);
 endmodule
 
 function a id(a x);
@@ -298,9 +366,25 @@ endinstance
 interface Empty;
 endinterface
 
+function Action error(String msg);
+endfunction
+
 module errorM#(String s)(Empty);
 endmodule
 
 function Action noAction(); endfunction
+
+// B.5.4
+
+function Bit#(1) parity(Bit#(n) v);
+endfunction
+
+function Bit#(n) reverseBits(Bit#(n) x);
+endfunction
+
+function Bit#(n) truncateLSB(Bit#(m) x)
+   provisos(Add#(n,k,m));
+   return Bit#(n)'(x >> valueOf(k));
+endfunction
 
 endpackage

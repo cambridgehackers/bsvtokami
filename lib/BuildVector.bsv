@@ -29,6 +29,24 @@ package BuildVector;
 
 import Vector::*;
 
+`define FULL_BUILDVECTOR
+`ifndef FULL_BUILDVECTOR
+
+function Vector#(1, element_t) vec1(element_t v0);
+   return cons(v0, nul);
+endfunction
+function Vector#(2, element_t) vec2(element_t v0, element_t v1);
+   return cons(v1, cons(v0, nul));
+endfunction
+function Vector#(3, element_t) vec1(element_t v0, element_t v1, element_t v2);
+   return cons(v2, cons(v1, cons(v0, nul)));
+endfunction
+function Vector#(4, element_t) vec1(element_t v0, element_t v1, element_t v2, element_t v3);
+   return cons(v3, cons(v2, cons(v1, cons(v0, nul))));
+endfunction
+
+`else
+
 // A typeclass used to implement a vector construction function which can take
 // any number of arguments (>0).
 
@@ -113,4 +131,5 @@ module mkTest();
 endmodule
 */
 
+`endif
 endpackage
