@@ -1121,10 +1121,18 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 	}
 	return logx;
     }
+    long exp2(long x) {
+	long exp = 1;
+	while (x > 0) {
+	    x -= 1;
+	    exp *= 2;
+	}
+	return exp;
+    }
 
     BSVType evaluateType(BSVType bsvtype) {
+	System.err.println("evaluateType " + bsvtype + " in scope " + scope.name);
 	bsvtype = typeVisitor.dereferenceTypedef(bsvtype);
-	System.err.println("evaluateType " + bsvtype);
 	if (bsvtype.name.equals("TLog")) {
 	    assert bsvtype.params.size() == 1;
 	    BSVType paramtype = evaluateType(bsvtype.params.get(0));
@@ -1134,6 +1142,16 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 		long log2v = log2(v);
 		System.err.println(String.format("log2(%d) = %d", v, log2v));
 		return new BSVType(log2v);
+	    }
+	} else if (bsvtype.name.equals("TExp")) {
+	    assert bsvtype.params.size() == 1;
+	    BSVType paramtype = evaluateType(bsvtype.params.get(0));
+	    System.err.println("TExp " + paramtype);
+	    if (paramtype.numeric) {
+		long v = paramtype.asLong();
+		long exp2v = exp2(v);
+		System.err.println(String.format("exp2(%d) = %d", v, exp2v));
+		return new BSVType(exp2v);
 	    }
 	} else if (bsvtype.name.equals("TDiv")) {
 	    assert bsvtype.params.size() == 2;
