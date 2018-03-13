@@ -19,15 +19,15 @@ class VoidValue extends Value {
 }
 
 class IntValue extends Value {
-    final int value;
+    final long value;
     final int width;
     final static Pattern verilogIntPattern = Pattern.compile("([0-9]*)'([bdho])?([A-Za-z0-9]+)");
 
-    IntValue(int x) {
+    IntValue(long x) {
 	value = x;
 	width = 0;
     }
-    IntValue(int x, int width) {
+    IntValue(long x, int width) {
 	value = x;
 	this.width = 0;
     }
@@ -61,7 +61,7 @@ class IntValue extends Value {
 		width = Integer.parseInt(widthspec);
 	    else
 		width = 0;
-	    value = Integer.parseInt(m.group(3), base);
+	    value = Long.parseLong(m.group(3), base);
 	} else {
 	    value = Integer.parseInt(x);
 	    width = 0;
@@ -75,7 +75,7 @@ class IntValue extends Value {
     }
     @Override
     public Value binop(String op, Value other) {
-        int ov = ((IntValue)other).value;
+        long ov = ((IntValue)other).value;
         if (op.equals("==")) {
             return new BoolValue(value == ov);
         } else if (op.equals("!=")) {
@@ -94,6 +94,8 @@ class IntValue extends Value {
             return new IntValue(value - ov);
         } else if (op.equals("*")) {
             return new IntValue(value * ov);
+        } else if (op.equals(">>")) {
+            return new IntValue(value >> ov);
         }
         System.err.println("Unhandled int binop " + op);
         return this;
@@ -132,9 +134,9 @@ class BoolValue extends Value {
 class VectorValue extends Value {
     public final ArrayList<Value> value;
     public final int size;
-    VectorValue(int size) {
-        this.size = size;
-        value = new ArrayList<>(size);
+    VectorValue(long size) {
+        this.size = (int)size;
+        value = new ArrayList<>((int)size);
     }
     public String toString() {
         return String.format("<Vector#(%d)>", size);
@@ -184,16 +186,16 @@ class RegValue extends Value {
     }
     @Override
     public Value sub(Value index) {
-        int v = ((IntValue)value).value;
-        int i = ((IntValue)index).value;
+        long v = ((IntValue)value).value;
+        long i = ((IntValue)index).value;
         return new IntValue((v >> i)  & 1);
     }
     @Override
     public Value sub(Value msb, Value lsb) {
-        int v = ((IntValue)value).value;
-        int m = ((IntValue)msb).value;
-        int l = ((IntValue)lsb).value;
-        int mask = (1 << (m - l + 1)) - 1;
+        long v = ((IntValue)value).value;
+        long m = ((IntValue)msb).value;
+        long l = ((IntValue)lsb).value;
+        long mask = (1 << (m - l + 1)) - 1;
         return new IntValue((v >> l) & mask);
     }
 }
@@ -273,6 +275,15 @@ class FunctionValue extends Value {
     }
     int remainingArgCount() {
         return argCount - args.size();
+    }
+    BSVParser.ProvisosContext provisos() {
+	if (function != null)
+	    return function.functionproto().provisos();
+	if (module != null)
+	    return module.moduleproto().provisos();
+	if (method != null)
+	    return method.provisos();
+	return null;
     }
 }
 
