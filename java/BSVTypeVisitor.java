@@ -22,7 +22,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
     public void pushScope(SymbolTable newScope)
     {
         System.err.println("BSVTypeVisitor.pushScope() {");
-        scopeStack.push(scope);
+        scopeStack.push(newScope);
         scope = newScope;
     }
     public void popScope() {
