@@ -135,18 +135,22 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         printstream.println("Set Implicit Arguments.");
         printstream.println("");
 
+	scope = scopes.pushScope(ctx);
+
         if (ctx.packagedecl() != null) {
             if (!pkgName.equals(ctx.packagedecl().pkgname.getText())) {
                 System.err.println("Expected " + pkgName + " found " + ctx.packagedecl().pkgname.getText());
             }
         }
-        return visitChildren(ctx);
+	visitChildren(ctx);
+	scopes.popScope();
+	return null;
     }
 
     @Override public Void visitTypeclassinstance(BSVParser.TypeclassinstanceContext ctx) {
-        scope = scopes.getScope(ctx);
+        scope = scopes.pushScope(ctx);
         visitChildren(ctx);
-        scope = scope.parent;
+        scope = scopes.popScope();
         return null;
     }
 
@@ -158,7 +162,8 @@ public class BSVToKami extends BSVBaseVisitor<Void>
             }
         }
         instances = new ArrayList<>();
-        scope = scopes.getScope(ctx);
+        scope = scopes.pushScope(ctx);
+
         String moduleName = ctx.moduleproto().name.getText();
         String sectionName = moduleName.startsWith("mk") ? moduleName.substring(2) : moduleName;
         moduleDef = new ModuleDef(moduleName);
@@ -203,7 +208,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 	printstream.println(String.format("%1$sModule)%%kami.", moduleName));
 
         printstream.println("End " + sectionName + ".");
-        scope = scope.parent;
+        scope = scopes.popScope();
         moduleDef = null;
         System.err.println("endmodule : " + moduleName);
         return null;
@@ -217,6 +222,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         BSVParser.BsvtypeContext t = ctx.t;
         for (BSVParser.VarinitContext varinit: ctx.varinit()) {
             String varName = varinit.var.getText();
+	    assert scope != null : "No scope to evaluate var binding " + ctx.getText();
             SymbolTableEntry entry = scope.lookup(varName);
             printstream.print("        Let " + varName + ": " + bsvTypeToKami(t));
             BSVParser.ExpressionContext rhs = varinit.rhs;
@@ -233,6 +239,8 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         for (BSVParser.LowerCaseIdentifierContext ident: ctx.lowerCaseIdentifier()) {
             String varName = ident.getText();
             SymbolTableEntry entry = scope.lookup(varName);
+	    assert entry != null : String.format("No entry for %s at %s",
+						 varName, StaticAnalysis.sourceLocation(ctx));
             printstream.print("        Let " + varName + ": " + bsvTypeToKami(entry.type) + " ");
         }
         if (ctx.op != null) {
@@ -297,7 +305,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
     @Override public Void visitRuledef(BSVParser.RuledefContext ruledef) {
         boolean outerContext = actionContext;
         actionContext = true;
-        scope = scopes.getScope(ruledef);
+        scope = scopes.pushScope(ruledef);
         String ruleName = ruledef.name.getText();
         RuleDef ruleDef = new RuleDef(ruleName);
         BSVParser.RulecondContext rulecond = ruledef.rulecond();
@@ -323,16 +331,22 @@ public class BSVToKami extends BSVBaseVisitor<Void>
             visit(stmt);
         }
         printstream.println("        Retv (* rule " + ruledef.name.getText() + " *)" + "\n");
-        scope = scope.parent;
+        scope = scopes.popScope();
         actionContext = outerContext;
         return null;
+    }
+
+    @Override public Void visitFunctiondef(BSVParser.FunctiondefContext ctx) {
+	scope = scopes.pushScope(ctx);
+	printstream.println(String.format("Definition %s placeholder", ctx.functionproto().name.getText()));
+	scope = scopes.popScope();
+	return null;
     }
 
     @Override public Void visitMethoddef(BSVParser.MethoddefContext ctx) {
         boolean outerContext = actionContext;
         actionContext = true;
 
-        SymbolTable methodScope = scopes.getScope(ctx);
         String methodName = ctx.name.getText();
         printstream.print("Method ^\"" + methodName + "\" (");
         if (ctx.methodformals() != null) {

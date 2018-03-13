@@ -44,19 +44,32 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     }
 
     private void pushScope(ParserRuleContext ctx, SymbolTable.ScopeType st, String name) {
-        symbolTable = new SymbolTable(symbolTable, st, name);
+	if (scopes.containsKey(ctx)) {
+	    symbolTable = scopes.get(ctx);
+	} else {
+	    symbolTable = new SymbolTable(symbolTable, st, name);
+	    scopes.put(ctx, symbolTable);
+	}
         System.err.println("pushScope { " + name + "-" + symbolTable + " " + st);
-        scopes.put(ctx, symbolTable);
         typeVisitor.pushScope(symbolTable);
     }
 
-    private void popScope() {
+    SymbolTable pushScope(ParserRuleContext ctx) {
+	assert scopes.containsKey(ctx);
+	symbolTable = scopes.get(ctx);
+        System.err.println("pushScope { " + symbolTable.name + "-" + symbolTable + " " + symbolTable.scopeType);
+        typeVisitor.pushScope(symbolTable);
+	return symbolTable;
+    }
+
+    SymbolTable popScope() {
 	assert symbolTable.parent != null : String.format("Symbol table %s:%s has no parent", symbolTable.name, symbolTable);
         System.err.println(String.format("popScope %s-%s parent %s-%s }",
 					 symbolTable.name, symbolTable, symbolTable.parent.name, symbolTable.parent));
 	assert typeVisitor != null;
         typeVisitor.popScope();
         symbolTable = symbolTable.parent;
+	return symbolTable;
     }
 
     static String sourceLocation(ParserRuleContext ctx) {
