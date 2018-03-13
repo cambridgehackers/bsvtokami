@@ -410,9 +410,10 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 		    SymbolTableEntry entry = scope.lookup(varname);
 		    assert entry != null : String.format("Could not find entry for %s at %s",
 							 varname, StaticAnalysis.sourceLocation(ctx));
-		    assert varinit.arraydims() == null : String.format("Unimplemented arraydims %s at %s",
-								       varinit.getText(),
-								       StaticAnalysis.sourceLocation(ctx));
+		    assert varinit.arraydims().expression().size() == 0
+			: String.format("Unimplemented arraydims %s at %s",
+					varinit.getText(),
+					StaticAnalysis.sourceLocation(ctx));
 		    entry.value = visit(varinit.rhs);
 		}
 	    } catch (Exception e) {
