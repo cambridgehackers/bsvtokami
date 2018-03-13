@@ -27,3 +27,5 @@
 `define CONNECTAL_BITS_DEPENDENCES build/checkpoints/to_aws/mkTop.SH_CL_routed.dcp
 `define CONNECTAL_RUN_SCRIPT $(CONNECTALDIR)/scripts/run.aws
 `define BOARD_awsf1 
+`define USER_CLK_PERIOD 10
+`define MemServerTags 4
