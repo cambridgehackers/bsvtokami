@@ -170,7 +170,7 @@ class PreprocessedTokenSource implements TokenSource {
 		    validStack.pop();
 		    System.err.println(String.format("preprocessor `endif cond %s valid %s %d",
 						     condStack.peek(), validStack.peek(), validStack.size()));
-		} else if (text.equals("`include")) {
+		} else if (text.equals("`include") && validStack.peek()) {
 		    Token filenameToken = tokenSource.nextToken();
 		    String filename = filenameToken.getText();
 		    filename = filename.substring(1,filename.length()-1);
@@ -183,7 +183,7 @@ class PreprocessedTokenSource implements TokenSource {
 		    } catch (IOException ex) {
 			System.err.println(ex);
 		    }
-		} else {
+		} else if (validStack.peek()) {
 		    // substitute
 		    String identifier = token.getText().substring(1);
 		    //System.err.println(String.format("defined %s %s", identifier, defines.containsKey(identifier)));
