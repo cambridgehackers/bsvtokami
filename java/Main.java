@@ -111,24 +111,27 @@ class PreprocessedTokenSource implements TokenSource {
 	    }
 	    if (token.getChannel() == 2) {
 		String text = token.getText();
-		if (text.equals("`define")) {
+		while (text != null && text.equals("`define")) {
 		    Token identtoken = tokenSource.nextToken();
 		    String identtext = identtoken.getText();
 		    Token valtoken = tokenSource.nextToken();
 		    if (identtoken.getLine() == valtoken.getLine()) {
-			//System.err.println(String.format("Defining preprocessor symbol %s %s", identtext, valtoken.getText()));
+			System.err.println(String.format("Defining preprocessor symbol %s %s", identtext, valtoken.getText()));
 			defines.put(identtext, valtoken);
-			continue;
+			token = null;
+			text = null;
 		    } else {
-			//System.err.println(String.format("Defining preprocessor symbol %s", identtext));
+			System.err.println(String.format("Defining preprocessor symbol %s", identtext));
 			defines.put(identtext, null);
 			if (valtoken.getChannel() != 2)
 			    return valtoken;
 			token = valtoken;
+			text = valtoken.getText();
 		    }
 		}
+		if (token == null)
+		    continue;
 
-		text = token.getText();
 		//System.err.println(String.format("preprocessor channel %d token %s", token.getChannel(), text));
 		if (text.equals("`ifdef") || text.equals("`ifndef")) {
 		    Token ident = tokenSource.nextToken();
@@ -160,6 +163,7 @@ class PreprocessedTokenSource implements TokenSource {
 		    String filename = filenameToken.getText();
 		    filename = filename.substring(1,filename.length()-1);
 		    filename = findIncludeFile(filename);
+		    System.err.println(String.format("preprocessor including %s", filename));
 		    try {
 			CharStream charStream = CharStreams.fromFileName(filename);
 			Lexer lexer = new BSVLexer(charStream);
@@ -172,7 +176,7 @@ class PreprocessedTokenSource implements TokenSource {
 		    String identifier = token.getText().substring(1);
 		    //System.err.println(String.format("defined %s %s", identifier, defines.containsKey(identifier)));
 		    assert defines.containsKey(identifier) : String.format("No definition for %s at %s",
-									   token.getText(), sourceLocation(token));
+									   identifier, sourceLocation(token));
 		    Token valtoken = defines.get(identifier);
 		    return valtoken;
 		}
