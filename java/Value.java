@@ -48,7 +48,10 @@ class IntValue extends Value {
 		base = 8;
 	    } else if (basespec.equals("h")) {
 		base = 16;
+	    } else if (basespec.equals("d")) {
+		base = 10;
 	    } else {
+		System.err.println(String.format("Parsing integer %s basespec %s", x, basespec));
 		assert basespec.length() == 0;
 		base = 10;
 	    }
