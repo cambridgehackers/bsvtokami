@@ -4,7 +4,11 @@ import java.util.*;
 
 class SymbolTableEntry {
     public final String name;
-    public final BSVType type;
+    public BSVType type;
+    public enum Type {
+	Module, Method, Function, Type, Enum, Struct
+    };
+    Type symbolType;
     public SymbolTable mappings; // for interfaces
     public ArrayList<SymbolTableEntry> instances; // for type classes
     public Value value;
@@ -33,7 +37,7 @@ class SymbolTable {
     public final Map<String,SymbolTableEntry> typeBindings;
     public final SymbolTable parent;
     public enum ScopeType {
-        Package, Module, Action, Declaration, Block, TypeClassInstance, CaseStmt, Loop
+        Package, Module, Action, Declaration, Block, TypeClassInstance, IfStmt, CaseStmt, Loop
     }
     public final ScopeType scopeType;
 
@@ -73,16 +77,25 @@ class SymbolTable {
         }
     }
 
+    void unbind(String key) {
+	bindings.remove(key);
+    }
     void bind(String key, BSVType bsvtype) {
         System.err.println("binding " + key + " with type " + bsvtype + " in scope " + this + " " + this.name);
+	assert !bindings.containsKey(key)
+	    : String.format("Symbol %s already bound in scope %s %s", key, name, this);
         bindings.put(key, new SymbolTableEntry(key, bsvtype));
     }
     void bind(String key, SymbolTableEntry entry) {
         System.err.println("binding " + key + " with type " + entry.type + " in scope " + this + " " + this.name);
+	assert !bindings.containsKey(key)
+	    : String.format("Symbol %s already bound in scope %s %s", key, name, this);
         bindings.put(key, entry);
     }
     void bind(String pkgName, String key, SymbolTableEntry entry) {
         System.err.println("binding " + key + " with type " + entry.type + " in scope " + this + " " + this.name);
+	assert !bindings.containsKey(key)
+	    : String.format("Symbol %s::%s already bound in scope %s %s", pkgName, key, name, this);
         entry.pkgName = pkgName;
         bindings.put(key, entry);
     }
@@ -115,7 +128,8 @@ class SymbolTable {
     }
     void bindType(String pkgName, String key, BSVType bsvtype, SymbolTable mappings) {
         SymbolTableEntry entry = new SymbolTableEntry(key, bsvtype);
-        System.err.println("binding type " + key + " with type " + bsvtype + " and mappings " + mappings);
+        System.err.println("binding type " + key + " with type " + bsvtype + " and mappings " + mappings
+			   + " in scope " + this + " " + this.name);
         entry.mappings = mappings;
         entry.pkgName = pkgName;
         typeBindings.put(key, entry);
