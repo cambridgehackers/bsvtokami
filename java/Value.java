@@ -21,7 +21,7 @@ class VoidValue extends Value {
 class IntValue extends Value {
     final long value;
     final int width;
-    final static Pattern verilogIntPattern = Pattern.compile("([0-9]*)'([bdho])?([A-Za-z0-9]+)");
+    final static Pattern verilogIntPattern = Pattern.compile("([0-9]*)'([bdho])?([A-Za-z0-9_]+)");
 
     IntValue(long x) {
 	value = x;
@@ -38,11 +38,6 @@ class IntValue extends Value {
 
     IntValue(String x) {
 	Matcher m = verilogIntPattern.matcher(x);
-	//tryMatch("[0-9]*.*", x);
-	//tryMatch("[0-9]*'.*", x);
-	//tryMatch("[0-9]*'[bdho]?.*", x);
-	//tryMatch("[0-9]*'[bdho]?[A-Za-z0-9]+.*", x);
-	//tryMatch("[0-9]*'[bdho]?[A-Za-z0-9]+", x);
 	if (m.matches()) {
 	    String widthspec = m.group(1);
 	    String basespec = m.group(2);
@@ -61,7 +56,9 @@ class IntValue extends Value {
 		width = Integer.parseInt(widthspec);
 	    else
 		width = 0;
-	    value = Long.parseLong(m.group(3), base);
+	    String digits = m.group(3);
+	    digits = digits.replace("_", "");
+	    value = Long.parseLong(digits, base);
 	} else {
 	    value = Integer.parseInt(x);
 	    width = 0;
