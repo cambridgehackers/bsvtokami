@@ -710,7 +710,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 	visit(ctx.expression());
 	for (BSVParser.CaseexpritemContext item: ctx.caseexpritem()) {
 	    System.err.println("visit case expr item " + item.getText());
-	    pushScope(ctx, SymbolTable.ScopeType.CaseStmt, "caseexpr");
+	    pushScope(item, SymbolTable.ScopeType.CaseStmt, "caseexpr");
 	    if (item.pattern() != null)
 		visit(item.pattern());
 	    if (item.patterncond() != null)
