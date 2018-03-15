@@ -151,12 +151,13 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
         pushScope(newScope);
     }
     private void pushScope(SymbolTable newScope) {
+        System.err.println("Evaluator.pushScope {");
         scopeStack.push(scope);
         typeVisitor.pushScope(scope);
         scope = newScope;
     }
     private void popScope() {
-        System.err.println("popScope " + " }");
+        System.err.println("Evaluator.popScope }");
         typeVisitor.popScope();
         scope = scopeStack.pop();
     }
@@ -859,13 +860,10 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public Value visitUnopexpr(BSVParser.UnopexprContext ctx) {
+	    Value v = visit(ctx.exprprimary());
             if (ctx.op == null) {
-                return visit(ctx.exprprimary());
-            } else if (ctx.exprprimary() != null) {
-                Value v = visit(ctx.exprprimary());
-                return v.unop(ctx.op.getText());
+                return v;
             } else {
-                Value v = visit(ctx.unopexpr());
                 return v.unop(ctx.op.getText());
             }
         }

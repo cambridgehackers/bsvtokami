@@ -21,13 +21,14 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 
     public void pushScope(SymbolTable newScope)
     {
-        System.err.println("BSVTypeVisitor.pushScope() {");
-        scopeStack.push(newScope);
+        scopeStack.push(scope);
         scope = newScope;
+        System.err.println(String.format("BSVTypeVisitor.pushScope()  %d {", scopeStack.size()));
     }
     public void popScope() {
-        System.err.println("} BSVTypeVisitor.popScope()");
+        System.err.println(String.format("} BSVTypeVisitor.popScope() %d", scopeStack.size()));
         scope = scopeStack.pop();
+	assert scopeStack.size() > 0; // nobody should pop the global scope
     }
 
     BSVType dereferenceTypedef(BSVType bsvtype) {
@@ -318,6 +319,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                     fieldMappings.bind(member.lowerCaseIdentifier().getText(), membertype);
                 }
             }
+	    System.err.println(String.format("Defining struct %s in scope %s %s",
+					     bsvtype.name, scope.name, scope));
             scope.bindType(null, bsvtype.name, bsvtype, fieldMappings);
             return bsvtype;
         }
@@ -964,7 +967,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             if (varName.startsWith("\\"))
                 varName = varName.substring(1);
             assert (ctx.pkg == null);
+	    assert scope != null : "no scope for " + StaticAnalysis.sourceLocation(ctx);
             SymbolTableEntry entry = scope.lookup(varName);
+            System.err.println("var expr " + varName + " entry " + entry);
             System.err.println("var expr " + varName + " entry " + entry + " : " + ((entry != null) ? entry.type : ""));
             assert entry != null : String.format("No symbol table entry for %s at %s", varName, StaticAnalysis.sourceLocation(ctx));
             if (entry.instances != null) {
@@ -1203,14 +1208,14 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 if (ctx.expression().size() == 1)
                     return new BSVType("Bit", new BSVType("1"));
                     assert scope != null;
-                Evaluator eval = new Evaluator(staticAnalyzer, this);
-                try {
-                    IntValue msbValue = (IntValue)eval.evaluate(ctx.expression(0), scope);
-                    IntValue lsbValue = (IntValue)eval.evaluate(ctx.expression(1), scope);
-                    return new BSVType("Bit", new BSVType(msbValue.value - lsbValue.value + 1));
-                } catch (Exception e) {
-                    System.err.println("Failed to evaluate msb or lsb " + e);
-                }
+                // Evaluator eval = new Evaluator(staticAnalyzer, this);
+                // try {
+                //     IntValue msbValue = (IntValue)eval.evaluate(ctx.expression(0), scope);
+                //     IntValue lsbValue = (IntValue)eval.evaluate(ctx.expression(1), scope);
+                //     return new BSVType("Bit", new BSVType(msbValue.value - lsbValue.value + 1));
+                // } catch (Exception e) {
+                //     System.err.println("Failed to evaluate msb or lsb " + e);
+                // }
                 return new BSVType("Bit", new BSVType());
             }
         }

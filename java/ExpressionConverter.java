@@ -27,11 +27,7 @@ class ExpressionConverter extends BSVBaseVisitor<Expression>
         @Override public Expression visitUnopexpr(BSVParser.UnopexprContext ctx) {
             if (ctx.op != null) {
                 String op = ctx.op.getText();
-                if (ctx.exprprimary() != null) {
-                    return new OperatorExpression(op, visit(ctx.exprprimary()));
-                } else {
-                    return new OperatorExpression(op, visit(ctx.unopexpr()));
-                }
+		return new OperatorExpression(op, visit(ctx.exprprimary()));
             } else {
                 return visit(ctx.exprprimary());
             }
