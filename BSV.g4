@@ -254,8 +254,8 @@ externcfuncarg :
     bsvtype lowerCaseIdentifier?
     ;
 varassign :
-    lvalue op=('='|'<-') expression ';'
-    | '{' lvalue (',' lvalue)* '}' op=('='|'<-') expression ';'
+    attributeinstance* lvalue op=('='|'<-') expression ';'
+    | attributeinstance* '{' lvalue (',' lvalue)* '}' op=('='|'<-') expression ';'
     ;
 lvalue :
     lowerCaseIdentifier
@@ -310,7 +310,7 @@ binopexpr :
     ;
 unopexpr : 
      op=('!' | '~' | '&' | '~&' | '|' | '~|' | '^' | '^~' | '~^') exprprimary
-    | op=('+' | '-') right=unopexpr
+    | op=('+' | '-') right=exprprimary
     | exprprimary
     ;
 exprprimary :
@@ -443,12 +443,14 @@ pattern :
     ;
 constantpattern :
     IntLiteral
+    | IntPattern
     | RealLiteral
     | StringLiteral
     | upperCaseIdentifier
     ;
 
 IntLiteral : ([1-9][0-9]*)?('\''[hdob]?)?[0-9a-fA-F_]+ ;
+IntPattern : ([1-9][0-9]*)?('\''[hdob]?)?[0-9a-fA-F_?]+ ;
 
 RealLiteral : [0-9]+'.'[0-9]+ ;
 
