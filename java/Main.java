@@ -281,8 +281,8 @@ class Main {
 	    }
 	}
 	staticAnalyzer.visitPackage(pkgName, packagedef);
-	Evaluator evaluator = new Evaluator(staticAnalyzer);
-	evaluator.evaluate(packagedef);
+	//Evaluator evaluator = new Evaluator(staticAnalyzer);
+	//evaluator.evaluate(packagedef);
 	return packagedef;
     }
 
