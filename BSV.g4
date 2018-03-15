@@ -315,7 +315,7 @@ unopexpr :
     ;
 exprprimary :
     '(' expression ')' #parenexpr
-    | exprprimary '.' field=lowerCaseIdentifier #fieldexpr
+    | exprprimary '.' field=identifier #fieldexpr
     | ( bsvtype | ( '(' bsvtype ')' ) ) '\'' exprprimary #castexpr
     | (pkg=upperCaseIdentifier '::')? var=anyidentifier #varexpr
     | IntLiteral #intliteral
