@@ -29,107 +29,110 @@ package BuildVector;
 
 import Vector::*;
 
-`define FULL_BUILDVECTOR
-`ifndef FULL_BUILDVECTOR
-
 function Vector#(1, element_t) vec1(element_t v0);
    return cons(v0, nul);
 endfunction
 function Vector#(2, element_t) vec2(element_t v0, element_t v1);
    return cons(v1, cons(v0, nul));
 endfunction
-function Vector#(3, element_t) vec1(element_t v0, element_t v1, element_t v2);
+function Vector#(3, element_t) vec3(element_t v0, element_t v1, element_t v2);
    return cons(v2, cons(v1, cons(v0, nul)));
 endfunction
-function Vector#(4, element_t) vec1(element_t v0, element_t v1, element_t v2, element_t v3);
+function Vector#(4, element_t) vec4(element_t v0, element_t v1, element_t v2, element_t v3);
    return cons(v3, cons(v2, cons(v1, cons(v0, nul))));
 endfunction
-
-`else
-
-// A typeclass used to implement a vector construction function which can take
-// any number of arguments (>0).
-
-// The type a is the type of Vector elements.  The function provided by the
-// typeclass definition, buildVec_, takes the Vector constructed so far, and
-// all the remaining elements.  But it is defined in curried form, taking just
-// one of the remaining elements, and returning a function expecting the
-// others.  The type r is the type of the resulting function (or the type of
-// the final Vector, when all the elements have been absorbed).  The type n is
-// the number of elements processed so far.
-//
-// So with 3 arguments, there would be three instance matches used for
-// BuildVector:
-//   one with r equal to Vector#(3,a)
-//   one with r equal to function Vector#(3,a) f(a x)
-//   one with r equal to function (function Vector#(3,a) f1(a x)) f2(a x)
-
-// The typeclass definition:
-typeclass BuildVector#(type a, type r, numeric type n)
-   dependencies (r determines (a,n));
-   function r buildVec_(Vector#(n,a) v, a x);
-endtypeclass
-
-// This is the base case (building a Vector from the final argument):
-//
-// Note that the Vector has been built up by consing successive elements onto
-// the front, and so a final reverse is needed.
-//
-instance BuildVector#(a,Vector#(m,a),n) provisos(Add#(n,1,m));
-   function Vector#(m,a) buildVec_(Vector#(n,a) v, a x);
-      return reverse(cons(x,v));
-   endfunction
-endinstance
-
-// This is the recursive case (building a vector from non-final arguments):
-//
-// Note: this uses partial application -- it defines the function expecting
-// all the remaining arguments by applying buildVec_ just to the newly
-// constructed "Vector so far"; the result of that is a function expecting
-// buildVec_'s second argument (and, iteratively, any remaining ones).
-//
-instance BuildVector#(a,function r f(a y),n) provisos(BuildVector#(a,r,m), Add#(n,1,m));
-   function (function r f(a y)) buildVec_(Vector#(n,a) v, a x);
-      return buildVec_(cons(x,v));
-   endfunction
-endinstance
-
-// This is the user-visible Vector constructor function:
-function r vec(a x) provisos(BuildVector#(a,r,0));
-   return buildVec_(nil,x);
+function Vector#(5, element_t) vec5(element_t v0, element_t v1, element_t v2, element_t v3, element_t v4);
+   return cons(v4, cons(v3, cons(v2, cons(v1, cons(v0, nul)))));
+endfunction
+function Vector#(6, element_t) vec6(element_t v0, element_t v1, element_t v2, element_t v3, element_t v4, element_t v5);
+   return cons(v5, cons(v4, cons(v3, cons(v2, cons(v1, cons(v0, nul))))));
 endfunction
 
-/*
-// A simple testcase:
-(* synthesize *)
-module mkTest();
-   Vector#(4,Bool)     v1 = vec(True,False,True,True);
-   Vector#(2,UInt#(8)) v2 = vec(7,32);
-   Vector#(3,Bool)     v3 = vec(False,True,True);
-   Vector#(1,UInt#(4)) v4 = vec(3);
+// `else
 
-   Reg#(Bool) done <- mkReg(False);
+// // A typeclass used to implement a vector construction function which can take
+// // any number of arguments (>0).
 
-   rule r (!done);
-      $display("v1[0] -> %b", v1[0]);
-      $display("v1[1] -> %b", v1[1]);
-      $display("v1[2] -> %b", v1[2]);
-      $display("v1[3] -> %b", v1[3]);
-      $display("v2[0] -> %d", v2[0]);
-      $display("v2[1] -> %d", v2[1]);
-      $display("v3[0] -> %b", v3[0]);
-      $display("v3[1] -> %b", v3[1]);
-      $display("v3[2] -> %b", v3[2]);
-      $display("v4[0] -> %d", v4[0]);
+// // The type a is the type of Vector elements.  The function provided by the
+// // typeclass definition, buildVec_, takes the Vector constructed so far, and
+// // all the remaining elements.  But it is defined in curried form, taking just
+// // one of the remaining elements, and returning a function expecting the
+// // others.  The type r is the type of the resulting function (or the type of
+// // the final Vector, when all the elements have been absorbed).  The type n is
+// // the number of elements processed so far.
+// //
+// // So with 3 arguments, there would be three instance matches used for
+// // BuildVector:
+// //   one with r equal to Vector#(3,a)
+// //   one with r equal to function Vector#(3,a) f(a x)
+// //   one with r equal to function (function Vector#(3,a) f1(a x)) f2(a x)
 
-      done <= True;
-   endrule
+// // The typeclass definition:
+// typeclass BuildVector#(type a, type r, numeric type n)
+//    dependencies (r determines (a,n));
+//    function r buildVec_(Vector#(n,a) v, a x);
+// endtypeclass
 
-   rule r2 (done);
-      $finish(0);
-   endrule
-endmodule
-*/
+// // This is the base case (building a Vector from the final argument):
+// //
+// // Note that the Vector has been built up by consing successive elements onto
+// // the front, and so a final reverse is needed.
+// //
+// instance BuildVector#(a,Vector#(m,a),n) provisos(Add#(n,1,m));
+//    function Vector#(m,a) buildVec_(Vector#(n,a) v, a x);
+//       return reverse(cons(x,v));
+//    endfunction
+// endinstance
 
-`endif
+// // This is the recursive case (building a vector from non-final arguments):
+// //
+// // Note: this uses partial application -- it defines the function expecting
+// // all the remaining arguments by applying buildVec_ just to the newly
+// // constructed "Vector so far"; the result of that is a function expecting
+// // buildVec_'s second argument (and, iteratively, any remaining ones).
+// //
+// instance BuildVector#(a,function r f(a y),n) provisos(BuildVector#(a,r,m), Add#(n,1,m));
+//    function (function r f(a y)) buildVec_(Vector#(n,a) v, a x);
+//       return buildVec_(cons(x,v));
+//    endfunction
+// endinstance
+
+// // This is the user-visible Vector constructor function:
+// function r vec(a x) provisos(BuildVector#(a,r,0));
+//    return buildVec_(nil,x);
+// endfunction
+
+// /*
+// // A simple testcase:
+// (* synthesize *)
+// module mkTest();
+//    Vector#(4,Bool)     v1 = vec(True,False,True,True);
+//    Vector#(2,UInt#(8)) v2 = vec(7,32);
+//    Vector#(3,Bool)     v3 = vec(False,True,True);
+//    Vector#(1,UInt#(4)) v4 = vec(3);
+
+//    Reg#(Bool) done <- mkReg(False);
+
+//    rule r (!done);
+//       $display("v1[0] -> %b", v1[0]);
+//       $display("v1[1] -> %b", v1[1]);
+//       $display("v1[2] -> %b", v1[2]);
+//       $display("v1[3] -> %b", v1[3]);
+//       $display("v2[0] -> %d", v2[0]);
+//       $display("v2[1] -> %d", v2[1]);
+//       $display("v3[0] -> %b", v3[0]);
+//       $display("v3[1] -> %b", v3[1]);
+//       $display("v3[2] -> %b", v3[2]);
+//       $display("v4[0] -> %d", v4[0]);
+
+//       done <= True;
+//    endrule
+
+//    rule r2 (done);
+//       $finish(0);
+//    endrule
+// endmodule
+// */
+
+// `endif
 endpackage

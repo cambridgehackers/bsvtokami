@@ -15,4 +15,9 @@ endmodule
 module mkFIFO1(FIFO#(element_type));
 endmodule
 
+module mkSizedFIFO#(Integer n)(FIFO#(element_type))
+   provisos (Bits#(element_type, width_any));
+endmodule
+
 endpackage
+

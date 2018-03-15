@@ -21,9 +21,6 @@ endmodule
 function Rules rJoin(Rules x, Rules y);
 endfunction
 
-function Rules rJoin(Rules x, Rules y);
-endfunction
-
 function Rules rJoinDescendingUrgency(Rules x, Rules y);
 endfunction
 
@@ -358,7 +355,7 @@ instance TupleSelector#(Tuple4#(t1,t2,t3,t4), t1, t2, t3, t4);
    function t3 tpl_3(Tuple4#(t1,t2,t3,t4) tpl);
       return tpl.tpl_3;
    endfunction
-   function t4 tpl_3(Tuple4#(t1,t2,t3,t4) tpl);
+   function t4 tpl_4(Tuple4#(t1,t2,t3,t4) tpl);
       return tpl.tpl_4;
    endfunction
 endinstance
@@ -374,6 +371,25 @@ endmodule
 
 function Action noAction(); endfunction
 
+// B.4.3
+
+interface RWire#(type element_type) ;
+   method Action wset(element_type datain) ;
+   method Maybe#(element_type) wget() ;
+endinterface: RWire
+
+module mkRWireSBR(RWire#(element_type))
+   provisos (Bits#(element_type, element_width)) ;
+endmodule
+
+module mkUnsafeRWire(RWire#(element_type))
+   provisos (Bits#(element_type, element_width)) ;
+endmodule
+
+module mkRWire(RWire#(element_type))
+   provisos (Bits#(element_type, element_width)) ;
+endmodule
+
 // B.5.4
 
 function Bit#(1) parity(Bit#(n) v);
@@ -386,5 +402,17 @@ function Bit#(n) truncateLSB(Bit#(m) x)
    provisos(Add#(n,k,m));
    return Bit#(n)'(x >> valueOf(k));
 endfunction
+
+// 12.8.3
+
+typedef union tagged {
+        void     InvalidFile ;
+        Bit#(31) MCD;
+        Bit#(31) FD;
+} File;
+
+File stdin = tagged MCD 0;
+File stdout = tagged MCD 1;
+File stderr = tagged MCD 2;
 
 endpackage

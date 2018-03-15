@@ -205,22 +205,22 @@ function b_type foldl(function b_type func(b_type y, a_type x),
    return foldrec(0, seed);
 endfunction
 
-// function a_type fold(function b_type func(a_type y, a_type x),
-// 		      Vector#(vsize,a_type) vect);
-//    function b_type recursive(Integer lb, Integer rb);
-//        if (lb == rb)
-// 	  return vect[lb];
-//        else if (lb == rb - 1)
-// 	  return func(vect[lb], vect[rb]);
-//        else begin
-// 	  Integer midpoint = lb + (rb - lb + 1 / 2);
-// 	  a_type v0 = recursive(lb, lb + midpoint);
-// 	  a_type v1 = recursive(lb + midpoint, rb);
-// 	  return func(v0, v2);
-//        end
-//    endfunction
-//    return recursive(0, valueOf(vsize)-1, seed);
-// endfunction
+function a_type fold(function b_type func(a_type y, a_type x),
+		      Vector#(vsize,a_type) vect);
+   function b_type recursive(Integer lb, Integer rb);
+       if (lb == rb)
+	  return vect[lb];
+       else if (lb == rb - 1)
+	  return func(vect[lb], vect[rb]);
+       else begin
+	  Integer midpoint = lb + (rb - lb + 1 / 2);
+	  a_type v0 = recursive(lb, lb + midpoint);
+	  a_type v1 = recursive(lb + midpoint, rb);
+	  return func(v0, v2);
+       end
+   endfunction
+   return recursive(0, valueOf(vsize)-1, seed);
+endfunction
 
 function a_type foldr1(function a_type func(a_type x, a_type y),
                       Vector#(vsize,a_type) vect)

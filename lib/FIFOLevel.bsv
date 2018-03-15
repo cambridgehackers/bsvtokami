@@ -11,4 +11,16 @@ interface FIFOLevelIfc#( type element_type, numeric type fifoDepth ) ;
    method Bool isGreaterThan( Integer c1 ) ;
 endinterface
 
+module mkFIFOLevel (
+          FIFOLevelIfc#(element_type, fifoDepth) )
+   provisos( Bits#(element_type, width_element ),
+             Log#(TAdd#(fifoDepth,1),cntSize) ) ;
+endmodule
+
+module mkGFIFOLevel#(Bool ugenq, Bool ugdeq, Bool ugcount)
+           ( FIFOLevelIfc#(element_type, fifoDepth) )
+   provisos( Bits#(element_type, width_element ),
+            Log#(TAdd#(fifoDepth,1),cntSize));
+endmodule
+
 endpackage
