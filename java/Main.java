@@ -170,9 +170,15 @@ class PreprocessedTokenSource implements TokenSource {
 		    validStack.pop();
 		    System.err.println(String.format("preprocessor `endif cond %s valid %s %d",
 						     condStack.peek(), validStack.peek(), validStack.size()));
-		} else if (text.equals("`include") && validStack.peek()) {
+		} else if (text.equals("`include")) {
 		    Token filenameToken = tokenSource.nextToken();
 		    String filename = filenameToken.getText();
+
+		    if (!validStack.peek()) {
+			System.err.println("preprocessor skipping include " + filename);
+			continue;
+		    }
+
 		    filename = filename.substring(1,filename.length()-1);
 		    filename = findIncludeFile(filename);
 		    System.err.println(String.format("preprocessor including %s", filename));
