@@ -236,6 +236,7 @@ class Main {
          * make a Parser on the token stream
          */
         BSVParser parser = new BSVParser(commonTokenStream);
+	parser.removeErrorListeners();
 	parser.addErrorListener(new BSVErrorListener());
 
 	/*
