@@ -338,7 +338,39 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 
     @Override public Void visitFunctiondef(BSVParser.FunctiondefContext ctx) {
 	scope = scopes.pushScope(ctx);
-	printstream.println(String.format("Definition %s placeholder", ctx.functionproto().name.getText()));
+	BSVParser.FunctionprotoContext functionproto = ctx.functionproto();
+	printstream.print(String.format("Definition %s (", functionproto.name.getText()));
+        if (functionproto.methodprotoformals() != null) {
+            String sep = "";
+            for (BSVParser.MethodprotoformalContext formal: functionproto.methodprotoformals().methodprotoformal()) {
+                BSVParser.BsvtypeContext bsvtype = formal.bsvtype();
+                String varName = formal.name.getText();
+                printstream.print(sep + varName + ": " + bsvTypeToKami(bsvtype));
+                sep = ", ";
+            }
+        }
+        String returntype = (functionproto.bsvtype() != null) ? bsvTypeToKami(functionproto.bsvtype()) : "";
+	printstream.println(String.format(") : %s := ", returntype));
+
+        RegReadVisitor regReadVisitor = new RegReadVisitor(scope);
+        for (BSVParser.StmtContext stmt: ctx.stmt())
+            regReadVisitor.visit(stmt);
+        if (ctx.expression() != null)
+            regReadVisitor.visit(ctx.expression());
+
+        for (Map.Entry<String,BSVType> entry: regReadVisitor.regs.entrySet()) {
+            String regName = entry.getKey();
+            printstream.println("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- \"" + regName + "\";");
+        }
+        for (BSVParser.StmtContext stmt: ctx.stmt())
+            visit(stmt);
+        if (ctx.expression() != null)
+            visit(ctx.expression());
+
+        if (returntype.equals("Action") || returntype.equals("Void"))
+            printstream.println("        Retv");
+	printstream.println(".");
+	printstream.println("");
 	scope = scopes.popScope();
 	return null;
     }
