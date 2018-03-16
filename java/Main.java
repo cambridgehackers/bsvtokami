@@ -310,10 +310,12 @@ class Main {
                 System.out.println("");
 		System.err.println("finished processing package " + pkgName);
 
-		System.err.println("Evaluating module mkMain"); Evaluator evaluator = new Evaluator(staticAnalyzer);
-		evaluator.evaluateModule("mkMain", packagedef);
-		while (!evaluator.isFinished()) {
-		    evaluator.runRulesOnce();
+		if (false) {
+		    System.err.println("Evaluating module mkMain"); Evaluator evaluator = new Evaluator(staticAnalyzer);
+		    evaluator.evaluateModule("mkMain", packagedef);
+		    while (!evaluator.isFinished()) {
+			evaluator.runRulesOnce();
+		    }
 		}
             } catch (IOException e) {
                 System.err.println("IOException " + e);
