@@ -2,6 +2,7 @@
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.*;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -215,6 +216,7 @@ class Main {
     private static HashMap<String, ParserRuleContext> packages;
     static StaticAnalysis staticAnalyzer = new StaticAnalysis();
     static String[] searchDirs = new String[0];
+    private static PrintStream dotstream;
 
     static ParserRuleContext parsePackage(String pkgName, String filename) throws IOException {
 	File file = new File(filename);
@@ -265,6 +267,11 @@ class Main {
 	}
 
 	ParserRuleContext ctx = parsePackage(pkgName, filename);
+	if (dotstream != null) {
+	    dotstream.println(String.format("    n%s[label=%s];",
+					    pkgName, pkgName));
+	}
+
 	BSVParser.PackagedefContext packagedef = (BSVParser.PackagedefContext)ctx;
 	for (BSVParser.PackagestmtContext stmt: packagedef.packagestmt()) {
 	    BSVParser.ImportdeclContext importdecl = stmt.importdecl();
@@ -275,6 +282,8 @@ class Main {
 						     importedPkgName,
 						     (packages.containsKey(importedPkgName) ? "previously seen" : "unseen"),
 						     StaticAnalysis.sourceLocation(importitem)));
+		    if (dotstream != null)
+			dotstream.println(String.format("    n%s -> n%s;", pkgName, importedPkgName));
 		    if (!packages.containsKey(importedPkgName)) {
 			analyzePackage(importedPkgName, findPackageFile(importedPkgName));
 		    }
@@ -292,6 +301,16 @@ class Main {
 	if (env.containsKey("BSVSEARCHPATH")) {
 	    searchDirs = env.get("BSVSEARCHPATH").split(":");
 	}
+
+	try {
+	    File dotfile = new File("imports.dot");
+	    dotstream = new PrintStream(dotfile);
+	    dotstream.println("digraph {");
+	} catch (FileNotFoundException ex) {
+	    System.err.println(ex);
+	    dotstream = null;
+	}
+
 	packages = new HashMap<>();
         for (String filename: args) {
             System.err.println("converting file " + filename);
@@ -326,5 +345,8 @@ class Main {
             }
         }
 
+	if (dotstream != null) {
+	    dotstream.println("    }");
+	}
     }
 }
