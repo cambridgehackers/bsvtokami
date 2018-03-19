@@ -13,6 +13,12 @@ import org.antlr.v4.runtime.dfa.DFA;
 import org.antlr.v4.runtime.tree.*;
 import org.antlr.v4.runtime.misc.*;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.ParseException;
+
 class BSVErrorListener implements ANTLRErrorListener {
     @Override
     public void syntaxError(Recognizer<?,?> recognizer, Object offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e) {
@@ -39,15 +45,11 @@ class PreprocessedTokenSource implements TokenSource {
     Stack<Boolean> validStack = new Stack<>();
     HashMap<String,Token> defines = new HashMap<>();
     TokenSource tokenSource = null;
-    String[] searchDirs = new String[0];
     
     PreprocessedTokenSource() {
 	condStack.push(true);
 	validStack.push(true);
 	Map<String,String> env = System.getenv();
-	if (env.containsKey("BSVSEARCHPATH")) {
-	    searchDirs = env.get("BSVSEARCHPATH").split(":");
-	}
     }
     void define(String ident) {
 	defines.put(ident, null);
@@ -65,7 +67,7 @@ class PreprocessedTokenSource implements TokenSource {
     }
 
     String findIncludeFile(String includeName) {
-	for (String path: searchDirs) {
+	for (String path: Main.searchDirs) {
 	    String filename = String.format("%s/%s", path, includeName);
 	    File file = new File(filename);
 	    //System.err.println(String.format("Trying %s %s", filename, file.exists()));
@@ -215,7 +217,7 @@ class PreprocessedTokenSource implements TokenSource {
 class Main {
     private static HashMap<String, ParserRuleContext> packages;
     static StaticAnalysis staticAnalyzer = new StaticAnalysis();
-    static String[] searchDirs = new String[0];
+    static ArrayList<String> searchDirs = new ArrayList<>();
     private static PrintStream dotstream;
 
     static ParserRuleContext parsePackage(String pkgName, String filename) throws IOException {
@@ -298,8 +300,36 @@ class Main {
 
     public static void main(String[] args) {
 	Map<String,String> env = System.getenv();
+	Options options = new Options();
+	options.addOption(Option.builder("I")
+			  .hasArg()
+			  .desc("Include path")
+			  .build());
+	try {
+	    CommandLine cmdLine = new DefaultParser().parse(options, args, true);
+	    Iterator<Option> iterator = cmdLine.iterator();
+	    while (iterator.hasNext()) {
+		Option option = iterator.next();
+		System.err.println("Option " + option.getOpt());
+		if (option.getOpt().equals("I")) {
+		    for (String includePath: option.getValues()) {
+			System.err.println("Including " + includePath);
+			searchDirs.add(includePath);
+		    }
+		}
+	    }
+	    for (String arg: cmdLine.getArgs()) {
+		System.err.println("Extra args: " + arg);
+	    }
+	    args = cmdLine.getArgs();
+	} catch (ParseException e) {
+	    System.err.println("Error parsing command line options " + e);
+	    return;
+	}
+
 	if (env.containsKey("BSVSEARCHPATH")) {
-	    searchDirs = env.get("BSVSEARCHPATH").split(":");
+	    for (String searchDir: env.get("BSVSEARCHPATH").split(":"))
+		searchDirs.add(searchDir);
 	}
 
 	try {
