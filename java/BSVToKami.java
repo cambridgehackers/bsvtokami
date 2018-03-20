@@ -125,13 +125,8 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         logger.fine("Package " + pkgName);
 
         printstream.println("Require Import Bool String List.");
-        printstream.println("Require Import Lib.CommonTactics Lib.ilist Lib.Word.");
-        printstream.println("Require Import Lib.Struct Lib.FMap Lib.StringEq Lib.Indexer.");
-        printstream.println("");
-        printstream.println("Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Wf.");
-        printstream.println("Require Import Kami.Inline Kami.InlineFacts.");
-        printstream.println("Require Import Kami.RefinementFacts Kami.Decomposition.");
-        printstream.println("Require Import Kami.Tactics.");
+        printstream.println("Require Import Kami.");
+        printstream.println("Require Import Lib.Indexer.");
         printstream.println("");
         printstream.println("Require Import FunctionalExtensionality.");
         printstream.println("");
