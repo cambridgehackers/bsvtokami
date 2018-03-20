@@ -1,6 +1,7 @@
 // Generated from BSV.g4 by ANTLR 4.7.1
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 import java.util.*;
+import java.util.logging.Logger;
 
 /**
  * This class provides an empty implementation of {@link BSVVisitor},
@@ -14,6 +15,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
     private StaticAnalysis staticAnalyzer;
     private SymbolTable scope;
     private Stack<SymbolTable> scopeStack = new Stack<>();
+    private static Logger logger = Logger.getGlobal();
 
     BSVTypeVisitor(StaticAnalysis staticAnalyzer) {
         this.staticAnalyzer = staticAnalyzer;
@@ -23,10 +25,10 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
     {
         scopeStack.push(scope);
         scope = newScope;
-        System.err.println(String.format("BSVTypeVisitor.pushScope()  %d {", scopeStack.size()));
+        logger.fine(String.format("BSVTypeVisitor.pushScope()  %d {", scopeStack.size()));
     }
     public void popScope() {
-        System.err.println(String.format("} BSVTypeVisitor.popScope() %d", scopeStack.size()));
+        logger.fine(String.format("} BSVTypeVisitor.popScope() %d", scopeStack.size()));
         scope = scopeStack.pop();
 	assert scopeStack.size() > 0; // nobody should pop the global scope
     }
@@ -203,7 +205,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 p.add(methodtype);
                 methodtype = new BSVType("Function", p);
             }
-            System.err.println("methodproto " + ctx.name.getText() + " : " + methodtype);
+            logger.fine("methodproto " + ctx.name.getText() + " : " + methodtype);
             return methodtype;
         }
         /**
@@ -310,7 +312,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         @Override public BSVType visitTypedefstruct(BSVParser.TypedefstructContext ctx) {
             BSVParser.TypedeftypeContext typedeftype = ctx.typedeftype();
             BSVType bsvtype = visit(typedeftype);
-            System.err.println(String.format("typedefstruct %s", bsvtype.name));
+            logger.fine(String.format("typedefstruct %s", bsvtype.name));
             SymbolTable fieldMappings = new SymbolTable(scope, SymbolTable.ScopeType.Declaration, bsvtype.name);
             for (BSVParser.StructmemberContext member: ctx.structmember()) {
                 assert member.subunion() == null;
@@ -319,8 +321,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                     fieldMappings.bind(member.lowerCaseIdentifier().getText(), membertype);
                 }
             }
-	    System.err.println(String.format("Defining struct %s in scope %s %s",
-					     bsvtype.name, scope.name, scope));
+	    logger.fine(String.format("Defining struct %s in scope %s %s",
+				      bsvtype.name, scope.name, scope));
             scope.bindType(null, bsvtype.name, bsvtype, fieldMappings);
             return bsvtype;
         }
@@ -377,7 +379,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         @Override public BSVType visitVarBinding(BSVParser.VarBindingContext ctx) {
             BSVType bsvtype = visit(ctx.t);
             for (BSVParser.VarinitContext varinit : ctx.varinit()) {
-                System.err.println("vardecl " + varinit.var.getText() + " : " + bsvtype);
+                logger.fine("vardecl " + varinit.var.getText() + " : " + bsvtype);
             }
             return bsvtype;
         }
@@ -389,7 +391,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          */
         @Override public BSVType visitActionBinding(BSVParser.ActionBindingContext ctx) {
             BSVType bsvtype = visit(ctx.t);
-            System.err.println("actiondecl " + ctx.var.getText() + " <- " + bsvtype);
+            logger.fine("actiondecl " + ctx.var.getText() + " <- " + bsvtype);
             return bsvtype;
         }
         /**
@@ -484,7 +486,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitModuledef(BSVParser.ModuledefContext ctx) {
-            System.err.println("moduledef " + ctx.moduleproto().name.getText());
+            logger.fine("moduledef " + ctx.moduleproto().name.getText());
             return visitChildren(ctx);
         }
         /**
@@ -513,7 +515,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 p.add(moduletype);
                 moduletype = new BSVType("Function", p);
             }
-            System.err.println("moduleproto " + ctx.name.getText() + " : " + moduletype);
+            logger.fine("moduleproto " + ctx.name.getText() + " : " + moduletype);
             return moduletype;
         }
         /**
@@ -639,7 +641,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 p.add(functiontype);
                 functiontype = new BSVType("Function", p);
             }
-            System.err.println("functionproto " + ctx.name.getText() + " : " + functiontype);
+            logger.fine("functionproto " + ctx.name.getText() + " : " + functiontype);
             return functiontype;
         }
         /**
@@ -679,18 +681,18 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         @Override public BSVType visitLvalue(BSVParser.LvalueContext ctx) {
             BSVParser.LvalueContext lvalue = ctx.lvalue();
             if (lvalue != null) {
-                System.err.println("computing type of lvalue " + lvalue.getText());
+                logger.fine("computing type of lvalue " + lvalue.getText());
                 BSVType lvaluetype = visit(lvalue);
                 if (ctx.lowerCaseIdentifier() != null) {
                     String interfaceName = lvaluetype.name;
                     String subname = ctx.lowerCaseIdentifier().getText();
                     SymbolTableEntry entry = scope.lookupType(interfaceName);
-                    System.err.println("lvalue field " + interfaceName + "." + subname + "    " + lvaluetype);
+                    logger.fine("lvalue field " + interfaceName + "." + subname + "    " + lvaluetype);
                     if (entry != null) {
                         SymbolTableEntry subentry = entry.mappings.lookup(subname);
                         if (subentry != null) {
                             // FIXME: instantiate
-                            System.err.println("Subscript " + interfaceName + "." + subname + " : " + subentry.type);
+                            logger.fine("Subscript " + interfaceName + "." + subname + " : " + subentry.type);
                             return subentry.type;
                         }
                     }
@@ -813,7 +815,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                     returnType.unify(itemtype);
                 }
             } catch (InferenceError e) {
-                System.err.println(e);
+                logger.fine(e.toString());
             }
             return returnType;
         }
@@ -831,7 +833,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 resultType.unify(visit(ctx.expression(1)));
                 resultType.unify(visit(ctx.expression(2)));
             } catch (InferenceError e) {
-                System.err.println(e);
+                logger.fine(e.toString());
             }
             return resultType;
         }
@@ -876,7 +878,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                     if (lhstype.prune() != rhstype.prune())
                         lhstype.unify(rhstype);
                 } catch (InferenceError e) {
-                    System.err.println("binop " + op + ": " + e);
+                    logger.fine("binop " + op + ": " + e);
                 }
                 if (op.equals("==") || op.equals("!=")
                     || op.equals("<") || op.equals(">")
@@ -896,7 +898,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         @Override public BSVType visitUnopexpr(BSVParser.UnopexprContext ctx) {
             BSVType bsvtype = visit(ctx.exprprimary());
             if (ctx.op == null) {
-                System.err.println("Unop expr " + ctx.exprprimary().getText() + " : " + bsvtype);
+                logger.fine("Unop expr " + ctx.exprprimary().getText() + " : " + bsvtype);
                 return bsvtype;
             }
             String op = ctx.op.getText();
@@ -904,7 +906,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 try {
                     bsvtype.unify(new BSVType("Bool"));
                 } catch (InferenceError e) {
-                    System.err.println(e);
+                    logger.fine(e.toString());
                 }
             }
             if (op.equals("&") || op.equals("|") || op.equals("~&") || op.equals("~|")
@@ -912,7 +914,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 try {
                     bsvtype.unify(new BSVType("Bit", new BSVType(null, true)));
                 } catch (InferenceError e) {
-                    System.err.println(e);
+                    logger.fine(e.toString());
                 }
                 return new BSVType("Bit", new BSVType(1));
             }
@@ -934,7 +936,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                     continue;
                 }
                 exprtype = dereferenceTypedef(exprtype);
-                System.err.println(String.format("bitconcat %s type %s", expr.getText(), exprtype));
+                logger.fine(String.format("bitconcat %s type %s", expr.getText(), exprtype));
                 if (exprtype.params.size() == 0) {
                     widthKnown = false;
                     continue;
@@ -946,10 +948,10 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                     continue;
                 }
                 widthtype = dereferenceTypedef(widthtype);
-                System.err.println(String.format("bitconcat %s type %s", expr.getText(), widthtype));
+                logger.fine(String.format("bitconcat %s type %s", expr.getText(), widthtype));
                 width += Integer.parseInt(widthtype.name);
             }
-            System.err.println(String.format("bitconcat %s width %d known %s at %s",
+            logger.fine(String.format("bitconcat %s width %d known %s at %s",
                                              ctx.getText(), width, widthKnown, StaticAnalysis.sourceLocation(ctx)));
             if (widthKnown)
                 return new BSVType("Bit", new BSVType(width));
@@ -969,12 +971,12 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             assert (ctx.pkg == null);
 	    assert scope != null : "no scope for " + StaticAnalysis.sourceLocation(ctx);
             SymbolTableEntry entry = scope.lookup(varName);
-            System.err.println("var expr " + varName + " entry " + entry);
-            System.err.println("var expr " + varName + " entry " + entry + " : " + ((entry != null) ? entry.type : ""));
+            logger.fine("var expr " + varName + " entry " + entry);
+            logger.fine("var expr " + varName + " entry " + entry + " : " + ((entry != null) ? entry.type : ""));
             assert entry != null : String.format("No symbol table entry for %s at %s", varName, StaticAnalysis.sourceLocation(ctx));
             if (entry.instances != null) {
                 for (SymbolTableEntry instance: entry.instances) {
-                    System.err.println(String.format("    instance %s : %s", varName, instance.type));
+                    logger.fine(String.format("    instance %s : %s", varName, instance.type));
                 }
             }
             if (varName.startsWith("$"))
@@ -1085,24 +1087,24 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitFieldexpr(BSVParser.FieldexprContext ctx) {
-            System.err.println("computing type of field " + ctx.getText());
+            logger.fine("computing type of field " + ctx.getText());
             BSVType basetype = visit(ctx.exprprimary());
             String interfaceName = basetype.name;
             String subname = ctx.field.getText();
             SymbolTableEntry entry = scope.lookupType(interfaceName);
-            System.err.println("expr field " + interfaceName + "." + subname + "    " + basetype);
+            logger.fine("expr field " + interfaceName + "." + subname + "    " + basetype);
             if (entry != null)
-                System.err.println(" entry.mappings " + entry.mappings);
+                logger.fine(" entry.mappings " + entry.mappings);
             if (entry != null && entry.mappings != null) {
                 SymbolTableEntry subentry = entry.mappings.lookup(subname);
-                System.err.println(String.format(" found %s subname %s subentry %s", entry.name, subname, subentry));
+                logger.fine(String.format(" found %s subname %s subentry %s", entry.name, subname, subentry));
                 if (subentry != null) {
                     // FIXME: instantiate interface
-                    System.err.println("expr field " + interfaceName + "." + subname + " : " + subentry.type);
+                    logger.fine("expr field " + interfaceName + "." + subname + " : " + subentry.type);
                     return subentry.type;
                 }
             }
-            System.err.println(String.format("Failed to find type of %s at %s", ctx.getText(), StaticAnalysis.sourceLocation(ctx)));
+            logger.fine(String.format("Failed to find type of %s at %s", ctx.getText(), StaticAnalysis.sourceLocation(ctx)));
             return new BSVType();
         }
         /**
@@ -1112,7 +1114,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitParenexpr(BSVParser.ParenexprContext ctx) {
-            System.err.println("paren expr " + ctx.getText());
+            logger.fine("paren expr " + ctx.getText());
             return visit(ctx.expression());
         }
         /**
@@ -1146,7 +1148,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitCallexpr(BSVParser.CallexprContext ctx) {
-            System.err.println("call " + ctx.fcn.getText());
+            logger.fine("call " + ctx.fcn.getText());
             BSVType fcntype = visit(ctx.fcn);
             assert fcntype != null : String.format("Null type for %s at %s", ctx.fcn.getText(), StaticAnalysis.sourceLocation(ctx));
             BSVType resulttype;
@@ -1156,11 +1158,11 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                     BSVType argtype = visit(expr);
                     assert argtype != null : String.format("Null type for %s at %s", expr.getText(), StaticAnalysis.sourceLocation(ctx));
                     BSVType ftype = new BSVType("Function", argtype, resulttype);
-                    System.err.println("Apply (" + fcntype + ") to (" + ftype + ")");
+                    logger.fine("Apply (" + fcntype + ") to (" + ftype + ")");
                     fcntype.unify(ftype);
-                    System.err.println("   -> " + resulttype.prune());
+                    logger.fine("   -> " + resulttype.prune());
                 } catch (InferenceError e) {
-                    System.err.println("Apply InferenceError " + e);
+                    logger.fine("Apply InferenceError " + e);
                 }
                 fcntype = resulttype;
             }
@@ -1214,7 +1216,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 //     IntValue lsbValue = (IntValue)eval.evaluate(ctx.expression(1), scope);
                 //     return new BSVType("Bit", new BSVType(msbValue.value - lsbValue.value + 1));
                 // } catch (Exception e) {
-                //     System.err.println("Failed to evaluate msb or lsb " + e);
+                //     logger.fine("Failed to evaluate msb or lsb " + e);
                 // }
                 return new BSVType("Bit", new BSVType());
             }

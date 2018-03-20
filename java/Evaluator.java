@@ -2,6 +2,7 @@
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 import org.antlr.v4.runtime.ParserRuleContext;
 import java.util.*;
+import java.util.logging.Logger;
 
 
 class RuleNotReady extends RuntimeException {
@@ -19,6 +20,7 @@ class RuleNotReady extends RuntimeException {
  * operations with no return type.
  */
 public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVisitor<Value> {
+    private static Logger logger = Logger.getGlobal();
     private String modulename;
     private SymbolTable scope;
     private StaticAnalysis staticAnalyzer;
@@ -55,9 +57,9 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
         isElaborating = true;
         finishCalled = false;
         pushScope(pkgdef);
-        System.err.println("evaluate module " + modulename + " scope " + scope);
+        logger.fine("evaluate module " + modulename + " scope " + scope);
         SymbolTableEntry entry = scope.lookup(modulename);
-        System.err.println("evaluate module " + modulename + " scope " + scope + " entry " + entry
+        logger.fine("evaluate module " + modulename + " scope " + scope + " entry " + entry
                            + " constructor "  + ((entry != null) ? entry.value : "<null entry>"));
         if (entry == null) {
             finishCalled = true;
@@ -94,7 +96,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
         popScope();
         BoolValue bv = (BoolValue)v;
         if (bv == null) {
-            System.err.println("Expecting a BoolValue, got " + v);
+            logger.fine("Expecting a BoolValue, got " + v);
             return false;
         }
         return bv.value;
@@ -133,7 +135,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
                     commitRegisters();
                     fire_count += 1;
                 } catch (RuleNotReady ex) {
-                    System.err.println("Rule not ready " + ex);
+                    logger.fine("Rule not ready " + ex);
                 }
             }
         }
@@ -142,28 +144,28 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 
     private void pushScope(ParserRuleContext ctx) {
         SymbolTable newScope = staticAnalyzer.getScope(ctx);
-        System.err.println(String.format("pushScope { %s-%s", newScope.name, newScope));
+        logger.fine(String.format("pushScope { %s-%s", newScope.name, newScope));
         pushScope(newScope);
     }
     private void pushScope(Rule rule) {
         SymbolTable newScope = rule.context;
-        System.err.println(String.format("pushScope rule %s{", rule.name));
+        logger.fine(String.format("pushScope rule %s{", rule.name));
         pushScope(newScope);
     }
     private void pushScope(SymbolTable newScope) {
-        System.err.println("Evaluator.pushScope {");
+        logger.fine("Evaluator.pushScope {");
         scopeStack.push(scope);
         typeVisitor.pushScope(scope);
         scope = newScope;
     }
     private void popScope() {
-        System.err.println("Evaluator.popScope }");
+        logger.fine("Evaluator.popScope }");
         typeVisitor.popScope();
         scope = scopeStack.pop();
     }
 
     @Override protected Value aggregateResult(Value agg, Value nextResult) {
-        //System.err.println("aggregate " + agg + " next " + nextResult);
+        //logger.fine("aggregate " + agg + " next " + nextResult);
         if (nextResult == null)
             return agg;
         else
@@ -178,7 +180,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          */
         @Override public Value visitPackagedef(BSVParser.PackagedefContext ctx) {
             pushScope(ctx);
-            System.err.println("packagedef scope " + scope);
+            logger.fine("packagedef scope " + scope);
             Value v = new VoidValue();
 	    for (BSVParser.PackagestmtContext stmt: ctx.packagestmt()) {
 		v = visit(stmt);
@@ -423,8 +425,8 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 		    entry.value = visit(varinit.rhs);
 		}
 	    } catch (Exception e) {
-		System.err.println(String.format("ERROR: Failed to evaluate varbinding %s at %s: %s",
-						 ctx.getText(), StaticAnalysis.sourceLocation(ctx), e));
+		logger.fine(String.format("ERROR: Failed to evaluate varbinding %s at %s: %s",
+					  ctx.getText(), StaticAnalysis.sourceLocation(ctx), e));
 		e.printStackTrace();
 	    }
 	    return new VoidValue();
@@ -433,11 +435,11 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
         @Override public Value visitActionBinding(BSVParser.ActionBindingContext ctx) {
             String var = ctx.var.getText();
             SymbolTableEntry entry = scope.lookup(var);
-            System.err.println("action bind var " + var + " scope " + scope + " entry " + entry);
+            logger.fine("action bind var " + var + " scope " + scope + " entry " + entry);
             Value v = null;
             if (ctx.rhs != null) {
                 v = visit(ctx.rhs);
-                System.err.println("  rhs " + ctx.rhs.getText() + " has value " + v);
+                logger.fine("  rhs " + ctx.rhs.getText() + " has value " + v);
             }
             if (isElaborating) {
                 // module monad
@@ -461,11 +463,11 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
         @Override public Value visitLetBinding(BSVParser.LetBindingContext ctx) {
             String var = ctx.lowerCaseIdentifier().get(0).getText();
             SymbolTableEntry entry = scope.lookup(var);
-            System.err.println("let var " + var + " scope " + scope + " entry " + entry);
+            logger.fine("let var " + var + " scope " + scope + " entry " + entry);
             Value v = null;
             if (ctx.rhs != null) {
                 v = visit(ctx.rhs);
-                System.err.println("  " + ctx.getText() + " has value " + v);
+                logger.fine("  " + ctx.getText() + " has value " + v);
                 entry.setValue(v);
             }
             return v;
@@ -486,11 +488,11 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
         @Override public Value visitVarinit(BSVParser.VarinitContext ctx) {
             String var = ctx.var.getText();
             SymbolTableEntry entry = scope.lookup(var);
-            System.err.println("var " + var + " scope " + scope + " entry " + entry);
+            logger.fine("var " + var + " scope " + scope + " entry " + entry);
             Value v = null;
             if (ctx.rhs != null) {
                 v = visit(ctx.rhs);
-                System.err.println("  " + ctx.getText() + " has value " + v);
+                logger.fine("  " + ctx.getText() + " has value " + v);
                 entry.setValue(v);
             } else {
                 // undefined
@@ -517,7 +519,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
                 if (functionproto != null) {
                     SymbolTable functionScope = staticAnalyzer.getScope(ctx);
                     String functionName = StaticAnalysis.unescape(functionproto.name.getText());
-                    System.err.println("function " + functionName + " scope " + functionScope);
+                    logger.fine("function " + functionName + " scope " + functionScope);
                     int argCount = (functionproto.methodprotoformals() != null) ? functionproto.methodprotoformals().methodprotoformal().size() : 0;
                     FunctionValue function = new FunctionValue(functionName, argCount, functionScope, scope);
                     scope.lookup(functionName).setValue(function);
@@ -583,10 +585,10 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          */
         @Override public Value visitModuledef(BSVParser.ModuledefContext ctx) {
             String moduleName = ctx.moduleproto().name.getText();
-	    System.err.println(String.format("Evaluating module def %s %s:%d",
-					     moduleName,
-					     ctx.start.getTokenSource().getSourceName(),
-					     ctx.start.getLine()));
+	    logger.fine(String.format("Evaluating module def %s %s:%d",
+				      moduleName,
+				      ctx.start.getTokenSource().getSourceName(),
+				      ctx.start.getLine()));
             SymbolTable moduleScope = staticAnalyzer.getScope(ctx); //.copy(scope);
             FunctionValue constructor = new FunctionValue(moduleName, ctx, moduleScope, scope);
             SymbolTableEntry entry = scope.lookup(moduleName);
@@ -597,7 +599,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 
     public Value instantiateModule(String instanceName, FunctionValue constructor) {
 	assert constructor != null;
-        System.err.println("Instantiating module " + constructor.name);
+        logger.fine("Instantiating module " + constructor.name);
         if (constructor.name.equals("mkReg")) {
             RegValue reg = new RegValue(instanceName, constructor.args.get(0));
             registers.add(reg);
@@ -660,7 +662,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
         @Override public Value visitMethoddef(BSVParser.MethoddefContext ctx) {
             SymbolTable methodScope = staticAnalyzer.getScope(ctx);
             String methodName = ctx.name.getText();
-            System.err.println("method " + methodName + " scope " + methodScope);
+            logger.fine("method " + methodName + " scope " + methodScope);
             FunctionValue function = new FunctionValue(methodName, ctx, methodScope, scope);
             scope.lookup(methodName).setValue(function);
             return function;
@@ -718,11 +720,11 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
         @Override public Value visitFunctiondef(BSVParser.FunctiondefContext ctx) {
             SymbolTable functionScope = staticAnalyzer.getScope(ctx);
             String functionName = StaticAnalysis.unescape(ctx.functionproto().name.getText());
-            System.err.println("function " + functionName + " scope " + functionScope);
+            logger.fine("function " + functionName + " scope " + functionScope);
             FunctionValue function = new FunctionValue(functionName, ctx, functionScope, scope);
             SymbolTableEntry entry = scope.lookup(functionName);
 	    if (entry == null)
-		System.err.println(ctx.functionproto().getText());
+		logger.fine(ctx.functionproto().getText());
 	    assert entry != null : String.format("No entry for %s at %s", functionName, StaticAnalysis.sourceLocation(ctx));
 	    entry.setValue(function);
             return function;
@@ -780,7 +782,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
             } else if (ctx.lsb != null) {
                 return lvalue.sub(visit(ctx.msb).read(), visit(ctx.lsb).read());
             } else if (ctx.lowerCaseIdentifier() != null) {
-                System.err.println("Error: Unhandled field access: " + ctx.getText());
+                logger.fine("Error: Unhandled field access: " + ctx.getText());
                 return null;
             }
             return lvalue;
@@ -846,11 +848,11 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
         @Override public Value visitBinopexpr(BSVParser.BinopexprContext ctx) {
             if (ctx.left == null)
                 return visit(ctx.unopexpr());
-            System.err.println("visitBinop " + ctx.getText());
+            logger.fine("visitBinop " + ctx.getText());
             Value left = visit(ctx.left).read();
             Value right = visit(ctx.right).read();
             String op = ctx.op.getText();
-            System.err.println(String.format("    %s %s %s", left, op, right));
+            logger.fine(String.format("    %s %s %s", left, op, right));
             return left.binop(op, right);
         }
         /**
@@ -890,9 +892,9 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
             } else {
                 entry = scope.lookup(varName);
             }
-            System.err.println("var '" + varName + "' entry " + entry + " " + scope + " parent " + scope.parent);
+            logger.fine("var '" + varName + "' entry " + entry + " " + scope + " parent " + scope.parent);
             if (entry != null)
-                System.err.println("    entry.value " + entry.value);
+                logger.fine("    entry.value " + entry.value);
             return entry.value;
         }
         /**
@@ -979,7 +981,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
          */
         @Override public Value visitReturnexpr(BSVParser.ReturnexprContext ctx) {
             Value v = visit(ctx.expression());
-            System.err.println("return (" + ctx.expression().getText() + ") = " + v);
+            logger.fine("return (" + ctx.expression().getText() + ") = " + v);
             return v;
         }
         /**
@@ -991,11 +993,11 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
         @Override public Value visitFieldexpr(BSVParser.FieldexprContext ctx) {
             Value v = visit(ctx.exprprimary());
             String fieldName = ctx.field.getText();
-            System.err.println("field expr " + v + " . " + fieldName);
+            logger.fine("field expr " + v + " . " + fieldName);
             ModuleInstance instance = (ModuleInstance)v;
             SymbolTableEntry entry = instance.context.lookup(fieldName);
             if (entry != null) {
-                System.err.println("  method " + entry.value);
+                logger.fine("  method " + entry.value);
                 return entry.value;
             }
             return v;
@@ -1062,7 +1064,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
             }
             ParserRuleContext defcontext = (closure.function != null) ? closure.function : closure.method;
             SymbolTable functionScope = staticAnalyzer.getScope(defcontext);
-            System.err.println("calling " + closure.name + " fcn (" + closure.name + ") scope " + scope);
+            logger.fine("calling " + closure.name + " fcn (" + closure.name + ") scope " + scope);
             //functionScope = functionScope.copy(closure.parentFrame);
             pushScope(defcontext);
 	    if (closure.provisos() != null) {
@@ -1080,7 +1082,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
                     String varName = formalVars.get(argnum);
                     SymbolTableEntry entry = scope.lookup(varName);
                     if (entry == null) {
-                        System.err.println("Did not find entry for function " + closure.name + " var " + varName);
+                        logger.fine("Did not find entry for function " + closure.name + " var " + varName);
                     }
                     entry.value = argValue;
                     argnum += 1;
@@ -1129,26 +1131,26 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
     }
 
     BSVType evaluateType(BSVType bsvtype) {
-	System.err.println("evaluateType " + bsvtype + " in scope " + scope.name);
+	logger.fine("evaluateType " + bsvtype + " in scope " + scope.name);
 	bsvtype = typeVisitor.dereferenceTypedef(bsvtype);
 	if (bsvtype.name.equals("TLog")) {
 	    assert bsvtype.params.size() == 1;
 	    BSVType paramtype = evaluateType(bsvtype.params.get(0));
-	    System.err.println("TLog " + paramtype);
+	    logger.fine("TLog " + paramtype);
 	    if (paramtype.numeric) {
 		long v = paramtype.asLong();
 		long log2v = log2(v);
-		System.err.println(String.format("log2(%d) = %d", v, log2v));
+		logger.fine(String.format("log2(%d) = %d", v, log2v));
 		return new BSVType(log2v);
 	    }
 	} else if (bsvtype.name.equals("TExp")) {
 	    assert bsvtype.params.size() == 1;
 	    BSVType paramtype = evaluateType(bsvtype.params.get(0));
-	    System.err.println("TExp " + paramtype);
+	    logger.fine("TExp " + paramtype);
 	    if (paramtype.numeric) {
 		long v = paramtype.asLong();
 		long exp2v = exp2(v);
-		System.err.println(String.format("exp2(%d) = %d", v, exp2v));
+		logger.fine(String.format("exp2(%d) = %d", v, exp2v));
 		return new BSVType(exp2v);
 	    }
 	} else if (bsvtype.name.equals("TDiv")) {
@@ -1156,7 +1158,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 	    BSVType numtype = evaluateType(bsvtype.params.get(0));
 	    BSVType denomtype = evaluateType(bsvtype.params.get(1));
 	    long div = numtype.asLong() / denomtype.asLong();
-	    System.err.println(String.format("TDiv(%d, %d) = %d", numtype.asLong(), denomtype.asLong(), div));
+	    logger.fine(String.format("TDiv(%d, %d) = %d", numtype.asLong(), denomtype.asLong(), div));
 	    return new BSVType(div);
 	}
 	return bsvtype;
@@ -1171,7 +1173,7 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
             assert !bsvtype.isVar
 		: String.format("%s has type %s at %s",
 				ctx.getText(), bsvtype, StaticAnalysis.sourceLocation(ctx));
-	    System.err.println(String.format("eval valueOf(%s) with type %s at %s",
+	    logger.fine(String.format("eval valueOf(%s) with type %s at %s",
 					     ctx.bsvtype().getText(), bsvtype, StaticAnalysis.sourceLocation(ctx)));
             return new IntValue((int)Long.parseLong(bsvtype.name));
         }
@@ -1241,12 +1243,12 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
         @Override public Value visitBeginendblock(BSVParser.BeginendblockContext block) {
             pushScope(block);
 
-            System.err.println("entering block scope " + scope + " {");
+            logger.fine("entering block scope " + scope + " {");
             Value v = null;
             for (BSVParser.StmtContext stmt: block.stmt()) {
                 v = visit(stmt);
             }
-            System.err.println("} exited block");
+            logger.fine("} exited block");
 
             popScope();
             return v;
@@ -1530,10 +1532,10 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
 	}
         @Override public Value visitImportbvi(BSVParser.ImportbviContext ctx) {
             String moduleName = ctx.moduleproto().name.getText();
-	    System.err.println(String.format("Evaluating module def %s %s:%d",
-					     moduleName,
-					     ctx.start.getTokenSource().getSourceName(),
-					     ctx.start.getLine()));
+	    logger.fine(String.format("Evaluating module def %s %s:%d",
+				      moduleName,
+				      ctx.start.getTokenSource().getSourceName(),
+				      ctx.start.getLine()));
             SymbolTable moduleScope = staticAnalyzer.getScope(ctx); //.copy(scope);
 	    int argCount = (ctx.moduleproto().methodprotoformals() == null) ? 0 : ctx.moduleproto().methodprotoformals().methodprotoformal().size();
 	    // fixme

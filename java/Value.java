@@ -1,4 +1,5 @@
 import java.util.*;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -19,6 +20,7 @@ class VoidValue extends Value {
 }
 
 class IntValue extends Value {
+    private static Logger logger = Logger.getGlobal();
     final long value;
     final int width;
     final static Pattern verilogIntPattern = Pattern.compile("([0-9]*)'([bdho])?([A-Za-z0-9_]+)");
@@ -33,7 +35,7 @@ class IntValue extends Value {
     }
 
     void tryMatch(String pat, String x) {
-	System.err.println(String.format("Match %s %s %s", pat, x, Pattern.matches(pat, x)));
+	logger.fine(String.format("Match %s %s %s", pat, x, Pattern.matches(pat, x)));
     }
 
     IntValue(String x) {
@@ -51,7 +53,7 @@ class IntValue extends Value {
 	    } else if (basespec.equals("d")) {
 		base = 10;
 	    } else {
-		System.err.println(String.format("Parsing integer %s basespec %s", x, basespec));
+		logger.fine(String.format("Parsing integer %s basespec %s", x, basespec));
 		assert basespec.length() == 0;
 		base = 10;
 	    }
@@ -97,7 +99,7 @@ class IntValue extends Value {
         } else if (op.equals(">>")) {
             return new IntValue(value >> ov);
         }
-        System.err.println("Unhandled int binop " + op);
+        logger.severe("Unhandled int binop " + op);
         return this;
     }
 
@@ -107,6 +109,7 @@ class IntValue extends Value {
 }
 
 class BoolValue extends Value {
+    private static Logger logger = Logger.getGlobal();
     final boolean value;
     BoolValue(boolean x) { value = x; }
     @Override
@@ -122,7 +125,7 @@ class BoolValue extends Value {
         } else if (op.equals("||")) {
             return new BoolValue(value || ov);
         }
-        System.err.println("Unhandled bool binop " + op);
+        logger.severe("Unhandled bool binop " + op);
         return this;
     }
 
@@ -160,13 +163,14 @@ class VectorValue extends Value {
 }
 
 class RegValue extends Value {
+    private static Logger logger = Logger.getGlobal();
     final String name;
     Value value;
     Value newValue;
     RegValue(String name, Value initValue) {
         this.name = name;
         value = initValue;
-        System.err.println(String.format("New register %s with value %s", name, initValue));
+        logger.info(String.format("New register %s with value %s", name, initValue));
     }
     void update(Value v) {
         newValue = v;

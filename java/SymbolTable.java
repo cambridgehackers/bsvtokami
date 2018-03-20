@@ -1,6 +1,7 @@
 
 import java.io.*;
 import java.util.*;
+import java.util.logging.Logger;
 
 class SymbolTableEntry {
     public final String name;
@@ -32,6 +33,8 @@ class SymbolTableEntry {
 }
 
 class SymbolTable {
+    private static Logger logger = Logger.getGlobal();
+
     public final String name;
     public final Map<String,SymbolTableEntry> bindings;
     public final Map<String,SymbolTableEntry> typeBindings;
@@ -81,19 +84,19 @@ class SymbolTable {
 	bindings.remove(key);
     }
     void bind(String key, BSVType bsvtype) {
-        System.err.println("binding " + key + " with type " + bsvtype + " in scope " + this + " " + this.name);
+        logger.fine("binding " + key + " with type " + bsvtype + " in scope " + this + " " + this.name);
 	assert !bindings.containsKey(key)
 	    : String.format("Symbol %s already bound in scope %s %s", key, name, this);
         bindings.put(key, new SymbolTableEntry(key, bsvtype));
     }
     void bind(String key, SymbolTableEntry entry) {
-        System.err.println("binding " + key + " with type " + entry.type + " in scope " + this + " " + this.name);
+        logger.fine("binding " + key + " with type " + entry.type + " in scope " + this + " " + this.name);
 	assert !bindings.containsKey(key)
 	    : String.format("Symbol %s already bound in scope %s %s", key, name, this);
         bindings.put(key, entry);
     }
     void bind(String pkgName, String key, SymbolTableEntry entry) {
-        System.err.println("binding " + key + " with type " + entry.type + " in scope " + this + " " + this.name);
+        logger.fine("binding " + key + " with type " + entry.type + " in scope " + this + " " + this.name);
 	assert !bindings.containsKey(key)
 	    : String.format("Symbol %s::%s already bound in scope %s %s", pkgName, key, name, this);
         entry.pkgName = pkgName;
@@ -104,7 +107,7 @@ class SymbolTable {
         if (typeBindings.containsKey(key)) {
             return (SymbolTableEntry)typeBindings.get(key);
         } else if (parent != null) {
-	    //System.err.println("lookupType chaining to parent " + parent);
+	    //logger.fine("lookupType chaining to parent " + parent);
             return parent.lookupType(key);
         } else {
             return null;
@@ -112,23 +115,23 @@ class SymbolTable {
     }
 
     void bindType(String key, SymbolTableEntry entry) {
-        System.err.println("binding type " + key + " with entry " + entry);
+        logger.fine("binding type " + key + " with entry " + entry);
         typeBindings.put(key, entry);
     }
     void bindType(String key, BSVType bsvtype) {
-        System.err.println("binding type " + key + " with type " + bsvtype + " in scope " + this + " " + this.name);
+        logger.fine("binding type " + key + " with type " + bsvtype + " in scope " + this + " " + this.name);
         SymbolTableEntry entry = new SymbolTableEntry(key, bsvtype);
         typeBindings.put(key, entry);
     }
     void bindType(String pkgName, String key, BSVType bsvtype) {
-        System.err.println("binding type " + key + " with type " + bsvtype);
+        logger.fine("binding type " + key + " with type " + bsvtype);
         SymbolTableEntry entry = new SymbolTableEntry(key, bsvtype);
         entry.pkgName = pkgName;
         typeBindings.put(key, entry);
     }
     void bindType(String pkgName, String key, BSVType bsvtype, SymbolTable mappings) {
         SymbolTableEntry entry = new SymbolTableEntry(key, bsvtype);
-        System.err.println("binding type " + key + " with type " + bsvtype + " and mappings " + mappings
+        logger.fine("binding type " + key + " with type " + bsvtype + " and mappings " + mappings
 			   + " in scope " + this + " " + this.name);
         entry.mappings = mappings;
         entry.pkgName = pkgName;
@@ -138,11 +141,11 @@ class SymbolTable {
         SymbolTable n = new SymbolTable(parentContext, scopeType);
         for (Map.Entry<String,SymbolTableEntry> entry: bindings.entrySet()) {
             n.bindings.put(entry.getKey(), entry.getValue().copy());
-            System.err.println("    copy " + entry.getKey() + " " + entry.getValue());
+            logger.fine("    copy " + entry.getKey() + " " + entry.getValue());
         }
         for (Map.Entry<String,SymbolTableEntry> entry: typeBindings.entrySet()) {
             n.typeBindings.put(entry.getKey(), entry.getValue().copy());
-            System.err.println("    copy " + entry.getKey() + " " + entry.getValue());
+            logger.fine("    copy " + entry.getKey() + " " + entry.getValue());
         }
         return n;
     }

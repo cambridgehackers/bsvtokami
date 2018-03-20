@@ -4,6 +4,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.*;
 import java.util.*;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,10 +25,11 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.ParseException;
 
 class BSVErrorListener implements ANTLRErrorListener {
+    private static Logger logger = Logger.getGlobal();
     @Override
     public void syntaxError(Recognizer<?,?> recognizer, Object offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e) {
-	System.err.println(String.format("Syntax error: %s at line %s:%d:%d",
-					 msg, recognizer.getInputStream().getSourceName(), line, charPositionInLine));
+	logger.severe(String.format("Syntax error: %s at line %s:%d:%d",
+				    msg, recognizer.getInputStream().getSourceName(), line, charPositionInLine));
     }
 
     @Override
@@ -40,6 +46,7 @@ class BSVErrorListener implements ANTLRErrorListener {
 }
 
 class PreprocessedTokenSource implements TokenSource {
+    private static Logger logger = Logger.getGlobal();
     Stack<TokenSource> tokenSources = new Stack<>();
     Stack<Boolean> condStack = new Stack<>();
     Stack<Boolean> validStack = new Stack<>();
@@ -55,7 +62,7 @@ class PreprocessedTokenSource implements TokenSource {
 	defines.put(ident, null);
     }
     void push(TokenSource tokenSource) {
-	System.err.println(String.format("pushing token source %s", tokenSource.getSourceName()));
+	logger.fine(String.format("pushing token source %s", tokenSource.getSourceName()));
 	this.tokenSource = tokenSource;
 	tokenSources.push(tokenSource);
     }
@@ -63,14 +70,14 @@ class PreprocessedTokenSource implements TokenSource {
 	assert tokenSources.size() > 1;
 	tokenSources.pop();
 	tokenSource = tokenSources.peek();
-	System.err.println(String.format("popped to source %s", tokenSource.getSourceName()));
+	logger.fine(String.format("popped to source %s", tokenSource.getSourceName()));
     }
 
     String findIncludeFile(String includeName) {
 	for (String path: Main.searchDirs) {
 	    String filename = String.format("%s/%s", path, includeName);
 	    File file = new File(filename);
-	    //System.err.println(String.format("Trying %s %s", filename, file.exists()));
+	    //logger.fine(String.format("Trying %s %s", filename, file.exists()));
 	    if (file.exists())
 		return filename;
 	}
@@ -107,7 +114,7 @@ class PreprocessedTokenSource implements TokenSource {
     public Token nextToken() {
 	while (true) {
 	    Token token = tokenSource.nextToken();
-	    //System.err.println(String.format("token.type %d %s %s:%d", token.getType(), token.getText(), token.getTokenSource().getSourceName(), token.getLine()));
+	    //logger.fine(String.format("token.type %d %s %s:%d", token.getType(), token.getText(), token.getTokenSource().getSourceName(), token.getLine()));
 	    if (token.getType() == Token.EOF && tokenSources.size() > 1) {
 		pop();
 		continue;
@@ -119,12 +126,12 @@ class PreprocessedTokenSource implements TokenSource {
 		    String identtext = identtoken.getText();
 		    Token valtoken = tokenSource.nextToken();
 		    if (identtoken.getLine() == valtoken.getLine()) {
-			System.err.println(String.format("Defining preprocessor symbol %s %s", identtext, valtoken.getText()));
+			logger.fine(String.format("Defining preprocessor symbol %s %s", identtext, valtoken.getText()));
 			defines.put(identtext, valtoken);
 			token = null;
 			text = null;
 		    } else {
-			System.err.println(String.format("Defining preprocessor symbol %s", identtext));
+			logger.fine(String.format("Defining preprocessor symbol %s", identtext));
 			defines.put(identtext, null);
 			if (valtoken.getChannel() != 2)
 			    return valtoken;
@@ -135,7 +142,7 @@ class PreprocessedTokenSource implements TokenSource {
 		if (token == null)
 		    continue;
 
-		//System.err.println(String.format("preprocessor channel %d token %s", token.getChannel(), text));
+		//logger.fine(String.format("preprocessor channel %d token %s", token.getChannel(), text));
 		if (text.equals("`ifdef") || text.equals("`ifndef")) {
 		    Token ident = tokenSource.nextToken();
 		    String identText = ident.getText();
@@ -146,15 +153,15 @@ class PreprocessedTokenSource implements TokenSource {
 		    else
 			validStack.push(!condStack.peek() && validStack.peek());
 
-		    System.err.println(String.format("preprocessor %s %d %s cond %s valid %s %d",
-						     text, ident.getChannel(), identText, condStack.peek(), validStack.peek(), validStack.size()));
+		    logger.fine(String.format("preprocessor %s %d %s cond %s valid %s %d",
+					      text, ident.getChannel(), identText, condStack.peek(), validStack.peek(), validStack.size()));
 		} else if (text.equals("`else")) {
 
 		    condStack.push(!condStack.pop());
 		    validStack.pop();
 		    validStack.push(condStack.peek() && validStack.peek());
 
-		    System.err.println(String.format("preprocessor `else cond %s valid %s %d",
+		    logger.fine(String.format("preprocessor `else cond %s valid %s %d",
 						     condStack.peek(), validStack.peek(), validStack.size()));
 		} else if (text.equals("`elsif")) {
 
@@ -166,36 +173,36 @@ class PreprocessedTokenSource implements TokenSource {
 		    condStack.push(defines.containsKey(identText));
 		    validStack.push(condStack.peek() && validStack.peek());
 
-		    System.err.println(String.format("preprocessor `elsif %s cond %s valid %s %d",
-						     identText, condStack.peek(), validStack.peek(), validStack.size()));
+		    logger.fine(String.format("preprocessor `elsif %s cond %s valid %s %d",
+					      identText, condStack.peek(), validStack.peek(), validStack.size()));
 		} else if (text.equals("`endif")) {
 		    condStack.pop();
 		    validStack.pop();
-		    System.err.println(String.format("preprocessor `endif cond %s valid %s %d",
+		    logger.fine(String.format("preprocessor `endif cond %s valid %s %d",
 						     condStack.peek(), validStack.peek(), validStack.size()));
 		} else if (text.equals("`include")) {
 		    Token filenameToken = tokenSource.nextToken();
 		    String filename = filenameToken.getText();
 
 		    if (!validStack.peek()) {
-			System.err.println("preprocessor skipping include " + filename);
+			logger.fine("preprocessor skipping include " + filename);
 			continue;
 		    }
 
 		    filename = filename.substring(1,filename.length()-1);
 		    filename = findIncludeFile(filename);
-		    System.err.println(String.format("preprocessor including %s", filename));
+		    logger.fine(String.format("preprocessor including %s", filename));
 		    try {
 			CharStream charStream = CharStreams.fromFileName(filename);
 			Lexer lexer = new BSVLexer(charStream);
 			push(lexer);
 		    } catch (IOException ex) {
-			System.err.println(ex);
+			logger.severe(ex.toString());
 		    }
 		} else if (validStack.peek()) {
 		    // substitute
 		    String identifier = token.getText().substring(1);
-		    //System.err.println(String.format("defined %s %s", identifier, defines.containsKey(identifier)));
+		    //logger.fine(String.format("defined %s %s", identifier, defines.containsKey(identifier)));
 		    assert defines.containsKey(identifier) : String.format("No definition for %s at %s",
 									   identifier, sourceLocation(token));
 		    Token valtoken = defines.get(identifier);
@@ -219,10 +226,12 @@ class Main {
     static StaticAnalysis staticAnalyzer = new StaticAnalysis();
     static ArrayList<String> searchDirs = new ArrayList<>();
     private static PrintStream dotstream;
+    static String kamidir; 
+    private static Logger logger = Logger.getGlobal();
 
     static ParserRuleContext parsePackage(String pkgName, String filename) throws IOException {
 	File file = new File(filename);
-	System.err.println(String.format("Parsing %s %s", pkgName, filename));
+	logger.fine(String.format("Parsing %s %s", pkgName, filename));
 	CharStream charStream = CharStreams.fromFileName(filename);
 
         /*
@@ -280,10 +289,10 @@ class Main {
 	    if (importdecl != null) {
 		for (BSVParser.ImportitemContext importitem: importdecl.importitem()) {
 		    String importedPkgName = importitem.pkgname.getText();
-		    System.err.println(String.format("import %s %s at %s",
-						     importedPkgName,
-						     (packages.containsKey(importedPkgName) ? "previously seen" : "unseen"),
-						     StaticAnalysis.sourceLocation(importitem)));
+		    logger.fine(String.format("import %s %s at %s",
+					      importedPkgName,
+					      (packages.containsKey(importedPkgName) ? "previously seen" : "unseen"),
+					      StaticAnalysis.sourceLocation(importitem)));
 		    if (dotstream != null)
 			dotstream.println(String.format("    n%s -> n%s;", pkgName, importedPkgName));
 		    if (!packages.containsKey(importedPkgName)) {
@@ -305,25 +314,38 @@ class Main {
 			  .hasArg()
 			  .desc("Include path")
 			  .build());
+	options.addOption(Option.builder("K")
+			  .hasArg()
+			  .desc("Directory in which to write kami files")
+			  .build());
+
+	ConsoleHandler consoleHandler = new ConsoleHandler();
+	consoleHandler.setLevel(Level.WARNING);
+	for (Handler handler: logger.getHandlers())
+	    System.err.println("Logger handler " + handler);
+	//logger.addHandler(consoleHandler);
+
 	try {
 	    CommandLine cmdLine = new DefaultParser().parse(options, args, true);
 	    Iterator<Option> iterator = cmdLine.iterator();
 	    while (iterator.hasNext()) {
 		Option option = iterator.next();
-		System.err.println("Option " + option.getOpt());
+		logger.fine("Option " + option.getOpt());
 		if (option.getOpt().equals("I")) {
 		    for (String includePath: option.getValues()) {
-			System.err.println("Including " + includePath);
+			logger.info("Including " + includePath);
 			searchDirs.add(includePath);
 		    }
+		} else if (option.getOpt().equals("K")) {
+		    kamidir = option.getValue();
 		}
 	    }
 	    for (String arg: cmdLine.getArgs()) {
-		System.err.println("Extra args: " + arg);
+		logger.fine("Extra args: " + arg);
 	    }
 	    args = cmdLine.getArgs();
 	} catch (ParseException e) {
-	    System.err.println("Error parsing command line options " + e);
+	    logger.fine("Error parsing command line options " + e);
 	    return;
 	}
 
@@ -337,13 +359,13 @@ class Main {
 	    dotstream = new PrintStream(dotfile);
 	    dotstream.println("digraph {");
 	} catch (FileNotFoundException ex) {
-	    System.err.println(ex);
+	    logger.severe(ex.toString());
 	    dotstream = null;
 	}
 
 	packages = new HashMap<>();
         for (String filename: args) {
-            System.err.println("converting file " + filename);
+            logger.fine("converting file " + filename);
             try {
 
 		File file = new File(filename);
@@ -352,22 +374,23 @@ class Main {
 
 		BSVParser.PackagedefContext packagedef = analyzePackage(pkgName, filename);
 
-		File ofile = new File(file.getParent(), pkgName + ".v");
+		String dirname = (kamidir != null) ? kamidir : file.getParent();
+		File ofile = new File(dirname, pkgName + ".v");
                 BSVToKami bsvToKami = new BSVToKami(pkgName, ofile, staticAnalyzer);
 
                 bsvToKami.visit(packagedef);
                 System.out.println("");
-		System.err.println("finished processing package " + pkgName);
+		logger.fine("finished processing package " + pkgName);
 
 		if (false) {
-		    System.err.println("Evaluating module mkMain"); Evaluator evaluator = new Evaluator(staticAnalyzer);
+		    logger.fine("Evaluating module mkMain"); Evaluator evaluator = new Evaluator(staticAnalyzer);
 		    evaluator.evaluateModule("mkMain", packagedef);
 		    while (!evaluator.isFinished()) {
 			evaluator.runRulesOnce();
 		    }
 		}
             } catch (IOException e) {
-                System.err.println("IOException " + e);
+                logger.warning("IOException " + e);
             } catch (Exception e) {
                 e.printStackTrace();
             } catch (AssertionError e) {

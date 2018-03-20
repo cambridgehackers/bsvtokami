@@ -3,11 +3,13 @@ import org.antlr.v4.runtime.misc.*;
 import org.antlr.v4.runtime.tree.*;
 import java.io.*;
 import java.util.*;
+import java.util.logging.Logger;
 
 class CallVisitor extends BSVBaseVisitor<BSVParser.CallexprContext> {
     @Override public BSVParser.CallexprContext visitCallexpr(BSVParser.CallexprContext ctx) { return ctx; }
 }
 class InstanceNameVisitor extends BSVBaseVisitor<String> {
+    private static Logger logger = Logger.getGlobal();
     private SymbolTable scope;
     public TreeMap<String,TreeSet<String>> methodsUsed;
     InstanceNameVisitor(SymbolTable scope) {
@@ -16,7 +18,7 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
     }
     @Override public String visitOperatorexpr(BSVParser.OperatorexprContext ctx) {
         String instanceName = visit(ctx.binopexpr());
-        System.err.println("visitOperatorExpr " + ctx.getRuleIndex() + " " + ctx.getText() + " " + instanceName);
+        logger.fine("visitOperatorExpr " + ctx.getRuleIndex() + " " + ctx.getText() + " " + instanceName);
         return instanceName;
     }
     @Override public String visitBinopexpr(BSVParser.BinopexprContext ctx) {
@@ -24,14 +26,14 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
         if (ctx.unopexpr() != null) {
             instanceName = visit(ctx.unopexpr());
         }
-        System.err.println("visitBinopexpr " + ctx.getRuleIndex() + " " + ctx.getText() + " " + instanceName);
+        logger.fine("visitBinopexpr " + ctx.getRuleIndex() + " " + ctx.getText() + " " + instanceName);
         return instanceName;
     }
     @Override public String visitUnopexpr(BSVParser.UnopexprContext ctx) {
         String instanceName = null;
         if (ctx.op == null)
             instanceName = visit(ctx.exprprimary());
-        System.err.println("visitUnopexpr " + ctx.getRuleIndex() + " " + ctx.getText() + " " + instanceName);
+        logger.fine("visitUnopexpr " + ctx.getRuleIndex() + " " + ctx.getText() + " " + instanceName);
         return instanceName;
     }
     @Override public String visitCallexpr(BSVParser.CallexprContext ctx) {
@@ -42,7 +44,7 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
         if (instanceName != null) {
             String fieldName = ctx.field.getText();
             String methodName = String.format("%s.%s", instanceName, fieldName);
-            System.err.println("methodName " + methodName);
+            logger.fine("methodName " + methodName);
             if (!methodsUsed.containsKey(instanceName))
                 methodsUsed.put(instanceName, new TreeSet<String>());
             methodsUsed.get(instanceName).add(fieldName);
@@ -56,13 +58,13 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
             SymbolTableEntry entry = scope.lookup(varName);
             if (entry != null) {
                 if (entry.instanceName != null) {
-                    System.err.println(String.format("Instancename %s -> %s", varName, entry.instanceName));
+                    logger.fine(String.format("Instancename %s -> %s", varName, entry.instanceName));
                     return entry.instanceName;
                 } else {
                     return varName;
 		}
             } else {
-                System.err.println(String.format("No symbol table entry for %s", varName));
+                logger.fine(String.format("No symbol table entry for %s", varName));
             }
         }
         return null;
@@ -93,6 +95,7 @@ class RegReadVisitor extends BSVBaseVisitor<Void> {
 
 public class BSVToKami extends BSVBaseVisitor<Void>
 {
+    private static Logger logger = Logger.getGlobal();
     private final File ofile;
     private PrintStream printstream;
     private final StaticAnalysis scopes;
@@ -112,14 +115,14 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 	try {
 	    printstream = new PrintStream(ofile);
 	} catch (FileNotFoundException ex) {
-	    System.err.println(ex);
+	    logger.severe(ex.toString());
 	    printstream = null;
 	}
     }
 
     @Override
     public Void visitPackagedef(BSVParser.PackagedefContext ctx) {
-        System.err.println("Package " + pkgName);
+        logger.fine("Package " + pkgName);
 
         printstream.println("Require Import Bool String List.");
         printstream.println("Require Import Lib.CommonTactics Lib.ilist Lib.Word.");
@@ -139,7 +142,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 
         if (ctx.packagedecl() != null) {
             if (!pkgName.equals(ctx.packagedecl().pkgname.getText())) {
-                System.err.println("Expected " + pkgName + " found " + ctx.packagedecl().pkgname.getText());
+                logger.fine("Expected " + pkgName + " found " + ctx.packagedecl().pkgname.getText());
             }
         }
 	visitChildren(ctx);
@@ -171,7 +174,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         InstanceNameVisitor inv = new InstanceNameVisitor(scope);
         inv.visit(ctx);
 
-        System.err.println("module " + moduleName);
+        logger.fine("module " + moduleName);
         printstream.println("Section " + sectionName + ".");
         printstream.println("    Variable moduleName: string.");
         printstream.println("    Local Notation \"^ s\" := (moduleName -- s) (at level 0).");
@@ -210,7 +213,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         printstream.println("End " + sectionName + ".");
         scope = scopes.popScope();
         moduleDef = null;
-        System.err.println("endmodule : " + moduleName);
+        logger.fine("endmodule : " + moduleName);
         return null;
     }
 
@@ -289,7 +292,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 					instanceName));
         } else {
             printstream.print(String.format("        Call %s <- %s(", varName, calleeInstanceName));
-            System.err.println("generic call " + ctx.rhs.getRuleIndex() + " " + ctx.rhs.getText());
+            logger.fine("generic call " + ctx.rhs.getRuleIndex() + " " + ctx.rhs.getText());
             BSVParser.CallexprContext call = getCall(ctx.rhs);
             String sep = "";
             for (BSVParser.ExpressionContext expr: call.expression()) {
@@ -513,10 +516,10 @@ public class BSVToKami extends BSVBaseVisitor<Void>
     @Override public Void visitVarexpr(BSVParser.VarexprContext ctx) {
         if (ctx.anyidentifier() != null) {
             String varName = ctx.anyidentifier().getText();
-            System.err.println("var " + varName + " scope " + scope);
+            logger.fine("var " + varName + " scope " + scope);
             if (scope.containsKey(varName)) {
                 SymbolTableEntry entry = scope.lookup(varName);
-                System.err.println("found binding " + varName + " " + entry.type);
+                logger.fine("found binding " + varName + " " + entry.type);
                 if (entry.type.name.startsWith("Reg"))
                     printstream.print("#" + varName + "_v");
                 else
@@ -574,7 +577,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
             }
             printstream.println("); (* method call expr *)");
         } else {
-            System.err.println(String.format("How to call action function {%s}", ctx.fcn.getText()));
+            logger.fine(String.format("How to call action function {%s}", ctx.fcn.getText()));
         }
         return null;
     }
