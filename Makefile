@@ -8,7 +8,7 @@ test: classes/Main.class connectal
 	./bsvparse connectal/bsv/*.bsv
 	if [ -d ssith-riscv ]; then ./bsvparse ssith-riscv/procs/*/*.bsv ; fi
 
-classes/Main.class: java/Main.java generated/BSVParser.java generated/BSVLexer.java java/BSVToKami.java java/StaticAnalysis.java java/SymbolTable.java java/BSVTypeVisitor.java java/BSVType.java java/Evaluator.java java/Value.java $(JARS)
+classes/Main.class: java/Main.java generated/BSVParser.java generated/BSVLexer.java java/BSVToKami.java java/StaticAnalysis.java java/SymbolTable.java java/BSVTypeVisitor.java java/BSVType.java java/Evaluator.java java/Value.java $(JARS) jars/commons-cli-1.4.jar
 	mkdir -p classes
 	javac -Xlint:unchecked -d classes -classpath classes:$(JARS):jars/commons-cli-1.4.jar java/*.java generated/*.java
 
@@ -39,6 +39,11 @@ antlr4-cpp-runtime-4.7.1-source.zip:
 $(JARS):
 	mkdir -p jars
 	curl http://www.antlr.org/download/antlr-4.7.1-complete.jar > jars/antlr-4.7.1-complete.jar
+
+jars/commons-cli-1.4.jar:
+	curl http://apache.cs.utah.edu//commons/cli/binaries/commons-cli-1.4-bin.zip > jars/commons-cli-1.4-bin.zip
+	(cd jars; unzip -o commons-cli-1.4-bin.zip)
+	mv -v jars/commons-cli-1.4/commons-cli-1.4.jar jars
 
 connectal:
 	git clone --depth=1 git://github.com/cambridgehackers/connectal
