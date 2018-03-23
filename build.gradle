@@ -1,0 +1,20 @@
+apply plugin: 'java'
+apply plugin: 'application'
+apply plugin: 'antlr'
+
+mainClassName = 'bsvtokami.Main'
+
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    antlr "org.antlr:antlr4:4.7.1" // use ANTLR version 4
+    compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
+}
+
+generateGrammarSource {
+    maxHeapSize = "64m"
+    arguments += ["-visitor"]
+}
