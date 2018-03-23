@@ -124,14 +124,16 @@ public class BSVToKami extends BSVBaseVisitor<Void>
     public Void visitPackagedef(BSVParser.PackagedefContext ctx) {
         logger.fine("Package " + pkgName);
 
-        printstream.println("Require Import Bool String List.");
+        printstream.println("Require Import Bool String List Arith.");
         printstream.println("Require Import Kami.");
         printstream.println("Require Import Lib.Indexer.");
+	printstream.println("Require Import Bsvtokami.");
         printstream.println("");
         printstream.println("Require Import FunctionalExtensionality.");
         printstream.println("");
         printstream.println("Set Implicit Arguments.");
         printstream.println("");
+	printstream.println();
 
 	scope = scopes.pushScope(ctx);
 
@@ -337,36 +339,38 @@ public class BSVToKami extends BSVBaseVisitor<Void>
     @Override public Void visitFunctiondef(BSVParser.FunctiondefContext ctx) {
 	scope = scopes.pushScope(ctx);
 	BSVParser.FunctionprotoContext functionproto = ctx.functionproto();
-	printstream.print(String.format("Definition %s (", functionproto.name.getText()));
+	printstream.print(String.format("Definition %s", functionproto.name.getText()));
         if (functionproto.methodprotoformals() != null) {
-            String sep = "";
             for (BSVParser.MethodprotoformalContext formal: functionproto.methodprotoformals().methodprotoformal()) {
                 BSVParser.BsvtypeContext bsvtype = formal.bsvtype();
                 String varName = formal.name.getText();
-                printstream.print(sep + varName + ": " + bsvTypeToKami(bsvtype));
-                sep = ", ";
+                printstream.print(String.format(" (%s: %s)", varName, bsvTypeToKami(bsvtype)));
             }
         }
         String returntype = (functionproto.bsvtype() != null) ? bsvTypeToKami(functionproto.bsvtype()) : "";
-	printstream.println(String.format(") : %s := ", returntype));
+	printstream.println(String.format(": %s := ", returntype));
 
         RegReadVisitor regReadVisitor = new RegReadVisitor(scope);
-        for (BSVParser.StmtContext stmt: ctx.stmt())
-            regReadVisitor.visit(stmt);
-        if (ctx.expression() != null)
+        if (ctx.expression() != null) {
+	    printstream.print("    ");
             regReadVisitor.visit(ctx.expression());
 
-        for (Map.Entry<String,BSVType> entry: regReadVisitor.regs.entrySet()) {
-            String regName = entry.getKey();
-            printstream.println("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- \"" + regName + "\";");
-        }
-        for (BSVParser.StmtContext stmt: ctx.stmt())
-            visit(stmt);
         if (ctx.expression() != null)
             visit(ctx.expression());
+        } else {
 
-        if (returntype.equals("Action") || returntype.equals("Void"))
-            printstream.println("        Retv");
+            for (Map.Entry<String,BSVType> entry: regReadVisitor.regs.entrySet()) {
+                String regName = entry.getKey();
+                printstream.println("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- \"" + regName + "\";");
+            }
+            for (BSVParser.StmtContext stmt: ctx.stmt())
+                regReadVisitor.visit(stmt);
+            for (BSVParser.StmtContext stmt: ctx.stmt())
+                visit(stmt);
+
+            if (returntype.equals("Action") || returntype.equals("Void"))
+                printstream.println("        Retv");
+        }
 	printstream.println(".");
 	printstream.println("");
 	scope = scopes.popScope();
@@ -475,12 +479,16 @@ public class BSVToKami extends BSVBaseVisitor<Void>
     @Override public Void visitBinopexpr(BSVParser.BinopexprContext expr) {
         if (expr.right != null) {
             printstream.print("(");
+            if (expr.op != null) {
+		String op = expr.op.getText();
+		if (op.equals("<"))
+		    op = "bitlt";
+                printstream.print(op);
+            }
+	    printstream.print(" ");
             if (expr.left != null)
                 visit(expr.left);
-            if (expr.op != null) {
-                printstream.print(" " + expr.op.getText() + " ");
-            }
-
+	    printstream.print(" ");
             visit(expr.right);
             printstream.print(")");
         } else {
@@ -601,11 +609,15 @@ public class BSVToKami extends BSVBaseVisitor<Void>
             return "<nulltype>";
         if (t.typeide() != null) {
             String kamitype = t.typeide().getText();
-            if (kamitype.equals("Action"))
+            if (kamitype.equals("Bit"))
+		kamitype = "word";
+            else if (kamitype.equals("Bool"))
+		kamitype = "bool";
+            else if (kamitype.equals("Action"))
                 kamitype = "Void";
             for (BSVParser.BsvtypeContext p: t.bsvtype())
                 kamitype += " " + bsvTypeToKami(p, 1);
-            if (level > 0)
+            if (t.bsvtype().size() > 0)
                 kamitype = String.format("(%s)", kamitype);
             return kamitype;
         } else if (t.typenat() != null) {
