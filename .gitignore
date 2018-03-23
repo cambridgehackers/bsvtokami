@@ -8,3 +8,7 @@ bin
 antlr4-cpp-runtime
 build-antlr4
 connectal
+*.pp
+*.glob
+.*.aux
+*.vo
