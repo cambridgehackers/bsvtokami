@@ -4,12 +4,16 @@ all: gradlebuild
 gradlebuild:
 	gradle build
 
+installdist:
+	gradle installDist
+
 JARS = jars/antlr-4.7.1-complete.jar
 
-test: connectal $(JARS)
+test: connectal $(JARS) installdist
 	./bsvparse tests/*.bsv
 	./bsvparse connectal/bsv/*.bsv
 	if [ -d ssith-riscv ]; then ./bsvparse ssith-riscv/procs/*/*.bsv ; fi
+	make -C prooftests
 
 generated/BSVParser.java: BSV.g4 $(JARS)
 	java -jar $(JARS) -listener -visitor -o generated BSV.g4
@@ -43,4 +47,6 @@ connectal:
 	git clone --depth=1 git://github.com/cambridgehackers/connectal
 
 clean:
+	rm -fr build
 	rm -fr classes bin
+	make -C prooftests clean
