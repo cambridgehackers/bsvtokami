@@ -1,3 +1,4 @@
+package bsvtokami;
 
 import java.io.File;
 import java.io.IOException;
@@ -230,6 +231,7 @@ class Main {
     private static Logger logger = Logger.getGlobal();
 
     static ParserRuleContext parsePackage(String pkgName, String filename) throws IOException {
+	System.err.println("parsePackage " + filename);
 	File file = new File(filename);
 	logger.fine(String.format("Parsing %s %s", pkgName, filename));
 	CharStream charStream = CharStreams.fromFileName(filename);
@@ -277,6 +279,7 @@ class Main {
 	    analyzePackage("Prelude", findPackageFile("Prelude"));
 	}
 
+	System.err.println(String.format("parsePkg %s %s", pkgName, filename));
 	ParserRuleContext ctx = parsePackage(pkgName, filename);
 	if (dotstream != null) {
 	    dotstream.println(String.format("    n%s[label=%s];",
@@ -366,6 +369,7 @@ class Main {
 	packages = new HashMap<>();
         for (String filename: args) {
             logger.fine("converting file " + filename);
+            System.err.println("converting file " + filename);
             try {
 
 		File file = new File(filename);

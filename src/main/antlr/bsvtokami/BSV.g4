@@ -1,5 +1,9 @@
 grammar BSV;
 
+@header {
+package bsvtokami;
+}
+
 packagedef : 
        packagedecl packagestmt* endpackage? EOF
        | packagestmt* EOF

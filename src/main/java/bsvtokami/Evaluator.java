@@ -1,4 +1,5 @@
-// Generated from BSV.g4 by ANTLR 4.7.1
+package bsvtokami;
+
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 import org.antlr.v4.runtime.ParserRuleContext;
 import java.util.*;
