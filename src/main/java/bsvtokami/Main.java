@@ -322,11 +322,19 @@ class Main {
 			  .desc("Directory in which to write kami files")
 			  .build());
 
+	logger.setLevel(Level.FINE);
 	ConsoleHandler consoleHandler = new ConsoleHandler();
 	consoleHandler.setLevel(Level.WARNING);
+	FileHandler fileHandler;
+	try {
+	    fileHandler = new FileHandler("bsvtokami.log");
+	    fileHandler.setLevel(Level.FINE);
+	    logger.addHandler(fileHandler);
+	} catch (IOException ex) {
+	    logger.warning("Could not log to file: " + ex.toString());
+	}
 	for (Handler handler: logger.getHandlers())
 	    System.err.println("Logger handler " + handler);
-	//logger.addHandler(consoleHandler);
 
 	try {
 	    CommandLine cmdLine = new DefaultParser().parse(options, args, true);

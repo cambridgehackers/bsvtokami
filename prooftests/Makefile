@@ -4,7 +4,7 @@ KAMIDIR=../../kami
 all: $(patsubst %.bsv, %.stamp, $(wildcard *.bsv))
 
 %.stamp: %.bsv Bsvtokami.vo
-	../bsvtokami $(*).bsv
+	../build/install/bsvtokami/bin/bsvtokami -I../lib $(*).bsv
 	make $(*).vo
 	make $(*)_proofs.vo
 	touch .$(*).stamp
