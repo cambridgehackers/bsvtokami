@@ -14,7 +14,7 @@ if [ -d $scriptdir/connectal ]; then
 else
     ppfiles="$*"
 fi
-time java -classpath $scriptdir/build/libs/bsvtokami.jar:$scriptdir/jars/antlr-4.7.1-complete.jar org.antlr.v4.gui.TestRig bsvtokami.BSV packagedef $ppfiles
+time java -classpath $scriptdir/build/classes/main:$scriptdir/jars/antlr-4.7.1-complete.jar org.antlr.v4.gui.TestRig bsvtokami.BSV packagedef $ppfiles
 # echo c++
 # time $scriptdir/bin/bsv-parser-cpp $ppfiles
 
