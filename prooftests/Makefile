@@ -1,9 +1,15 @@
 
-KAMIDIR=../../kami
+KAMIDIR=.
 
-all: $(patsubst %.bsv, %.stamp, $(wildcard *.bsv))
+all: $(patsubst %.bsv, %.stamp, $(wildcard *.bsv)) Kami
 
-%.stamp: %.bsv Bsvtokami.vo
+Kami-2018-03-28.tgz:
+	curl http://buildbot.connectal.org/downloads/Kami-2018-03-28.tgz > Kami-2018-03-28.tgz
+
+Kami: Kami-2018-03-28.tgz
+	tar -zxf Kami-2018-03-28.tgz
+
+%.stamp: %.bsv Bsvtokami.vo Kami
 	../build/install/bsvtokami/bin/bsvtokami -I../lib $(*).bsv
 	make $(*).vo
 	make $(*)_proofs.vo
