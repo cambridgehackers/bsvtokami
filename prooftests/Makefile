@@ -1,5 +1,5 @@
 
-KAMIDIR=.
+KAMIDIR?=.
 
 all: $(patsubst %.bsv, %.stamp, $(wildcard *.bsv)) Kami
 
@@ -11,8 +11,8 @@ Kami: Kami-2018-03-28a.tgz
 
 %.stamp: %.bsv Bsvtokami.vo Kami
 	../build/install/bsvtokami/bin/bsvtokami -I../lib $(*).bsv
-	make $(*).vo
-	make $(*)_proofs.vo
+	$(MAKE) $(*).vo
+	$(MAKE) $(*)_proofs.vo
 	touch .$(*).stamp
 
 %.vo: %.v
