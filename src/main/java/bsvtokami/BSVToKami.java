@@ -160,6 +160,26 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         return null;
     }
 
+    @Override public Void visitTypedefstruct(BSVParser.TypedefstructContext ctx) {
+	//scope = scopes.pushScope(ctx);
+	String typeName = ctx.typedeftype().typeide().getText();
+	System.err.println(String.format("BSVTOKAMI typedef struct %s\n", typeName));
+	assert ctx.typedeftype().typeformals() == null;
+	printstream.println(String.format("Notation %sT := (STRUCT {", typeName));
+	ArrayList<String> members = new ArrayList<>();
+	for (BSVParser.StructmemberContext member: ctx.structmember()) {
+	    assert member.subunion() == null;
+	    assert member.bsvtype() != null;
+	    members.add(String.format("    \"%s\" :: %s",
+				      member.lowerCaseIdentifier().getText(),
+				      bsvTypeToKami(member.bsvtype())));
+	}
+	printstream.print(String.join(";\n", members));
+	printstream.println("}).");
+	//scope = scopes.popScope();
+	return null;
+    }
+
     @Override public Void visitModuledef(BSVParser.ModuledefContext ctx) {
         for (BSVParser.AttributeinstanceContext attrinstance: ctx.attributeinstance()) {
             for (BSVParser.AttrspecContext attr: attrinstance.attrspec()) {
@@ -529,6 +549,10 @@ public class BSVToKami extends BSVBaseVisitor<Void>
             printstream.print(ctx.op.getText());
         }
         return visitChildren(ctx);
+    }
+
+    @Override public Void visitStructexpr(BSVParser.StructexprContext ctx) {
+	return visitChildren(ctx);
     }
     @Override public Void visitIntliteral(BSVParser.IntliteralContext ctx) {
         printstream.print("$" + ctx.IntLiteral().getText());
