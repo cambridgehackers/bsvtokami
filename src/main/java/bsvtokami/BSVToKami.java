@@ -162,10 +162,13 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 
     @Override public Void visitTypedefstruct(BSVParser.TypedefstructContext ctx) {
 	//scope = scopes.pushScope(ctx);
+	boolean wasInModule = inModule;
+	inModule = true;
+
 	String typeName = ctx.typedeftype().typeide().getText();
 	System.err.println(String.format("BSVTOKAMI typedef struct %s\n", typeName));
 	assert ctx.typedeftype().typeformals() == null;
-	printstream.println(String.format("Notation %sT := (STRUCT {", typeName));
+	printstream.println(String.format("Definition %s := Struct (STRUCT {", typeName));
 	ArrayList<String> members = new ArrayList<>();
 	for (BSVParser.StructmemberContext member: ctx.structmember()) {
 	    assert member.subunion() == null;
@@ -177,6 +180,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 	printstream.print(String.join(";\n", members));
 	printstream.println("}).");
 	//scope = scopes.popScope();
+	inModule = wasInModule;
 	return null;
     }
 
@@ -253,21 +257,20 @@ public class BSVToKami extends BSVBaseVisitor<Void>
             String varName = varinit.var.getText();
 	    assert scope != null : "No scope to evaluate var binding " + ctx.getText();
             SymbolTableEntry entry = scope.lookup(varName);
-            printstream.print("        Let " + varName // + ": " + bsvTypeToKami(t)
-			      );
             BSVParser.ExpressionContext rhs = varinit.rhs;
             if (rhs != null) {
 		BSVParser.CallexprContext call = getCall(rhs);
 		if (call != null) {
 		    printstream.print(String.format("        Call %s <- ", varName));
 		} else {
-		    printstream.print(String.format("        Let %s = ", varName));
+		    printstream.print(String.format("        LET %s : %s <- ", varName, bsvTypeToKami(t)));
 		}
                 visit(rhs);
             } else {
-		printstream.print(String.format("        Let %s : %s", varName, bsvTypeToKami(t)));
+		assert false;
+		printstream.print(String.format("        LET %s : %s", varName, bsvTypeToKami(t)));
 	    }
-            printstream.println(". (* varbinding *)");
+            printstream.println("; (* varbinding *)");
         }
         return null;
     }
@@ -552,7 +555,17 @@ public class BSVToKami extends BSVBaseVisitor<Void>
     }
 
     @Override public Void visitStructexpr(BSVParser.StructexprContext ctx) {
-	return visitChildren(ctx);
+	printstream.print("STRUCT { ");
+	int i = 0;
+	for (BSVParser.MemberbindContext memberbind : ctx.memberbinds().memberbind()) {
+	    printstream.print(String.format("\"%s\" ::= ",
+					    memberbind.field.getText()));
+	    visit(memberbind.expression());
+	    printstream.print((i == ctx.memberbinds().memberbind().size() - 1) ? " " : "; ");
+	    i++;
+	}
+	printstream.print(" }");
+	return null;
     }
     @Override public Void visitIntliteral(BSVParser.IntliteralContext ctx) {
         printstream.print("$" + ctx.IntLiteral().getText());
