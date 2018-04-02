@@ -12,3 +12,4 @@ connectal
 *.glob
 .*.aux
 *.vo
+*.stamp
