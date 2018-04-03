@@ -259,32 +259,46 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         if (!declOnly)
             return null;
         String typedefname = ctx.typedeftype().typeide().getText();
-        BSVType taggeduniontype = typeVisitor.visit(ctx);
-        symbolTable.bind(packageName, typedefname,
-                         new SymbolTableEntry(typedefname,
-                                              taggeduniontype));
+        BSVType taggeduniontype = typeVisitor.visit(ctx.typedeftype());
+	SymbolTable mappings = new SymbolTable(null, SymbolTable.ScopeType.TaggedUnion, typedefname);
+        symbolTable.bindType(packageName, typedefname, taggeduniontype, mappings);
         logger.fine(String.format("tagged union %s : %s", typedefname, taggeduniontype));
+	int tagnum = 0;
         for (BSVParser.UnionmemberContext member: ctx.unionmember()) {
             BSVParser.UpperCaseIdentifierContext id = member.upperCaseIdentifier();
-            if (id != null) {
-                String idname = id.getText();
-                SymbolTableEntry entry = symbolTable.lookup(idname);
-                if (entry != null)
+            String idname = id.getText();
+            SymbolTableEntry entry = symbolTable.lookup(idname);
+            if (entry != null)
                 logger.fine(String.format("Previously defined entry %s type %s",
-                                                 idname, entry.symbolType));
-                if (entry == null) {
-                    entry = new SymbolTableEntry(idname, taggeduniontype);
-                    symbolTable.bind(packageName, idname, entry);
-                } else {
-                    entry.type = new BSVType();
-                }
-                if (entry.instances == null)
-                    entry.instances = new ArrayList<>();
-                entry.instances.add(new SymbolTableEntry(idname, taggeduniontype));
-                logger.fine(String.format("tagged union member %s : %s", idname, taggeduniontype));
-            } else if (member.substruct() != null) {
-            } else if (member.subunion() != null) {
+                                          idname, entry.symbolType));
+            if (entry == null) {
+                entry = new SymbolTableEntry(idname, taggeduniontype);
+                entry.value = new IntValue(tagnum);
+                symbolTable.bind(packageName, idname, entry);
+            } else {
+                entry.type = new BSVType();
             }
+            if (entry.instances == null)
+                entry.instances = new ArrayList<>();
+            entry.instances.add(new SymbolTableEntry(idname, taggeduniontype));
+
+	    logger.fine(String.format("tagged union member %s : %s", idname, taggeduniontype));
+
+	    assert member.subunion() == null : String.format("subunions unhandled %s", ctx.getText());
+            if (member.bsvtype() != null) {
+		SymbolTableEntry fieldEntry = new SymbolTableEntry(idname, typeVisitor.visit(member.bsvtype()));
+		fieldEntry.value = new IntValue(tagnum);
+		mappings.bind(idname, fieldEntry);
+            } else if (member.substruct() != null) {
+		for (BSVParser.StructmemberContext structmember: member.substruct().structmember()) {
+		    assert structmember.subunion() == null;
+		    String name = String.format("%s$%s", idname, structmember.lowerCaseIdentifier().getText());
+		    SymbolTableEntry memberEntry = new SymbolTableEntry(name,
+									typeVisitor.visit(structmember.bsvtype()));
+		    mappings.bind(name, memberEntry);
+		}
+            }
+            tagnum += 1;
         }
         return null;
     }
@@ -823,6 +837,10 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
                 bindFreeTypeVars(p);
             }
         }
+    }
+
+    @Override public Void visitStructexpr(BSVParser.StructexprContext ctx) {
+	return null;
     }
 
     @Override public Void visitProviso(BSVParser.ProvisoContext proviso) {

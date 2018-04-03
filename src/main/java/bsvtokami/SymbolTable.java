@@ -11,7 +11,7 @@ class SymbolTableEntry {
 	Module, Method, Function, Type, Enum, Struct
     };
     Type symbolType;
-    public SymbolTable mappings; // for interfaces
+    public SymbolTable mappings; // for interfaces, tagged unions
     public ArrayList<SymbolTableEntry> instances; // for type classes
     public Value value;
     public String instanceName;
@@ -41,7 +41,7 @@ class SymbolTable {
     public final Map<String,SymbolTableEntry> typeBindings;
     public final SymbolTable parent;
     public enum ScopeType {
-        Package, Module, Action, Declaration, Block, TypeClassInstance, IfStmt, CaseStmt, Loop
+        Package, Module, Action, Declaration, Block, TypeClassInstance, IfStmt, CaseStmt, Loop, TaggedUnion
     }
     public final ScopeType scopeType;
 
