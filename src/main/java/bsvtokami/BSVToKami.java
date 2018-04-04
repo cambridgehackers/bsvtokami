@@ -181,7 +181,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         String typeName = ctx.typedeftype().typeide().getText();
         System.err.println(String.format("BSVTOKAMI typedef struct %s\n", typeName));
         assert ctx.typedeftype().typeformals() == null;
-        printstream.println(String.format("Definition %s := Struct (STRUCT {", typeName));
+        printstream.println(String.format("Definition %sFields := (STRUCT {", typeName));
         ArrayList<String> members = new ArrayList<>();
         for (BSVParser.StructmemberContext member: ctx.structmember()) {
             assert member.subunion() == null;
@@ -194,6 +194,9 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         }
         printstream.print(String.join(";\n", members));
         printstream.println("}).");
+        printstream.println(String.format("Definition %s := (Struct %sFields).", typeName, typeName));
+	printstream.println("");
+
         //scope = scopes.popScope();
         inModule = wasInModule;
         return null;
@@ -207,7 +210,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         String typeName = ctx.typedeftype().typeide().getText();
         System.err.println(String.format("BSVTOKAMI typedef tagged union %s\n", typeName));
         assert ctx.typedeftype().typeformals() == null;
-        printstream.println(String.format("Definition %s := Struct (STRUCT {", typeName));
+        printstream.println(String.format("Definition %sFields := (STRUCT {", typeName));
         ArrayList<String> members = new ArrayList<>();
         members.add(String.format("    \"$tag\" :: (Bit 8)"));
         for (BSVParser.UnionmemberContext member: ctx.unionmember()) {
@@ -224,6 +227,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         }
         printstream.print(String.join(";\n", members));
         printstream.println("}).");
+        printstream.println(String.format("Definition %s := (Struct %sFields).", typeName, typeName));
         //scope = scopes.popScope();
         inModule = wasInModule;
         return null;
@@ -553,8 +557,66 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         printstream.println(")");
         return null;
     }
+    void destructurePattern(BSVParser.PatternContext pattern, String match, String tagName) {
+	if (pattern.taggedunionpattern() != null) {
+	    BSVParser.TaggedunionpatternContext taggedunionpattern = pattern.taggedunionpattern();
+	    if (taggedunionpattern.pattern() != null)
+		destructurePattern(taggedunionpattern.pattern(),
+				   match,
+				   taggedunionpattern.tag.getText());
+	} else if (pattern.structpattern() != null) {
+	    BSVParser.StructpatternContext structpattern = pattern.structpattern();
+	    tagName = structpattern.tag.getText();
+	    SymbolTableEntry tagEntry = scope.lookup(tagName);
+	    assert tagEntry != null;
+	    BSVType tagType = tagEntry.type;
+	    for (int i = 0; i < structpattern.pattern().size(); i++) {
+		String fieldName = structpattern.lowerCaseIdentifier(i).getText();
+		BSVParser.PatternContext fieldPattern = structpattern.pattern(i);
+		destructurePattern(fieldPattern, String.format("(#%s!%sFields@.\"%s%s%s\")", match,
+							       bsvTypeToKami(tagType),
+							       ((tagName != null) ? tagName : ""),
+							       ((tagName != null) ? "$" : ""),
+							       fieldName),
+				   null);
+	    }
+	} else if (pattern.lowerCaseIdentifier() != null) {
+	    printstream.println(String.format("        LET %s <- %s;",
+					      pattern.lowerCaseIdentifier().getText(),
+					      match));
+	}
+    }
+
+    @Override public Void visitCaseexpr(BSVParser.CaseexprContext ctx) {
+	System.err.println("visitCaseexpr");
+	return null;
+    }
     @Override public Void visitCasestmt(BSVParser.CasestmtContext ctx) {
-        visitChildren(ctx);
+	int branchnum = 0;
+	System.err.println("visitCasestmt");
+	logger.fine("visitCasestmt " + ctx.getText());
+	for (BSVParser.CasestmtpatitemContext patitem: ctx.casestmtpatitem()) {
+	    BSVParser.PatternContext pattern = patitem.pattern();
+	    BSVParser.StructpatternContext structpattern = pattern.structpattern();
+	    assert structpattern != null;
+	    String tagName = structpattern.tag.getText();
+	    SymbolTableEntry tagEntry = scope.lookup(tagName);
+	    assert tagEntry != null;
+	    BSVType tagType = tagEntry.type;
+
+	    printstream.print("    If (");
+	    visit(ctx.expression());
+	    printstream.print(String.format("!%sFields@.\"$tag\"", "FooTaggedUnion"));
+	    printstream.print(" == ");
+	    printstream.print("$1");
+	    printstream.println(") then");
+	    destructurePattern(pattern, ctx.expression().getText(), null);
+	    assert patitem.patterncond().expression().size() == 0;
+	    visit(patitem.stmt());
+	    printstream.println("        Retv");
+	    printstream.println("    else");
+	}
+	printstream.println("        Retv;");
         return null;
     }
     @Override

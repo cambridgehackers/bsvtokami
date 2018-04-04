@@ -25,6 +25,10 @@ module mkFoo(Empty);
       MaybeBit32 mb32 = tagged Valid32 v1;
       FooTaggedUnion ftu1 = tagged T1 { f1: v1, f2: v2 };
       FooTaggedUnion ftu2 = tagged T2 { f1: v1, f2: v2 };
+      case (ftu2) matches
+	 tagged T2 { f1: .mv1, f2: .mv2 }:
+	    r1 <= mv1;
+      endcase
    endrule
 
 endmodule
