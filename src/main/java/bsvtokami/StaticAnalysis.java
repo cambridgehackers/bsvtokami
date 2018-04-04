@@ -227,22 +227,49 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         symbolTable.bind(packageName, typedefname,
                          new SymbolTableEntry(typedefname,
                                               enumtype));
+        long tagValue = 0;
         for (BSVParser.TypedefenumelementContext elt: ctx.typedefenumelement()) {
-            String tagname = elt.upperCaseIdentifier().getText();
-            SymbolTableEntry entry = symbolTable.lookup(tagname);
-            if (entry != null)
-                logger.fine(String.format("Previously defined entry %s type %s",
-                                          tagname, entry.symbolType));
-            if (entry == null) {
-                entry = new SymbolTableEntry(tagname, enumtype);
-                symbolTable.bind(packageName, tagname, entry);
-            } else {
-                entry.type = new BSVType();
+            String basetagname = elt.upperCaseIdentifier().getText();
+            long tagCount = 1;
+            boolean numbered = false;
+            long tagFrom = 0;
+
+            if (elt.tagval != null) {
+                tagValue = Long.parseLong(elt.tagval.getText());
             }
-            if (entry.instances == null)
-                entry.instances = new ArrayList<>();
-            entry.instances.add(new SymbolTableEntry(tagname, enumtype));
-            logger.fine(String.format("Enum tag %s : %s", tagname, enumtype));
+
+            if (elt.from != null) {
+                numbered = true;
+                tagCount = Long.parseLong(elt.from.getText());
+                if (elt.to != null) {
+                    tagFrom = tagCount;
+                    tagCount = Long.parseLong(elt.to.getText()) - tagFrom + 1;
+                }
+            }
+
+            for (int i = 0; i < tagCount; i++) {
+                String tagname = basetagname;
+                if (numbered) {
+                    tagname = String.format("%s%d", basetagname, tagFrom + i);
+                }
+                SymbolTableEntry entry = symbolTable.lookup(tagname);
+                if (entry != null)
+                    logger.fine(String.format("Previously defined entry %s type %s",
+                                              tagname, entry.symbolType));
+                if (entry == null) {
+                    entry = new SymbolTableEntry(tagname, enumtype);
+                    symbolTable.bind(packageName, tagname, entry);
+                } else {
+                    entry.type = new BSVType();
+                }
+                if (entry.instances == null)
+                    entry.instances = new ArrayList<>();
+                entry.value = new IntValue(tagValue);
+                entry.instances.add(new SymbolTableEntry(tagname, enumtype));
+                logger.fine(String.format("Enum tag %s : %s", tagname, enumtype));
+
+                tagValue = tagValue + i;
+            }
         }
         return null;
     }

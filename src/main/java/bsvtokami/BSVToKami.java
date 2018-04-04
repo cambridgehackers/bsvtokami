@@ -202,6 +202,55 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         return null;
     }
 
+    @Override public Void visitTypedefenum(BSVParser.TypedefenumContext ctx) {
+        //scope = scopes.pushScope(ctx);
+        boolean wasInModule = inModule;
+        inModule = true;
+
+        String typeName = ctx.upperCaseIdentifier().getText();
+        System.err.println(String.format("BSVTOKAMI typedef enum %s\n", typeName));
+        printstream.println(String.format("Definition %sFields := (STRUCT { \"$tag\" :: (Bit 8) }).", typeName));
+        printstream.println(String.format("Definition %s := (Struct %sFields).", typeName, typeName));
+
+        String typedefname = ctx.upperCaseIdentifier().getText();
+        for (BSVParser.TypedefenumelementContext elt: ctx.typedefenumelement()) {
+            String basetagname = elt.upperCaseIdentifier().getText();
+            long tagCount = 1;
+            boolean numbered = false;
+            long tagFrom = 0;
+
+            System.err.println(String.format("enum %s from %s to %s",
+                                             basetagname,
+                                             ((elt.from != null) ? elt.from.getText() : ""),
+                                             ((elt.to != null) ? elt.to.getText() : "")));
+            if (elt.from != null) {
+                numbered = true;
+                tagCount = Long.parseLong(elt.from.getText());
+                if (elt.to != null) {
+                    tagFrom = tagCount;
+                    tagCount = Long.parseLong(elt.to.getText()) - tagFrom + 1;
+                }
+            }
+
+            for (int i = 0; i < tagCount; i++) {
+                String tagname = basetagname;
+                if (numbered) {
+                    tagname = String.format("%s%d", basetagname, tagFrom + i);
+                }
+                SymbolTableEntry entry = scope.lookup(tagname);
+                assert entry != null;
+                assert entry.value != null;
+                IntValue tagValue = (IntValue)entry.value;
+                assert tagValue != null;
+                printstream.println(String.format("Definition %s := (STRUCT { \"$tag\" ::= $%d }).",
+                                                  tagname, tagValue.value));
+            }
+        }
+
+        //scope = scopes.popScope();
+        inModule = wasInModule;
+        return null;
+    }
     @Override public Void visitTypedeftaggedunion(BSVParser.TypedeftaggedunionContext ctx) {
         //scope = scopes.pushScope(ctx);
         boolean wasInModule = inModule;
