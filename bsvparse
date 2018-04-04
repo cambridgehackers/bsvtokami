@@ -3,6 +3,11 @@
 script=`which $0`
 scriptdir=`dirname $0`
 
+if [ ! -d $scriptdir/build/install ]; then
+   echo 'Run gradle installDist to download ANTLR jar files' >&2
+   exit 1
+fi
+
 ppfiles=""
 doremove=0
 if [ -d $scriptdir/connectal ]; then
@@ -14,7 +19,8 @@ if [ -d $scriptdir/connectal ]; then
 else
     ppfiles="$*"
 fi
-time java -classpath $scriptdir/build/classes/main:$scriptdir/jars/antlr-4.7.1-complete.jar org.antlr.v4.gui.TestRig bsvtokami.BSV packagedef $ppfiles
+
+time java -classpath $scriptdir/build/classes/main:$scriptdir/build/install/bsvtokami/lib/antlr4-4.7.1.jar::$scriptdir/build/install/bsvtokami/lib/antlr4-runtime-4.7.1.jar org.antlr.v4.gui.TestRig bsvtokami.BSV packagedef $ppfiles
 # echo c++
 # time $scriptdir/bin/bsv-parser-cpp $ppfiles
 
