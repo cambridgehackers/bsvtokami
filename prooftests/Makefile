@@ -10,7 +10,7 @@ Kami: Kami-2018-03-28a.tgz
 	tar -zxf Kami-2018-03-28a.tgz
 
 %.stamp: %.bsv Bsvtokami.vo Kami
-	../build/install/bsvtokami/bin/bsvtokami -I../lib $(*).bsv
+	JAVA_OPTS=-ea ../build/install/bsvtokami/bin/bsvtokami -I../lib $(*).bsv
 	$(MAKE) $(*).vo
 	$(MAKE) $(*)_proofs.vo
 	touch .$(*).stamp
