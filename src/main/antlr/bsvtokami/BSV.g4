@@ -115,9 +115,8 @@ typedefenum :
     'typedef' 'enum' '{' typedefenumelement (',' typedefenumelement)* '}' upperCaseIdentifier derives? ';'
     ;
 typedefenumelement :
-    upperCaseIdentifier '(' IntLiteral ':' IntLiteral ')?' ('=' IntLiteral)?
-    | upperCaseIdentifier '(' IntLiteral ')?' ('=' IntLiteral)?
-    | upperCaseIdentifier ('=' IntLiteral)?
+    tag=upperCaseIdentifier '[' from=IntLiteral (':' to=IntLiteral)? ']' ('=' tagval=IntLiteral)?
+    | tag=upperCaseIdentifier ('=' tagval=IntLiteral)?
     ;
 typedefstruct :
     'typedef' 'struct' '{' (structmember)* '}' typedeftype derives? ';'
