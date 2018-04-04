@@ -603,12 +603,13 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 	    SymbolTableEntry tagEntry = scope.lookup(tagName);
 	    assert tagEntry != null;
 	    BSVType tagType = tagEntry.type;
-
+	    assert tagEntry.value != null : String.format("Missing value for tag %s", tagName);
+	    IntValue tagValue = (IntValue)tagEntry.value;
 	    printstream.print("    If (");
 	    visit(ctx.expression());
-	    printstream.print(String.format("!%sFields@.\"$tag\"", "FooTaggedUnion"));
+	    printstream.print(String.format("!%sFields@.\"$tag\"", tagType.name));
 	    printstream.print(" == ");
-	    printstream.print("$1");
+	    printstream.print(String.format("$%d", tagValue.value));
 	    printstream.println(") then");
 	    destructurePattern(pattern, ctx.expression().getText(), null);
 	    assert patitem.patterncond().expression().size() == 0;
@@ -676,17 +677,18 @@ public class BSVToKami extends BSVBaseVisitor<Void>
     }
     @Override public Void visitTaggedunionexpr(BSVParser.TaggedunionexprContext ctx) {
         printstream.print("STRUCT { ");
-        int tagval = 0;
 	String tagName = ctx.tag.getText();
 	SymbolTableEntry tagEntry = scope.lookup(tagName);
 	assert tagEntry != null;
 	BSVType tagtype = tagEntry.type;
+	assert tagEntry.value != null : String.format("Missing value for tag %s", tagName);
+	IntValue tagValue = (IntValue)tagEntry.value;
 	SymbolTableEntry typedefEntry = scope.lookupType(tagtype.name);
 	System.err.println(String.format("tagged union expr %s type %s", ctx.getText(), tagtype));
 	assert typedefEntry != null;
 	ArrayList<String> visitedFields = new ArrayList<>();
 
-        printstream.print(String.format(" \"$tag\" ::= $%d", tagval));
+        printstream.print(String.format(" \"$tag\" ::= $%d", tagValue.value));
 
 	visitedFields.add("$tag");
         for (Map.Entry<String,SymbolTableEntry> iterator: typedefEntry.mappings.bindings.entrySet()) {
