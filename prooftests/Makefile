@@ -1,5 +1,5 @@
 
-KAMIDIR?=.
+KAMIDIR?=~/kami
 
 all: $(patsubst %.bsv, %.stamp, $(wildcard *.bsv)) Kami
 

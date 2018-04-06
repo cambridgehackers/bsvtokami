@@ -242,7 +242,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
                 assert entry.value != null;
                 IntValue tagValue = (IntValue)entry.value;
                 assert tagValue != null;
-                printstream.println(String.format("Definition %s := (STRUCT { \"$tag\" ::= $%d }).",
+                printstream.println(String.format("Notation %s := (STRUCT { \"$tag\" ::= $%d })%%kami_expr.",
                                                   tagname, tagValue.value));
             }
         }

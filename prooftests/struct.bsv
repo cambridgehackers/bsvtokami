@@ -16,6 +16,13 @@ typedef union tagged {
    struct { Bit#(32) f1; Bit#(8) f2; } T2;
    } FooTaggedUnion;
 
+typedef enum {
+   First,
+   Second = 10,
+   Batch[5],
+   Batch[100:109] = 100
+   } FooEnum;
+
 module mkFoo(Empty);
    Reg#(Bit#(32)) r1 <- mkReg(0);
    rule foorule;
