@@ -838,7 +838,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         methodName = methodName.replace(".", "");
         if (methodName != null) {
             // "Call" is up where the binding is, hopefully
-            printstream.print(String.format(" %s(", methodName));
+            printstream.print(String.format("        Call %s(", methodName));
             String sep = "";
             for (BSVParser.ExpressionContext expr: ctx.expression()) {
                 printstream.print(sep);
