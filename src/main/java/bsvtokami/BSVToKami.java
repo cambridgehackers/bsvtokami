@@ -13,7 +13,7 @@ class CallVisitor extends BSVBaseVisitor<BSVParser.CallexprContext> {
 class InstanceNameVisitor extends BSVBaseVisitor<String> {
     private static Logger logger = Logger.getGlobal();
     private SymbolTable scope;
-    public TreeMap<String,TreeSet<String>> methodsUsed;
+    public TreeMap<String,TreeSet<SymbolTableEntry>> methodsUsed;
     InstanceNameVisitor(SymbolTable scope) {
         this.scope = scope;
         methodsUsed = new TreeMap<>();
@@ -47,10 +47,14 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
             String fieldName = ctx.field.getText();
             String methodName = String.format("%s.%s", instanceName, fieldName);
             SymbolTableEntry entry = scope.lookup(instanceName);
-            logger.fine("methodName " + methodName + " " + entry);
+            assert entry != null;
+            SymbolTableEntry interfaceEntry = scope.lookupType(entry.type.name);
+            assert interfaceEntry != null;
+            SymbolTableEntry methodEntry = interfaceEntry.mappings.lookup(fieldName);
+            logger.fine("methodName " + methodName + " " + entry.type + " method type " + methodEntry.type);
             if (!methodsUsed.containsKey(instanceName))
-                methodsUsed.put(instanceName, new TreeSet<String>());
-            methodsUsed.get(instanceName).add(fieldName);
+                methodsUsed.put(instanceName, new TreeSet<SymbolTableEntry>());
+            methodsUsed.get(instanceName).add(methodEntry);
             return methodName;
         }
         return null;
@@ -161,16 +165,16 @@ public class BSVToKami extends BSVBaseVisitor<Void>
     }
 
     void declareSubstruct(ArrayList<String> members, String fieldPrefix,
-			  BSVParser.SubstructContext substruct) {
+                          BSVParser.SubstructContext substruct) {
         for (BSVParser.StructmemberContext member: substruct.structmember()) {
             assert member.subunion() == null;
             if (member.bsvtype() != null) {
-		members.add(String.format("    \"%s$%s\" :: %s",
-					  fieldPrefix,
-					  member.lowerCaseIdentifier().getText(),
-					  bsvTypeToKami(member.bsvtype())));
-	    }
-	}
+                members.add(String.format("    \"%s$%s\" :: %s",
+                                          fieldPrefix,
+                                          member.lowerCaseIdentifier().getText(),
+                                          bsvTypeToKami(member.bsvtype())));
+            }
+        }
     }
 
     @Override public Void visitTypedefstruct(BSVParser.TypedefstructContext ctx) {
@@ -185,17 +189,17 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         ArrayList<String> members = new ArrayList<>();
         for (BSVParser.StructmemberContext member: ctx.structmember()) {
             assert member.subunion() == null;
-	    if (member.bsvtype() != null) {
-		members.add(String.format("    \"%s\" :: %s",
-					  member.lowerCaseIdentifier().getText(),
-					  bsvTypeToKami(member.bsvtype())));
-	    } else {
-	    }
+            if (member.bsvtype() != null) {
+                members.add(String.format("    \"%s\" :: %s",
+                                          member.lowerCaseIdentifier().getText(),
+                                          bsvTypeToKami(member.bsvtype())));
+            } else {
+            }
         }
         printstream.print(String.join(";\n", members));
         printstream.println("}).");
         printstream.println(String.format("Definition %s := (Struct %sFields).", typeName, typeName));
-	printstream.println("");
+        printstream.println("");
 
         //scope = scopes.popScope();
         inModule = wasInModule;
@@ -265,14 +269,14 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         for (BSVParser.UnionmemberContext member: ctx.unionmember()) {
             assert member.subunion() == null;
             if (member.bsvtype() != null) {
-		members.add(String.format("    \"%s\" :: %s",
-					  member.upperCaseIdentifier().getText(),
-					  bsvTypeToKami(member.bsvtype())));
-	    } else if (member.substruct() != null) {
-		String memberName = member.upperCaseIdentifier().getText();
-		declareSubstruct(members, memberName, member.substruct());
-	    } else {
-	    }
+                members.add(String.format("    \"%s\" :: %s",
+                                          member.upperCaseIdentifier().getText(),
+                                          bsvTypeToKami(member.bsvtype())));
+            } else if (member.substruct() != null) {
+                String memberName = member.upperCaseIdentifier().getText();
+                declareSubstruct(members, memberName, member.substruct());
+            } else {
+            }
         }
         printstream.print(String.join(";\n", members));
         printstream.println("}).");
@@ -294,7 +298,8 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         boolean wasInModule = inModule;
         inModule = true;
 
-        String moduleName = ctx.moduleproto().name.getText();
+        BSVParser.ModuleprotoContext moduleproto = ctx.moduleproto();
+        String moduleName = moduleproto.name.getText();
         String sectionName = moduleName.startsWith("mk") ? moduleName.substring(2) : moduleName;
         moduleDef = new ModuleDef(moduleName);
         pkg.addStatement(moduleDef);
@@ -306,12 +311,23 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         printstream.println("    Variable moduleName: string.");
         printstream.println("    Local Notation \"^ s\" := (moduleName -- s) (at level 0).");
 
-        for (Map.Entry<String,TreeSet<String>> entry: inv.methodsUsed.entrySet()) {
+        if (moduleproto.methodprotoformals() != null) {
+            for (BSVParser.MethodprotoformalContext formal : moduleproto.methodprotoformals().methodprotoformal()) {
+                if (formal.name != null)
+                    printstream.println(String.format("    Variable %sName: string.", formal.name.getText()));
+            }
+        }
+
+        for (Map.Entry<String,TreeSet<SymbolTableEntry>> entry: inv.methodsUsed.entrySet()) {
             String instanceName = entry.getKey();
-            TreeSet<String> methods = entry.getValue();
-            for (String method: methods) {
-                printstream.println(String.format("    Definition %1$s%2$s := MethodSig (^\"%1$s\"--\"%2$s\") () : %3$s.",
-                                                  instanceName, method, "Void"));
+            TreeSet<SymbolTableEntry> methods = entry.getValue();
+            for (SymbolTableEntry methodEntry: methods) {
+                String method = methodEntry.name;
+                BSVType methodType = methodEntry.type;
+                BSVType argType = methodType.params.get(0);
+                BSVType returnType = methodType.params.get(1);
+                printstream.println(String.format("    Definition %1$s%2$s := MethodSig (%1$sName--\"%2$s\") (%3$s) : %4$s.",
+                                                  instanceName, method, bsvTypeToKami(argType), bsvTypeToKami(returnType)));
             }
         }
 
@@ -607,66 +623,66 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         return null;
     }
     void destructurePattern(BSVParser.PatternContext pattern, String match, String tagName) {
-	if (pattern.taggedunionpattern() != null) {
-	    BSVParser.TaggedunionpatternContext taggedunionpattern = pattern.taggedunionpattern();
-	    if (taggedunionpattern.pattern() != null)
-		destructurePattern(taggedunionpattern.pattern(),
-				   match,
-				   taggedunionpattern.tag.getText());
-	} else if (pattern.structpattern() != null) {
-	    BSVParser.StructpatternContext structpattern = pattern.structpattern();
-	    tagName = structpattern.tag.getText();
-	    SymbolTableEntry tagEntry = scope.lookup(tagName);
-	    assert tagEntry != null;
-	    BSVType tagType = tagEntry.type;
-	    for (int i = 0; i < structpattern.pattern().size(); i++) {
-		String fieldName = structpattern.lowerCaseIdentifier(i).getText();
-		BSVParser.PatternContext fieldPattern = structpattern.pattern(i);
-		destructurePattern(fieldPattern, String.format("(#%s!%sFields@.\"%s%s%s\")", match,
-							       bsvTypeToKami(tagType),
-							       ((tagName != null) ? tagName : ""),
-							       ((tagName != null) ? "$" : ""),
-							       fieldName),
-				   null);
-	    }
-	} else if (pattern.lowerCaseIdentifier() != null) {
-	    printstream.println(String.format("        LET %s <- %s;",
-					      pattern.lowerCaseIdentifier().getText(),
-					      match));
-	}
+        if (pattern.taggedunionpattern() != null) {
+            BSVParser.TaggedunionpatternContext taggedunionpattern = pattern.taggedunionpattern();
+            if (taggedunionpattern.pattern() != null)
+                destructurePattern(taggedunionpattern.pattern(),
+                                   match,
+                                   taggedunionpattern.tag.getText());
+        } else if (pattern.structpattern() != null) {
+            BSVParser.StructpatternContext structpattern = pattern.structpattern();
+            tagName = structpattern.tag.getText();
+            SymbolTableEntry tagEntry = scope.lookup(tagName);
+            assert tagEntry != null;
+            BSVType tagType = tagEntry.type;
+            for (int i = 0; i < structpattern.pattern().size(); i++) {
+                String fieldName = structpattern.lowerCaseIdentifier(i).getText();
+                BSVParser.PatternContext fieldPattern = structpattern.pattern(i);
+                destructurePattern(fieldPattern, String.format("(#%s!%sFields@.\"%s%s%s\")", match,
+                                                               bsvTypeToKami(tagType),
+                                                               ((tagName != null) ? tagName : ""),
+                                                               ((tagName != null) ? "$" : ""),
+                                                               fieldName),
+                                   null);
+            }
+        } else if (pattern.lowerCaseIdentifier() != null) {
+            printstream.println(String.format("        LET %s <- %s;",
+                                              pattern.lowerCaseIdentifier().getText(),
+                                              match));
+        }
     }
 
     @Override public Void visitCaseexpr(BSVParser.CaseexprContext ctx) {
-	System.err.println("visitCaseexpr");
-	return null;
+        System.err.println("visitCaseexpr");
+        return null;
     }
     @Override public Void visitCasestmt(BSVParser.CasestmtContext ctx) {
-	int branchnum = 0;
-	System.err.println("visitCasestmt");
-	logger.fine("visitCasestmt " + ctx.getText());
-	for (BSVParser.CasestmtpatitemContext patitem: ctx.casestmtpatitem()) {
-	    BSVParser.PatternContext pattern = patitem.pattern();
-	    BSVParser.StructpatternContext structpattern = pattern.structpattern();
-	    assert structpattern != null;
-	    String tagName = structpattern.tag.getText();
-	    SymbolTableEntry tagEntry = scope.lookup(tagName);
-	    assert tagEntry != null;
-	    BSVType tagType = tagEntry.type;
-	    assert tagEntry.value != null : String.format("Missing value for tag %s", tagName);
-	    IntValue tagValue = (IntValue)tagEntry.value;
-	    printstream.print("    If (");
-	    visit(ctx.expression());
-	    printstream.print(String.format("!%sFields@.\"$tag\"", tagType.name));
-	    printstream.print(" == ");
-	    printstream.print(String.format("$%d", tagValue.value));
-	    printstream.println(") then");
-	    destructurePattern(pattern, ctx.expression().getText(), null);
-	    assert patitem.patterncond().expression().size() == 0;
-	    visit(patitem.stmt());
-	    printstream.println("        Retv");
-	    printstream.println("    else");
-	}
-	printstream.println("        Retv;");
+        int branchnum = 0;
+        System.err.println("visitCasestmt");
+        logger.fine("visitCasestmt " + ctx.getText());
+        for (BSVParser.CasestmtpatitemContext patitem: ctx.casestmtpatitem()) {
+            BSVParser.PatternContext pattern = patitem.pattern();
+            BSVParser.StructpatternContext structpattern = pattern.structpattern();
+            assert structpattern != null;
+            String tagName = structpattern.tag.getText();
+            SymbolTableEntry tagEntry = scope.lookup(tagName);
+            assert tagEntry != null;
+            BSVType tagType = tagEntry.type;
+            assert tagEntry.value != null : String.format("Missing value for tag %s", tagName);
+            IntValue tagValue = (IntValue)tagEntry.value;
+            printstream.print("    If (");
+            visit(ctx.expression());
+            printstream.print(String.format("!%sFields@.\"$tag\"", tagType.name));
+            printstream.print(" == ");
+            printstream.print(String.format("$%d", tagValue.value));
+            printstream.println(") then");
+            destructurePattern(pattern, ctx.expression().getText(), null);
+            assert patitem.patterncond().expression().size() == 0;
+            visit(patitem.stmt());
+            printstream.println("        Retv");
+            printstream.println("    else");
+        }
+        printstream.println("        Retv;");
         return null;
     }
     @Override
@@ -726,45 +742,45 @@ public class BSVToKami extends BSVBaseVisitor<Void>
     }
     @Override public Void visitTaggedunionexpr(BSVParser.TaggedunionexprContext ctx) {
         printstream.print("STRUCT { ");
-	String tagName = ctx.tag.getText();
-	SymbolTableEntry tagEntry = scope.lookup(tagName);
-	assert tagEntry != null;
-	BSVType tagtype = tagEntry.type;
-	assert tagEntry.value != null : String.format("Missing value for tag %s", tagName);
-	IntValue tagValue = (IntValue)tagEntry.value;
-	SymbolTableEntry typedefEntry = scope.lookupType(tagtype.name);
-	System.err.println(String.format("tagged union expr %s type %s", ctx.getText(), tagtype));
-	assert typedefEntry != null;
-	ArrayList<String> visitedFields = new ArrayList<>();
+        String tagName = ctx.tag.getText();
+        SymbolTableEntry tagEntry = scope.lookup(tagName);
+        assert tagEntry != null;
+        BSVType tagtype = tagEntry.type;
+        assert tagEntry.value != null : String.format("Missing value for tag %s", tagName);
+        IntValue tagValue = (IntValue)tagEntry.value;
+        SymbolTableEntry typedefEntry = scope.lookupType(tagtype.name);
+        System.err.println(String.format("tagged union expr %s type %s", ctx.getText(), tagtype));
+        assert typedefEntry != null;
+        ArrayList<String> visitedFields = new ArrayList<>();
 
         printstream.print(String.format(" \"$tag\" ::= $%d", tagValue.value));
 
-	visitedFields.add("$tag");
+        visitedFields.add("$tag");
         for (Map.Entry<String,SymbolTableEntry> iterator: typedefEntry.mappings.bindings.entrySet()) {
-	    String fieldName = iterator.getKey();
+            String fieldName = iterator.getKey();
 
-	    if (ctx.exprprimary() != null) {
-		if (!visitedFields.contains(tagName)) {
-		    printstream.print(String.format("; \"%s\" ::= ", tagName));
-		    visit(ctx.exprprimary());
-		    visitedFields.add(tagName);
-		}
-	    } else {
-		int i = 0;
-		for (BSVParser.MemberbindContext memberbind : ctx.memberbinds().memberbind()) {
-		    String memberfieldname = String.format("%s$%s", tagName, memberbind.field.getText());
-		    if (fieldName.equals(memberfieldname) && !visitedFields.contains(memberfieldname)) {
-			visitedFields.add(memberfieldname);
-			printstream.print(String.format("; \"%s\" ::= ", memberfieldname));
-			visit(memberbind.expression());
-			i++;
-		    }
-		}
-	    }
-	    if (!visitedFields.contains(fieldName)) {
-		printstream.print(String.format("; \"%s\" ::= $0", fieldName));
-	    }
-	}
+            if (ctx.exprprimary() != null) {
+                if (!visitedFields.contains(tagName)) {
+                    printstream.print(String.format("; \"%s\" ::= ", tagName));
+                    visit(ctx.exprprimary());
+                    visitedFields.add(tagName);
+                }
+            } else {
+                int i = 0;
+                for (BSVParser.MemberbindContext memberbind : ctx.memberbinds().memberbind()) {
+                    String memberfieldname = String.format("%s$%s", tagName, memberbind.field.getText());
+                    if (fieldName.equals(memberfieldname) && !visitedFields.contains(memberfieldname)) {
+                        visitedFields.add(memberfieldname);
+                        printstream.print(String.format("; \"%s\" ::= ", memberfieldname));
+                        visit(memberbind.expression());
+                        i++;
+                    }
+                }
+            }
+            if (!visitedFields.contains(fieldName)) {
+                printstream.print(String.format("; \"%s\" ::= $0", fieldName));
+            }
+        }
         printstream.print(" }");
         return null;
     }
