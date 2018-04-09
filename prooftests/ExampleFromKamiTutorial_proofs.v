@@ -10,7 +10,7 @@ Set Implicit Arguments.
 Require Import ExampleFromKamiTutorial.
 
 Definition producer := mkProducer "p0" "c0". 
-Definition consumer := mkConsumer "c0".
+Definition consumer := mkConsumer "c0" "e0".
 Definition producerConsumerImpl := (producer ++ consumer)%kami.
 Hint Unfold producer : ModuleDefs.
 Hint Unfold consumer : ModuleDefs.
@@ -36,7 +36,7 @@ Hint Resolve impl_ModEquiv.
 
 (** Now we are ready to prove the refinement! *)
 Theorem producer_consumer_refinement:
-  producerConsumerImpl <<== mkProduceConsume "pc0".
+  producerConsumerImpl <<== mkProduceConsume "pc0" "e0".
 Proof.
   kinline_left implInlined.
   (* Inlining: replace internal function calls in [impl]. *)

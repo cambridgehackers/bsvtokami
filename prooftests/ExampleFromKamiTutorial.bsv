@@ -6,15 +6,13 @@ endinterface
 interface Producer;
 endinterface
 
-`ifdef EXTCALL
-function Action extCall(Bit#(32) v);
-   // something
-endfunction
-`endif
+interface ExtCall;
+   method Action extCall(Bit#(32) v);
+endinterface
 
-module mkConsumer(Consumer);
+module mkConsumer#(ExtCall ext)(Consumer);
    method Action send(Bit#(32) v);
-      //extCall(data);
+      ext.extCall(v);
    endmethod
 endmodule
 
@@ -27,10 +25,10 @@ module mkProducer#(Consumer consumer)(Producer);
 
 endmodule
 
-module mkProduceConsume(Empty);
+module mkProduceConsume#(ExtCall extpc)(Empty);
    Reg#(Bit#(32)) data <- mkReg(0);
    rule produce_consume;
-      //extCall(data);
+      extpc.extCall(data);
       data <= data + 1;
    endrule
 endmodule
