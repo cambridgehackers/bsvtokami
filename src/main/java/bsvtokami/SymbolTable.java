@@ -4,7 +4,7 @@ import java.io.*;
 import java.util.*;
 import java.util.logging.Logger;
 
-class SymbolTableEntry {
+class SymbolTableEntry implements java.lang.Comparable {
     public final String name;
     public BSVType type;
     public enum Type {
@@ -30,6 +30,10 @@ class SymbolTableEntry {
 	if (instances == null)
 	    instances = new ArrayList<>();
 	instances.add(instanceEntry);
+    }
+    public int compareTo(Object o) {
+	SymbolTableEntry oentry = (SymbolTableEntry)o;
+	return name.compareTo(oentry.name);
     }
 }
 
