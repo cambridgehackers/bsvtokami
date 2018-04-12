@@ -1,7 +1,7 @@
 
 KAMIDIR?=~/kami
 
-all: $(patsubst %.bsv, %.stamp, $(wildcard *.bsv)) Kami
+all: $(patsubst %.bsv, .%.stamp, $(wildcard *.bsv)) Kami
 
 Kami-2018-03-28a.tgz:
 	curl http://buildbot.connectal.org/downloads/Kami-2018-03-28a.tgz > Kami-2018-03-28a.tgz
