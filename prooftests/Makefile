@@ -12,7 +12,7 @@ Kami: Kami-2018-03-28a.tgz
 %.v: %.bsv Bsvtokami.vo Kami
 	JAVA_OPTS=-ea ../build/install/bsvtokami/bin/bsvtokami -I../lib $(*).bsv
 
-.%.stamp: %.v
+.%.stamp: %.v Bsvtokami.vo
 	$(MAKE) $(*).vo
 	$(MAKE) $(*)_proofs.vo
 	touch .$(*).stamp
