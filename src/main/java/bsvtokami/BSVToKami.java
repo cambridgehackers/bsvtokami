@@ -331,7 +331,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
             }
         }
 
-        printstream.println("    Definition " + moduleName + "Module := MODULE {" + "\n");
+        printstream.println("    Definition " + moduleName + "Module := (BKMODULE {" + "\n");
         String stmtPrefix = "    ";
         for (BSVParser.ModulestmtContext modulestmt: ctx.modulestmt()) {
             stmtEmitted = true;
@@ -340,7 +340,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
             if (stmtEmitted)
                 stmtPrefix = "    with ";
         }
-        printstream.println("    }. (*" + ctx.moduleproto().name.getText() + " *)" + "\n");
+        printstream.println("    }). (*" + ctx.moduleproto().name.getText() + " *)" + "\n");
 
         if (instances.size() > 0)
             printstream.println(String.format("    Definition %sInstances := (%s)%%kami.",
@@ -412,6 +412,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         String varName = ctx.var.getText();
         BSVParser.ExpressionContext rhs = ctx.rhs;
         SymbolTableEntry entry = scope.lookup(varName);
+	assert entry != null: "Null var name in " + ctx.getText();
         BSVType bsvtype = entry.type;
         InstanceNameVisitor inv = new InstanceNameVisitor(scope);
         String calleeInstanceName = inv.visit(ctx.rhs);
@@ -692,6 +693,40 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         return null;
     }
 
+    @Override public Void visitForstmt(BSVParser.ForstmtContext ctx) {
+        scope = scopes.pushScope(ctx);
+	BSVParser.FornewinitContext init = ctx.forinit().fornewinit();
+	assert init != null : "Only supports new-style for loop init";
+	String iterationVar = init.var.getText();
+	SymbolTableEntry iterationVarEntry = scope.lookup(iterationVar);
+	assert iterationVarEntry != null;
+	BSVType iterationVarType = iterationVarEntry.type;
+	assert iterationVarType != null;
+	assert iterationVarType.name.equals("Integer"): "Iteration var must be an Integer";
+
+	BSVParser.ExpressionContext testExpr = ctx.fortest().expression();
+	BSVParser.OperatorexprContext operatorExpr = (testExpr instanceof BSVParser.OperatorexprContext) ? (BSVParser.OperatorexprContext)testExpr : null;
+	BSVParser.BinopexprContext binop = operatorExpr.binopexpr();
+	assert binop != null;
+	assert binop.left != null;
+	assert binop.left.getText().equals(iterationVar);
+	assert binop.op.getText().equals("<");
+
+	printstream.println("    Let loopM :=");
+	printstream.println("      (fix loopM' (limit: nat) (m: nat): InModule :=");
+	printstream.println("        match m with");
+	printstream.println("        | 0 => NilInModule");
+	printstream.println("        | S m' =>");
+	printstream.println(String.format("          let %s := limit - m", iterationVar));
+	printstream.println("          in STMTSR {");
+	visit(ctx.stmt());
+	printstream.println("          }");
+	printstream.println("          (loopM' limit m')");
+	printstream.println("        end).");
+        scope = scopes.popScope();
+	return null;
+    }
+
     @Override public Void visitBinopexpr(BSVParser.BinopexprContext expr) {
         if (expr.right != null) {
             printstream.print("(");
@@ -851,6 +886,9 @@ public class BSVToKami extends BSVBaseVisitor<Void>
     @Override public Void visitCallexpr(BSVParser.CallexprContext ctx) {
         InstanceNameVisitor inv = new InstanceNameVisitor(scope);
         String methodName = inv.visit(ctx.fcn);
+	if (methodName == null)
+	    methodName = "FIXME$" + ctx.fcn.getText();
+	assert methodName != null : "No methodName for " + ctx.fcn.getText();
         methodName = methodName.replace(".", "");
         if (methodName != null) {
             // "Call" is up where the binding is, hopefully
@@ -866,6 +904,20 @@ public class BSVToKami extends BSVBaseVisitor<Void>
             logger.fine(String.format("How to call action function {%s}", ctx.fcn.getText()));
         }
         return null;
+    }
+
+    @Override public Void visitBeginendblock(BSVParser.BeginendblockContext ctx) {
+	scope = scopes.pushScope(ctx);
+	String stmtPrefix = "    ";
+        for (BSVParser.StmtContext stmt: ctx.stmt()) {
+            stmtEmitted = true;
+            printstream.print(stmtPrefix);
+            visit(stmt);
+            if (stmtEmitted)
+                stmtPrefix = "    with ";
+        }
+	scope = scopes.popScope();
+	return null;
     }
 
     public String bsvTypeToKami(BSVType t) {
