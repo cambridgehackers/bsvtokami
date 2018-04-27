@@ -19,10 +19,6 @@ Notation "'STMTS' { s1 'with' .. 'with' sN }" :=
   (appendInModule s1 .. (appendInModule sN NilInModule) ..)
     (at level 0, only parsing).
 
-Notation "'STMTSR' { s1 'with' .. 'with' sN } SL" :=
-  (ConsInModule s1%kami .. (ConsInModule sN%kami SL%kami) ..)
-    (at level 0, only parsing).
-
 Definition bitlt (x : nat) (y: nat): bool := (Nat.ltb x y).
 
 (** * Notation for BSV to Kami modules *)
@@ -31,12 +27,12 @@ Inductive BKElt :=
 | BKRegister (_ : RegInitT)
 | BKRule (_ : Attribute (Action Void))
 | BKMeth (_ : DefMethT)
-| BKMod (_ : list Modules).
+| BKMod (_ : list Modules)
+| BKElts (_ : InBKModule)
 
-Inductive InBKModule :=
+with InBKModule :=
 | NilInBKModule
-| ConsInBKModule (_ : BKElt) (_ : InBKModule)
-| AppInBKModule (_ : InBKModule) (_ : InBKModule).
+| ConsInBKModule (_ : BKElt) (_ : InBKModule).
 
 Fixpoint makeBKModule' (im : InBKModule) :=
   match im with
@@ -48,11 +44,10 @@ Fixpoint makeBKModule' (im : InBKModule) :=
     | BKRule mrule => (iregs, mrule :: irules, imeths, imods)
     | BKMeth mmeth => (iregs, irules, mmeth :: imeths, imods)
     | BKMod mmods => (iregs, irules, imeths, mmods ++ imods)
+    | BKElts m =>
+      let '(mregs, mrules, mmeths, mmods) := makeBKModule' m in
+      (mregs ++ iregs, mrules ++ irules, mmeths ++ imeths, mmods ++ imods)
     end
-  | AppInBKModule m i =>
-    let '(mregs, mrules, mmeths, mmods) := makeBKModule' m in
-    let '(iregs, irules, imeths, imods) := makeBKModule' i in
-    (mregs ++ iregs, mrules ++ irules, mmeths ++ imeths, mmods ++ imods)
   end.
 
 Fixpoint concatModules (m: Modules) (lm: list Modules) :=
@@ -68,6 +63,10 @@ Definition makeBKModule (im : InBKModule) :=
 (* * BSV to Kami Notation *)
 
 Delimit Scope bk_scope with bk.
+
+Notation "'STMTSR' { s1 'with' .. 'with' sN } SL" :=
+  (ConsInBKModule s1%bk .. (ConsInBKModule sN%bk SL%bk) ..)
+    (at level 0, only parsing).
 
 Notation "'RegisterN' name : type <- 'Default'" :=
   (BKRegister (Build_Attribute name (RegInitDefault type)))
