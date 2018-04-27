@@ -736,7 +736,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         BSVType bsvtype = typeVisitor.visit(ctx.bsvtype());
         String varname = ctx.var.getText();
         symbolTable.bind(varname, bsvtype);
-        typeVisitor.visit(ctx.expression()); //FIXME
+        visit(ctx.expression()); //FIXME
         for (BSVParser.SimplevardeclassignContext vardecl: ctx.simplevardeclassign()) {
             if (vardecl.bsvtype() != null)
                 bsvtype = typeVisitor.visit(vardecl.bsvtype());
