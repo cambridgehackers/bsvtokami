@@ -16,22 +16,21 @@ module mkConsumer#(ExtCall ext)(Consumer);
    endmethod
 endmodule
 
-module mkProducer#(Consumer consumer, Integer numRegs)(Producer);
-   for (Integer i = 0; i < numRegs; numRegs = numRegs + 1) begin
-      Reg#(Bit#(32)) data <- mkReg(0);
+module mkProducer#(Consumer consumer)(Producer);
+   for (Integer i = 0; i < 10; i = i + 1) begin
+      Reg#(Bit#(32)) datafoo <- mkReg(0);
       rule produce;
-	 consumer.send(data);
-	 data <= data + fromInteger(numRegs);
+	 consumer.send(datafoo);
+	 datafoo <= datafoo + 10;
       endrule
    end
 endmodule
 
 module mkProduceConsume#(ExtCall extpc)(Empty);
-   for (Integer i = 0; i < numRegs; numRegs = numRegs + 1) begin
+   for (Integer i = 0; i < 10; i = i + 1) begin
       Reg#(Bit#(32)) data <- mkReg(0);
       rule produce;
-	 consumer.send(data);
-	 data <= data + fromInteger(numRegs);
+	 data <= data + 10;
          extpc.extCall(data);
       endrule
    end
