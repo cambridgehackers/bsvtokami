@@ -19,13 +19,14 @@ Section Consumer.
   Local Notation "^ s" := (moduleName -- s) (at level 0).
   Variable ext: ExtCall.
   Definition extextCall := MethodSig (ext--"extCall") (Bit 32) : Void.
-  Definition mkConsumerModule := (BKMODULE {
+  Definition mkConsumerModule :=
+    (BKMODULE {
 
-                                      Method ^"send" (v: (Bit 32)) : Void := 
-                                        Call extextCall(#v); (* method call expr *)
-                                      Retv
+         Method ^"send" (v: (Bit 32)) : Void := 
+           Call extextCall(#v); (* method call expr *)
+         Retv
 
-                                 }). (*mkConsumer *)
+    }). (*mkConsumer *)
 
   Definition mkConsumer := (mkConsumerModule)%kami.
 End Consumer.
@@ -35,28 +36,29 @@ Section Producer.
   Variable consumer: Consumer.
   Variable numRules: nat.
   Definition consumersend := MethodSig (consumer--"send") (Bit 32) : Void.
-  Definition mkProducerModule := (BKMODULE {
+  Definition mkProducerModule :=
+    (BKMODULE {
 
-                                      (BKElts
-                                         (let limit : nat := numRules in
-                                          ((fix loopM' (m: nat): InBKModule :=
-                                              match m with
-                                              | 0 => NilInBKModule
-                                              | S m' =>
-                                                let i := limit - m
-                                                in STMTSR {
-                                                       Register ^"datafoo" : Bit 32 <- $0
-                                                       with Rule ^"produce" :=
-                                                         Read datafoo_v : Bit 32 <- ^"datafoo";
-                                                       Call consumersend(#datafoo_v); (* method call expr *)
-                                                       Write ^"datafoo" : Bit 32 <- (#datafoo_v + $10);
-                                                       Retv (* rule produce *)
+         (BKElts
+            (let limit : nat := numRules in
+             ((fix loopM' (m: nat): InBKModule :=
+                 match m with
+                 | 0 => NilInBKModule
+                 | S m' =>
+                   let i := limit - m
+                   in STMTSR {
+                          Register ^"datafoo" : Bit 32 <- $0
+                          with Rule ^"produce" :=
+                            Read datafoo_v : Bit 32 <- ^"datafoo";
+                          Call consumersend(#datafoo_v); (* method call expr *)
+                          Write ^"datafoo" : Bit 32 <- (#datafoo_v + $10);
+                          Retv (* rule produce *)
 
-                                                     }
-                                                          (loopM' m')
-                                              end)
-                                             numRules)))
-                                 }). (*mkProducer *)
+                        }
+                             (loopM' m')
+                 end)
+                numRules)))
+    }). (*mkProducer *)
 
   Definition mkProducer := (mkProducerModule)%kami.
 End Producer.
