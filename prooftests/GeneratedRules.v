@@ -8,11 +8,17 @@ Require Import FunctionalExtensionality.
 Set Implicit Arguments.
 
 
+(* * interface Consumer *)
+Definition Consumer := string.
+(* * interface Producer *)
+Definition Producer := string.
+(* * interface ExtCall *)
+Definition ExtCall := string.
 Section Consumer.
     Variable moduleName: string.
     Local Notation "^ s" := (moduleName -- s) (at level 0).
-    Variable extName: string.
-    Definition extextCall := MethodSig (extName--"extCall") (Bit 32) : Void.
+    Variable ext: ExtCall.
+    Definition extextCall := MethodSig (ext--"extCall") (Bit 32) : Void.
     Definition mkConsumerModule := (BKMODULE {
 
     Method ^"send" (v: (Bit 32)) : Void := 
@@ -26,12 +32,14 @@ End Consumer.
 Section Producer.
     Variable moduleName: string.
     Local Notation "^ s" := (moduleName -- s) (at level 0).
-    Variable consumerName: string.
-    Definition consumersend := MethodSig (consumerName--"send") (Bit 32) : Void.
+    Variable consumer: Consumer.
+    Variable numRules: nat.
+    Definition consumersend := MethodSig (consumer--"send") (Bit 32) : Void.
     Definition mkProducerModule := (BKMODULE {
 
         (BKElts
-      ((fix loopM' (limit: nat) (m: nat): InBKModule :=
+      (let limit : nat := numRules in
+      ((fix loopM' (m: nat): InBKModule :=
         match m with
         | 0 => NilInBKModule
         | S m' =>
@@ -45,9 +53,9 @@ Section Producer.
         Retv (* rule produce *)
 
           }
-          (loopM' limit m')
+          (loopM' m')
         end)
-        10 10))
+        numRules)))
     }). (*mkProducer *)
 
     Definition mkProducer := (mkProducerModule)%kami.
@@ -55,12 +63,14 @@ End Producer.
 Section ProduceConsume.
     Variable moduleName: string.
     Local Notation "^ s" := (moduleName -- s) (at level 0).
-    Variable extpcName: string.
-    Definition extpcextCall := MethodSig (extpcName--"extCall") (Bit 32) : Void.
+    Variable extpc: ExtCall.
+    Variable numRules: nat.
+    Definition extpcextCall := MethodSig (extpc--"extCall") (Bit 32) : Void.
     Definition mkProduceConsumeModule := (BKMODULE {
 
         (BKElts
-      ((fix loopM' (limit: nat) (m: nat): InBKModule :=
+      (let limit : nat := numRules in
+      ((fix loopM' (m: nat): InBKModule :=
         match m with
         | 0 => NilInBKModule
         | S m' =>
@@ -74,9 +84,9 @@ Section ProduceConsume.
         Retv (* rule produce *)
 
           }
-          (loopM' limit m')
+          (loopM' m')
         end)
-        10 10))
+        numRules)))
     }). (*mkProduceConsume *)
 
     Definition mkProduceConsume := (mkProduceConsumeModule)%kami.

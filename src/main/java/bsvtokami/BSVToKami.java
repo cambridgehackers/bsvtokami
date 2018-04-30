@@ -157,6 +157,14 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         return null;
     }
 
+    @Override public Void visitInterfacedecl(BSVParser.InterfacedeclContext ctx) {
+	// modules are represented by a string: the name of the instance
+	String interfaceName = ctx.typedeftype().typeide().getText();
+	printstream.println(String.format("(* * interface %s *)", interfaceName));
+	printstream.println(String.format("Definition %s := string.", interfaceName));
+	return null;
+    }
+
     @Override public Void visitTypeclassinstance(BSVParser.TypeclassinstanceContext ctx) {
         scope = scopes.pushScope(ctx);
         visitChildren(ctx);
@@ -313,8 +321,9 @@ public class BSVToKami extends BSVBaseVisitor<Void>
 
         if (moduleproto.methodprotoformals() != null) {
             for (BSVParser.MethodprotoformalContext formal : moduleproto.methodprotoformals().methodprotoformal()) {
+		String typeName = bsvTypeToKami(formal.bsvtype());
                 if (formal.name != null)
-                    printstream.println(String.format("    Variable %sName: string.", formal.name.getText()));
+                    printstream.println(String.format("    Variable %s: %s.", formal.name.getText(), typeName));
             }
         }
 
@@ -326,7 +335,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
                 BSVType methodType = methodEntry.type;
                 BSVType argType = methodType.params.get(0);
                 BSVType returnType = methodType.params.get(1);
-                printstream.println(String.format("    Definition %1$s%2$s := MethodSig (%1$sName--\"%2$s\") (%3$s) : %4$s.",
+                printstream.println(String.format("    Definition %1$s%2$s := MethodSig (%1$s--\"%2$s\") (%3$s) : %4$s.",
                                                   instanceName, method, bsvTypeToKami(argType), bsvTypeToKami(returnType)));
             }
         }
@@ -711,7 +720,8 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         String limitVar = binop.right.getText();
 
         printstream.println("    (BKElts");
-        printstream.println("      ((fix loopM' (limit: nat) (m: nat): InBKModule :=");
+        printstream.println(String.format("      (let limit : nat := %s in", limitVar));
+        printstream.println("      ((fix loopM' (m: nat): InBKModule :=");
         printstream.println("        match m with");
         printstream.println("        | 0 => NilInBKModule");
         printstream.println("        | S m' =>");
@@ -719,9 +729,9 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         printstream.println("          in STMTSR {");
         visit(ctx.stmt());
         printstream.println("          }");
-        printstream.println("          (loopM' limit m')");
+        printstream.println("          (loopM' m')");
         printstream.println("        end)");
-        printstream.println(String.format("        %s %s))", limitVar, limitVar));
+        printstream.println(String.format("        %s)))", limitVar));
         scope = scopes.popScope();
         return null;
     }
@@ -929,6 +939,8 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         String kamitype = t.name;
         if (kamitype.equals("Action"))
             kamitype = "Void";
+        if (kamitype.equals("Integer"))
+            kamitype = "nat";
         for (BSVType p: t.params)
             kamitype += " " + bsvTypeToKami(p);
         if (level > 0)
@@ -947,6 +959,8 @@ public class BSVToKami extends BSVBaseVisitor<Void>
                 kamitype = "word";
             else if (kamitype.equals("Bool"))
                 kamitype = "bool";
+            else if (kamitype.equals("Integer"))
+                kamitype = "nat";
             else if (kamitype.equals("Action"))
                 kamitype = "Void";
             for (BSVParser.BsvtypeContext p: t.bsvtype())

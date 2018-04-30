@@ -8,6 +8,8 @@ Fixpoint appendInModule (im1: InModule) (im2: InModule) : InModule :=
     | ConsInModule e im1' => ConsInModule e (appendInModule im1' im2)
 end.
 
+Definition ExtCall := string.
+
 Definition moduleStatement stmt: InModule :=
     (ConsInModule stmt NilInModule).
 

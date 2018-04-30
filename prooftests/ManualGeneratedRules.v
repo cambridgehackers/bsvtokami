@@ -98,7 +98,7 @@ Section ProduceConsume.
     Definition extpcextCall := MethodSig (extpcName--"extCall") (Bit 32) : Void.
 
     Let loopM :=
-       fix loopM' (m: nat) : InModule :=
+       fix loopM' (limit: nat) (m: nat) : InModule :=
        match m with
        | S m' =>  let n := (numRegs - m) in
        	          STMTSR {
@@ -110,13 +110,13 @@ Section ProduceConsume.
 			Write ^"pcdata"--(toBinary n) : Bit 32 <- (#data_v + $1);
 			Write ^"pcdata"--(toBinary n) : Bit 32 <- (#data_v + $2);
 			Retv)%kami }
-	          (loopM' m')
+	          (loopM' limit m')
        | 0 => NilInModule
        end.
 
     Definition mkProduceConsumeModule := MODULESTMTS {
 
-        (loopM numRegs)
+        (loopM numRegs numRegs)
  (* rule produce_consume *)
 
     }. (*mkProduceConsume *)
