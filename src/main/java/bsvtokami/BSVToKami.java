@@ -335,7 +335,7 @@ public class BSVToKami extends BSVBaseVisitor<Void>
                 BSVType methodType = methodEntry.type;
                 BSVType argType = methodType.params.get(0);
                 BSVType returnType = methodType.params.get(1);
-                printstream.println(String.format("    Definition %1$s%2$s := MethodSig (%1$s--\"%2$s\") (%3$s) : %4$s.",
+                printstream.println(String.format("    Let %1$s%2$s := MethodSig (%1$s--\"%2$s\") (%3$s) : %4$s.",
                                                   instanceName, method, bsvTypeToKami(argType), bsvTypeToKami(returnType)));
             }
         }
