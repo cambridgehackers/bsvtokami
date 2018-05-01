@@ -340,7 +340,8 @@ public class BSVToKami extends BSVBaseVisitor<Void>
             }
         }
 
-        printstream.println("    Definition " + moduleName + "Module := (BKMODULE {" + "\n");
+        printstream.println("    Definition " + moduleName + "Module := ");
+	printstream.println("        (BKMODULE {" + "\n");
         String stmtPrefix = "    ";
         for (BSVParser.ModulestmtContext modulestmt: ctx.modulestmt()) {
             stmtEmitted = true;
@@ -720,13 +721,15 @@ public class BSVToKami extends BSVBaseVisitor<Void>
         String limitVar = binop.right.getText();
 
         printstream.println("    (BKElts");
-        printstream.println(String.format("      (let limit : nat := %s in", limitVar));
-        printstream.println("      ((fix loopM' (m: nat): InBKModule :=");
+        printstream.println(String.format("      (let limit : nat := %s", limitVar));
+        printstream.println(String.format("       in let moduleName : string := moduleName--\"%s\"", iterationVar));
+        printstream.println("      in ((fix loopM' (m: nat): InBKModule :=");
         printstream.println("        match m with");
         printstream.println("        | 0 => NilInBKModule");
         printstream.println("        | S m' =>");
         printstream.println(String.format("          let %s := limit - m", iterationVar));
-        printstream.println("          in STMTSR {");
+        printstream.println(String.format("          in let moduleName := moduleName--(toBinaryString %s)", iterationVar));
+        printstream.println("          in LOOP {");
         visit(ctx.stmt());
         printstream.println("          }");
         printstream.println("          (loopM' m')");

@@ -26,6 +26,32 @@ module mkProducer#(Consumer consumer, Integer numRules)(Producer);
    end
 endmodule
 
+`ifdef ManyConsumers
+module mkManyConsumer#(ExtCall ext, Integer numRules)(Producer);
+   for (Integer i = 0; i < numRules; i = i + 1) begin
+      Consumer c <- mkConsumer(ext);
+      Reg#(Bit#(32)) datafoo <- mkReg(0);
+      rule produce;
+	 c.send(datafoo);
+	 datafoo <= datafoo + 10;
+      endrule
+   end
+endmodule
+`endif
+
+`ifdef ProducerConsumer
+module mkProducerConsumer#(ExtCall ext, Integer numRules)(Producer);
+   Consumer c0 <- mkConsumer(ext);
+   for (Integer i = 0; i < numRules; i = i + 1) begin
+      Reg#(Bit#(32)) datafoo <- mkReg(0);
+      rule produce;
+	 c0.send(datafoo);
+	 datafoo <= datafoo + 10;
+      endrule
+   end
+endmodule
+`endif
+
 module mkProduceConsume#(ExtCall extpc, Integer numRules)(Empty);
    for (Integer i = 0; i < numRules; i = i + 1) begin
       Reg#(Bit#(32)) data <- mkReg(0);
