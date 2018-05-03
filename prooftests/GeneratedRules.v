@@ -23,7 +23,7 @@ Section Consumer.
         (BKMODULE {
 
     Method ^"send" (v: (Bit 32)) : Void := 
-        Call extextCall(#v); (* method call expr *)
+        Call extextCall(#v);
         Retv
 
     }). (*mkConsumer *)
@@ -51,7 +51,7 @@ Section Producer.
                                      Register ^"datafoo" : Bit 32 <- $0
                                      with Rule ^"produce" :=
                                        Read datafoo_v : Bit 32 <- ^"datafoo";
-                                     Call consumersend(#datafoo_v); (* method call expr *)
+                                     Call consumersend(#datafoo_v);
                                      Write ^"datafoo" : Bit 32 <- (#datafoo_v + $10);
                                      Retv (* rule produce *)
 
@@ -86,7 +86,7 @@ Section ProduceConsume.
     with Rule ^"produce" :=
         Read data_v : Bit 32 <- ^"data";
         Write ^"data" : Bit 32 <- (#data_v + $10);
-        Call extpcextCall(#data_v); (* method call expr *)
+        Call extpcextCall(#data_v);
         Retv (* rule produce *)
 
           }
