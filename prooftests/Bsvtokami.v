@@ -1,6 +1,21 @@
 Require Import Kami.
 Require Import Kami.Lib.Struct.
-Require Import Bool Arith.
+Require Import Bool Arith String Nat ZArith.
+
+Fixpoint toBinaryP (p: positive) : string :=
+  match p with
+  | xI p' => String "1" (toBinaryP p')
+  | xO p' => String "0" (toBinaryP p')
+  | xH => ""
+  end.
+
+Definition toBinaryN (n: N): string :=
+  match n with
+  | N0 => "0"
+  | Npos p => toBinaryP p
+  end.
+
+Definition toBinaryString (n: nat) := (toBinaryN (N.of_nat n)).
 
 Fixpoint appendInModule (im1: InModule) (im2: InModule) : InModule :=
     match im1 with
@@ -66,7 +81,7 @@ Definition makeBKModule (im : InBKModule) :=
 
 Delimit Scope bk_scope with bk.
 
-Notation "'STMTSR' { s1 'with' .. 'with' sN } SL" :=
+Notation "'LOOP' { s1 'with' .. 'with' sN } SL" :=
   (ConsInBKModule s1%bk .. (ConsInBKModule sN%bk SL%bk) ..)
     (at level 0, only parsing).
 
