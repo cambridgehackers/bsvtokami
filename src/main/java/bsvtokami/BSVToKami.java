@@ -234,9 +234,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         logger.fine("module " + moduleName);
         printstream.println("Section " + sectionName + ".");
-        printstream.println("    Variable moduleName: string.");
-	printstream.println("    Local Notation \"^ s\" := (moduleName -- s) (at level 0).");
-
+        printstream.println("    Variable instancePrefix: string.");
 
         if (moduleproto.methodprotoformals() != null) {
             for (BSVParser.MethodprotoformalContext formal : moduleproto.methodprotoformals().methodprotoformal()) {
@@ -264,7 +262,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             printstream.print(stmtPrefix);
             visit(modulestmt);
         }
-        printstream.println("    Definition " + moduleName + "Module := ");
+        printstream.println("    Definition " + moduleName + "Module :=");
 	if (letBindings.size() > 0) {
 	    printstream.println("       (");
 	    for (String letBinding: letBindings) {
@@ -371,7 +369,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         if (typeName.startsWith("Reg")) {
             BSVType paramtype = bsvtype.params.get(0);
-            statement.append("Register ^\"" + varName + "\" : " + bsvTypeToKami(paramtype)
+	    letBindings.add(String.format("%s : string := instancePrefix--\"%s\"", varName, varName));
+            statement.append("Register " + varName + " : " + bsvTypeToKami(paramtype)
                              + " <- ");
 
             BSVParser.CallexprContext call = getCall(ctx.rhs);
@@ -432,10 +431,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
 
 	StringBuilder statement = new StringBuilder();
-        statement.append("Rule ^\"" + ruleName + "\" :=\n");
+        statement.append("Rule instancePrefix--\"" + ruleName + "\" :=\n");
         for (Map.Entry<String,BSVType> entry: regReadVisitor.regs.entrySet()) {
             String regName = entry.getKey();
-            statement.append("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- ^\"" + regName + "\";\n");
+            statement.append("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- " + regName + ";\n");
         }
 
         if (rulecond != null) {
@@ -516,7 +515,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	StringBuilder statement = new StringBuilder();
 
         String methodName = ctx.name.getText();
-        statement.append("Method ^\"" + methodName + "\" (");
+        statement.append("Method instancePrefix--\"" + methodName + "\" (");
         if (ctx.methodformals() != null) {
             String sep = "";
             for (BSVParser.MethodformalContext formal: ctx.methodformals().methodformal()) {
@@ -527,7 +526,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             }
         }
         String returntype = (ctx.bsvtype() != null) ? bsvTypeToKami(ctx.bsvtype()) : "";
-        statement.append(") : " + returntype + " := ");
+        statement.append(") : " + returntype + " :=");
 	statement.append(newline);
         RegReadVisitor regReadVisitor = new RegReadVisitor(scope);
         for (BSVParser.StmtContext stmt: ctx.stmt())
@@ -562,9 +561,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     @Override public String visitRegwrite(BSVParser.RegwriteContext regwrite) {
 	StringBuilder statement = new StringBuilder();
-        statement.append("        Write ^\"");
+        statement.append("        Write ");
         statement.append(visit(regwrite.lhs));
-        statement.append("\"");
         String regName = regwrite.lhs.getText();
         SymbolTableEntry entry = scope.lookup(regName);
         if (entry != null) {
@@ -743,6 +741,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	ArrayList<String> parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
         scope = scopes.pushScope(ctx);
+
         BSVParser.FornewinitContext init = ctx.forinit().fornewinit();
         assert init != null : "Only supports new-style for loop init";
         String iterationVar = init.var.getText();
@@ -762,11 +761,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
         String limitVar = binop.right.getText();
 
 	StringBuilder statement = new StringBuilder();
-        statement.append("    (BKElts");
+        statement.append("    (BKBlock");
 	statement.append(newline);
         statement.append(String.format("      (let limit : nat := %s", limitVar));
 	statement.append(newline);
-        statement.append(String.format("       in let moduleName : string := moduleName--\"%s\"", iterationVar));
+        statement.append(String.format("       in let instancePrefix : string := instancePrefix--\"%s\"", iterationVar));
 	statement.append(newline);
         statement.append("      in ((fix loopM' (m: nat): InBKModule :=");
 	statement.append(newline);
@@ -778,9 +777,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	statement.append(newline);
         statement.append(String.format("          let %s := limit - m", iterationVar));
 	statement.append(newline);
-        statement.append(String.format("          in let moduleName := moduleName--(toBinaryString %s)", iterationVar));
+        statement.append(String.format("          in let instancePrefix := instancePrefix--(toBinaryString %s)", iterationVar));
 	statement.append(newline);
-        statement.append("          in LOOP {");
+        statement.append("          in ConsInBKModule");
 	statement.append(newline);
 
 	letBindings = new ArrayList<>();
@@ -792,9 +791,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    statement.append(newline);
 	}
 
-        statement.append("          }");
-	statement.append(newline);
-        statement.append("          (loopM' m')");
+        statement.append("        (loopM' m')");
 	statement.append(newline);
         statement.append("        end)");
 	statement.append(newline);
@@ -998,16 +995,29 @@ public class BSVToKami extends BSVBaseVisitor<String>
     @Override public String visitBeginendblock(BSVParser.BeginendblockContext ctx) {
 	ArrayList<String> parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
+	// rule context
         scope = scopes.pushScope(ctx);
 
-	StringBuilder statement = new StringBuilder();
 	letBindings = new ArrayList<>();
 	statements = new ArrayList<>();
         for (BSVParser.StmtContext stmt: ctx.stmt()) {
             stmtEmitted = true;
             visit(stmt);
         }
-	// rule context
+	StringBuilder statement = new StringBuilder();
+	if (letBindings.size() != 0) {
+	    statement.append("        (BKBlock (");
+	    statement.append(newline);
+	    for (String binding: letBindings) {
+		statement.append("        let ");
+		statement.append(binding);
+		statement.append(" in");
+		statement.append(newline);
+	    }
+	}
+
+	statement.append("        BKSTMTS {");
+	statement.append(newline);
 	String separator = "";
 	String terminator = (actionContext) ? ";" : "";
 	for (String substatement: statements) {
@@ -1015,6 +1025,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    if (!actionContext)
 		separator = "with ";
 	}
+
+	if (letBindings.size() != 0) {
+	    statement.append("        }");
+	    statement.append("))");
+	}
+
         scope = scopes.popScope();
 	letBindings = parentLetBindings;
 	statements  = parentStatements;

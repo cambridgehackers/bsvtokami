@@ -17,24 +17,7 @@ Definition toBinaryN (n: N): string :=
 
 Definition toBinaryString (n: nat) := (toBinaryN (N.of_nat n)).
 
-Fixpoint appendInModule (im1: InModule) (im2: InModule) : InModule :=
-    match im1 with
-    | NilInModule => im2
-    | ConsInModule e im1' => ConsInModule e (appendInModule im1' im2)
-end.
-
 Definition ExtCall := string.
-
-Definition moduleStatement stmt: InModule :=
-    (ConsInModule stmt NilInModule).
-
-Notation "'MODULESTMTS' { s1 'with' .. 'with' sN }" :=
-  (makeModule (appendInModule s1 .. (appendInModule sN NilInModule) ..))
-    (at level 0, only parsing).
-
-Notation "'STMTS' { s1 'with' .. 'with' sN }" :=
-  (appendInModule s1 .. (appendInModule sN NilInModule) ..)
-    (at level 0, only parsing).
 
 Definition bitlt (x : nat) (y: nat): bool := (Nat.ltb x y).
 
@@ -45,7 +28,7 @@ Inductive BKElt :=
 | BKRule (_ : Attribute (Action Void))
 | BKMeth (_ : DefMethT)
 | BKMod (_ : list Modules)
-| BKElts (_ : InBKModule)
+| BKBlock (_ : InBKModule)
 
 with InBKModule :=
 | NilInBKModule
@@ -61,7 +44,7 @@ Fixpoint makeBKModule' (im : InBKModule) :=
     | BKRule mrule => (iregs, mrule :: irules, imeths, imods)
     | BKMeth mmeth => (iregs, irules, mmeth :: imeths, imods)
     | BKMod mmods => (iregs, irules, imeths, mmods ++ imods)
-    | BKElts m =>
+    | BKBlock m =>
       let '(mregs, mrules, mmeths, mmods) := makeBKModule' m in
       (mregs ++ iregs, mrules ++ irules, mmeths ++ imeths, mmods ++ imods)
     end
@@ -80,6 +63,10 @@ Definition makeBKModule (im : InBKModule) :=
 (* * BSV to Kami Notation *)
 
 Delimit Scope bk_scope with bk.
+
+Notation "'BKSTMTS' { s1 'with' .. 'with' sN }" :=
+  (ConsInBKModule s1%bk .. (ConsInBKModule sN%bk NilInBKModule) ..)
+    (at level 0, only parsing).
 
 Notation "'LOOP' { s1 'with' .. 'with' sN } SL" :=
   (ConsInBKModule s1%bk .. (ConsInBKModule sN%bk SL%bk) ..)
