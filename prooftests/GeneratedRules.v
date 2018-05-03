@@ -17,7 +17,7 @@ Definition ExtCall := string.
 Section Consumer.
   Variable instancePrefix: string.
   Variable ext: ExtCall.
-  Definition extextCall := MethodSig (ext--"extCall") (Bit 32) : Void.
+  Let extextCall := MethodSig (ext--"extCall") (Bit 32) : Void.
   Definition mkConsumerModule :=
     (BKMODULE {
          Method instancePrefix--"send" (v: (Bit 32)) : Void :=
@@ -32,7 +32,7 @@ Section Producer.
   Variable instancePrefix: string.
   Variable consumer: Consumer.
   Variable numRules: nat.
-  Definition consumersend := MethodSig (consumer--"send") (Bit 32) : Void.
+  Let consumersend := MethodSig (consumer--"send") (Bit 32) : Void.
   Definition mkProducerModule :=
     (BKMODULE {
          (BKBlock
@@ -66,7 +66,7 @@ Section ProduceConsume.
   Variable instancePrefix: string.
   Variable extpc: ExtCall.
   Variable numRules: nat.
-  Definition extpcextCall := MethodSig (extpc--"extCall") (Bit 32) : Void.
+  Let extpcextCall := MethodSig (extpc--"extCall") (Bit 32) : Void.
   Definition mkProduceConsumeModule :=
     (BKMODULE {
          (BKBlock
@@ -85,7 +85,8 @@ Section ProduceConsume.
                                           Register data : Bit 32 <- $0
                                           with Rule instancePrefix--"produce" :=
                                             Read data_v : Bit 32 <- data;
-                                          Write data : Bit 32 <- (#data_v + $10);
+                                          LET k : (Bit 32) <- $10;
+                                          Write data : Bit 32 <- (#data_v + #k);
                                           Call extpcextCall(#data_v);
                                           Retv (* rule produce *)
                                  }))

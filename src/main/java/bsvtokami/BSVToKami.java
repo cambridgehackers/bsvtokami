@@ -252,7 +252,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 BSVType methodType = methodEntry.type;
                 BSVType argType = methodType.params.get(0);
                 BSVType returnType = methodType.params.get(1);
-                printstream.println(String.format("    Definition %1$s%2$s := MethodSig (%1$s--\"%2$s\") (%3$s) : %4$s.",
+                printstream.println(String.format("    Let %1$s%2$s := MethodSig (%1$s--\"%2$s\") (%3$s) : %4$s.",
                                                   instanceName, method, bsvTypeToKami(argType), bsvTypeToKami(returnType)));
             }
         }
@@ -311,8 +311,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     @Override public String visitVarBinding(BSVParser.VarBindingContext ctx) {
         BSVParser.BsvtypeContext t = ctx.t;
-	StringBuilder statement = new StringBuilder();
         for (BSVParser.VarinitContext varinit: ctx.varinit()) {
+	    StringBuilder statement = new StringBuilder();
             String varName = varinit.var.getText();
             assert scope != null : "No scope to evaluate var binding " + ctx.getText();
             SymbolTableEntry entry = scope.lookup(varName);
@@ -324,14 +324,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 } else {
                     statement.append(String.format("        LET %s : %s <- ", varName, bsvTypeToKami(t)));
                 }
-                visit(rhs);
+                statement.append(visit(rhs));
             } else {
                 assert false;
                 statement.append(String.format("        LET %s : %s", varName, bsvTypeToKami(t)));
             }
-            statement.append(";");
+	    statements.add(statement.toString());
         }
-        return statement.toString();
+	return null;
     }
     @Override public String visitLetBinding(BSVParser.LetBindingContext ctx) {
         BSVParser.ExpressionContext rhs = ctx.rhs;
