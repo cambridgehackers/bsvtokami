@@ -18,12 +18,9 @@ Definition toBinaryN (n: N): string :=
 Definition toBinaryString (n: nat) := (toBinaryN (N.of_nat n)).
 
 Record ModuleInstance intT :=
-    { instance : string;
-      module : Modules;
+    { module : Modules;
       interface : intT;
     }.
-
-Definition ExtCall := string.
 
 Definition bitlt (x : nat) (y: nat): bool := (Nat.ltb x y).
 

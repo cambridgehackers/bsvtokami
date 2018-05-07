@@ -1,4 +1,8 @@
 
+// should be in Prelude.bsv
+interface Empty;
+endinterface
+
 interface Consumer;
    method Action send(Bit#(32) v);
 endinterface

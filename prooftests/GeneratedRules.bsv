@@ -1,6 +1,11 @@
 
+interface SubConsumer;
+   method Acton foo();
+endinterface
+
 interface Consumer;
    method Action send(Bit#(32) v);
+   //interface SubConsumer sc;
 endinterface
 
 interface Producer;
@@ -26,7 +31,6 @@ module mkProducer#(Consumer consumer, Integer numRules)(Producer);
    end
 endmodule
 
-`ifdef ManyConsumers
 module mkManyConsumer#(ExtCall ext, Integer numRules)(Producer);
    for (Integer i = 0; i < numRules; i = i + 1) begin
       Consumer c <- mkConsumer(ext);
@@ -37,7 +41,6 @@ module mkManyConsumer#(ExtCall ext, Integer numRules)(Producer);
       endrule
    end
 endmodule
-`endif
 
 `ifdef ProducerConsumer
 module mkProducerConsumer#(ExtCall ext, Integer numRules)(Producer);

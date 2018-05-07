@@ -74,7 +74,21 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	// modules are represented by a string: the name of the instance
 	String interfaceName = ctx.typedeftype().typeide().getText();
 	printstream.println(String.format("(* * interface %s *)", interfaceName));
-	printstream.println(String.format("Definition %s := string.", interfaceName));
+
+	printstream.println(String.format("Record %s := {", interfaceName));
+	printstream.println(String.format("    %s'interface: Modules;", interfaceName));
+	for (BSVParser.InterfacememberdeclContext decl: ctx.interfacememberdecl()) {
+	    if (decl.methodproto() != null) {
+		printstream.println(String.format("    %s'%s : string;", interfaceName, decl.methodproto().name.getText()));
+	    } else {
+		String interfaceType = bsvTypeToKami(decl.subinterfacedecl().bsvtype());
+		assert interfaceType != null;
+		printstream.println(String.format("    %s'%s : %s;",
+						  interfaceName, decl.subinterfacedecl().lowerCaseIdentifier().getText(), interfaceType));
+	    }
+	}
+	printstream.println(String.format("}."));
+	printstream.println("");
 	return null;
     }
 
@@ -226,8 +240,17 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         BSVParser.ModuleprotoContext moduleproto = ctx.moduleproto();
         String moduleName = moduleproto.name.getText();
-        String sectionName = moduleName.startsWith("mk") ? moduleName.substring(2) : moduleName;
-        moduleDef = new ModuleDef(moduleName);
+	String interfaceName = (moduleName.startsWith("mk") ? moduleName.substring(2) : moduleName);
+	if (ctx.moduleproto().moduleinterface != null) {
+	    // FIXME
+	    interfaceName = ctx.moduleproto().moduleinterface.getText();
+	} else {
+	    // FIXME also
+	    interfaceName = ctx.moduleproto().methodprotoformals().methodprotoformal(0).getText();
+	}
+        String sectionName = "Module'" + moduleName;
+
+	moduleDef = new ModuleDef(moduleName);
         pkg.addStatement(moduleDef);
         InstanceNameVisitor inv = new InstanceNameVisitor(scope);
         inv.visit(ctx);
@@ -252,8 +275,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 BSVType methodType = methodEntry.type;
                 BSVType argType = methodType.params.get(0);
                 BSVType returnType = methodType.params.get(1);
-                printstream.println(String.format("    Let %1$s%2$s := MethodSig (%1$s--\"%2$s\") (%3$s) : %4$s.",
-                                                  instanceName, method, bsvTypeToKami(argType), bsvTypeToKami(returnType)));
+		SymbolTableEntry methodInterfaceEntry = methodEntry.parent;
+		assert methodInterfaceEntry != null;
+		String methodInterfaceName = methodInterfaceEntry.name;
+                printstream.println(String.format("    Let %1$s%2$s := MethodSig (%5$s'%2$s %1$s) (%3$s) : %4$s.",
+                                                  instanceName, method, bsvTypeToKami(argType), bsvTypeToKami(returnType), methodInterfaceName));
             }
         }
 
@@ -288,13 +314,28 @@ public class BSVToKami extends BSVBaseVisitor<String>
                                              moduleName,
                                              String.join("\n            ++ ", instances)));
 
-        printstream.print(String.format("    Definition %1$s := (", moduleName));
+	SymbolTableEntry interfaceEntry = scope.lookupType(interfaceName);
+	assert interfaceEntry != null;
+
+	StringBuilder methodNames = new StringBuilder();
+        for (Map.Entry<String,SymbolTableEntry> iterator: interfaceEntry.mappings.bindings.entrySet()) {
+            String methodName = iterator.getKey();
+	    methodNames.append(String.format(" (instancePrefix--\"%s\")", methodName));
+	}
+
+        printstream.print(String.format("    Definition %1$s := Build_%2$s ", moduleName, interfaceName));
         if (instances.size() > 0)
-            printstream.print(String.format("%1$sInstances ++ ",
+            printstream.print(String.format("(%1$sInstances ++ ",
                                             moduleName));
-        printstream.println(String.format("%1$sModule)%%kami.", moduleName));
+
+        printstream.print(String.format("%1$sModule%%kami", moduleName));
+        if (instances.size() > 0)
+	    printstream.print(")");
+	printstream.print(methodNames.toString());
+	printstream.println(".");
 
         printstream.println("End " + sectionName + ".");
+	printstream.println("");
         scope = scopes.popScope();
         moduleDef = null;
         logger.fine("endmodule : " + moduleName);
@@ -384,7 +425,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
             statement.append(String.format("        Call %s <- %s()", varName, calleeInstanceName));
         } else if (!actionContext) {
             BSVParser.CallexprContext call = getCall(ctx.rhs);
-            statement.append(String.format("(BKMod (%s %s :: nil))", call.fcn.getText(), varName));
+	    String interfaceName = "FIXME$$InterfaceName";
+            letBindings.add(String.format("%s := %s (instancePrefix--\"%s\")", varName, call.fcn.getText(), varName));
+            statement.append(String.format("(BKMod (%s'instance %s :: nil))", interfaceName, varName));
 
             String instanceName = String.format("%s", varName); //FIXME concat methodName
             entry.instanceName = instanceName;

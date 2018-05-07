@@ -16,6 +16,7 @@ class SymbolTableEntry implements java.lang.Comparable {
     public Value value;
     public String instanceName;
     public String pkgName;
+    public SymbolTableEntry parent; // which interface a method belongs to, etc.
     SymbolTableEntry(String name, BSVType type) {
         this.name = name;
         this.type = type;

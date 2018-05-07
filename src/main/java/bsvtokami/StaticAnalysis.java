@@ -202,6 +202,14 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
             logger.fine(String.format("interface tmapping %s  %s : %s", interfaceName, mapping.getKey(), mapping.getValue().type));
         }
         symbolTable.bindType(packageName, interfaceName, interfaceType, interfaceMappings);
+	SymbolTableEntry interfaceEntry = symbolTable.lookupType(interfaceName);
+
+        for (Map.Entry<String,SymbolTableEntry> mapping: interfaceMappings.bindings.entrySet()) {
+	    mapping.getValue().parent = interfaceEntry;
+        }
+        for (Map.Entry<String,SymbolTableEntry> mapping: interfaceMappings.typeBindings.entrySet()) {
+	    mapping.getValue().parent = interfaceEntry;
+        }
 
         logger.fine("} exiting interface decl " + interfaceName);
         return null;

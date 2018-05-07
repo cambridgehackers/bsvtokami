@@ -9,8 +9,8 @@ Set Implicit Arguments.
 
 Require Import ExampleFromKamiTutorial.
 
-Definition producer := mkProducer "p0" "c0". 
 Definition consumer := mkConsumer "c0" "e0".
+Definition producer := mkProducer "p0" "c0". 
 Definition producerConsumerImpl := (producer ++ consumer)%kami.
 Hint Unfold producer : ModuleDefs.
 Hint Unfold consumer : ModuleDefs.
