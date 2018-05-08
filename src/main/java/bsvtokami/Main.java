@@ -183,22 +183,25 @@ class PreprocessedTokenSource implements TokenSource {
 						     condStack.peek(), validStack.peek(), validStack.size()));
 		} else if (text.equals("`include")) {
 		    Token filenameToken = tokenSource.nextToken();
-		    String filename = filenameToken.getText();
+		    String include = filenameToken.getText();
 
 		    if (!validStack.peek()) {
-			logger.fine("preprocessor skipping include " + filename);
+			logger.fine("preprocessor skipping include " + include);
 			continue;
 		    }
 
-		    filename = filename.substring(1,filename.length()-1);
-		    filename = findIncludeFile(filename);
-		    logger.fine(String.format("preprocessor including %s", filename));
+		    include = include.substring(1,include.length()-1);
+		    String filename = findIncludeFile(include);
+		    assert filename != null: String.format("Include %s not found", include);
+		    assert !filename.equals("null"): String.format("Include %s not found", include);
+		    logger.fine(String.format("preprocessor including %s: %s", include, filename));
 		    try {
 			CharStream charStream = CharStreams.fromFileName(filename);
 			Lexer lexer = new BSVLexer(charStream);
 			push(lexer);
 		    } catch (IOException ex) {
 			logger.severe(ex.toString());
+			System.err.println(String.format("Include %s not found", include));
 		    }
 		} else if (validStack.peek()) {
 		    // substitute
