@@ -289,13 +289,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
             printstream.print(stmtPrefix);
             visit(modulestmt);
         }
-        printstream.println("    Definition " + moduleName + "Module :=");
 	if (letBindings.size() > 0) {
-	    printstream.println("       (");
 	    for (String letBinding: letBindings) {
-		printstream.println(String.format("       let %s in", letBinding));
+		printstream.println(String.format("       Let %s.", letBinding));
 	    }
 	}
+        printstream.println("    Definition " + moduleName + "Module :=");
 	printstream.println("        (BKMODULE {");
 	if (statements.size() > 0) {
 	    String sep = "    ";
@@ -305,9 +304,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    }
 	}
         printstream.print("    })");
-	if (letBindings.size() > 0) {
-	    printstream.println("       )");
-	}
 	printstream.println(". (* " + ctx.moduleproto().name.getText() + " *)" + "\n");
 
         if (instances.size() > 0)
