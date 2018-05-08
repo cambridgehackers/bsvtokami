@@ -248,7 +248,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    // FIXME also
 	    interfaceName = ctx.moduleproto().methodprotoformals().methodprotoformal(0).getText();
 	}
-        String sectionName = "Module'" + moduleName;
+        String sectionName = "Section'" + moduleName;
 
 	moduleDef = new ModuleDef(moduleName);
         pkg.addStatement(moduleDef);
@@ -256,7 +256,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
         inv.visit(ctx);
 
         logger.fine("module " + moduleName);
-        printstream.println("Section " + sectionName + ".");
+	printstream.println("Module " + moduleName + ".");
+        printstream.println("    Section " + sectionName + ".");
         printstream.println("    Variable instancePrefix: string.");
 
         if (moduleproto.methodprotoformals() != null) {
@@ -334,7 +335,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	printstream.print(methodNames.toString());
 	printstream.println(".");
 
-        printstream.println("End " + sectionName + ".");
+        printstream.println("    End " + sectionName + ".");
+        printstream.println("End " + moduleName + ".");
 	printstream.println("");
         scope = scopes.popScope();
         moduleDef = null;
