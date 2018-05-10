@@ -213,9 +213,25 @@ public class BSVToKami extends BSVBaseVisitor<String>
         inModule = true;
 
         String typeName = ctx.typedeftype().typeide().getText();
+        String constructorParams = "";
+        String params = "";
+        if (ctx.typedeftype().typeformals() != null) {
+            StringBuilder constructorParamsBuilder = new StringBuilder();
+            StringBuilder paramsBuilder = new StringBuilder();
+            for (BSVParser.TypeformalContext formal: ctx.typedeftype().typeformals().typeformal()) {
+                String name = formal.typeide().getText();
+                assert formal.numeric != null : "Expecting numeric type parameter at " + StaticAnalysis.sourceLocation(formal);
+                constructorParamsBuilder.append(String.format(" (%s : nat)", name));
+                paramsBuilder.append(String.format(" %s", name));
+            }
+
+            constructorParams = constructorParamsBuilder.toString();
+            params = paramsBuilder.toString();
+        }
+
         System.err.println(String.format("BSVTOKAMI typedef tagged union %s\n", typeName));
-        assert ctx.typedeftype().typeformals() == null;
-        printstream.println(String.format("Definition %sFields := (STRUCT {", typeName));
+
+        printstream.println(String.format("Definition %sFields%s := (STRUCT {", typeName, constructorParams));
         ArrayList<String> members = new ArrayList<>();
         members.add(String.format("    \"$tag\" :: (Bit 8)"));
         for (BSVParser.UnionmemberContext member: ctx.unionmember()) {
@@ -232,7 +248,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
         printstream.print(String.join(";\n", members));
         printstream.println("}).");
-        printstream.println(String.format("Definition %s := (Struct %sFields).", typeName, typeName));
+        printstream.println(String.format("Definition %s%s := Struct (%sFields%s).", typeName, constructorParams, typeName, params));
         //scope = scopes.popScope();
         inModule = wasInModule;
         return null;
