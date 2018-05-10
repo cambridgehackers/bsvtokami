@@ -241,13 +241,19 @@ public class BSVToKami extends BSVBaseVisitor<String>
         BSVParser.ModuleprotoContext moduleproto = ctx.moduleproto();
         String moduleName = moduleproto.name.getText();
 	String interfaceName = (moduleName.startsWith("mk") ? moduleName.substring(2) : moduleName);
+	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
+	typeVisitor.pushScope(scope);
+	BSVType interfaceType;
 	if (ctx.moduleproto().moduleinterface != null) {
 	    // FIXME
-	    interfaceName = ctx.moduleproto().moduleinterface.getText();
+	    interfaceType = typeVisitor.visit(ctx.moduleproto().moduleinterface);
+	    assert interfaceType != null;
 	} else {
 	    // FIXME also
-	    interfaceName = ctx.moduleproto().methodprotoformals().methodprotoformal(0).getText();
+	    interfaceType = typeVisitor.visit(ctx.moduleproto().methodprotoformals().methodprotoformal(0));
+	    assert interfaceType != null;
 	}
+	interfaceName = interfaceType.name;
         String sectionName = "Section'" + moduleName;
 
 	moduleDef = new ModuleDef(moduleName);
@@ -274,13 +280,18 @@ public class BSVToKami extends BSVBaseVisitor<String>
             for (SymbolTableEntry methodEntry: methods) {
                 String method = methodEntry.name;
                 BSVType methodType = methodEntry.type;
-                BSVType argType = methodType.params.get(0);
-                BSVType returnType = methodType.params.get(1);
-		SymbolTableEntry methodInterfaceEntry = methodEntry.parent;
-		assert methodInterfaceEntry != null;
-		String methodInterfaceName = methodInterfaceEntry.name;
-                printstream.println(String.format("    Let %1$s%2$s := MethodSig (%5$s'%2$s %1$s) (%3$s) : %4$s.",
-                                                  instanceName, method, bsvTypeToKami(argType), bsvTypeToKami(returnType), methodInterfaceName));
+		if (methodType.name.equals("Function"))  {
+		    assert methodType.params.size() == 2: "Unhandled method " + method + " has type " + methodType + " from interface " + ((methodEntry.parent != null) ? methodEntry.parent.name : "<unknown>");
+		    BSVType argType = methodType.params.get(0);
+		    BSVType returnType = methodType.params.get(1);
+		    SymbolTableEntry methodInterfaceEntry = methodEntry.parent;
+		    assert methodInterfaceEntry != null;
+		    String methodInterfaceName = methodInterfaceEntry.name;
+		    printstream.println(String.format("    Let %1$s%2$s := MethodSig (%5$s'%2$s %1$s) (%3$s) : %4$s.",
+						      instanceName, method, bsvTypeToKami(argType), bsvTypeToKami(returnType), methodInterfaceName));
+		} else {
+		    printstream.println(String.format("(* FIXME: interface %s subinterface %s *)", methodEntry.parent.name, method));
+		}
             }
         }
 
@@ -312,7 +323,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
                                              String.join("\n            ++ ", instances)));
 
 	SymbolTableEntry interfaceEntry = scope.lookupType(interfaceName);
-	assert interfaceEntry != null;
+	assert interfaceEntry != null: "No symbol table entry for interface " + interfaceName + " at location " + StaticAnalysis.sourceLocation(ctx);
 
 	StringBuilder methodNames = new StringBuilder();
         for (Map.Entry<String,SymbolTableEntry> iterator: interfaceEntry.mappings.bindings.entrySet()) {
@@ -423,7 +434,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
             statement.append(String.format("        Call %s <- %s()", varName, calleeInstanceName));
         } else if (!actionContext) {
             BSVParser.CallexprContext call = getCall(ctx.rhs);
-	    String interfaceName = "FIXME$$InterfaceName";
+	    String interfaceName = "FIXME'InterfaceName";
+	    assert call != null && call.fcn != null: "Something wrong with " + ctx.rhs.getText() + " at " + StaticAnalysis.sourceLocation(ctx.rhs);
             letBindings.add(String.format("%s := %s (instancePrefix--\"%s\")", varName, call.fcn.getText(), varName));
             statement.append(String.format("(BKMod (%s'instance %s :: nil))", interfaceName, varName));
 
@@ -924,7 +936,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
                     expression.append(visit(ctx.exprprimary()));
                     visitedFields.add(tagName);
                 }
-            } else {
+            } else if (ctx.memberbinds() != null) {
                 int i = 0;
                 for (BSVParser.MemberbindContext memberbind : ctx.memberbinds().memberbind()) {
                     String memberfieldname = String.format("%s$%s", tagName, memberbind.field.getText());
