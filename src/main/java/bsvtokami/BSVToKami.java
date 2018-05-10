@@ -120,8 +120,23 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         String typeName = ctx.typedeftype().typeide().getText();
         System.err.println(String.format("BSVTOKAMI typedef struct %s\n", typeName));
-        assert ctx.typedeftype().typeformals() == null;
-        printstream.println(String.format("Definition %sFields := (STRUCT {", typeName));
+        //assert ctx.typedeftype().typeformals() == null: "Typedef struct with type formals at " + StaticAnalysis.sourceLocation(ctx);
+        String constructorParams = "";
+        String params = "";
+        if (ctx.typedeftype().typeformals() != null) {
+            StringBuilder constructorParamsBuilder = new StringBuilder();
+            StringBuilder paramsBuilder = new StringBuilder();
+            for (BSVParser.TypeformalContext formal: ctx.typedeftype().typeformals().typeformal()) {
+                String name = formal.typeide().getText();
+                constructorParamsBuilder.append(String.format(" (%s : nat)", name));
+                paramsBuilder.append(String.format(" %s", name));
+            }
+
+            constructorParams = constructorParamsBuilder.toString();
+            params = paramsBuilder.toString();
+        }
+
+        printstream.println(String.format("Definition %sFields%s := (STRUCT {", typeName, constructorParams));
         ArrayList<String> members = new ArrayList<>();
         for (BSVParser.StructmemberContext member: ctx.structmember()) {
             assert member.subunion() == null;
@@ -134,7 +149,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
         printstream.print(String.join(";\n", members));
         printstream.println("}).");
-        printstream.println(String.format("Definition %s := (Struct %sFields).", typeName, typeName));
+        printstream.println(String.format("Definition %s %s := Struct (%sFields%s).", typeName, constructorParams, typeName, params));
         printstream.println("");
 
         //scope = scopes.popScope();
