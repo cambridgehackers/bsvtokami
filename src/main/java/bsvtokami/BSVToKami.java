@@ -361,6 +361,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     @Override public String visitVarBinding(BSVParser.VarBindingContext ctx) {
         BSVParser.BsvtypeContext t = ctx.t;
+	if (statements == null) {
+	    logger.fine("Visiting var binding but not collecting statements at " + StaticAnalysis.sourceLocation(ctx));
+	    return "";
+	}
         for (BSVParser.VarinitContext varinit: ctx.varinit()) {
 	    StringBuilder statement = new StringBuilder();
             String varName = varinit.var.getText();
@@ -376,7 +380,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 }
                 statement.append(visit(rhs));
             } else {
-                assert false;
+                System.err.println("No rhs for " + ctx.getText() + " at " + StaticAnalysis.sourceLocation(ctx));
                 statement.append(String.format("        LET %s : %s", varName, bsvTypeToKami(t)));
             }
 	    statements.add(statement.toString());
@@ -522,9 +526,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
         printstream.print(String.format("Definition %s", functionproto.name.getText()));
         if (functionproto.methodprotoformals() != null) {
             for (BSVParser.MethodprotoformalContext formal: functionproto.methodprotoformals().methodprotoformal()) {
-                BSVParser.BsvtypeContext bsvtype = formal.bsvtype();
-                String varName = formal.name.getText();
-                printstream.print(String.format(" (%s: %s)", varName, bsvTypeToKami(bsvtype)));
+                BSVType bsvtype = StaticAnalysis.getBsvType(formal);
+		String formalName = StaticAnalysis.getFormalName(formal);
+
+		printstream.print(String.format(" (%s: %s)", formalName, bsvTypeToKami(bsvtype)));
             }
         }
         String returntype = (functionproto.bsvtype() != null) ? bsvTypeToKami(functionproto.bsvtype()) : "";
