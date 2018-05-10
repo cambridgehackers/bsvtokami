@@ -93,9 +93,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitTypeclassinstance(BSVParser.TypeclassinstanceContext ctx) {
-        scope = scopes.pushScope(ctx);
-        visitChildren(ctx);
-        scope = scopes.popScope();
+        //FIXME: overloading
+        //scope = scopes.pushScope(ctx);
+        //visitChildren(ctx);
+        //scope = scopes.popScope();
         return null;
     }
 
@@ -521,15 +522,20 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitFunctiondef(BSVParser.FunctiondefContext ctx) {
+        ArrayList<String> parentLetBindings = letBindings;
+        ArrayList<String> parentStatements = statements;
+        letBindings = new ArrayList<>();
+        statements = new ArrayList<>();
         scope = scopes.pushScope(ctx);
+
         BSVParser.FunctionprotoContext functionproto = ctx.functionproto();
         printstream.print(String.format("Definition %s", functionproto.name.getText()));
         if (functionproto.methodprotoformals() != null) {
             for (BSVParser.MethodprotoformalContext formal: functionproto.methodprotoformals().methodprotoformal()) {
                 BSVType bsvtype = StaticAnalysis.getBsvType(formal);
-		String formalName = StaticAnalysis.getFormalName(formal);
+                String formalName = StaticAnalysis.getFormalName(formal);
 
-		printstream.print(String.format(" (%s: %s)", formalName, bsvTypeToKami(bsvtype)));
+                printstream.print(String.format(" (%s: %s)", formalName, bsvTypeToKami(bsvtype)));
             }
         }
         String returntype = (functionproto.bsvtype() != null) ? bsvTypeToKami(functionproto.bsvtype()) : "";
@@ -558,6 +564,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
         printstream.println(".");
         printstream.println("");
+
+        letBindings = parentLetBindings;
+        statements  = parentStatements;
         scope = scopes.popScope();
         return null;
     }
@@ -695,6 +704,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	letBindings = parentLetBindings;
 	statements  = parentStatements;
+	if (statements == null)
+	    System.err.println("Not gathering statements at " + StaticAnalysis.sourceLocation(ctx));
+
 	statements.add(statement.toString());
 	return null;
     }
@@ -750,10 +762,17 @@ public class BSVToKami extends BSVBaseVisitor<String>
         for (BSVParser.CasestmtpatitemContext patitem: ctx.casestmtpatitem()) {
             BSVParser.PatternContext pattern = patitem.pattern();
             BSVParser.StructpatternContext structpattern = pattern.structpattern();
-            assert structpattern != null;
-            String tagName = structpattern.tag.getText();
+            BSVParser.TaggedunionpatternContext taggedunionpattern = pattern.taggedunionpattern();
+            String tagName;
+	    if (structpattern != null)
+		tagName = structpattern.tag.getText();
+	    else if (taggedunionpattern != null)
+		tagName = taggedunionpattern.tag.getText();
+	    else
+		// FIXME
+		tagName = pattern.getText();
             SymbolTableEntry tagEntry = scope.lookup(tagName);
-            assert tagEntry != null;
+            assert tagEntry != null: "No pattern tag entry for " + tagName + " at " + StaticAnalysis.sourceLocation(pattern);
             BSVType tagType = tagEntry.type;
             assert tagEntry.value != null : String.format("Missing value for tag %s", tagName);
             IntValue tagValue = (IntValue)tagEntry.value;
