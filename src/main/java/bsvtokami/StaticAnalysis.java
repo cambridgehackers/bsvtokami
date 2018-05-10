@@ -76,8 +76,8 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     }
 
     SymbolTable pushScope(ParserRuleContext ctx) {
-        assert scopes.containsKey(ctx) : String.format("Expected to find scope for %s %s at %s",
-                                                       ctx, ctx.getText(), sourceLocation(ctx));
+        assert scopes.containsKey(ctx) : String.format("Expected to find scope for %s at %s",
+                                                       ctx.getText(), sourceLocation(ctx));
         symbolTable = scopes.get(ctx);
         ctxStack.push(ctx);
         logger.fine("pushScope { " + symbolTable.name + "-" + symbolTable + " " + symbolTable.scopeType
