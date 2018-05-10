@@ -343,6 +343,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	assert interfaceEntry != null: "No symbol table entry for interface " + interfaceName + " at location " + StaticAnalysis.sourceLocation(ctx);
 
 	StringBuilder methodNames = new StringBuilder();
+        assert interfaceEntry.mappings != null: "No interface mappings for " + interfaceName + " at location " + StaticAnalysis.sourceLocation(ctx);
         for (Map.Entry<String,SymbolTableEntry> iterator: interfaceEntry.mappings.bindings.entrySet()) {
             String methodName = iterator.getKey();
 	    methodNames.append(String.format(" (instancePrefix--\"%s\")", methodName));
