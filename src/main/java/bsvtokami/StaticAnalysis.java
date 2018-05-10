@@ -243,15 +243,18 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
             long tagFrom = 0;
 
             if (elt.tagval != null) {
-                tagValue = Long.parseLong(elt.tagval.getText());
+		IntValue intValue = new IntValue(elt.tagval.getText());
+                tagValue = intValue.value;
             }
 
             if (elt.from != null) {
                 numbered = true;
-                tagCount = Long.parseLong(elt.from.getText());
+		IntValue intValue = new IntValue(elt.from.getText());
+                tagCount = intValue.value;
                 if (elt.to != null) {
                     tagFrom = tagCount;
-                    tagCount = Long.parseLong(elt.to.getText()) - tagFrom + 1;
+		    intValue = new IntValue(elt.to.getText());
+                    tagCount = intValue.value - tagFrom + 1;
                 }
             }
 
