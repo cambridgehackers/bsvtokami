@@ -15,6 +15,18 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
         this.scope = scope;
         methodsUsed = new TreeMap<>();
     }
+
+    BSVType dereferenceTypedef(BSVType bsvtype) {
+        assert scope != null;
+        assert bsvtype != null;
+        SymbolTableEntry entry = scope.lookupType(bsvtype.name);
+        if (entry != null) {
+            //fixme
+            return entry.type;
+        }
+        return bsvtype;
+    }
+
     @Override public String visitOperatorexpr(BSVParser.OperatorexprContext ctx) {
         String instanceName = visit(ctx.binopexpr());
         logger.fine("visitOperatorExpr " + ctx.getRuleIndex() + " " + ctx.getText() + " " + instanceName);
@@ -45,9 +57,13 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
             String methodName = String.format("%s.%s", instanceName, fieldName);
             SymbolTableEntry entry = scope.lookup(instanceName);
             assert entry != null;
-            SymbolTableEntry interfaceEntry = scope.lookupType(entry.type.name);
+	    BSVType interfaceType = dereferenceTypedef(entry.type);
+            SymbolTableEntry interfaceEntry = scope.lookupType(interfaceType.name);
             assert interfaceEntry != null;
+
+	    assert interfaceEntry.mappings != null: "No interface mappings for " + entry.type.name;
             SymbolTableEntry methodEntry = interfaceEntry.mappings.lookup(fieldName);
+	    assert methodEntry != null: String.format("No symbol table entry for method %s of interface %s", fieldName, entry.type.name);
             logger.fine("methodName " + methodName + " " + entry.type + " method type " + methodEntry.type);
             if (!methodsUsed.containsKey(instanceName))
                 methodsUsed.put(instanceName, new TreeSet<SymbolTableEntry>());
