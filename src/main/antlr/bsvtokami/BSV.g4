@@ -105,7 +105,7 @@ typeformals :
     '#' '(' typeformal (',' typeformal)* ')'
     ;
 typeformal :
-    ('numeric')? 'type' typeide
+    numeric=('numeric'|'numeric')? 'type' typeide
     ;
 typedefsynonym :
     'typedef' bsvtype typedeftype ';'

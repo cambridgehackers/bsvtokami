@@ -128,6 +128,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             StringBuilder paramsBuilder = new StringBuilder();
             for (BSVParser.TypeformalContext formal: ctx.typedeftype().typeformals().typeformal()) {
                 String name = formal.typeide().getText();
+                assert formal.numeric != null : "Expecting numeric type parameter at " + StaticAnalysis.sourceLocation(formal);
                 constructorParamsBuilder.append(String.format(" (%s : nat)", name));
                 paramsBuilder.append(String.format(" %s", name));
             }
