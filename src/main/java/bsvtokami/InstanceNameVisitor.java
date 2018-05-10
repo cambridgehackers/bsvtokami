@@ -59,7 +59,7 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
             assert entry != null;
 	    BSVType interfaceType = dereferenceTypedef(entry.type);
             SymbolTableEntry interfaceEntry = scope.lookupType(interfaceType.name);
-            assert interfaceEntry != null;
+            assert interfaceEntry != null : "No interface entry for " + interfaceType + " at " +  StaticAnalysis.sourceLocation(ctx);
 
 	    assert interfaceEntry.mappings != null: "No interface mappings for " + entry.type.name;
             SymbolTableEntry methodEntry = interfaceEntry.mappings.lookup(fieldName);
