@@ -20,7 +20,7 @@ class RegReadVisitor extends BSVBaseVisitor<Void> {
             String varName = ctx.anyidentifier().getText();
             if (scope.containsKey(varName)) {
                 SymbolTableEntry entry = scope.lookup(varName);
-                if (entry.type.name.startsWith("Reg")) {
+                if (entry.type.name.equals("Reg")) {
                     regs.put(varName, entry.type.params.get(0));
                 }
             }
