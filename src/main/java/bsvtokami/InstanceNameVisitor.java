@@ -56,14 +56,15 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
             String fieldName = ctx.field.getText();
             String methodName = String.format("%s.%s", instanceName, fieldName);
             SymbolTableEntry entry = scope.lookup(instanceName);
-            assert entry != null;
+            assert entry != null: "Field expr problem at " + StaticAnalysis.sourceLocation(ctx);
 	    BSVType interfaceType = dereferenceTypedef(entry.type);
             SymbolTableEntry interfaceEntry = scope.lookupType(interfaceType.name);
             assert interfaceEntry != null : "No interface entry for " + interfaceType + " at " +  StaticAnalysis.sourceLocation(ctx);
 
 	    assert interfaceEntry.mappings != null: "No interface mappings for " + entry.type.name;
             SymbolTableEntry methodEntry = interfaceEntry.mappings.lookup(fieldName);
-	    assert methodEntry != null: String.format("No symbol table entry for method %s of interface %s", fieldName, entry.type.name);
+	    assert methodEntry != null: String.format("No symbol table entry for method %s of interface %s at %s",
+						      fieldName, entry.type.name, StaticAnalysis.sourceLocation(ctx));
             logger.fine("methodName " + methodName + " " + entry.type + " method type " + methodEntry.type);
             if (!methodsUsed.containsKey(instanceName))
                 methodsUsed.put(instanceName, new TreeSet<SymbolTableEntry>());

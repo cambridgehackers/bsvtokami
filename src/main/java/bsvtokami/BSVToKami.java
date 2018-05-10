@@ -867,7 +867,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         assert binop != null;
         assert binop.left != null;
         assert binop.left.getText().equals(iterationVar);
-        assert binop.op.getText().equals("<");
+        assert binop.op.getText().equals("<"): "Unimplemented for loop condition " + testExpr.getText() + " at " + StaticAnalysis.sourceLocation(testExpr);
         String limitVar = binop.right.getText();
 
 	StringBuilder statement = new StringBuilder();
@@ -977,8 +977,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         assert tagEntry.value != null : String.format("Missing value for tag %s", tagName);
         IntValue tagValue = (IntValue)tagEntry.value;
         SymbolTableEntry typedefEntry = scope.lookupType(tagtype.name);
-        System.err.println(String.format("tagged union expr %s type %s", ctx.getText(), tagtype));
-        assert typedefEntry != null;
+        assert typedefEntry != null: String.format("tagged union expr %s type %s at %s", ctx.getText(), tagtype, StaticAnalysis.sourceLocation(ctx));
         ArrayList<String> visitedFields = new ArrayList<>();
 
         expression.append(String.format(" \"$tag\" ::= $%d", tagValue.value));

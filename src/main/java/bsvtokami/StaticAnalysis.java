@@ -48,7 +48,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         for (Map.Entry<String,SymbolTableEntry> iterator: pkgscope.bindings.entrySet()) {
             String identifier = iterator.getKey();
             SymbolTableEntry entry = iterator.getValue();
-            logger.fine(String.format("Importing %s::%s entry %s", pkgname, identifier, entry));
+            logger.fine(String.format("Importing %s::%s entry %s into %s", pkgname, identifier, entry, this.packageName));
             SymbolTableEntry oldEntry = importScope.lookup(identifier);
             if (oldEntry != null) {
                 logger.info(String.format("Overriding %s::%s", oldEntry.pkgName, identifier));
@@ -57,7 +57,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
             importScope.bind(identifier, entry);
         }
         for (Map.Entry<String,SymbolTableEntry> iterator: pkgscope.typeBindings.entrySet()) {
-            logger.fine(String.format("Importing type %s::%s entry %s", pkgname, iterator.getKey(), iterator.getValue()));
+            logger.fine(String.format("Importing type %s::%s entry %s into %s", pkgname, iterator.getKey(), iterator.getValue(), this.packageName));
             importScope.bindType(iterator.getKey(), iterator.getValue());
         }
     }
