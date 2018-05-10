@@ -891,4 +891,58 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         return null;
     }
 
+    static String getFormalName(BSVParser.MethodprotoformalContext formal) {
+	if (formal.name != null) {
+	    return formal.name.getText();
+	} else {
+	    return formal.functionproto().name.getText();
+	}
+    }
+
+    static BSVType getBsvType(BSVParser.MethodprotoformalContext formal) {
+	if (formal.bsvtype() != null) {
+	    return getBsvType(formal.bsvtype());
+	} else {
+	    return getBsvType(formal.functionproto());
+	}
+    }
+
+    static BSVType getBsvType(BSVParser.BsvtypeContext ctx) {
+	if (ctx.functionproto() != null) {
+	    return getBsvType(ctx.functionproto());
+	} else if (ctx.typenat() != null) {
+	    return new BSVType(ctx.typenat().getText(), true);
+	} else {
+	    String typeide = ctx.typeide().getText();
+	    List<BSVType> typeparams = new ArrayList<BSVType>();
+	    for (BSVParser.BsvtypeContext param : ctx.bsvtype()) {
+		typeparams.add(getBsvType(param));
+	    }
+	    return new BSVType(typeide, typeparams);
+	}
+    }
+
+    static BSVType getBsvType(BSVParser.FunctionprotoContext ctx) {
+            BSVType returnType =
+                (ctx.bsvtype() != null)
+                ? getBsvType(ctx.bsvtype())
+                : new BSVType("Void");
+            List<BSVType> params = new ArrayList<BSVType>();
+            if (ctx.methodprotoformals() != null) {
+		for (BSVParser.MethodprotoformalContext formal: ctx.methodprotoformals().methodprotoformal()) {
+		    params.add(getBsvType(formal));
+		}
+            }
+            int numparams = params.size();
+            BSVType functiontype = returnType;
+            for (int i = numparams-1; i >= 0; i--) {
+                List<BSVType> p = new ArrayList<BSVType>();
+                p.add(params.get(i));
+                p.add(functiontype);
+                functiontype = new BSVType("Function", p);
+            }
+            logger.fine("functionproto " + ctx.name.getText() + " : " + functiontype);
+            return functiontype;
+    }
+
 }

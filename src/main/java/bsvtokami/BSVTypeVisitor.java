@@ -625,25 +625,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitFunctionproto(BSVParser.FunctionprotoContext ctx) {
-            BSVType returnType =
-                (ctx.bsvtype() != null)
-                ? visit(ctx.bsvtype())
-                : new BSVType("Void");
-            List<BSVType> params = new ArrayList<BSVType>();
-            if (ctx.methodprotoformals() != null) {
-                BSVType paramType = visit(ctx.methodprotoformals());
-                params = paramType.params;
-            }
-            int numparams = params.size();
-            BSVType functiontype = returnType;
-            for (int i = numparams-1; i >= 0; i--) {
-                List<BSVType> p = new ArrayList<BSVType>();
-                p.add(params.get(i));
-                p.add(functiontype);
-                functiontype = new BSVType("Function", p);
-            }
-            logger.fine("functionproto " + ctx.name.getText() + " : " + functiontype);
-            return functiontype;
+	    return StaticAnalysis.getBsvType(ctx);
         }
         /**
          * {@inheritDoc}
@@ -1603,4 +1585,5 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitBvischedule(BSVParser.BvischeduleContext ctx) { return visitChildren(ctx); }
+
 }
