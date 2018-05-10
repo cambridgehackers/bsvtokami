@@ -314,9 +314,21 @@ class Main {
 	    File file = new File(filename);
 	    String dirname = (kamidir != null) ? kamidir : file.getParent();
 	    File ofile = new File(dirname, pkgName + ".v");
-	    BSVToKami bsvToKami = new BSVToKami(pkgName, ofile, staticAnalyzer);
+	    try {
+		BSVToKami bsvToKami = new BSVToKami(pkgName, ofile, staticAnalyzer);
 
-	    bsvToKami.visit(packagedef);
+		bsvToKami.visit(packagedef);
+	    } catch (Exception e) {
+		String msg = String.format("Exception while translating file %s: %s", filename, e.toString());
+		logger.severe(msg);
+		System.err.println(msg);
+		e.printStackTrace();
+	    } catch (AssertionError e) {
+		String msg = String.format("Assertion error while translating file %s: %s", filename, e.toString());
+		logger.severe(msg);
+		System.err.println(msg);
+		e.printStackTrace();
+	    }
 	}
 
 	return packagedef;
