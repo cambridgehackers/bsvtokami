@@ -276,10 +276,10 @@ class Main {
 	return null;
     }
 
-    static BSVParser.PackagedefContext analyzePackage(String pkgName, String filename) throws IOException {
+    static BSVParser.PackagedefContext analyzePackage(String pkgName, String filename, boolean translateToKami) throws IOException {
 	packages.put(pkgName, null); // mark that we are working on this package
 	if (!packages.containsKey("Prelude")) {
-	    analyzePackage("Prelude", findPackageFile("Prelude"));
+	    analyzePackage("Prelude", findPackageFile("Prelude"), false);
 	}
 
 	System.err.println(String.format("parsePkg %s %s", pkgName, filename));
@@ -302,7 +302,7 @@ class Main {
 		    if (dotstream != null)
 			dotstream.println(String.format("    n%s -> n%s;", pkgName, importedPkgName));
 		    if (!packages.containsKey(importedPkgName)) {
-			analyzePackage(importedPkgName, findPackageFile(importedPkgName));
+			analyzePackage(importedPkgName, findPackageFile(importedPkgName), true);
 		    }
 		}
 	    }
@@ -310,6 +310,15 @@ class Main {
 	staticAnalyzer.visitPackage(pkgName, packagedef);
 	//Evaluator evaluator = new Evaluator(staticAnalyzer);
 	//evaluator.evaluate(packagedef);
+	if (translateToKami) {
+	    File file = new File(filename);
+	    String dirname = (kamidir != null) ? kamidir : file.getParent();
+	    File ofile = new File(dirname, pkgName + ".v");
+	    BSVToKami bsvToKami = new BSVToKami(pkgName, ofile, staticAnalyzer);
+
+	    bsvToKami.visit(packagedef);
+	}
+
 	return packagedef;
     }
 
@@ -387,13 +396,7 @@ class Main {
 		String[] components = file.getName().split("\\.");
 		String pkgName = components[0];
 
-		BSVParser.PackagedefContext packagedef = analyzePackage(pkgName, filename);
-
-		String dirname = (kamidir != null) ? kamidir : file.getParent();
-		File ofile = new File(dirname, pkgName + ".v");
-                BSVToKami bsvToKami = new BSVToKami(pkgName, ofile, staticAnalyzer);
-
-                bsvToKami.visit(packagedef);
+		BSVParser.PackagedefContext packagedef = analyzePackage(pkgName, filename, true);
                 System.out.println("");
 		logger.fine("finished processing package " + pkgName);
 
