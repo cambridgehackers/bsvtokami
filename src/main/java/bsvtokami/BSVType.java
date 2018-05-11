@@ -63,6 +63,25 @@ public class BSVType {
 	this.params.add(param0);
 	this.params.add(param1);
     }
+
+    private void getFreeVariables(TreeMap<String,BSVType> freeVars) {
+	if (isVar) {
+	    if (instance != null)
+		instance.getFreeVariables(freeVars);
+	    else if (!freeVars.containsKey(name))
+		freeVars.put(name, this);
+	} else {
+	    for (BSVType param: params)
+		param.getFreeVariables(freeVars);
+	}
+    }
+
+    public TreeMap<String,BSVType> getFreeVariables() {
+	TreeMap<String,BSVType> freeVariables = new TreeMap<>();
+	getFreeVariables(freeVariables);
+	return freeVariables;
+    }
+
     public BSVType prune() {
 	if (isVar && instance != null) {
 		instance = instance.prune();
@@ -75,6 +94,7 @@ public class BSVType {
 	assert numeric : this + " should be numeric " + name.matches("[0-9]+");
 	return Long.parseLong(name);
     }
+
     private BSVType freshrec(BSVType tp, List<BSVType> non_generics, Map<BSVType, BSVType> mappings) {
 	    tp = tp.prune();
 	    if (tp.isVar) {
@@ -145,6 +165,7 @@ public class BSVType {
 	}
 	return false;
     }
+
     public String toString() {
 	if (instance != null)
 	    return instance.toString();
