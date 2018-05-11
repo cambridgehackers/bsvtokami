@@ -138,16 +138,16 @@ module mkBaudGenerator#(Bit#(16) divider)(BaudGenerator);
    /// Design Elements
    ////////////////////////////////////////////////////////////////////////////////
    Counter#(16)                              rBaudCounter        <- mkCounter(0);
-   PulseWire                                 pwBaudTick16x       <- mkPulseWire;
+   PulseWire                                 pwBaudTick16x       <- mkPulseWire();
 
    Counter#(3)                               rBaudTickCounter    <- mkCounter(0);
-   PulseWire                                 pwBaudTick2x        <- mkPulseWire;
+   PulseWire                                 pwBaudTick2x        <- mkPulseWire();
 
-   Wire#(Bit#(16))                           wBaudCount          <- mkWire;
+   Wire#(Bit#(16))                           wBaudCount          <- mkWire();
    rule baud_count_wire;
       wBaudCount <= rBaudCounter.value;
    endrule
-   Wire#(Bit#(3))                            wBaudTickCount      <- mkWire;
+   Wire#(Bit#(3))                            wBaudTickCount      <- mkWire();
    rule baud_tick_count_wire;
       wBaudTickCount <= rBaudTickCounter.value;
    endrule
@@ -156,7 +156,8 @@ module mkBaudGenerator#(Bit#(16) divider)(BaudGenerator);
    /// Rules
    ////////////////////////////////////////////////////////////////////////////////
    rule count_baudtick_16x(pwBaudTick16x);
-      rBaudTickCounter.up;
+      Counter#(3) btc = rBaudTickCounter;
+      btc.up();
    endrule
 
    rule assert_2x_baud_tick(rBaudTickCounter.value() == 0 && pwBaudTick16x);
@@ -169,15 +170,15 @@ module mkBaudGenerator#(Bit#(16) divider)(BaudGenerator);
    method Action clock_enable();
       if (rBaudCounter.value() + 1 >= divider) begin
          pwBaudTick16x.send;
-         rBaudCounter.clear;
+         rBaudCounter.clear();
       end
       else begin
-         rBaudCounter.up;
+         rBaudCounter.up();
       end
    endmethod
 
    method Action clear();
-      rBaudCounter.clear;
+      rBaudCounter.clear();
    endmethod
 
    method Bool baud_tick_16x();
@@ -338,7 +339,7 @@ module mkInputMovingFilter#(a din)(InputMovingFilter#(width, threshold, a))
    ////////////////////////////////////////////////////////////////////////////////
    Counter#(width)                           counter             <- mkCounter(0);
    Reg#(a)                                   rOut                <- mkReg(unpack(0));
-   PulseWire                                 pwSample            <- mkPulseWire;
+   PulseWire                                 pwSample            <- mkPulseWire();
 
    ////////////////////////////////////////////////////////////////////////////////
    /// Rules
@@ -390,7 +391,7 @@ module mkUART( Bit#(4) charsize
    ////////////////////////////////////////////////////////////////////////////////
    /// Design Elements
    ////////////////////////////////////////////////////////////////////////////////
-   let                                       baudGen               <- mkBaudGenerator( divider );
+   BaudGenerator                             baudGen               <- mkBaudGenerator( divider );
 
    ////////////////////////////////////////////////////////////////////////////////
    /// Receive UART
@@ -406,10 +407,10 @@ module mkUART( Bit#(4) charsize
    Reg#(Bit#(4))                             rRecvBitCount         <- mkRegA(0);
    Reg#(Bit#(1))                             rRecvParity           <- mkRegA(0);
 
-   PulseWire                                 pwRecvShiftBuffer     <- mkPulseWire;
-   PulseWire                                 pwRecvCellCountReset  <- mkPulseWire;
-   PulseWire                                 pwRecvResetBitCount   <- mkPulseWire;
-   PulseWire                                 pwRecvEnableBitCount  <- mkPulseWire;
+   PulseWire                                 pwRecvShiftBuffer     <- mkPulseWire();
+   PulseWire                                 pwRecvCellCountReset  <- mkPulseWire();
+   PulseWire                                 pwRecvResetBitCount   <- mkPulseWire();
+   PulseWire                                 pwRecvEnableBitCount  <- mkPulseWire();
 
    ////////////////////////////////////////////////////////////////////////////////
    /// Transmit UART
@@ -424,11 +425,11 @@ module mkUART( Bit#(4) charsize
    Reg#(Bit#(1))                             rXmitDataOut          <- mkRegA(1);
    Reg#(Bit#(1))                             rXmitParity           <- mkRegA(0);
 
-   PulseWire                                 pwXmitCellCountReset  <- mkPulseWire;
-   PulseWire                                 pwXmitResetBitCount   <- mkPulseWire;
-   PulseWire                                 pwXmitEnableBitCount  <- mkPulseWire;
-   PulseWire                                 pwXmitLoadBuffer      <- mkPulseWire;
-   PulseWire                                 pwXmitShiftBuffer     <- mkPulseWire;
+   PulseWire                                 pwXmitCellCountReset  <- mkPulseWire();
+   PulseWire                                 pwXmitResetBitCount   <- mkPulseWire();
+   PulseWire                                 pwXmitEnableBitCount  <- mkPulseWire();
+   PulseWire                                 pwXmitLoadBuffer      <- mkPulseWire();
+   PulseWire                                 pwXmitShiftBuffer     <- mkPulseWire();
 
    ////////////////////////////////////////////////////////////////////////////////
    /// Definitions
@@ -693,7 +694,7 @@ module mkUART( Bit#(4) charsize
 
    interface Get tx;
       method ActionValue#(Bit#(8)) get;
-         let data = pack(fifoRecv.first);
+         Bit#(8) data = pack(fifoRecv.first);
          fifoRecv.deq;
          return data;
       endmethod
