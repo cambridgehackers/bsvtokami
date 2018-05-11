@@ -64,7 +64,7 @@ export mkBypassFIFOLevel;
 module mkPipelineFIFO (FIFO#(a))
    provisos (Bits#(a,sa));
 
-   (* hide *) FIFOF#(a) _ifc <- mkPipelineFIFOF;
+   (* hide *) FIFOF#(a) _ifc <- mkPipelineFIFOF();
 
    // return fifofToFifo(_ifc)
    method enq = _ifc.enq;
@@ -119,7 +119,7 @@ endmodule
 module mkBypassFIFO (FIFO#(a))
    provisos (Bits#(a,sa));
 
-   (* hide *) FIFOF#(a) _ifc <- mkBypassFIFOF;
+   (* hide *) FIFOF#(a) _ifc <- mkBypassFIFOF();
 
    // return fifofToFifo(_ifc)
    method enq = _ifc.enq;
@@ -188,9 +188,9 @@ module mkSizedDFIFOF#(Integer n, a dflt) (FIFOF#(a))
       q[i] <- mkReg(dflt);
    SCounter cntr <- mkSCounter(n);
 
-   PulseWire enqueueing <- mkPulseWire;
-   Wire#(a)      x_wire <- mkWire;
-   PulseWire dequeueing <- mkPulseWire;
+   PulseWire enqueueing <- mkPulseWire();
+   Wire#(a)      x_wire <- mkWire();
+   PulseWire dequeueing <- mkPulseWire();
 
    let empty = cntr.isEq(0);
    let full  = cntr.isEq(n);
@@ -280,9 +280,9 @@ module mkSizedBypassFIFOF#(Integer n)(FIFOF#(a))
 
    FIFOF#(a) ff <- mkUGSizedFIFOF(n);
 
-   RWire#(a) enqw <- mkRWire;
+   RWire#(a) enqw <- mkRWire();
    Reg#(Bool) firstValid <- mkRevertingVirtualReg(True);
-   PulseWire dequeueing <- mkPulseWire;
+   PulseWire dequeueing <- mkPulseWire();
 
    let empty = !ff.notEmpty;
    let full  = !ff.notFull;
@@ -337,9 +337,9 @@ module mkBypassFIFOLevel(FIFOLevelIfc#(a, fifoDepth))
    Reg#(Bool)           levelsValidEnq <- mkRevertingVirtualReg(True);
    Reg#(Bool)           levelsValidDeq <- mkRevertingVirtualReg(True);
    Reg#(Bool)           levelsValidClr <- mkRevertingVirtualReg(True);
-   PulseWire      do_enq      <- mkPulseWire;
-   PulseWire      do_deq      <- mkPulseWire;
-   PulseWire      do_clr      <- mkPulseWire;
+   PulseWire      do_enq      <- mkPulseWire();
+   PulseWire      do_deq      <- mkPulseWire();
+   PulseWire      do_clr      <- mkPulseWire();
 
    Bool levelsValid = levelsValidEnq && levelsValidDeq && levelsValidClr;
 
