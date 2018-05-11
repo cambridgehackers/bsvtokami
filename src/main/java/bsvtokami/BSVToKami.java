@@ -641,16 +641,17 @@ public class BSVToKami extends BSVBaseVisitor<String>
         for (BSVParser.StmtContext stmt: ctx.stmt())
             visit(stmt);
 	for (String substatement: statements) {
-	    statement.append(substatement);
-	    statement.append(";");
-	    statement.append(newline);
+            statement.append(substatement);
+            statement.append(";");
+            statement.append(newline);
 	}
-        if (ctx.expression() != null)
+        if (ctx.expression() != null) {
             statement.append(visit(ctx.expression()));
+	    statement.append(";");
+	}
 
         if (returntype.equals("Action") || returntype.equals("Void"))
             statement.append("        Retv");
-        statement.append(newline);
         actionContext = outerContext;
 
 	letBindings = parentLetBindings;
@@ -762,18 +763,19 @@ public class BSVToKami extends BSVBaseVisitor<String>
             for (int i = 0; i < structpattern.pattern().size(); i++) {
                 String fieldName = structpattern.lowerCaseIdentifier(i).getText();
                 BSVParser.PatternContext fieldPattern = structpattern.pattern(i);
-		patternString.append(destructurePattern(fieldPattern, String.format("(#%s!%sFields@.\"%s%s%s\")", match,
-										    bsvTypeToKami(tagType),
-										    ((tagName != null) ? tagName : ""),
-										    ((tagName != null) ? "$" : ""),
-										    fieldName),
-							null));
+                patternString.append(destructurePattern(fieldPattern, String.format("(#%s!%sFields@.\"%s%s%s\")", match,
+                                                                                    bsvTypeToKami(tagType),
+                                                                                    ((tagName != null) ? tagName : ""),
+                                                                                    ((tagName != null) ? "$" : ""),
+                                                                                    fieldName),
+                                                        null));
             }
 	    return patternString.toString();
         } else if (pattern.lowerCaseIdentifier() != null) {
-            return String.format("        LET %s <- %s;",
-				 pattern.lowerCaseIdentifier().getText(),
-				 match);
+            return String.format("              LET %s <- %s;%s",
+                                 pattern.lowerCaseIdentifier().getText(),
+                                 match,
+                                 newline);
         }
 	return "";
     }
@@ -823,10 +825,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    statements = new ArrayList<>();
             visit(patitem.stmt());
 	    assert(letBindings.size() == 0);
-	    for (String substatement: statements) {
-		statement.append(substatement);
-		statement.append(" (* cases sub statement *)");
-	    }
+            for (String substatement: statements) {
+                statement.append(substatement);
+                statement.append(";");
+                statement.append(newline);
+            }
 
             statement.append("        Retv");
 	    statement.append(newline);
@@ -834,7 +837,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    statement.append(newline);
         }
         statement.append("        Retv");
-	statement.append(newline);
 
 	letBindings = parentLetBindings;
 	statements  = parentStatements;
