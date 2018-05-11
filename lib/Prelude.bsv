@@ -6,6 +6,12 @@ typedef enum {
 
 // B.2.20
 
+interface Bit#(numeric type sz);
+endinterface
+
+interface Empty;
+endinterface
+
 interface Rule;
 endinterface
 
