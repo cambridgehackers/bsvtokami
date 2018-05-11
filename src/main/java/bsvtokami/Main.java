@@ -313,6 +313,10 @@ class Main {
 	if (translateToKami) {
 	    File file = new File(filename);
 	    String dirname = (kamidir != null) ? kamidir : file.getParent();
+	    File dir = new File(dirname);
+	    if (!dir.exists()) {
+		dir.mkdirs();
+	    }
 	    File ofile = new File(dirname, pkgName + ".v");
 	    try {
 		BSVToKami bsvToKami = new BSVToKami(pkgName, ofile, staticAnalyzer);
