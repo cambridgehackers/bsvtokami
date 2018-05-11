@@ -2,6 +2,10 @@ Require Import Kami.
 Require Import Kami.Lib.Struct.
 Require Import Bool Arith String Nat ZArith.
 
+Record Empty := {
+    Empty'interface: Modules;
+}.
+
 Fixpoint toBinaryP (p: positive) : string :=
   match p with
   | xI p' => String "1" (toBinaryP p')
