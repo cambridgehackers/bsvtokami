@@ -287,6 +287,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    interfaceType = typeVisitor.visit(ctx.moduleproto().methodprotoformals().methodprotoformal(0));
 	    assert interfaceType != null;
 	}
+        interfaceType = typeVisitor.dereferenceTypedef(interfaceType);
 	interfaceName = interfaceType.name;
         String sectionName = "Section'" + moduleName;
 
@@ -358,9 +359,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	SymbolTableEntry interfaceEntry = scope.lookupType(interfaceName);
 	assert interfaceEntry != null: "No symbol table entry for interface " + interfaceName + " at location " + StaticAnalysis.sourceLocation(ctx);
+        assert interfaceEntry.mappings != null: "No interface mappings for " + interfaceName + " at location " + StaticAnalysis.sourceLocation(ctx);
 
 	StringBuilder methodNames = new StringBuilder();
-        assert interfaceEntry.mappings != null: "No interface mappings for " + interfaceName + " at location " + StaticAnalysis.sourceLocation(ctx);
         for (Map.Entry<String,SymbolTableEntry> iterator: interfaceEntry.mappings.bindings.entrySet()) {
             String methodName = iterator.getKey();
 	    methodNames.append(String.format(" (instancePrefix--\"%s\")", methodName));
