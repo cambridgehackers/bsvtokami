@@ -78,18 +78,32 @@ public class BSVToKami extends BSVBaseVisitor<String>
     @Override public String visitInterfacedecl(BSVParser.InterfacedeclContext ctx) {
 	// modules are represented by a string: the name of the instance
 	String interfaceName = ctx.typedeftype().typeide().getText();
-	printstream.println(String.format("(* * interface %s *)", interfaceName));
+	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
+	typeVisitor.pushScope(scope);
+	BSVType interfaceType = typeVisitor.visit(ctx.typedeftype());
+	printstream.println(String.format("(* * interface %s *)", interfaceType));
 
-	printstream.println(String.format("Record %s := {", interfaceName));
+	TreeMap<String,BSVType> freeTypeVariables = interfaceType.getFreeVariables();
+	StringBuilder paramsStringBuilder = new StringBuilder();
+        for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
+	    BSVType freeType = entry.getValue();
+	    logger.fine("Free type variable " + freeType);
+	    paramsStringBuilder.append(String.format(" (%s : %s)",
+						     entry.getKey(),
+						     (freeType.numeric ? "nat" : "Kind")));
+	}
+	String paramsString = paramsStringBuilder.toString();
+
+	printstream.println(String.format("Record %s%s := {", interfaceName, paramsString));
 	printstream.println(String.format("    %s'interface: Modules;", interfaceName));
 	for (BSVParser.InterfacememberdeclContext decl: ctx.interfacememberdecl()) {
 	    if (decl.methodproto() != null) {
 		printstream.println(String.format("    %s'%s : string;", interfaceName, decl.methodproto().name.getText()));
 	    } else {
-		String interfaceType = bsvTypeToKami(decl.subinterfacedecl().bsvtype());
-		assert interfaceType != null;
+		String kamiType = bsvTypeToKami(decl.subinterfacedecl().bsvtype());
+		assert kamiType != null;
 		printstream.println(String.format("    %s'%s : %s;",
-						  interfaceName, decl.subinterfacedecl().lowerCaseIdentifier().getText(), interfaceType));
+						  interfaceName, decl.subinterfacedecl().lowerCaseIdentifier().getText(), kamiType));
 	    }
 	}
 	printstream.println(String.format("}."));
@@ -385,6 +399,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
 
         printstream.print(String.format("    Definition %1$s := Build_%2$s ", moduleName, interfaceName));
+        for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
+	    printstream.print(String.format("%s ", entry.getKey()));
+	}
         if (instances.size() > 0)
             printstream.print(String.format("(%1$sInstances ++ ",
                                             moduleName));
@@ -1181,15 +1198,27 @@ public class BSVToKami extends BSVBaseVisitor<String>
     public String bsvTypeToKami(BSVType t) {
         return bsvTypeToKami(t, 0);
     }
-    public String bsvTypeToKami(BSVType t, int level) {
-        if (t == null)
-            return "<nulltype>";
-        t = t.prune();
-        String kamitype = t.name;
+    public String bsvTypeToKami(String t) {
+	String kamitype = t;
         if (kamitype.equals("Action"))
             kamitype = "Void";
         if (kamitype.equals("Integer"))
             kamitype = "nat";
+            if (kamitype.equals("Bit") && !inModule)
+                kamitype = "word";
+            else if (kamitype.equals("Bool") && !inModule)
+                kamitype = "bool";
+            else if (kamitype.equals("Integer"))
+                kamitype = "nat";
+            else if (kamitype.equals("Action"))
+                kamitype = "Void";
+	return kamitype;
+    }
+    public String bsvTypeToKami(BSVType t, int level) {
+        if (t == null)
+            return "<nulltype>";
+        t = t.prune();
+        String kamitype = bsvTypeToKami(t.name);
         for (BSVType p: t.params)
             kamitype += " " + bsvTypeToKami(p);
         if (level > 0)
@@ -1203,15 +1232,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         if (t == null)
             return "<nulltype>";
         if (t.typeide() != null) {
-            String kamitype = t.typeide().getText();
-            if (kamitype.equals("Bit") && !inModule)
-                kamitype = "word";
-            else if (kamitype.equals("Bool"))
-                kamitype = "bool";
-            else if (kamitype.equals("Integer"))
-                kamitype = "nat";
-            else if (kamitype.equals("Action"))
-                kamitype = "Void";
+            String kamitype = bsvTypeToKami(t.typeide().getText());
             for (BSVParser.BsvtypeContext p: t.bsvtype())
                 kamitype += " " + bsvTypeToKami(p, 1);
             if (t.bsvtype().size() > 0)
