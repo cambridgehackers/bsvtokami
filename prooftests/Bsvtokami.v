@@ -116,3 +116,34 @@ Notation "'Rule' name := c" :=
 Notation "'BKMODULE' { s1 'with' .. 'with' sN }" :=
   (makeBKModule (ConsInBKModule s1%bk .. (ConsInBKModule sN%bk NilInBKModule) ..))
     (at level 0, only parsing).
+
+Notation "'Method2' name ( p1 : d1 ) ( p2 : d2 ) : retT := c" :=
+  (let d1f := d1 in
+   let d1g := d1 in
+   let d2f := d2 in
+   let d2g := d2 in
+   let fields := STRUCT { "_1" :: d1f ; "_2" :: d2f } in
+  (BKMeth (Build_Attribute name
+                           (existT MethodT {| arg := (Struct fields); ret := retT |}
+                                   (fun ty => fun param : ty (Struct fields)  =>
+                                                 (LET p1 : d1g <-  #param!fields @."_1";
+                                                  LET p2 : d2g <-  #param!fields @."_2";
+                                                  c)%kami_action : ActionT ty retT)))))
+    (at level 0, name at level 0, p1 at level 0, d1 at level 0, p2 at level 0, d2 at level 0).
+
+Notation "'Method3' name ( p1 : d1 ) ( p2 : d2 )  ( p3 : d3 ) : retT := c" :=
+  (let d1f := d1 in
+   let d1g := d1 in
+   let d2f := d2 in
+   let d2g := d2 in
+   let d3f := d3 in
+   let d3g := d3 in
+   let fields := STRUCT { "_1" :: d1f ; "_2" :: d2f; "_3" :: d3f } in
+  (BKMeth (Build_Attribute name
+                           (existT MethodT {| arg := (Struct fields); ret := retT |}
+                                   (fun ty => fun param : ty (Struct fields)  =>
+                                                 (LET p1 : d1g <-  #param!fields @."_1";
+                                                  LET p2 : d2g <-  #param!fields @."_2";
+                                                  LET p3 : d3g <-  #param!fields @."_3";
+                                                  c)%kami_action : ActionT ty retT)))))
+    (at level 0, name at level 0, p1 at level 0, d1 at level 0, p2 at level 0, d2 at level 0, p3 at level 0, d3 at level 0).
