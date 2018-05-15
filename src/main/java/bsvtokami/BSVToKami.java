@@ -790,13 +790,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	assert(letBindings.size() == 0);
 
 	StringBuilder statement = new StringBuilder();
-        statement.append("        (If ");
+        statement.append("        If ");
         statement.append(visit(ctx.expression()));
         statement.append(newline);
         statement.append("        then ");
 	for (String substatement: statements)
 	    statement.append(String.format("        %s;%s", substatement, newline));
-        statement.append("        Retv;");
+        statement.append("        Retv");
         if (ctx.stmt(1) != null) {
             statement.append(newline);
             statement.append("        else ");
