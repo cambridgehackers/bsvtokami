@@ -108,6 +108,23 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
 	printstream.println(String.format("}."));
 	printstream.println("");
+	// for (BSVParser.InterfacememberdeclContext decl: ctx.interfacememberdecl()) {
+	//     if (decl.methodproto() != null) {
+	// 	BSVParser.MethodprotoformalsContext formals = decl.methodproto().methodprotoformals();
+	// 	if (formals != null && formals.methodprotoformal().size() > 1) {
+	// 	    ArrayList<String> fields = new ArrayList<>();
+	// 	    for (BSVParser.MethodprotoformalContext formal: formals.methodprotoformal()) {
+	// 		String formalName = formal.name.getText();
+	// 		assert formal.bsvtype() != null;
+	// 		String kamiType = bsvTypeToKami(formal.bsvtype());
+	// 		fields.add(String.format("    \"%s\" :: %s", formalName, kamiType));
+	// 	    }
+	// 	    printstream.println(String.format("Notation %s'%s'args := STRUCT {", interfaceName, decl.methodproto().name.getText()));
+	// 	    printstream.println(String.join(';' + newline, fields));
+	// 	    printstream.println(String.format("}."));
+	// 	}
+	//     }
+	// }
 	return null;
     }
 
@@ -288,8 +305,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
         instances = new ArrayList<>();
         scope = scopes.pushScope(ctx);
-        boolean wasInModule = inModule;
-        inModule = true;
 
         BSVParser.ModuleprotoContext moduleproto = ctx.moduleproto();
         String moduleName = moduleproto.name.getText();
@@ -339,6 +354,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
                     printstream.println(String.format("    Variable %s: %s.", formal.name.getText(), typeName));
             }
         }
+
+	// after module proto has been emitted, then assert inModule to translate to Kami types rather than Gallina types
+        boolean wasInModule = inModule;
+        inModule = true;
 
         for (Map.Entry<String,TreeSet<SymbolTableEntry>> entry: inv.methodsUsed.entrySet()) {
             String instanceName = entry.getKey();
@@ -663,18 +682,25 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	StringBuilder statement = new StringBuilder();
 
         String methodName = ctx.name.getText();
-        statement.append("Method instancePrefix--\"" + methodName + "\" (");
+	String methodSuffix = "";
+	String noParams = " ()";
         if (ctx.methodformals() != null) {
-            String sep = "";
+	    int numArgs = ctx.methodformals().methodformal().size();
+	    if (numArgs > 1)
+		methodSuffix = String.format("%d", numArgs);
+	    noParams = "";
+	}
+	
+        statement.append(String.format("Method%s instancePrefix--\"%s\"%s", methodSuffix, methodName, noParams));
+        if (ctx.methodformals() != null) {
             for (BSVParser.MethodformalContext formal: ctx.methodformals().methodformal()) {
                 BSVParser.BsvtypeContext bsvtype = formal.bsvtype();
                 String varName = formal.name.getText();
-                statement.append(sep + varName + ": " + bsvTypeToKami(bsvtype));
-                sep = ", ";
+                statement.append(String.format(" (%s : %s)", varName, bsvTypeToKami(bsvtype)));
             }
         }
         String returntype = (ctx.bsvtype() != null) ? bsvTypeToKami(ctx.bsvtype()) : "";
-        statement.append(") : " + returntype + " :=");
+        statement.append(" : " + returntype + " :=");
 	statement.append(newline);
         RegReadVisitor regReadVisitor = new RegReadVisitor(scope);
         for (BSVParser.StmtContext stmt: ctx.stmt())
@@ -782,7 +808,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		statement.append(String.format("        %s;%s", substatement, newline));
             statement.append("        Retv;");
         }
-        statement.append(")");
 
 	letBindings = parentLetBindings;
 	statements  = parentStatements;
@@ -900,6 +925,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	ArrayList<String> parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
         scope = scopes.pushScope(ctx);
+
+	logger.fine(String.format("For stmt at %s", StaticAnalysis.sourceLocation(ctx)));
 
         BSVParser.FornewinitContext init = ctx.forinit().fornewinit();
         assert init != null : "Only supports new-style for loop init";
