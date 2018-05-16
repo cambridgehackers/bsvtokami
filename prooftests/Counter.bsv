@@ -29,7 +29,7 @@ module mkCounter#(Bit#(sz) init)(Counter#(sz));
        counter <= v;
    endmethod
    method Action clear();
-       counter <= 0;
+       counter <= init;
    endmethod
    method Bit#(sz) value();
        return counter;

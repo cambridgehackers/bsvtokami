@@ -27,7 +27,7 @@ Module mkCounter.
     Variable init: word sz.
                                        Let counter : string := instancePrefix--"counter".
     Definition mkCounterModule :=
-        (BKMODULE {
+        (MODULE {
            Register counter : Bit sz <- init
        with Method instancePrefix--"dec" (v : (Bit sz)) : Void :=
         Read counter_v : Bit sz <- "counter";        Write counter : Bit sz <- (#counter_v - #v);
