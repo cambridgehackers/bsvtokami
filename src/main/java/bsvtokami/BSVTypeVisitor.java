@@ -44,6 +44,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         }
         return bsvtype;
     }
+
         /**
          * {@inheritDoc}
          *
@@ -281,7 +282,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitTypeformal(BSVParser.TypeformalContext ctx) {
-            return new BSVType(ctx.typeide().getText());
+            return new BSVType(ctx.typeide().getText(), ctx.numeric != null);
         }
         /**
          * {@inheritDoc}

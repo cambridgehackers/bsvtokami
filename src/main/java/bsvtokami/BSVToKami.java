@@ -84,10 +84,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	printstream.println(String.format("(* * interface %s *)", interfaceType));
 
 	TreeMap<String,BSVType> freeTypeVariables = interfaceType.getFreeVariables();
+
 	StringBuilder paramsStringBuilder = new StringBuilder();
         for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
 	    BSVType freeType = entry.getValue();
-	    logger.fine("Free type variable " + freeType);
+	    logger.fine("Ifc decl: Free type variable " + freeType + (freeType.numeric ? " nat" : " interface type"));
 	    paramsStringBuilder.append(String.format(" (%s : %s)",
 						     entry.getKey(),
 						     (freeType.numeric ? "nat" : "Kind")));
@@ -339,10 +340,15 @@ public class BSVToKami extends BSVBaseVisitor<String>
         printstream.println("    Section " + sectionName + ".");
         for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
 	    BSVType freeType = entry.getValue();
-	    logger.fine("Free type variable " + freeType);
+	    boolean isNumeric = freeType.numeric;
+	    // FIXME: heuristic
+	    if (freeType.name.endsWith("sz"))
+		isNumeric = true;
+	    logger.fine("Module def: Free type variable " + freeType + (isNumeric ? " numeric" : " interface type"));
+
 	    printstream.println(String.format("    Variable %s : %s.",
 					      entry.getKey(),
-					      (freeType.numeric ? "nat" : "Kind")));
+					      (isNumeric ? "nat" : "Kind")));
 	}
 
         printstream.println("    Variable instancePrefix: string.");
@@ -1106,11 +1112,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
             logger.fine("var " + varName + " scope " + scope);
             if (scope.containsKey(varName)) {
                 SymbolTableEntry entry = scope.lookup(varName);
+		String prefix = "#";
+		if (entry.type.name.equals("Integer"))
+		    prefix = "$";
                 logger.fine("found binding " + varName + " " + entry.type);
                 if (entry.type.name.startsWith("Reg"))
-                    expression.append("#" + varName + "_v");
+                    expression.append(prefix + varName + "_v");
                 else
-                    expression.append("#" + varName);
+                    expression.append(prefix + varName);
             } else {
                 expression.append("#" + varName);
             }
