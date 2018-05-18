@@ -460,20 +460,59 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    logger.fine("Visiting var binding but not collecting statements at " + StaticAnalysis.sourceLocation(ctx));
 	    return "";
 	}
+	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
+	typeVisitor.pushScope(scope);
+	
         for (BSVParser.VarinitContext varinit: ctx.varinit()) {
 	    StringBuilder statement = new StringBuilder();
             String varName = varinit.var.getText();
             assert scope != null : "No scope to evaluate var binding " + ctx.getText();
-            SymbolTableEntry entry = scope.lookup(varName);
+            SymbolTableEntry varEntry = scope.lookup(varName);
             BSVParser.ExpressionContext rhs = varinit.rhs;
+	    assert varEntry != null : "No var entry for " + varName + " at " + StaticAnalysis.sourceLocation(ctx);
+	    BSVType varType = varEntry.type;
             if (rhs != null) {
                 BSVParser.CallexprContext call = getCall(rhs);
                 if (call != null) {
-                    statement.append(String.format("        Call %s <- ", varName));
+		    String functionName = "";
+		    if (call != null)
+			functionName = call.fcn.getText();
+
+		    System.err.println(String.format("var binding functionName=%s at %s",
+						     functionName,
+						     StaticAnalysis.sourceLocation(ctx)));
+
+		    if (functionName.equals("truncate")) {
+			List<BSVParser.ExpressionContext> args = call.expression();
+			BSVType arg0Type = typeVisitor.visit(args.get(0));
+			String varWidth = bsvTypeSize(varType);
+			String lsbWidth = bsvTypeSize(arg0Type);
+			String msbWidth = String.format("(%s - %s)", varWidth, lsbWidth);;
+			statement.append(String.format("LET %s : %s <- (UniBit (Trunc %s %s) %s)",
+						       varName,
+						       bsvTypeToKami(t),
+						       lsbWidth,
+						       msbWidth,
+						       visit(args.get(0))));
+		    } else if (functionName.equals("truncateLSB")) {
+			List<BSVParser.ExpressionContext> args = call.expression();
+			BSVType arg0Type = typeVisitor.visit(args.get(0));
+			String varWidth = bsvTypeSize(varType);
+			String lsbWidth = bsvTypeSize(arg0Type);
+			String msbWidth = String.format("(%s - %s)", varWidth, lsbWidth);;
+			statement.append(String.format("LET %s : %s <- (UniBit (TruncLsb %s %s) %s)",
+						       varName,
+						       bsvTypeToKami(t),
+						       lsbWidth,
+						       msbWidth,
+						       visit(args.get(0))));
+		    } else {
+			statement.append(String.format("LET %s <- ", varName, visit(rhs)));
+		    }
                 } else {
                     statement.append(String.format("        LET %s : %s <- ", varName, bsvTypeToKami(t)));
+		    statement.append(visit(rhs));
                 }
-                statement.append(visit(rhs));
             } else {
                 System.err.println("No rhs for " + ctx.getText() + " at " + StaticAnalysis.sourceLocation(ctx));
                 statement.append(String.format("        LET %s : %s", varName, bsvTypeToKami(t)));
@@ -487,18 +526,19 @@ public class BSVToKami extends BSVBaseVisitor<String>
         BSVParser.CallexprContext call = getCall(rhs);
         assert ctx.lowerCaseIdentifier().size() == 1;
 	StringBuilder statement = new StringBuilder();
-	statement.append(String.format("        %s ", (call != null) ? "Call" : "Let"));
+	statement.append(String.format("        %s ", (call != null) ? "Call" : "LET"));
         for (BSVParser.LowerCaseIdentifierContext ident: ctx.lowerCaseIdentifier()) {
             String varName = ident.getText();
             SymbolTableEntry entry = scope.lookup(varName);
             assert entry != null : String.format("No entry for %s at %s",
                                                  varName, StaticAnalysis.sourceLocation(ctx));
-            statement.append(varName);
+            statement.append(String.format("%s : %s", varName, bsvTypeToKami(entry.type)));
         }
+
         if (ctx.op != null) {
             statement.append(String.format(" %s ", (call != null) ? "<-" : ctx.op.getText()));
-            statement.append(visit(ctx.rhs));
-        }
+	    statement.append(visit(ctx.rhs));
+	}
         statements.add(statement.toString());
 	return null;
     }
@@ -682,6 +722,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         actionContext = true;
 	ArrayList<String> parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
+        scope = scopes.pushScope(ctx);
 
 	letBindings = new ArrayList<>();
 	statements = new ArrayList<>();
@@ -737,6 +778,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	letBindings = parentLetBindings;
 	statements  = parentStatements;
 	statements.add(statement.toString());
+        scope = scopes.popScope();
         return null;
     }
 
@@ -1035,6 +1077,22 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	return expression.toString();
     }
 
+    @Override public String visitBitconcat(BSVParser.BitconcatContext ctx) {
+	assert ctx.expression().size() == 2 : "Bit concat more than 2";
+	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
+	typeVisitor.pushScope(scope);
+	BSVParser.ExpressionContext arg0 = ctx.expression(0);
+	BSVParser.ExpressionContext arg1 = ctx.expression(1);
+	BSVType arg0Type = typeVisitor.visit(arg0);
+	BSVType arg1Type = typeVisitor.visit(arg1);
+	return String.format("(BinBit (Concat %s %s) %s %s)",
+			     bsvTypeSize(arg0Type),
+			     bsvTypeSize(arg1Type),
+			     visit(arg0),
+			     visit(arg1)
+			     );
+    }
+
     @Override public String visitStructexpr(BSVParser.StructexprContext ctx) {
 	StringBuilder expression = new StringBuilder();
         expression.append("STRUCT { ");
@@ -1171,7 +1229,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	StringBuilder statement = new StringBuilder();
         if (methodName != null) {
             // "Call" is up where the binding is, hopefully
-            statement.append(String.format("        Call %s(", methodName));
+            statement.append(String.format(" %s(", methodName));
             String sep = "";
             for (BSVParser.ExpressionContext expr: ctx.expression()) {
                 statement.append(sep);
@@ -1279,6 +1337,26 @@ public class BSVToKami extends BSVBaseVisitor<String>
         } else {
             return "<functionproto>";
         }
+    }
+
+    String bsvTypeSize(BSVType bsvtype) {
+	if (bsvtype.name.equals("Reg")) {
+	    assert bsvtype.params != null;
+	    assert bsvtype.params.size() == 1;
+	    return bsvTypeSize(bsvtype.params.get(0));
+	} else if (bsvtype.name.equals("TAdd")) {
+	    return String.format("%s + %s",
+				 bsvTypeSize(bsvtype.params.get(0)),
+				 bsvTypeSize(bsvtype.params.get(1)));
+	} else if (bsvtype.name.equals("TSub")) {
+	    return String.format("%s - %s",
+				 bsvTypeSize(bsvtype.params.get(0)),
+				 bsvTypeSize(bsvtype.params.get(1)));
+	}
+	assert (bsvtype.name.equals("Bit")) : "Unable to calculate size of " + bsvtype;
+	assert bsvtype.params != null;
+	assert bsvtype.params.size() == 1;
+	return bsvtype.params.get(0).toString();
     }
 
     protected String aggregateResult(String aggregate, String nextResult)
