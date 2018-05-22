@@ -1152,7 +1152,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
         return expression.toString();
     }
     @Override public String visitIntliteral(BSVParser.IntliteralContext ctx) {
-        return ("$" + ctx.IntLiteral().getText());
+	IntValue intValue = new IntValue(ctx.IntLiteral().getText());
+        return ("$" + intValue.toString());
     }
     @Override public String visitRealliteral(BSVParser.RealliteralContext ctx) {
         return ("$" + ctx.RealLiteral().getText());
