@@ -87,9 +87,11 @@ endmodule
 module mkCReg#(Integer depth, data_t v)(Reg#(data_t));
 endmodule
 
+(* nogen *)
 module mkWire(Wire#(element_type))
    provisos (Bits#(element_type, element_width)) ;
 endmodule
+(* nogen *)
 module mkBypassWire(Wire#(element_type))
    provisos (Bits#(element_type, element_width));
 endmodule

@@ -42,7 +42,7 @@ module mkFIFO1(FIFO#(element_type));
    endmethod
 endmodule
 
-module mkSizedFIFO#(Integer n)(FIFO#(element_type))
+module mkSizedFIFO#(Integer n)(FIFO#(element_type));
    Reg#(element_type) v <- mkRegU();
    Reg#(Bit#(0)) valid <- mkReg(0);
    method element_type first() if (valid == 1); 

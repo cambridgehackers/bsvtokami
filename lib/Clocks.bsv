@@ -6,12 +6,15 @@ endinterface
 interface Reset;
 endinterface
 
+(* nogen *)
 module exposeCurrentClock(Clock);
 endmodule
 
+(* nogen *)
 module exposeCurrentReset(Reset);
 endmodule
 
+(* nogen *)
 module mkNullCrossingWire #( Clock dClk, a_type dataIn )
                            ( ReadOnly#(a_type) )
    provisos (Bits#(a_type, sa)) ;
@@ -27,6 +30,7 @@ interface SyncFIFOIfc #(type a_type) ;
    method Bool notEmpty () ;
 endinterface
 
+(* nogen *)
 module mkSyncFIFO #( Integer depth,
                      Clock sClkIn, Reset sRstIn,
                      Clock dClkIn )

@@ -10,7 +10,8 @@ interface Counter#(numeric type sz);
    method Bit#(sz) value();
 endinterface
 
-module mkCounter#(Bit#(sz) init)(Counter#(sz));
+module mkCounter#(Integer init)(Counter#(sz));
+   //FIXME: init
    Reg#(Bit#(sz)) counter <- mkReg(init);
    method Action dec(Bit#(sz) v);
        counter <= counter - v;
