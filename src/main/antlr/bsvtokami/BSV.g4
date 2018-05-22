@@ -108,8 +108,7 @@ typeformal :
     numeric=('numeric'|'numeric')? 'type' typeide
     ;
 typedefsynonym :
-    'typedef' bsvtype typedeftype ';'
-    | 'typedef' functionproto typedeftype ';'
+    attributeinstance* 'typedef' ( bsvtype | functionproto ) typedeftype ';'
     ;
 typedefenum :
     'typedef' 'enum' '{' typedefenumelement (',' typedefenumelement)* '}' upperCaseIdentifier derives? ';'
@@ -177,6 +176,7 @@ overloadeddecl :
     ;
 tctype : bsvtype | functionproto ;
 typeclassinstance :
+    attributeinstance*
     'instance' typeclasside '#' '(' tctype (',' tctype)* ')' provisos? ';'
     overloadeddef* 'endinstance' (':' typeclasside)?
     ;
