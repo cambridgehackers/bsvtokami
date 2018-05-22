@@ -129,6 +129,17 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	return null;
     }
 
+    @Override public String visitTypedefsynonym(BSVParser.TypedefsynonymContext ctx) {
+	if (ctx.bsvtype() != null) {
+	    printstream.println(String.format("Definition %s := %s.",
+					      bsvTypeToKami(ctx.typedeftype()),
+					      bsvTypeToKami(ctx.bsvtype())
+					      ));
+	    printstream.println("");
+	}
+	return null;
+    }
+
     @Override public String visitTypeclassinstance(BSVParser.TypeclassinstanceContext ctx) {
         //FIXME: overloading
         //scope = scopes.pushScope(ctx);
@@ -485,8 +496,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		    if (functionName.equals("truncate")) {
 			List<BSVParser.ExpressionContext> args = call.expression();
 			BSVType arg0Type = typeVisitor.visit(args.get(0));
-			String varWidth = bsvTypeSize(varType);
-			String lsbWidth = bsvTypeSize(arg0Type);
+			String varWidth = bsvTypeSize(varType, varinit.var);
+			String lsbWidth = bsvTypeSize(arg0Type, args.get(0));
 			String msbWidth = String.format("(%s - %s)", varWidth, lsbWidth);;
 			statement.append(String.format("LET %s : %s <- (UniBit (Trunc %s %s) %s)",
 						       varName,
@@ -497,8 +508,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		    } else if (functionName.equals("truncateLSB")) {
 			List<BSVParser.ExpressionContext> args = call.expression();
 			BSVType arg0Type = typeVisitor.visit(args.get(0));
-			String varWidth = bsvTypeSize(varType);
-			String lsbWidth = bsvTypeSize(arg0Type);
+			String varWidth = bsvTypeSize(varType, varinit.var);
+			String lsbWidth = bsvTypeSize(arg0Type, args.get(0));
 			String msbWidth = String.format("(%s - %s)", varWidth, lsbWidth);;
 			statement.append(String.format("LET %s : %s <- (UniBit (TruncLsb %s %s) %s)",
 						       varName,
@@ -918,22 +929,31 @@ public class BSVToKami extends BSVBaseVisitor<String>
             BSVParser.PatternContext pattern = patitem.pattern();
             BSVParser.StructpatternContext structpattern = pattern.structpattern();
             BSVParser.TaggedunionpatternContext taggedunionpattern = pattern.taggedunionpattern();
-            String tagName;
-	    if (structpattern != null)
+	    BSVParser.ConstantpatternContext constantpattern = pattern.constantpattern();
+            String tagName = null;
+	    IntValue tagValue = null;
+	    BSVType tagType = null;
+	    if (structpattern != null) {
 		tagName = structpattern.tag.getText();
-	    else if (taggedunionpattern != null)
+	    } else if (taggedunionpattern != null) {
 		tagName = taggedunionpattern.tag.getText();
-	    else
+	    } else if (constantpattern != null) {
+		tagValue = new IntValue(constantpattern.getText());
+	    } else {
 		// FIXME
 		tagName = pattern.getText();
-            SymbolTableEntry tagEntry = scope.lookup(tagName);
-            assert tagEntry != null: "No pattern tag entry for " + tagName + " at " + StaticAnalysis.sourceLocation(pattern);
-            BSVType tagType = tagEntry.type;
-            assert tagEntry.value != null : String.format("Missing value for tag %s", tagName);
-            IntValue tagValue = (IntValue)tagEntry.value;
+	    }
+	    if (tagValue == null && tagName != null) {
+		SymbolTableEntry tagEntry = scope.lookup(tagName);
+		assert tagEntry != null: "No pattern tag entry for " + tagName + " at " + StaticAnalysis.sourceLocation(pattern);
+		tagType = tagEntry.type;
+		assert tagEntry.value != null : String.format("Missing value for tag %s", tagName);
+		tagValue = (IntValue)tagEntry.value;
+	    }
             statement.append("    If (");
             statement.append(visit(ctx.expression()));
-	    statement.append(String.format("!%sFields@.\"$tag\"", tagType.name));
+	    if (tagName != null)
+		statement.append(String.format("!%sFields@.\"$tag\"", tagType.name));
             statement.append(" == ");
             statement.append(String.format("$%d", tagValue.value));
             statement.append(") then");
@@ -1078,7 +1098,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitBitconcat(BSVParser.BitconcatContext ctx) {
-	assert ctx.expression().size() == 2 : "Bit concat more than 2";
 	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
 	typeVisitor.pushScope(scope);
 	BSVParser.ExpressionContext arg0 = ctx.expression(0);
@@ -1086,8 +1105,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	BSVType arg0Type = typeVisitor.visit(arg0);
 	BSVType arg1Type = typeVisitor.visit(arg1);
 	return String.format("(BinBit (Concat %s %s) %s %s)",
-			     bsvTypeSize(arg0Type),
-			     bsvTypeSize(arg1Type),
+			     bsvTypeSize(arg0Type, arg0),
+			     bsvTypeSize(arg1Type, arg1),
 			     visit(arg0),
 			     visit(arg1)
 			     );
@@ -1340,21 +1359,42 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
     }
 
-    String bsvTypeSize(BSVType bsvtype) {
+    public String bsvTypeToKami(BSVParser.TypedeftypeContext t) {
+        if (t == null)
+            return "<nulltype>";
+	String kamitype = bsvTypeToKami(t.typeide().getText());
+	if (t.typeformals() != null) {
+	    for (BSVParser.TypeformalContext p: t.typeformals().typeformal())
+		kamitype += " " + bsvTypeToKami(p);
+	    kamitype = String.format("(%s)", kamitype);
+	}
+	return kamitype;
+    }
+
+    public String bsvTypeToKami(BSVParser.TypeformalContext t) {
+	return bsvTypeToKami(t.typeide().getText());
+    }
+
+    String bsvTypeSize(BSVType bsvtype, ParserRuleContext ctx) {
 	if (bsvtype.name.equals("Reg")) {
 	    assert bsvtype.params != null;
 	    assert bsvtype.params.size() == 1;
-	    return bsvTypeSize(bsvtype.params.get(0));
+	    return bsvTypeSize(bsvtype.params.get(0), ctx);
 	} else if (bsvtype.name.equals("TAdd")) {
 	    return String.format("%s + %s",
-				 bsvTypeSize(bsvtype.params.get(0)),
-				 bsvTypeSize(bsvtype.params.get(1)));
+				 bsvTypeSize(bsvtype.params.get(0), ctx),
+				 bsvTypeSize(bsvtype.params.get(1), ctx));
 	} else if (bsvtype.name.equals("TSub")) {
 	    return String.format("%s - %s",
-				 bsvTypeSize(bsvtype.params.get(0)),
-				 bsvTypeSize(bsvtype.params.get(1)));
+				 bsvTypeSize(bsvtype.params.get(0), ctx),
+				 bsvTypeSize(bsvtype.params.get(1), ctx));
+	} else if (bsvtype.name.equals("TAdd")) {
+	    return String.format("%s / %s",
+				 bsvTypeSize(bsvtype.params.get(0), ctx),
+				 bsvTypeSize(bsvtype.params.get(1), ctx));
 	}
-	assert (bsvtype.name.equals("Bit")) : "Unable to calculate size of " + bsvtype;
+	assert (bsvtype.name.equals("Bit")) : "Unable to calculate size of " + bsvtype + " at "
+	    + StaticAnalysis.sourceLocation(ctx);
 	assert bsvtype.params != null;
 	assert bsvtype.params.size() == 1;
 	return bsvtype.params.get(0).toString();
