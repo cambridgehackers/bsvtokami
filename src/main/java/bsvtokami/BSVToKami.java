@@ -214,11 +214,25 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         String typeName = ctx.upperCaseIdentifier().getText();
         System.err.println(String.format("BSVTOKAMI typedef enum %s\n", typeName));
-        printstream.println(String.format("Definition %sFields := (STRUCT { \"$tag\" :: (Bit 8) }).", typeName));
-        printstream.println(String.format("Definition %s := (Struct %sFields).", typeName, typeName));
 
         String typedefname = ctx.upperCaseIdentifier().getText();
-        for (BSVParser.TypedefenumelementContext elt: ctx.typedefenumelement()) {
+
+	// go through them all and collect names and values
+	// then bit width from max value
+	// then generate statements
+
+	class TagValue {
+	    String tag;
+	    long value;
+	    TagValue(String tag, long value) {
+		this.tag = tag;
+		this.value = value;
+	    }
+	};
+	ArrayList<TagValue> tagsAndValues = new ArrayList<>();
+	long maxValue = 0;
+
+	for (BSVParser.TypedefenumelementContext elt: ctx.typedefenumelement()) {
             String basetagname = elt.upperCaseIdentifier().getText();
             long tagCount = 1;
             boolean numbered = false;
@@ -247,10 +261,20 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 assert entry.value != null;
                 IntValue tagValue = (IntValue)entry.value;
                 assert tagValue != null;
-                printstream.println(String.format("Notation %s := (STRUCT { \"$tag\" ::= $%d })%%kami_expr.",
-                                                  tagname, tagValue.value));
+		maxValue = java.lang.Math.max(maxValue, tagValue.value);
+		tagsAndValues.add(new TagValue(tagname, tagValue.value));
             }
         }
+	long tagSize = (long)java.lang.Math.ceil(java.lang.Math.log(maxValue) / java.lang.Math.log(2.0));
+        printstream.println(String.format("Definition %sFields := (STRUCT { \"$tag\" :: (Bit %d) }).", typeName, tagSize));
+        printstream.println(String.format("Definition %s := (Struct %sFields).", typeName, typeName));
+
+	for (TagValue pair: tagsAndValues) {
+	    printstream.println(String.format("Notation %s := (STRUCT { \"$tag\" ::= $$(natToWord %d %d) })%%kami_expr.",
+					      pair.tag, tagSize, pair.value));
+
+	}
+
 
         //scope = scopes.popScope();
         inModule = wasInModule;
