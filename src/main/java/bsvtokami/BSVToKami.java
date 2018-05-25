@@ -1230,15 +1230,23 @@ public class BSVToKami extends BSVBaseVisitor<String>
             if (scope.containsKey(varName)) {
                 SymbolTableEntry entry = scope.lookup(varName);
 		String prefix = "#";
+		char firstChar = varName.charAt(0);
 		if (entry.type.name.equals("Integer"))
 		    prefix = "$";
+		else if (firstChar >= 'A' && firstChar <= 'Z')
+		    prefix = "";
+
                 logger.fine("found binding " + varName + " " + entry.type);
                 if (entry.type.name.startsWith("Reg"))
                     expression.append(prefix + varName + "_v");
                 else
                     expression.append(prefix + varName);
             } else {
-                expression.append("#" + varName);
+		char firstChar = varName.charAt(0);
+		if (firstChar >= 'A' && firstChar <= 'Z')
+		    expression.append(varName);
+		else
+		    expression.append("#" + varName);
             }
         }
         return expression.toString();
