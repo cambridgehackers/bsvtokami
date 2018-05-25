@@ -956,7 +956,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		statement.append(String.format("!%sFields@.\"$tag\"", tagType.name));
             statement.append(" == ");
             statement.append(String.format("$%d", tagValue.value));
-            statement.append(") then");
+            statement.append(") then (");
 	    statement.append(newline);
             statement.append(destructurePattern(pattern, ctx.expression().getText(), null));
             assert patitem.patterncond().expression().size() == 0;
@@ -967,16 +967,31 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    assert(letBindings.size() == 0);
             for (String substatement: statements) {
                 statement.append(substatement);
-                statement.append(";");
                 statement.append(newline);
             }
 
-            statement.append("        Retv");
+            //statement.append("        Retv");
 	    statement.append(newline);
-            statement.append("    else");
+            statement.append("   ) else (");
 	    statement.append(newline);
         }
-        statement.append("        Retv");
+
+	assert ctx.casestmtdefaultitem() != null : "default clause required at " + StaticAnalysis.sourceLocation(ctx);
+	{
+	    letBindings = new ArrayList<>();
+	    statements = new ArrayList<>();
+            visit(ctx.casestmtdefaultitem().stmt());
+	    assert(letBindings.size() == 0);
+            for (String substatement: statements) {
+                statement.append(substatement);
+                statement.append(newline);
+            }
+	}
+        for (int i = 0; i < ctx.casestmtpatitem().size(); i += 1) {
+	    //statement.append("        Retv");
+	    statement.append(") as retval; Ret #retval");
+	    statement.append(newline);
+	}
 
 	letBindings = parentLetBindings;
 	statements  = parentStatements;
@@ -1172,7 +1187,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
     @Override public String visitIntliteral(BSVParser.IntliteralContext ctx) {
 	IntValue intValue = new IntValue(ctx.IntLiteral().getText());
-        return ("$" + intValue.toString());
+        return (String.format("$%d", intValue.value));
     }
     @Override public String visitRealliteral(BSVParser.RealliteralContext ctx) {
         return ("$" + ctx.RealLiteral().getText());

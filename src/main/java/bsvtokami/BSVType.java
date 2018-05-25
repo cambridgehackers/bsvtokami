@@ -183,7 +183,7 @@ public class BSVType {
 
 	String result = name;
 	if (params.size() > 0) {
-	    result = name + "#(";
+	    result = name + (numeric ? "'numeric" : "" ) + "#(";
 	    String sep = "";
 	    for (BSVType p: params) {
 		result += sep;

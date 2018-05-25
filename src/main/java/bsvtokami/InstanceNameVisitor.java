@@ -63,6 +63,11 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
 
 	    assert interfaceEntry.mappings != null: "No interface mappings for " + entry.type.name;
             SymbolTableEntry methodEntry = interfaceEntry.mappings.lookup(fieldName);
+	    if (methodEntry == null) {
+		for (Map.Entry<String,SymbolTableEntry> mapping: interfaceEntry.mappings.bindings.entrySet()) {
+		    System.err.println(String.format("ifc %s method %s type %s", interfaceType.name, mapping.getKey(), mapping.getValue().type));
+		}
+	    }
 	    assert methodEntry != null: String.format("No symbol table entry for method %s of interface %s at %s",
 						      fieldName, entry.type.name, StaticAnalysis.sourceLocation(ctx));
             logger.fine("methodName " + methodName + " " + entry.type + " method type " + methodEntry.type);

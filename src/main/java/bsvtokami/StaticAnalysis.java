@@ -264,6 +264,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
                     tagname = String.format("%s%d", basetagname, tagFrom + i);
                 }
                 SymbolTableEntry entry = symbolTable.lookup(tagname);
+                assert entry == null : String.format("Redefining symbol %s at %s", tagname, StaticAnalysis.sourceLocation(elt));
                 if (entry != null)
                     logger.fine(String.format("Previously defined entry %s type %s",
                                               tagname, entry.symbolType));
