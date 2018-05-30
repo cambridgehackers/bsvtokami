@@ -130,6 +130,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitTypedefsynonym(BSVParser.TypedefsynonymContext ctx) {
+        for (BSVParser.AttributeinstanceContext attrinstance: ctx.attributeinstance()) {
+            for (BSVParser.AttrspecContext attr: attrinstance.attrspec()) {
+                if (attr.identifier().getText().equals("nogen"))
+                return null;
+            }
+        }
 	if (ctx.bsvtype() != null) {
 	    printstream.println(String.format("Definition %s := %s.",
 					      bsvTypeToKami(ctx.typedeftype()),
@@ -704,6 +710,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
         letBindings = new ArrayList<>();
         statements = new ArrayList<>();
         scope = scopes.pushScope(ctx);
+
+        for (BSVParser.AttributeinstanceContext attrinstance: ctx.attributeinstance()) {
+            for (BSVParser.AttrspecContext attr: attrinstance.attrspec()) {
+                if (attr.identifier().getText().equals("nogen"))
+                return null;
+            }
+        }
 
         BSVParser.FunctionprotoContext functionproto = ctx.functionproto();
         printstream.print(String.format("Definition %s", functionproto.name.getText()));
