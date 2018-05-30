@@ -809,14 +809,18 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
         for (BSVParser.StmtContext stmt: ctx.stmt())
             visit(stmt);
+	boolean hasStatements = statements.size() > 0;
 	statement.append(String.join(";" + newline, statements));
         if (ctx.expression() != null) {
             statement.append(visit(ctx.expression()));
+	    hasStatements = true;
 	}
 
         if (returntype.equals("Action") || returntype.equals("Void")) {
-	    statement.append(";");
-	    statement.append(newline);
+	    if (hasStatements) {
+		statement.append(";");
+		statement.append(newline);
+	    }
             statement.append("        Retv");
 	}
 	statement.append(newline);
