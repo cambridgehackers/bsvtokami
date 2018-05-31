@@ -794,6 +794,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 statement.append(String.format(" (%s : %s)", varName, bsvTypeToKami(bsvtype)));
             }
         }
+	assert ctx.bsvtype() != null : "Method return type required at " + StaticAnalysis.sourceLocation(ctx);
         String returntype = (ctx.bsvtype() != null) ? bsvTypeToKami(ctx.bsvtype()) : "";
         statement.append(" : " + returntype + " :=");
 	statement.append(newline);

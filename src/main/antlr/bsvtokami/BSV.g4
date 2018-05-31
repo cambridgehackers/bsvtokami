@@ -118,10 +118,10 @@ typedefenumelement :
     | tag=upperCaseIdentifier ('=' tagval=IntLiteral)?
     ;
 typedefstruct :
-    'typedef' 'struct' '{' (structmember)* '}' typedeftype derives? ';'
+    attributeinstance* 'typedef' 'struct' '{' (structmember)* '}' typedeftype derives? ';'
     ;
 typedeftaggedunion :
-    'typedef' 'union' 'tagged' '{' (unionmember)* '}' typedeftype derives? ';'
+    attributeinstance* 'typedef' 'union' 'tagged' '{' (unionmember)* '}' typedeftype derives? ';'
     ;
 structmember :
     bsvtype lowerCaseIdentifier ';'
