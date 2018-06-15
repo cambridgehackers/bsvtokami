@@ -53,6 +53,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         logger.fine("Package " + pkgName);
 
         printstream.println("Require Import Bool String List Arith.");
+        printstream.println("Require Import Omega.");
         printstream.println("Require Import Kami.");
         printstream.println("Require Import Lib.Indexer.");
         printstream.println("Require Import Bsvtokami.");
@@ -437,8 +438,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		printstream.println(String.format("       Let %s.", letBinding));
 	    }
 	}
-        printstream.println("    Definition " + moduleName + "Module :=");
-	printstream.println("        (BKMODULE {");
+        printstream.println("    Definition " + moduleName + "Module: Modules.");
+	printstream.println("        refine (BKMODULE {");
 	if (statements.size() > 0) {
 	    String sep = "    ";
 	    for (String statement: statements) {
@@ -446,7 +447,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		sep = "with ";
 	    }
 	}
-        printstream.print("    })");
+        printstream.print("    }); abstract omega. Qed.");
 	printstream.println(". (* " + ctx.moduleproto().name.getText() + " *)" + "\n");
 
         if (instances.size() > 0)
