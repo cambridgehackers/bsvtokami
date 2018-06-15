@@ -61,6 +61,9 @@ export mkBypassFIFOLevel;
 //     - either just deq, leaving it empty
 //     - or deq and enq simultaneously (logically: deq before enq), leaving it full
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 module mkPipelineFIFO (FIFO#(a))
    provisos (Bits#(a,sa));
 
@@ -74,6 +77,9 @@ module mkPipelineFIFO (FIFO#(a))
 
 endmodule: mkPipelineFIFO
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 module mkPipelineFIFOF (FIFOF#(a))
    provisos (Bits#(a,sa));
 
@@ -116,6 +122,9 @@ endmodule
 //     - either just enq, leaving it full
 //     - or enq and deq simultaneously (logically: enq before deq), leaving it empty
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 module mkBypassFIFO (FIFO#(a))
    provisos (Bits#(a,sa));
 
@@ -129,6 +138,9 @@ module mkBypassFIFO (FIFO#(a))
 
 endmodule
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 module mkBypassFIFOF (FIFOF#(a))
    provisos (Bits#(a,sa));
 
@@ -170,13 +182,24 @@ endmodule
 /// FIFO is empty.
 ////////////////////////////////////////////////////////////////////////////////
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 module mkDFIFOF#(a dflt) (FIFOF#(a))
    provisos (Bits#(a,sa));
    (*hide*)
-   let _ifc <- mkSizedDFIFOF(2, dflt);
-   return _ifc;
+   FIFOF#(a) _ifc <- mkSizedDFIFOF(2, dflt);
+   method enq = _ifc.enq;
+   method deq = _ifc.deq;
+   method first = _ifc.first;
+   method clear = _ifc.clear;
+   method notEmpty = _ifc.notEmpty;
+   method notFull = _ifc.notFull;
 endmodule
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 module mkSizedDFIFOF#(Integer n, a dflt) (FIFOF#(a))
    provisos (Bits#(a,sa));
 
@@ -240,6 +263,9 @@ interface SCounter;
    method Action clear;
 endinterface
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 module mkSCtr#(Reg#(UInt#(s)) c)(SCounter);
    method Action incr; c <= c+1; endmethod
    method Action decr; c <= c-1; endmethod
@@ -250,6 +276,9 @@ module mkSCtr#(Reg#(UInt#(s)) c)(SCounter);
 endmodule
 
 // A counter which can count up to m inclusive (m known at compile time):
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 module mkSCounter#(Integer m)(SCounter);
    let _i = ?;
    if      (m<2)      begin Reg#(UInt#(1))  r <- mkReg(0); _i <- mkSCtr(r); end
@@ -275,6 +304,9 @@ endmodule
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 module mkSizedBypassFIFOF#(Integer n)(FIFOF#(a))
    provisos (Bits#(a,sa));
 
@@ -322,6 +354,9 @@ endmodule
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 module mkBypassFIFOLevel(FIFOLevelIfc#(a, fifoDepth))
    provisos( Bits#(a, sa), Log#(TAdd#(fifoDepth,1), cntSize));
 
@@ -388,6 +423,9 @@ module mkBypassFIFOLevel(FIFOLevelIfc#(a, fifoDepth))
 endmodule
 
 // Common function to test the validity arguments to methods
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 function Bool rangeTest( UInt#(cntSz) value,
                         Integer comp,
                         function Bool foperation(UInt#(cntSz) a,

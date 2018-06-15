@@ -18,24 +18,30 @@ endinterface
 interface Rules;
 endinterface
 
+(* nogen *)
 function Rules emptyRules;
 endfunction
 
 module addRules#(Rules r) (Empty);
 endmodule
 
+(* nogen *)
 function Rules rJoin(Rules x, Rules y);
 endfunction
 
+(* nogen *)
 function Rules rJoinDescendingUrgency(Rules x, Rules y);
 endfunction
 
+(* nogen *)
 function Rules rJoinMutuallyExclusive(Rules x, Rules y);
 endfunction
 
+(* nogen *)
 function Rules rJoinExecutionOrder(Rules x, Rules y);
 endfunction
 
+(* nogen *)
 function Rules rJoinConflictFree(Rules x, Rules y);
 endfunction
 
@@ -55,14 +61,17 @@ interface Wire#(type a);
   method Action _write(a v);
 endinterface
 
+(* nogen *)
 function Reg#(a_type) asReg(Reg#(a_type) regIfc);
    return regIfc;
 endfunction
 
+(* nogen *)
 function a_type readReg(Reg#(a_type) regIfc);
    return regIfc._read();
 endfunction
 
+(* nogen *)
 function Action writeReg(Reg#(a_atype) regIfc, a_type din);
    regIfc._write(din);
 endfunction
@@ -114,49 +123,63 @@ endinterface
 module mkPulseWire(PulseWire);
 endmodule
 
+(* nogen *)
 function a id(a x);
    return x;
 endfunction
 
+(* nogen *)
 function Bool \$guard(Bool cond);
 endfunction
 
+(* nogen *)
 function a when(Bool cond, a expr);
    $guard(cond);
    return expr;
 endfunction
 
 typeclass Bits #(type a, numeric type n);
+(* nogen *)
    function Bit#(n) pack(a x);
+(* nogen *)
    function a unpack(Bit#(n) x);
 endtypeclass
 
 typeclass Eq #(type data_t);
+(* nogen *)
    function Bool \== (data_t x, data_t y);
+(* nogen *)
    function Bool \/= (data_t x, data_t y);
 endtypeclass
 
 
+(* nogen *)
 function String integerToString(Integer m);
    return (String)'m;
 endfunction
 
 typeclass Literal #(type data_t);
+(* nogen *)
    function data_t fromInteger(Integer x);
+(* nogen *)
    function Bool   inLiteralRange(data_t target, Integer x);
 endtypeclass
 
 instance Literal#(Bit#(bsz));
+(* nogen *)
    function Bit#(bsz) fromInteger(Integer x); return (Bit#(bsz))'x; endfunction
 endinstance
 instance Literal#(Int#(bsz));
+(* nogen *)
    function Int#(bsz) fromInteger(Integer x); return (Int#(bsz))'x; endfunction
 endinstance
 instance Literal#(UInt#(bsz));
+(* nogen *)
    function UInt#(bsz) fromInteger(Integer x); return (UInt#(bsz))'x; endfunction
 endinstance
 
 typeclass RealLiteral #(type data_t);
+(* nogen *)
    function data_t fromReal(Real x);
 endtypeclass
 
@@ -227,12 +250,15 @@ typeclass BitExtend #(numeric type m, numeric type n, type x);  // n > m
    function x#(m) truncate (x#(n) d);
 endtypeclass
 
+(* nogen *)
 function Bool signedLT(a x, a y);
    return x < y;
 endfunction
+(* nogen *)
 function Bool signedGE(a x, a y);
    return x >= y;
 endfunction
+(* nogen *)
 function Bit#(asz) signedShiftRight(Bit#(asz) x, Bit#(bsz) shift);
    return x >> shift;
 endfunction
@@ -268,10 +294,12 @@ typedef union tagged {
    Void Invalid;
    } Maybe#(type a) deriving (Bits,Eq);
 
+(* nogen *)
 function Bool isValid(Maybe#(data_t) m);
    case (m) matches tagged Valid: return True; default: return False; endcase
 endfunction
 
+(* nogen *)
 function data_t fromMaybe( data_t defaultval,
                            Maybe#(data_t) val ) ;
    return (case (val) matches
@@ -280,6 +308,7 @@ function data_t fromMaybe( data_t defaultval,
       endcase);
 endfunction
 
+(* nogen *)
 function data_t validValue(Maybe#(data_t) val ) ;
    return (case (val) matches
 	   tagged Valid .validval: validval;
@@ -287,13 +316,16 @@ function data_t validValue(Maybe#(data_t) val ) ;
       endcase);
 endfunction
 
+(* nogen *)
 function Bit#(0) \$methodready (Bit#(1) m);
    return 1;
 endfunction
 
+(* nogen *)
 function Void \$display ( a x);
 endfunction
 
+(* nogen *)
 function Void \$finish ();
 endfunction
 
@@ -302,6 +334,7 @@ typedef struct {
 		t2 tpl_2;
    } Tuple2#(type t1, type t2) deriving (Bits);
 
+(* nogen *)
 function Tuple2#(t1, t2) tuple2(t1 x1, t2 x2);
    return Tuple2 { tpl_1: x1, tpl_2: x2 };
 endfunction
@@ -312,6 +345,7 @@ typedef struct {
 		t3 tpl_3;
    } Tuple3#(type t1, type t2, type t3) deriving (Bits);
 
+(* nogen *)
 function Tuple3#(t1, t2, t3) tuple3(t1 x1, t2 x2, t3 x3);
    return Tuple3 { tpl_1: x1, tpl_2: x2, tpl_3: x3 };
 endfunction
@@ -323,6 +357,7 @@ typedef struct {
 		t4 tpl_4;
    } Tuple4#(type t1, type t2, type t3, type t4) deriving (Bits);
 
+(* nogen *)
 function Tuple4#(t1, t2, t3, t4) tuple4(t1 x1, t2 x2, t3 x3, t4 x4);
    return Tuple4 { tpl_1: x1, tpl_2: x2, tpl_3: x3, tpl_4: x4 };
 endfunction
@@ -335,34 +370,43 @@ typeclass TupleSelector#(type t, type t1, type t2, type t3, type t4);
 endtypeclass
 
 instance TupleSelector#(Tuple2#(t1,t2), t1, t2, t3, t4);
+(* nogen *)
    function t1 tpl_1(Tuple2#(t1,t2) tpl);
       return tpl.tpl_1;
    endfunction
+(* nogen *)
    function t2 tpl_2(Tuple2#(t1,t2) tpl);
       return tpl.tpl_2;
    endfunction
 endinstance
 instance TupleSelector#(Tuple3#(t1,t2,t3), t1, t2, t3, t4);
+(* nogen *)
    function t1 tpl_1(Tuple3#(t1,t2,t3) tpl);
       return tpl.tpl_1;
    endfunction
+(* nogen *)
    function t2 tpl_2(Tuple3#(t1,t2,t3) tpl);
       return tpl.tpl_2;
    endfunction
+(* nogen *)
    function t3 tpl_3(Tuple3#(t1,t2,t3) tpl);
       return tpl.tpl_3;
    endfunction
 endinstance
 instance TupleSelector#(Tuple4#(t1,t2,t3,t4), t1, t2, t3, t4);
+(* nogen *)
    function t1 tpl_1(Tuple4#(t1,t2,t3,t4) tpl);
       return tpl.tpl_1;
    endfunction
+(* nogen *)
    function t2 tpl_2(Tuple4#(t1,t2,t3,t4) tpl);
       return tpl.tpl_2;
    endfunction
+(* nogen *)
    function t3 tpl_3(Tuple4#(t1,t2,t3,t4) tpl);
       return tpl.tpl_3;
    endfunction
+(* nogen *)
    function t4 tpl_4(Tuple4#(t1,t2,t3,t4) tpl);
       return tpl.tpl_4;
    endfunction
@@ -400,12 +444,15 @@ endmodule
 
 // B.5.4
 
+(* nogen *)
 function Bit#(1) parity(Bit#(n) v);
 endfunction
 
+(* nogen *)
 function Bit#(n) reverseBits(Bit#(n) x);
 endfunction
 
+(* nogen *)
 function Bit#(n) truncateLSB(Bit#(m) x)
    provisos(Add#(n,k,m));
    return Bit#(n)'(x >> valueOf(k));

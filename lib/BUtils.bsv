@@ -14,6 +14,9 @@ import Vector::*;
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 function a grab_left(b value)
    provisos(Bits#(a, sa), Bits#(b, sb), Add#(x, sa, sb));
 
@@ -22,6 +25,9 @@ function a grab_left(b value)
    return unpack(result);
 endfunction
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 function a reverse_bytes (a value)
       provisos (Bits#(a, sa), Add#(8, ignore, sa), Add#(8, sa, sb));
 
@@ -44,6 +50,9 @@ function a reverse_bytes (a value)
 
 endfunction
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 function Integer getSizeOf(a value)
    provisos(Bits#(a, sa));
    return valueOf(sa);
@@ -53,6 +62,9 @@ endfunction
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 function Bit#(m) zExtend(Bit#(n) value)
    provisos(Add#(n,m,k));
    Bit#(k) out = zeroExtend(value);
@@ -62,6 +74,9 @@ function Bit#(m) zExtend(Bit#(n) value)
       return out[valueOf(m) - 1:0];
 endfunction
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 function Bit#(m) sExtend(Bit#(n) value)
    provisos(Add#(n,m,k));
    Bit#(k) out = signExtend(value);
@@ -71,6 +86,9 @@ function Bit#(m) sExtend(Bit#(n) value)
       return out[valueOf(m) - 1:0];
 endfunction
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 function a cExtend(b value)
    provisos(Bits#(a, sa), Bits#(b, sb));
 
@@ -79,6 +97,9 @@ function a cExtend(b value)
    return out;
 endfunction
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 function Bit#(m) zExtendLSB(Bit#(n) value)
    provisos( Add#(n,m,k) );
    Bit#(k) out = { value, 0 };
@@ -88,6 +109,9 @@ function Bit#(m) zExtendLSB(Bit#(n) value)
       return out[valueof(k)-1:valueof(n)];
 endfunction
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 function a cExtendLSB(b value)
    provisos( Bits#(a,sa), Bits#(b,sb) );
    let out = unpack(zExtendLSB(pack(value)));
@@ -98,6 +122,9 @@ endfunction
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 function Bit#(size) getIndex (Vector#(count, Bool) vector)
    provisos (Log#(count, size));
 
@@ -116,6 +143,9 @@ endfunction
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 function Action dummyAction ();
    action
       $write("");
@@ -127,13 +157,23 @@ endfunction
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 typedef Bit#(TLog#(TAdd#(m, 1)))  LBit#(numeric type m);
+
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 typedef UInt#(TLog#(TAdd#(m, 1))) LUInt#(numeric type m);
 
 ////////////////////////////////////////////////////////////////////////////////
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 function Bit#(m) duplicate(Bit#(n) d) provisos(Mul#(n,x,m));
    function Bit#(n) setVal(Integer i) = d;
    Vector#(x,Bit#(n)) v = map(setVal, genVector);

@@ -12,6 +12,7 @@ typeclass VectorOps#(type index_type);
    function element_type select(Vector#(len, element_type) vector, index_type offset);
  endtypeclass
 
+(* nogen *)
 function Vector#(len, element_type) genWith(function element_type func(Integer xi));
    function Vector#(len, element_type) genWithRec(Vector#(len, element_type) vect, Integer i);
        if (i < valueOf(len))
@@ -22,35 +23,42 @@ function Vector#(len, element_type) genWith(function element_type func(Integer x
    return genWithRec($vecnew(valueOf(len)), 0);
 endfunction
 
+(* nogen *)
 function Vector#(len, element_type) newVector();
    function element_type elt(Integer xi); return ?; endfunction
    return genWith(elt);
 endfunction
 
+(* nogen *)
 function Vector#(len, Integer) genVector();
    function Integer elt(Integer xi); return xi; endfunction
    return genWith(elt);
 endfunction
 
+(* nogen *)
 function Vector#(len, element_type) replicate(element_type v);
    function element_type elt(Integer xi); return v; endfunction
    return genWith(elt);
 endfunction
 
+(* nogen *)
 function Vector#(len_plus_1, element_type) cons(element_type v, Vector#(len, element_type) vect)
    provisos (Add#(len, 1, len_plus_1));
    function element_type elt(Integer xi); if (xi == 0) return v; else return vect[xi - 1]; endfunction
    return genWith(elt);
 endfunction
 
-function Vector#(0, element_type) nil = newVector();
+(* nogen *)
+function Vector#(0, element_type) nil(); return newVector(); endfunction
 
+(* nogen *)
 function Vector#(vsize, element_type) append(Vector#(lena, element_type) vecta, Vector#(lenb, element_type) vectb)
    provisos (Add#(lena, lenb, vsize));
    function element_type elt(Integer xi); if (xi < valueOf(lena) ) return vecta[xi]; else return vectb[xi - valueOf(lena)]; endfunction
    return genWith(elt);
 endfunction
 
+(* nogen *)
 function Vector#(vsize, element_type) concat(Vector#(m, Vector#(n, element_type)) vectofvects)
    provisos (Mul#(m, n, vsize));
    function element_type elt(Integer xi);
@@ -61,22 +69,26 @@ function Vector#(vsize, element_type) concat(Vector#(m, Vector#(n, element_type)
    return genWith(elt);
 endfunction
 
+(* nogen *)
 function element_type head(Vector#(len, element_type) v)
    provisos (Add#(1, a__, len));
    return v[0];
 endfunction
 
+(* nogen *)
 function element_type tail(Vector#(len, element_type) v)
    provisos (Add#(1, a__, len));
    return v[valueOf(len) - 1];
 endfunction
 
+(* nogen *)
 function Vector#(vsize, element_type) init(Vector#(vsize1, element_type) v)
    provisos (Add#(vsize, 1, vsize1));
    function element_type elt(Integer xi); return v[xi]; endfunction
    return genWith(elt);
 endfunction
 
+(* nogen *)
 function Vector#(vsize, element_type) take(Vector#(vsize1, element_type) v)
    provisos (Add#(vsize, a__, vsize1));
    function element_type elt(Integer xi); return v[xi]; endfunction
@@ -84,18 +96,21 @@ function Vector#(vsize, element_type) take(Vector#(vsize1, element_type) v)
 endfunction
 
 // deprecated
+(* nogen *)
 function Vector#(vsize, element_type) drop(Vector#(vsize1, element_type) v)
    provisos (Add#(vsize, a__, vsize1));
    function element_type elt(Integer xi); return v[xi + valueOf(vsize1) - valueOf(vsize)]; endfunction
    return genWith(elt);
 endfunction
 
+(* nogen *)
 function Vector#(vsize, element_type) takeTail(Vector#(vsize1, element_type) v)
    provisos (Add#(vsize, a__, vsize1));
    function element_type elt(Integer xi); return v[xi + valueOf(vsize1) - valueOf(vsize)]; endfunction
    return genWith(elt);
 endfunction
 
+(* nogen *)
 function Vector#(vsize, element_type) takeAt(Integer startPos, Vector#(vsize1, element_type) vect)
    provisos (Add#(vsize, a__, vsize1));
    function element_type elt(Integer xi); return vect[xi - startPos]; endfunction
@@ -104,6 +119,7 @@ endfunction
 
 // Mapping Functions over Vectors
 
+(* nogen *)
 function Vector#(vsize,b_type) map(function b_type func(a_type x),
 				   Vector#(vsize, a_type) vect);
    function b_type funci(Integer i);
@@ -114,21 +130,25 @@ endfunction
 
 // Vector to Vector Functions
 
+(* nogen *)
 function Vector#(len, element_type) rotate(Vector#(len, element_type) vect);
    function element_type elt(Integer xi); return vect[(xi + 1) % valueOf(len) ]; endfunction
    return genWith(elt);
 endfunction
 
+(* nogen *)
 function Vector#(len, element_type) rotateR(Vector#(len, element_type) vect);
    function element_type elt(Integer xi); return vect[(xi - 1) % valueOf(len) ]; endfunction
    return genWith(elt);
 endfunction
 
+(* nogen *)
 function Vector#(len, element_type) rotateBy(Vector#(len, element_type) vect, Integer n);
    function element_type elt(Integer xi); return vect[(xi + n) % valueOf(len) ]; endfunction
    return genWith(elt);
 endfunction
 
+(* nogen *)
 function Vector#(len, element_type) shiftInAt0(Vector#(len, element_type) vect, element_type new_elt);
    function element_type elt(Integer xi);
       if (xi == 0)
@@ -138,6 +158,7 @@ function Vector#(len, element_type) shiftInAt0(Vector#(len, element_type) vect, 
    return genWith(elt);
 endfunction
 
+(* nogen *)
 function Vector#(len, element_type) shiftInAtN(Vector#(len, element_type) vect, element_type new_elt);
    function element_type elt(Integer xi);
       if (xi == valueOf(len) - 1)
@@ -147,6 +168,7 @@ function Vector#(len, element_type) shiftInAtN(Vector#(len, element_type) vect, 
    return genWith(elt);
 endfunction
 
+(* nogen *)
 function Vector#(len, element_type) shiftOutFrom0(element_type new_elt, Vector#(len, element_type) vect, Integer amount);
    function element_type elt(Integer xi);
       if (xi >= valueOf(len) - amount)
@@ -156,6 +178,7 @@ function Vector#(len, element_type) shiftOutFrom0(element_type new_elt, Vector#(
    return genWith(elt);
 endfunction
 
+(* nogen *)
 function Vector#(len, element_type) shiftOutFromN(element_type new_elt, Vector#(len, element_type) vect, Integer amount);
    function element_type elt(Integer xi);
       if (xi < amount)
@@ -165,14 +188,17 @@ function Vector#(len, element_type) shiftOutFromN(element_type new_elt, Vector#(
    return genWith(elt);
 endfunction
 
+(* nogen *)
 function Vector#(len, element_type) reverse(Vector#(len, element_type) vect);
    function element_type elt(Integer xi);
       return vect[valueOf(len) - xi - 1]; endfunction
    return genWith(elt);
 endfunction
 
+(* nogen *)
 function Vector#(m, Vector#(n, element_type)) transpose(Vector#(m, Vector#(n, element_type)) vectofvects);
    function Vector#(n, element_type) outer_elt(Integer xi);
+(* nogen *)
       function element_type inner_elt(Integer yi);
 	 return vectofvects[yi][xi];
       endfunction
@@ -182,6 +208,7 @@ function Vector#(m, Vector#(n, element_type)) transpose(Vector#(m, Vector#(n, el
 endfunction
 
 // Fold Functions
+(* nogen *)
 function b_type foldr(function b_type func(a_type x, b_type y),
 		       b_type seed, Vector#(vsize,a_type) vect);
    function b_type foldrec(Integer i, b_type v);
@@ -193,6 +220,7 @@ function b_type foldr(function b_type func(a_type x, b_type y),
    return foldrec(0, seed);
 endfunction
 
+(* nogen *)
 function b_type foldl(function b_type func(b_type y, a_type x),
                        b_type seed, Vector#(vsize,a_type) vect);
    b_type result = seed;
@@ -205,6 +233,7 @@ function b_type foldl(function b_type func(b_type y, a_type x),
    return foldrec(0, seed);
 endfunction
 
+(* nogen *)
 function a_type fold(function b_type func(a_type y, a_type x),
 		      Vector#(vsize,a_type) vect);
    function b_type recursive(Integer lb, Integer rb);
@@ -222,6 +251,7 @@ function a_type fold(function b_type func(a_type y, a_type x),
    return recursive(0, valueOf(vsize)-1, seed);
 endfunction
 
+(* nogen *)
 function a_type foldr1(function a_type func(a_type x, a_type y),
                       Vector#(vsize,a_type) vect)
    provisos (Add#(vsizem1, 1, vsize));
@@ -229,6 +259,7 @@ function a_type foldr1(function a_type func(a_type x, a_type y),
    return foldr(func, tail(vect), subvec);
 endfunction
 
+(* nogen *)
 function a_type foldl1(function a_type func(a_type y, a_type x),
                       Vector#(vsize,a_type) vect)
    provisos (Add#(vsizem1, 1, vsize));
@@ -238,6 +269,7 @@ endfunction
 
 // Tests on Vectors
 
+(* nogen *)
 function Bool elem (element_type needle,
                     Vector#(vsize,element_type) vect )
   provisos (Eq#(element_type));
@@ -247,6 +279,7 @@ function Bool elem (element_type needle,
    return foldl(found, False, vect);
 endfunction
 
+(* nogen *)
 function Bool any(function Bool pred(element_type x1),
                   Vector#(vsize,element_type) vect );
    function Bool anypred(Bool f, element_type elt);
@@ -255,6 +288,7 @@ function Bool any(function Bool pred(element_type x1),
    return foldl(anypred, False, vect);
 endfunction
 
+(* nogen *)
 function Bool all(function Bool pred(element_type x1),
                   Vector#(vsize,element_type) vect );
    function Bool allelts(Bool f, element_type elt);
@@ -263,6 +297,7 @@ function Bool all(function Bool pred(element_type x1),
    return foldl(allelts, True, vect);
 endfunction
 
+(* nogen *)
 function Bool vector (Vector#(vsize, Bool) vect );
    function Bool anyelt(Bool f, Bool g);
       return f || g;
@@ -270,6 +305,7 @@ function Bool vector (Vector#(vsize, Bool) vect );
    return foldl(anyelt, False, vect);
 endfunction
 
+(* nogen *)
 function Bool vectand (Vector#(vsize, Bool) vect );
    function Bool allelts(Bool f, Bool g);
       return f && g;
@@ -277,6 +313,7 @@ function Bool vectand (Vector#(vsize, Bool) vect );
    return foldl(allelts, False, vect);
 endfunction
 
+(* nogen *)
 function UInt#(logv1) countElem (element_type needle,
                                  Vector#(vsize, element_type) vect)
   provisos (Eq#(element_type), Add#(vsize, 1, vsize1),
@@ -288,6 +325,7 @@ function UInt#(logv1) countElem (element_type needle,
    return foldl(countelt, 0, vect);
 endfunction
 
+(* nogen *)
 function UInt#(logv1) countIf (function Bool pred(element_type x1),
                                Vector#(vsize, element_type) vect)
   provisos (Add#(vsize, 1, vsize1), Log#(vsize1, logv1));
@@ -298,6 +336,7 @@ function UInt#(logv1) countIf (function Bool pred(element_type x1),
    return foldl(countelt, 0, vect);
 endfunction
 
+(* nogen *)
 function Maybe#(element_type) find (function Bool pred(element_type x),
 				    Vector#(vsize, element_type) vect);
 
@@ -310,6 +349,7 @@ function Maybe#(element_type) find (function Bool pred(element_type x),
    return foldl(findelt, Invalid, vect);
 endfunction
 
+(* nogen *)
 function Maybe#(UInt#(logv)) findElem (element_type needle,
 				       Vector#(vsize, element_type) vect)
   provisos (Eq#(element_type)
@@ -326,6 +366,7 @@ function Maybe#(UInt#(logv)) findElem (element_type needle,
    return foldl(findelt, Invalid, indices);
 endfunction
 
+(* nogen *)
 function Maybe#(UInt#(logv)) findIndex(function Bool pred(element_type x1),
 				       Vector#(vsize, element_type) vect)
    provisos (Add#(xx1,1,vsize), Log#(vsize, logv));
@@ -342,6 +383,7 @@ endfunction
 
 // Bit-Vector Operations
 
+(* nogen *)
 function Bit#(n) rotateBitsBy (Bit#(n) bvect, UInt#(logn) rotatebits)
   provisos (Log#(n,logn), Add#(1,xxx,n));
    
@@ -351,6 +393,7 @@ function Bit#(n) rotateBitsBy (Bit#(n) bvect, UInt#(logn) rotatebits)
    return pack(rotated);
 endfunction
 
+(* nogen *)
 function UInt#(logn1) countOnesAlt (Bit#(n) bvect)
    provisos (Add#(1,n,n1), Log#(n1,logn1));
    Vector#(n, Bit#(1)) bits = unpack(bvect);
@@ -362,11 +405,13 @@ endfunction
 
 // Functions on Vectors of Registers
 
+(* nogen *)
 function Vector#(n,a) readVReg ( Vector#(n, Reg#(a)) vrin) ;
    function a readreg(Reg#(a) r); return r; endfunction
    return map(readreg, vrin);
 endfunction
 
+(* nogen *)
 function Action writeVReg ( Vector#(n, Reg#(a)) vr,
                             Vector#(n,a) vdin) ;
    action
@@ -384,6 +429,7 @@ endfunction
 
 // Combining Vectors with Zip
 
+(* nogen *)
 function Vector#(vsize,Tuple2 #(a_type, b_type))
       zip( Vector#(vsize, a_type) vecta,
            Vector#(vsize, b_type) vectb);
@@ -394,6 +440,7 @@ function Vector#(vsize,Tuple2 #(a_type, b_type))
    return genWith(combine);
 endfunction
 
+(* nogen *)
 function Vector#(vsize,Tuple3 #(a_type, b_type, c_type))
       zip3(Vector#(vsize, a_type) vecta,
 	   Vector#(vsize, b_type) vectb,
@@ -405,6 +452,7 @@ function Vector#(vsize,Tuple3 #(a_type, b_type, c_type))
    return genWith(combine);
 endfunction
 
+(* nogen *)
 function Vector#(vsize,Tuple4 #(a_type, b_type, c_type, d_type))
       zip4(Vector#(vsize, a_type) vecta,
 	   Vector#(vsize, b_type) vectb,
@@ -417,6 +465,7 @@ function Vector#(vsize,Tuple4 #(a_type, b_type, c_type, d_type))
    return genWith(combine);
 endfunction
 
+(* nogen *)
 function Vector#(vsize,Tuple2 #(a_type, b_type))
       zipAny(Vector#(m,a_type) vect1,
              Vector#(n,b_type) vect2)
@@ -429,6 +478,7 @@ function Vector#(vsize,Tuple2 #(a_type, b_type))
    return zip(as, bs);
 endfunction
 
+(* nogen *)
 function Tuple2#(Vector#(vsize,a_type), Vector#(vsize, b_type))
       unzip(Vector#(vsize,Tuple2 #(a_type, b_type)) vectab);
    return tuple2(map(tpl_1, vectab), map(tpl_2, vectab));
@@ -436,6 +486,7 @@ endfunction
 
 // ZipWith Functions
 
+(* nogen *)
 function Vector#(vsize,c_type)
          zipWith (function c_type func(a_type x, b_type y),
                   Vector#(vsize,a_type) vecta,
@@ -446,6 +497,7 @@ function Vector#(vsize,c_type)
    return genWith(funci);
 endfunction
 
+(* nogen *)
 function Vector#(vsize,c_type)
          zipWithAny (function c_type func(a_type x, b_type y),
                       Vector#(m,a_type) vecta,
@@ -458,6 +510,7 @@ function Vector#(vsize,c_type)
    return genWith(funci);
 endfunction
 
+(* nogen *)
 function Vector#(vsize,d_type)
         zipWith3(function d_type func(a_type x, b_type y, c_type z),
                  Vector#(vsize,a_type) vecta,
@@ -470,6 +523,7 @@ function Vector#(vsize,d_type)
    return genWith(funci);
 endfunction
 
+(* nogen *)
 function Vector#(vsize,d_type)
    zipWithAny3(function d_type func(a_type x, b_type y, c_type z),
                Vector#(m,a_type) vecta,
@@ -484,6 +538,7 @@ function Vector#(vsize,d_type)
 endfunction
 // Monadic Operations
 
+(* nogen *)
 function m#(Vector#(vsize, element_type)) genWithM(function m#(element_type) func(Integer x))
    provisos (Monad#(m));
    Vector#(vsize, Integer) indices = genVector;
@@ -497,6 +552,7 @@ function m#(Vector#(vsize, element_type)) genWithM(function m#(element_type) fun
    //return \return (result);
 endfunction
 
+(* nogen *)
 function m#(Vector#(vsize, b_type)) mapM( function m#(b_type) func(a_type x),
 					 Vector#(vsize, a_type) vecta )
    provisos (Monad#(m));
@@ -507,6 +563,7 @@ function m#(Vector#(vsize, b_type)) mapM( function m#(b_type) func(a_type x),
    return genWithM(gen_elt);
 endfunction
 
+(* nogen *)
 function m#(void) mapM_( function m#(b_type) func(a_type x),
 			Vector#(vsize, a_type) vecta )
    provisos (Monad#(m));
@@ -518,6 +575,7 @@ function m#(void) mapM_( function m#(b_type) func(a_type x),
    return ?;
 endfunction
 
+(* nogen *)
 function m#(Vector#(vsize, c_type)) zipWithM( function m#(c_type) func(a_type x, b_type y),
 					     Vector#(vsize, a_type) vecta,
 					     Vector#(vsize, b_type) vectb )
@@ -529,6 +587,7 @@ function m#(Vector#(vsize, c_type)) zipWithM( function m#(c_type) func(a_type x,
    return genWithM(gen_elt);
 endfunction
 
+(* nogen *)
 function m#(void) zipWithM_( function m#(c_type) func(a_type x, b_type y),
 			    Vector#(vsize, a_type) vecta,
 			    Vector#(vsize, b_type) vectb )
@@ -541,6 +600,7 @@ function m#(void) zipWithM_( function m#(c_type) func(a_type x, b_type y),
    return ?;
 endfunction
 
+(* nogen *)
 function m#(Vector#(vsize, d_type)) zipWith3M( function m#(d_type) func(a_type x, b_type y, c_type z),
 					      Vector#(vsize, a_type) vecta,
 					      Vector#(vsize, b_type) vectb,
@@ -553,6 +613,7 @@ function m#(Vector#(vsize, d_type)) zipWith3M( function m#(d_type) func(a_type x
    return genWithM(gen_elt_3m);
 endfunction
 
+(* nogen *)
 function m#(Vector#(vsize, b_type)) replicateM( m#(b_type) c)
    provisos (Monad#(m));
    function m#(b_type) gen_elt(Integer i);
