@@ -526,10 +526,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		    if (functionName.equals("truncate")) {
 			List<BSVParser.ExpressionContext> args = call.expression();
 			BSVType arg0Type = typeVisitor.visit(args.get(0));
-			String varWidth = bsvTypeSize(varType, varinit.var);
-			String lsbWidth = bsvTypeSize(arg0Type, args.get(0));
-			String msbWidth = String.format("(%s - %s)", varWidth, lsbWidth);;
-			statement.append(String.format("LET %s : %s <- (UniBit (Trunc %s %s) %s)",
+			String lsbWidth = bsvTypeSize(varType, varinit.var);
+			String exprWidth = bsvTypeSize(arg0Type, args.get(0));
+			String msbWidth = String.format("(%s - %s)", exprWidth, lsbWidth);
+			statement.append(String.format("LET %s : %s <- UniBit (Trunc %s %s) (castBits _ _ _ _ %s)",
 						       varName,
 						       bsvTypeToKami(t),
 						       lsbWidth,
@@ -538,14 +538,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		    } else if (functionName.equals("truncateLSB")) {
 			List<BSVParser.ExpressionContext> args = call.expression();
 			BSVType arg0Type = typeVisitor.visit(args.get(0));
-			String varWidth = bsvTypeSize(varType, varinit.var);
-			String lsbWidth = bsvTypeSize(arg0Type, args.get(0));
-			String msbWidth = String.format("(%s - %s)", varWidth, lsbWidth);;
-			statement.append(String.format("LET %s : %s <- (UniBit (TruncLsb %s %s) %s)",
+			String lsbWidth = bsvTypeSize(varType, varinit.var);
+			String exprWidth = bsvTypeSize(arg0Type, args.get(0));
+			String msbWidth = String.format("(%s - %s)", exprWidth, lsbWidth);
+			statement.append(String.format("LET %s : %s <-  UniBit (TruncLsb %s %s) (castBits _ _ _ _ %s)",
 						       varName,
 						       bsvTypeToKami(t),
-						       lsbWidth,
 						       msbWidth,
+						       lsbWidth,
 						       visit(args.get(0))));
 		    } else {
 			statement.append(String.format("LET %s <- ", varName, visit(rhs)));
@@ -1161,7 +1161,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	BSVParser.ExpressionContext arg1 = ctx.expression(1);
 	BSVType arg0Type = typeVisitor.visit(arg0);
 	BSVType arg1Type = typeVisitor.visit(arg1);
-	return String.format("(BinBit (Concat %s %s) %s %s)",
+	return String.format("castBits _ _ _ _ (BinBit (Concat %s %s) %s %s)",
 			     bsvTypeSize(arg0Type, arg0),
 			     bsvTypeSize(arg1Type, arg1),
 			     visit(arg0),
@@ -1458,7 +1458,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 				 bsvTypeSize(bsvtype.params.get(0), ctx),
 				 bsvTypeSize(bsvtype.params.get(1), ctx));
 	}
-	assert (bsvtype.name.equals("Bit")) : "Unable to calculate size of " + bsvtype + " at "
+	assert (bsvtype.name.equals("Bit")) : "Unable to calculate size of " + bsvtype + " of "
+	    + ctx.getText() + " at "
 	    + StaticAnalysis.sourceLocation(ctx);
 	assert bsvtype.params != null;
 	assert bsvtype.params.size() == 1;
