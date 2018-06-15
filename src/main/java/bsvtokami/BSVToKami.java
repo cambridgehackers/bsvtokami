@@ -395,6 +395,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         printstream.println("    Variable instancePrefix: string.");
 
+        boolean wasInModule = inModule;
+        inModule = true;
+
         if (moduleproto.methodprotoformals() != null) {
             for (BSVParser.MethodprotoformalContext formal : moduleproto.methodprotoformals().methodprotoformal()) {
 		String typeName = bsvTypeToKami(formal.bsvtype());
@@ -403,10 +406,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
             }
         }
 
-	// after module proto has been emitted, then assert inModule to translate to Kami types rather than Gallina types
-        boolean wasInModule = inModule;
-        inModule = true;
-
+	boolean hasProvisos = moduleproto.provisos() != null;
+	if (hasProvisos) {
+	    for (BSVParser.ProvisoContext proviso: moduleproto.provisos().proviso()) {
+		// emit Variable declaration for free variable in proviso
+		// emit hypothesis for proviso
+	    }
+	}
         for (Map.Entry<String,TreeSet<SymbolTableEntry>> entry: inv.methodsUsed.entrySet()) {
             String instanceName = entry.getKey();
             TreeSet<SymbolTableEntry> methods = entry.getValue();
@@ -438,8 +444,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		printstream.println(String.format("       Let %s.", letBinding));
 	    }
 	}
-        printstream.println("    Definition " + moduleName + "Module: Modules.");
-	printstream.println("        refine (BKMODULE {");
+        printstream.println("    Definition " + moduleName + "Module: Modules"
+			    + (hasProvisos ? "." : " :="));
+	printstream.println(String.format("        %s (BKMODULE {", (hasProvisos ? "refine " : "")));
 	if (statements.size() > 0) {
 	    String sep = "    ";
 	    for (String statement: statements) {
@@ -447,7 +454,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		sep = "with ";
 	    }
 	}
-        printstream.print("    }); abstract omega. Qed.");
+        printstream.print("    })");
+	if (hasProvisos) {
+	    printstream.print("; abstract omega. Qed");
+	}
 	printstream.println(". (* " + ctx.moduleproto().name.getText() + " *)" + "\n");
 
         if (instances.size() > 0)
