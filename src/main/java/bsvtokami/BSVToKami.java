@@ -27,6 +27,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     // for modules and rules
     private ArrayList<String> letBindings;
     private ArrayList<String> statements;
+    private TreeMap<String,String> mSizeRelationshipProvisos;
 
     BSVToKami(String pkgName, File ofile, StaticAnalysis scopes) {
         this.scopes = scopes;
@@ -41,6 +42,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
             logger.severe(ex.toString());
             printstream = null;
         }
+	mSizeRelationshipProvisos = new TreeMap<>();
+	mSizeRelationshipProvisos.put("Add", "+");
+	mSizeRelationshipProvisos.put("Mul", "*");
+	mSizeRelationshipProvisos.put("Div", "/");
+	mSizeRelationshipProvisos.put("Max", "max");
+	mSizeRelationshipProvisos.put("Min", "min");
+	mSizeRelationshipProvisos.put("Log", "log");
     }
 
     @Override public String visitImportitem(BSVParser.ImportitemContext ctx) {
@@ -398,11 +406,15 @@ public class BSVToKami extends BSVBaseVisitor<String>
         boolean wasInModule = inModule;
         inModule = true;
 
+	ArrayList<String> formalNames = new ArrayList<>();
         if (moduleproto.methodprotoformals() != null) {
             for (BSVParser.MethodprotoformalContext formal : moduleproto.methodprotoformals().methodprotoformal()) {
 		String typeName = bsvTypeToKami(formal.bsvtype());
-                if (formal.name != null)
-                    printstream.println(String.format("    Variable %s: %s.", formal.name.getText(), typeName));
+                if (formal.name != null) {
+		    String formalName = formal.name.getText();
+		    formalNames.add(formalName);
+                    printstream.println(String.format("    Variable %s: %s.", formalName, typeName));
+		}
             }
         }
 
@@ -410,6 +422,16 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	if (hasProvisos) {
 	    for (BSVParser.ProvisoContext proviso: moduleproto.provisos().proviso()) {
 		// emit Variable declaration for free variable in proviso
+		for (BSVParser.BsvtypeContext bsvtype: proviso.bsvtype()) {
+		    String typeVariable = bsvtype.getText();
+		    if (!freeTypeVariables.containsKey(typeVariable)) {
+			printstream.println(String.format("    Variable %s: %s.", typeVariable, "nat"));
+			freeTypeVariables.put(typeVariable, typeVisitor.visit(bsvtype));
+		    }
+		}
+		String constraint = visit(proviso);
+		if (constraint != null)
+		    printstream.println(String.format("    %s", constraint));
 		// emit hypothesis for proviso
 	    }
 	}
@@ -1125,6 +1147,26 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	statements.add(statement.toString());
         return null;
+    }
+
+    @Override public String visitProviso(BSVParser.ProvisoContext ctx) {
+	String name = ctx.var.getText();
+	ArrayList<String> params = new ArrayList<>();
+	for (BSVParser.BsvtypeContext bsvtype: ctx.bsvtype()) {
+	    //FIXME: Not handling TAdd#, etc...
+	    params.add(bsvtype.getText());
+	}
+	logger.info(String.format("proviso name=%s", name));
+
+	if (mSizeRelationshipProvisos.containsKey(name)) {
+	    return String.format("Hypothesis H%s: (%s = %s %s %s)%%nat.",
+				 name,
+				 params.get(2),
+				 params.get(0),
+				 mSizeRelationshipProvisos.get(name),
+				 params.get(1));
+	}
+	return null;
     }
 
     @Override public String visitBinopexpr(BSVParser.BinopexprContext expr) {
