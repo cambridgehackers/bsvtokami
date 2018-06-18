@@ -498,9 +498,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
 
         printstream.print(String.format("    Definition %1$s := Build_%2$s ", moduleName, interfaceName));
-        for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
-	    printstream.print(String.format("%s ", entry.getKey()));
+	for (BSVType param: moduleType.params.get(0).params) {
+	    printstream.print(String.format("(%s) ", bsvTypeToKami(param)));
 	}
+        //for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
+	//    printstream.print(String.format("%s ", entry.getKey()));
+	//}
         if (instances.size() > 0)
             printstream.print(String.format("(%1$sInstances ++ ",
                                             moduleName));
