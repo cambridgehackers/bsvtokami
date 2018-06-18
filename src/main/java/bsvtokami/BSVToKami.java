@@ -502,8 +502,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    methodNames.append(String.format(" (instancePrefix--\"%s\")", methodName));
 	}
 
+	BSVType moduleReturnType = moduleType.name.equals("Module")
+	    ? moduleType.params.get(0)
+	    : moduleType.params.get(1).params.get(0);
+
+	printstream.println(String.format("(* Module %s type %s return type %s *)",
+					  moduleName, moduleType, moduleReturnType));
         printstream.print(String.format("    Definition %1$s := Build_%2$s ", moduleName, interfaceName));
-	for (BSVType param: moduleType.params.get(0).params) {
+	for (BSVType param: moduleReturnType.params) {
 	    printstream.print(String.format("(%s) ", bsvTypeToKami(param)));
 	}
         //for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
