@@ -413,6 +413,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		String typeName = bsvTypeToKami(formal.bsvtype());
 		if (bsvType.name.equals("Reg"))
 		    typeName = "string";
+		if (bsvType.isVar)
+		    typeName = String.format("ConstT %s", typeName);
                 if (formal.name != null) {
 		    String formalName = formal.name.getText();
 		    formalNames.add(formalName);
@@ -1308,6 +1310,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 SymbolTableEntry entry = scope.lookup(varName);
 		String prefix = "#";
 		char firstChar = varName.charAt(0);
+		if (entry.symbolType == SymbolType.ModuleParam
+		    && entry.type.isVar)
+		    prefix = "$$";
 		if (entry.type.name.equals("Integer"))
 		    prefix = "$";
 		else if (firstChar >= 'A' && firstChar <= 'Z')

@@ -431,12 +431,14 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
                 if (formal.bsvtype() != null) {
                     BSVType bsvtype = typeVisitor.visit(formal.bsvtype());
                     String name = formal.name.getText();
-                    symbolTable.bind(name, bsvtype);
+                    symbolTable.bind(name, bsvtype)
+			.setSymbolType(SymbolType.ModuleParam);
                 } else {
                     assert formal.functionproto() != null;
                     BSVType bsvtype = typeVisitor.visit(formal.functionproto());
                     String name = formal.functionproto().name.getText();
-                    symbolTable.bind(name, bsvtype);
+                    symbolTable.bind(name, bsvtype)
+			.setSymbolType(SymbolType.ModuleParam);
                 }
             }
         }
