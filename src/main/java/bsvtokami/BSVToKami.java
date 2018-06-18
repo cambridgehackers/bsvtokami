@@ -409,7 +409,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	ArrayList<String> formalNames = new ArrayList<>();
         if (moduleproto.methodprotoformals() != null) {
             for (BSVParser.MethodprotoformalContext formal : moduleproto.methodprotoformals().methodprotoformal()) {
+		BSVType bsvType = typeVisitor.visit(formal.bsvtype());
 		String typeName = bsvTypeToKami(formal.bsvtype());
+		if (bsvType.name.equals("Reg"))
+		    typeName = "string";
                 if (formal.name != null) {
 		    String formalName = formal.name.getText();
 		    formalNames.add(formalName);
