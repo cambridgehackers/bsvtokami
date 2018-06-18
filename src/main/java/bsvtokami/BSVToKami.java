@@ -95,11 +95,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	TreeMap<String,BSVType> freeTypeVariables = interfaceType.getFreeVariables();
 
 	StringBuilder paramsStringBuilder = new StringBuilder();
-        for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
-	    BSVType freeType = entry.getValue();
+        for (BSVType freeType: interfaceType.params) {
 	    logger.fine("Ifc decl: Free type variable " + freeType + (freeType.numeric ? " nat" : " interface type"));
 	    paramsStringBuilder.append(String.format(" (%s : %s)",
-						     entry.getKey(),
+						     freeType.name,
 						     (freeType.numeric ? "nat" : "Kind")));
 	}
 	String paramsString = paramsStringBuilder.toString();
@@ -386,7 +385,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         inv.visit(ctx);
 
         logger.fine("module " + moduleName);
-	printstream.println("Module " + moduleName + ".");
+	printstream.println("Module module'" + moduleName + ".");
         printstream.println("    Section " + sectionName + ".");
         for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
 	    BSVType freeType = entry.getValue();
@@ -440,6 +439,17 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		// emit hypothesis for proviso
 	    }
 	}
+        String stmtPrefix = "    ";
+        for (BSVParser.ModulestmtContext modulestmt: ctx.modulestmt()) {
+            printstream.print(stmtPrefix);
+            visit(modulestmt);
+        }
+	if (letBindings.size() > 0) {
+	    for (String letBinding: letBindings) {
+		printstream.println(String.format("       Let %s.", letBinding));
+	    }
+	}
+
         for (Map.Entry<String,TreeSet<SymbolTableEntry>> entry: inv.methodsUsed.entrySet()) {
             String instanceName = entry.getKey();
             TreeSet<SymbolTableEntry> methods = entry.getValue();
@@ -461,16 +471,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
             }
         }
 
-        String stmtPrefix = "    ";
-        for (BSVParser.ModulestmtContext modulestmt: ctx.modulestmt()) {
-            printstream.print(stmtPrefix);
-            visit(modulestmt);
-        }
-	if (letBindings.size() > 0) {
-	    for (String letBinding: letBindings) {
-		printstream.println(String.format("       Let %s.", letBinding));
-	    }
-	}
         printstream.println("    Definition " + moduleName + "Module: Modules"
 			    + (hasProvisos ? "." : " :="));
 	printstream.println(String.format("        %s (BKMODULE {", (hasProvisos ? "refine " : "")));
@@ -526,7 +526,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	printstream.println(".");
 
         printstream.println("    End " + sectionName + ".");
-        printstream.println("End " + moduleName + ".");
+        printstream.println("End module'" + moduleName + ".");
+	printstream.println("");
+        printstream.println("Definition " + moduleName + " := module'" + moduleName + "." + moduleName + ".");
 	printstream.println("");
         scope = scopes.popScope();
         moduleDef = null;
