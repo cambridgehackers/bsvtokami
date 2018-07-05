@@ -1513,10 +1513,17 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     String bsvTypeSize(BSVType bsvtype, ParserRuleContext ctx) {
+	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
+	typeVisitor.pushScope(scope);
+	//BSVType dereftype = typeVisitor.dereferenceTypedef(bsvtype);
+        //System.err.println(String.format("bsvtype %s dereftype %s at %s", bsvtype, dereftype, StaticAnalysis.sourceLocation(ctx)));
+	//bsvtype = dereftype;
 	if (bsvtype.name.equals("Reg")) {
 	    assert bsvtype.params != null;
 	    assert bsvtype.params.size() == 1;
-	    return bsvTypeSize(bsvtype.params.get(0), ctx);
+	    BSVType dereftype = typeVisitor.dereferenceTypedef(bsvtype.params.get(0));
+	    System.err.println(String.format("bsvtype %s dereftype %s at %s", bsvtype.params.get(0), dereftype, StaticAnalysis.sourceLocation(ctx)));
+	    return bsvTypeSize(dereftype, ctx);
 	} else if (bsvtype.name.equals("TAdd")) {
 	    return String.format("%s + %s",
 				 bsvTypeSize(bsvtype.params.get(0), ctx),
