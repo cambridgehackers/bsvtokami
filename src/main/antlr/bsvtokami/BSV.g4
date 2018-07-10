@@ -170,9 +170,10 @@ typelist :
     | '(' typeide (',' typeide)* ')'
     ;
 overloadeddecl :
-    functionproto ';'
+    attributeinstance*
+    ( functionproto ';'
     | moduleproto
-    | vardecl
+    | vardecl )
     ;
 tctype : bsvtype | functionproto ;
 typeclassinstance :
