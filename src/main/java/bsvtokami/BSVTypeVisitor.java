@@ -1187,7 +1187,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         @Override public BSVType visitArraysub(BSVParser.ArraysubContext ctx) {
             BSVType arraytype = visit(ctx.exprprimary());
             assert arraytype != null;
-            assert !arraytype.isVar : arraytype;
+            assert !arraytype.isVar : String.format("Array type is variable at %s",
+						    StaticAnalysis.sourceLocation(ctx));
             if (arraytype.name.equals("Vector"))
                 return arraytype.params.get(1);
             else {

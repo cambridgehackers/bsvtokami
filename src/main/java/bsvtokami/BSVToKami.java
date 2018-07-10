@@ -246,16 +246,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	ArrayList<TagValue> tagsAndValues = new ArrayList<>();
 	long maxValue = 0;
 
+	long tagFrom = 0;
 	for (BSVParser.TypedefenumelementContext elt: ctx.typedefenumelement()) {
             String basetagname = elt.upperCaseIdentifier().getText();
             long tagCount = 1;
             boolean numbered = false;
-            long tagFrom = 0;
 
-            System.err.println(String.format("enum %s from %s to %s",
-                                             basetagname,
-                                             ((elt.from != null) ? elt.from.getText() : ""),
-                                             ((elt.to != null) ? elt.to.getText() : "")));
             if (elt.from != null) {
                 numbered = true;
                 tagCount = Long.parseLong(elt.from.getText());
@@ -265,6 +261,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 }
             }
 
+            System.err.println(String.format("enum %s %s%s%s%s tagCount %d tagFrom %d",
+                                             basetagname,
+					     ((elt.from != null) ? "from " : ""),
+                                             ((elt.from != null) ? elt.from.getText() : ""),
+					     ((elt.to != null) ? " to " : ""),
+                                             ((elt.to != null) ? elt.to.getText() : ""),
+					     tagCount,
+					     tagFrom));
             for (int i = 0; i < tagCount; i++) {
                 String tagname = basetagname;
                 if (numbered) {
@@ -275,11 +279,16 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 assert entry.value != null;
                 IntValue tagValue = (IntValue)entry.value;
                 assert tagValue != null;
-		maxValue = java.lang.Math.max(maxValue, tagValue.value);
-		tagsAndValues.add(new TagValue(tagname, tagValue.value));
+		maxValue = java.lang.Math.max(maxValue, tagFrom + i);
+		tagsAndValues.add(new TagValue(tagname, tagFrom + i));
             }
+	    tagFrom += tagCount;
         }
+	maxValue += 1;
 	long tagSize = (long)java.lang.Math.ceil(java.lang.Math.log(maxValue) / java.lang.Math.log(2.0));
+	System.err.println(String.format("%sFields maxValue=%d log maxValue %f tagSize=%d at %s",
+					 typeName, maxValue, java.lang.Math.log(maxValue), tagSize,
+					 StaticAnalysis.sourceLocation(ctx)));
         printstream.println(String.format("Definition %sFields := (STRUCT { \"$tag\" :: (Bit %d) }).", typeName, tagSize));
         printstream.println(String.format("Definition %s := (Struct %sFields).", typeName, typeName));
 
@@ -1175,12 +1184,22 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	logger.info(String.format("proviso name=%s", name));
 
 	if (mSizeRelationshipProvisos.containsKey(name)) {
-	    return String.format("Hypothesis H%s: (%s = %s %s %s)%%nat.",
-				 name,
-				 params.get(2),
-				 params.get(0),
-				 mSizeRelationshipProvisos.get(name),
-				 params.get(1));
+	    assert params.size() >= 2 : String.format("Unexpected proviso %s %d params %s at %s",
+						      name, params.size(), params,
+						      StaticAnalysis.sourceLocation(ctx));
+	    if (params.size() == 3)
+		return String.format("Hypothesis H%s: (%s = %s %s %s)%%nat.",
+				     name,
+				     params.get(2),
+				     params.get(0),
+				     mSizeRelationshipProvisos.get(name),
+				     params.get(1));
+	    else
+		return String.format("Hypothesis H%s: (%s = %s %s)%%nat.",
+				     name,
+				     params.get(1),
+				     mSizeRelationshipProvisos.get(name),
+				     params.get(0));
 	}
 	return null;
     }

@@ -46,7 +46,10 @@ class IntValue extends Value {
 	    String widthspec = m.group(1);
 	    String basespec = m.group(2);
 	    int base = 10;
-	    if (basespec.equals("b")) {
+	    assert widthspec != null : "Null widthspec: " + x;
+	    if (basespec == null) {
+		base = 10;
+	    } else if (basespec.equals("b")) {
 		base = 2;
 	    } else if (basespec.equals("o")) {
 		base = 8;
