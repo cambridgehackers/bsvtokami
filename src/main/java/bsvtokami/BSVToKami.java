@@ -459,23 +459,21 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    }
 	}
 
-        for (Map.Entry<String,TreeSet<SymbolTableEntry>> entry: inv.methodsUsed.entrySet()) {
-            String instanceName = entry.getKey();
-            TreeSet<SymbolTableEntry> methods = entry.getValue();
-            for (SymbolTableEntry methodEntry: methods) {
-                String method = methodEntry.name;
-                BSVType methodType = methodEntry.type;
+        for (Map.Entry<String,TreeSet<InstanceEntry>> iter: inv.methodsUsed.entrySet()) {
+            String instanceName = iter.getKey();
+            TreeSet<InstanceEntry> methods = iter.getValue();
+            for (InstanceEntry methodEntry: methods) {
+                String method = methodEntry.methodName;
+                BSVType methodType = methodEntry.methodType;
 		if (methodType.name.equals("Function"))  {
-		    assert methodType.params.size() == 2: "Unhandled method " + method + " has type " + methodType + " from interface " + ((methodEntry.parent != null) ? methodEntry.parent.name : "<unknown>");
+		    assert methodType.params.size() == 2: "Unhandled method " + method + " has type " + methodType + " from interface " + methodEntry.interfaceName;
 		    BSVType argType = methodType.params.get(0);
 		    BSVType returnType = methodType.params.get(1);
-		    SymbolTableEntry methodInterfaceEntry = methodEntry.parent;
-		    assert methodInterfaceEntry != null;
-		    String methodInterfaceName = methodInterfaceEntry.name;
+		    String methodInterfaceName = methodEntry.interfaceName;
 		    printstream.println(String.format("    Let %1$s%2$s := MethodSig (%5$s'%2$s %1$s) (%3$s) : %4$s.",
 						      instanceName, method, bsvTypeToKami(argType), bsvTypeToKami(returnType), methodInterfaceName));
 		} else {
-		    printstream.println(String.format("(* FIXME: interface %s subinterface %s *)", methodEntry.parent.name, method));
+		    printstream.println(String.format("(* FIXME: interface %s subinterface %s *)", methodEntry.interfaceName, method));
 		}
             }
         }

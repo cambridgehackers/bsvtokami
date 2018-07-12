@@ -345,12 +345,12 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     @Override public Void visitTypeclassdecl(BSVParser.TypeclassdeclContext ctx) {
         if (!declOnly)
             return null;
+	if (ctx.provisos() != null)
+	    visit(ctx.provisos());
         for (BSVParser.OverloadeddeclContext def : ctx.overloadeddecl()) {
             BSVParser.FunctionprotoContext functionproto = def.functionproto();
             BSVParser.ModuleprotoContext moduleproto = def.moduleproto();
             BSVParser.VardeclContext vardecl = def.vardecl();
-            if (ctx.provisos() != null)
-                visit(ctx.provisos());
             if (functionproto != null)
                 visit(functionproto);
             if (moduleproto != null)
