@@ -1478,14 +1478,16 @@ public class BSVToKami extends BSVBaseVisitor<String>
             kamitype = "Void";
         if (kamitype.equals("Integer"))
             kamitype = "nat";
-            if (kamitype.equals("Bit") && !inModule)
-                kamitype = "word";
-            else if (kamitype.equals("Bool") && !inModule)
-                kamitype = "bool";
-            else if (kamitype.equals("Integer"))
-                kamitype = "nat";
-            else if (kamitype.equals("Action"))
-                kamitype = "Void";
+	if (kamitype.equals("Bit") && !inModule)
+	    kamitype = "Bit";
+	else if (kamitype.equals("Bool") && !inModule)
+	    kamitype = "bool";
+	else if (kamitype.equals("Integer"))
+	    kamitype = "nat";
+	else if (kamitype.equals("Action"))
+	    kamitype = "Void";
+	else if (kamitype.equals("void"))
+	    kamitype = "Void";
 	return kamitype;
     }
     public String bsvTypeToKami(BSVType t, int level) {
