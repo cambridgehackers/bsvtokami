@@ -1544,7 +1544,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	if (bsvtype.name.equals("Reg")) {
 	    assert bsvtype.params != null;
 	    assert bsvtype.params.size() == 1;
-	    BSVType dereftype = typeVisitor.dereferenceTypedef(bsvtype.params.get(0));
+	    BSVType elementType = bsvtype.params.get(0);
+	    BSVType dereftype = typeVisitor.dereferenceTypedef(elementType);
+	    if (elementType.params.size() > 0) {
+		dereftype = dereftype.instantiate(dereftype.params, elementType.params);
+	    }
 	    System.err.println(String.format("bsvtype %s dereftype %s at %s", bsvtype.params.get(0), dereftype, StaticAnalysis.sourceLocation(ctx)));
 	    return bsvTypeSize(dereftype, ctx);
 	} else if (bsvtype.name.equals("TAdd")) {
