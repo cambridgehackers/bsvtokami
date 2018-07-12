@@ -678,9 +678,15 @@ public class BSVToKami extends BSVBaseVisitor<String>
             statement.append(String.format("        Call %s <- %s()", varName, calleeInstanceName));
         } else if (!actionContext) {
             BSVParser.CallexprContext call = getCall(ctx.rhs);
-	    String interfaceName = "FIXME'InterfaceName";
 	    assert call != null && call.fcn != null: "Something wrong with " + ctx.rhs.getText() + " at " + StaticAnalysis.sourceLocation(ctx.rhs);
-            letBindings.add(String.format("%s := %s (instancePrefix--\"%s\")", varName, call.fcn.getText(), varName));
+	    String fcnName = call.fcn.getText();
+	    SymbolTableEntry fcnEntry = scope.lookup(fcnName);
+	    BSVType moduleType = fcnEntry.type;
+	    BSVType interfaceType = moduleType.params.get(0);
+	    String interfaceName = interfaceType.name;
+	    System.err.println(String.format("Module instantiation fcn %s type %s interface %s at %s",
+					     fcnName, fcnEntry.type, interfaceType, StaticAnalysis.sourceLocation(ctx.rhs)));
+            letBindings.add(String.format("%s := %s (instancePrefix--\"%s\")", varName, fcnName, varName));
             statement.append(String.format("(BKMod (%s'instance %s :: nil))", interfaceName, varName));
 
             String instanceName = String.format("%s", varName); //FIXME concat methodName
