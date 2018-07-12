@@ -95,6 +95,30 @@ public class BSVType {
 	return Long.parseLong(name);
     }
 
+    BSVType instantiate(List<BSVType> params, List<BSVType> args)
+    {
+	Map<String, BSVType> mappings = new HashMap<>();
+	for (int i = 0; i < params.size(); i++) {
+	    mappings.put(params.get(i).name, args.get(i));
+	}
+	return instantiate(this, mappings);
+    }
+
+    private BSVType instantiate(BSVType t, Map<String, BSVType> mappings) {
+	if (t.isVar) {
+	    if (mappings.containsKey(t.name))
+		return mappings.get(t.name);
+	    else
+		return t;
+	} else {
+	    List<BSVType> instantiatedParams = new ArrayList<>();
+	    for (BSVType param: t.params) {
+		instantiatedParams.add(instantiate(param, mappings));
+	    }
+	    return new BSVType(t.name, instantiatedParams);
+	}
+    }
+
     private BSVType freshrec(BSVType tp, List<BSVType> non_generics, Map<BSVType, BSVType> mappings) {
 	    tp = tp.prune();
 	    if (tp.isVar) {
