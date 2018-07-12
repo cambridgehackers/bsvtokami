@@ -154,7 +154,7 @@ arraydims :
     ('[' expression ']')*
     ;
 typeclassdecl :
-    'typeclass' typeclasside typeformals provisos? typedepends? ';' overloadeddecl* 'endtypeclass' (':' typeclasside)?
+    attributeinstance* 'typeclass' typeclasside typeformals provisos? typedepends? ';' overloadeddecl* 'endtypeclass' (':' typeclasside)?
     ;
 typeclasside :
     upperCaseIdentifier
