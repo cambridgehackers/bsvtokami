@@ -104,7 +104,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	String paramsString = paramsStringBuilder.toString();
 
 	printstream.println(String.format("Record %s%s := {", interfaceName, paramsString));
-	printstream.println(String.format("    %s'interface: Modules;", interfaceName));
+	printstream.println(String.format("    %s'modules: Modules;", interfaceName));
 	for (BSVParser.InterfacememberdeclContext decl: ctx.interfacememberdecl()) {
 	    if (decl.methodproto() != null) {
 		printstream.println(String.format("    %s'%s : string;", interfaceName, decl.methodproto().name.getText()));
@@ -604,7 +604,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 						       lsbWidth,
 						       visit(args.get(0))));
 		    } else {
-			statement.append(String.format("LET %s <- ", varName, visit(rhs)));
+			statement.append(String.format("LET %s <- %s", varName, visit(rhs)));
 		    }
                 } else {
                     statement.append(String.format("        LET %s : %s <- ", varName, bsvTypeToKami(t)));
@@ -687,7 +687,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    System.err.println(String.format("Module instantiation fcn %s type %s interface %s at %s",
 					     fcnName, fcnEntry.type, interfaceType, StaticAnalysis.sourceLocation(ctx.rhs)));
             letBindings.add(String.format("%s := %s (instancePrefix--\"%s\")", varName, fcnName, varName));
-            statement.append(String.format("(BKMod (%s'instance %s :: nil))", interfaceName, varName));
+            statement.append(String.format("(BKMod (%s'modules %s :: nil))", interfaceName, varName));
 
             String instanceName = String.format("%s", varName); //FIXME concat methodName
             entry.instanceName = instanceName;
