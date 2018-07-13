@@ -1367,13 +1367,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
     @Override public String visitArraysub(BSVParser.ArraysubContext ctx) {
 	StringBuilder expression = new StringBuilder();
         expression.append(visit(ctx.array));
-        expression.append("[");
-        expression.append(visit(ctx.expression(0)));
         if (ctx.expression(1) != null) {
-            expression.append(" : ");
-            expression.append(visit(ctx.expression(1)));
-        }
-        expression.append("]");
+	    IntValue msb = new IntValue(ctx.expression(0).getText());
+	    IntValue lsb = new IntValue(ctx.expression(1).getText());
+	    expression.append(String.format("$[%d:%d]@%d",
+					    msb.value, lsb.value, msb.value - lsb.value + 1));
+        } else {
+	    expression.append(String.format("@[%s]", visit(ctx.expression(0))));
+	}
         return expression.toString();
     }
     @Override public String visitLvalue(BSVParser.LvalueContext ctx) {
