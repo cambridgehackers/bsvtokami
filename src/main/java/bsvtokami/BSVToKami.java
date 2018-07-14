@@ -1368,10 +1368,15 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	StringBuilder expression = new StringBuilder();
         expression.append(visit(ctx.array));
         if (ctx.expression(1) != null) {
+	    BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
+	    typeVisitor.pushScope(scope);
+
+	    BSVType exprType = typeVisitor.visit(ctx.array);
+	    String exprWidth = bsvTypeSize(exprType, ctx.array);
 	    IntValue msb = new IntValue(ctx.expression(0).getText());
 	    IntValue lsb = new IntValue(ctx.expression(1).getText());
-	    expression.append(String.format("$[%d:%d]@%d",
-					    msb.value, lsb.value, msb.value - lsb.value + 1));
+	    expression.append(String.format("$[%d:%d]@%s",
+					    msb.value, lsb.value, exprWidth));
         } else {
 	    expression.append(String.format("@[%s]", visit(ctx.expression(0))));
 	}
@@ -1541,14 +1546,17 @@ public class BSVToKami extends BSVBaseVisitor<String>
     String bsvTypeSize(BSVType bsvtype, ParserRuleContext ctx) {
 	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
 	typeVisitor.pushScope(scope);
-	//BSVType dereftype = typeVisitor.dereferenceTypedef(bsvtype);
-        //System.err.println(String.format("bsvtype %s dereftype %s at %s", bsvtype, dereftype, StaticAnalysis.sourceLocation(ctx)));
-	//bsvtype = dereftype;
+	BSVType dereftype = typeVisitor.dereferenceTypedef(bsvtype);
+        System.err.println(String.format("bsvtype %s dereftype %s at %s", bsvtype, dereftype, StaticAnalysis.sourceLocation(ctx)));
+	if (bsvtype.params.size() > 0)
+	    bsvtype = dereftype.instantiate(dereftype.params, bsvtype.params);
+	else
+	    bsvtype = dereftype;
 	if (bsvtype.name.equals("Reg")) {
 	    assert bsvtype.params != null;
 	    assert bsvtype.params.size() == 1;
 	    BSVType elementType = bsvtype.params.get(0);
-	    BSVType dereftype = typeVisitor.dereferenceTypedef(elementType);
+	    dereftype = typeVisitor.dereferenceTypedef(elementType);
 	    if (elementType.params.size() > 0) {
 		dereftype = dereftype.instantiate(dereftype.params, elementType.params);
 	    }
@@ -1572,7 +1580,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    + StaticAnalysis.sourceLocation(ctx);
 	assert bsvtype.params != null;
 	assert bsvtype.params.size() == 1;
-	return bsvtype.params.get(0).toString();
+	BSVType bitsize = bsvtype.params.get(0);
+	bitsize = typeVisitor.dereferenceTypedef(bitsize);
+	return bitsize.toString();
     }
 
     protected String aggregateResult(String aggregate, String nextResult)
