@@ -604,7 +604,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 						       lsbWidth,
 						       visit(args.get(0))));
 		    } else {
-			statement.append(String.format("LET %s <- %s", varName, visit(rhs)));
+			statement.append(String.format("Call %s <- %s", varName, visit(rhs)));
 		    }
                 } else {
                     statement.append(String.format("        LET %s : %s <- ", varName, bsvTypeToKami(t)));
