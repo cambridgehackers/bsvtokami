@@ -1266,10 +1266,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
         expression.append("STRUCT { ");
         int i = 0;
         for (BSVParser.MemberbindContext memberbind : ctx.memberbinds().memberbind()) {
-            expression.append(String.format("\"%s\" ::= ",
-                                            memberbind.field.getText()));
-            expression.append(visit(memberbind.expression()));
-            expression.append(((i == ctx.memberbinds().memberbind().size() - 1) ? " " : "; "));
+            expression.append(String.format("\"%s\" ::= (%s)%s",
+                                            memberbind.field.getText(),
+					    visit(memberbind.expression()),
+					    ((i == ctx.memberbinds().memberbind().size() - 1) ? " " : "; ")));
             i++;
         }
         expression.append(" }");
