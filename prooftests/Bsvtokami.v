@@ -3,7 +3,13 @@ Require Import Kami.Lib.Struct.
 Require Import Bool Arith String Nat ZArith.
 
 Record Empty := {
-    Empty'interface: Modules;
+    Empty'modules: Modules;
+}.
+
+Record Reg (a : Kind) := {
+    Reg'modules: Modules;
+    Reg'_read : string;
+    Reg'_write : string;
 }.
 
 Fixpoint toBinaryP (p: positive) : string :=
