@@ -1350,15 +1350,25 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		    prefix = "";
 
                 logger.fine("found binding " + varName + " " + entry.type);
-                if (entry.type.name.startsWith("Reg"))
+                if (entry.type.name.startsWith("Reg")) {
                     expression.append(prefix + varName + "_v");
-                else
+		} else if (varName.equals("True")) {
+		    expression.append("$$true");
+		} else if (varName.equals("False")) {
+		    expression.append("$$false");
+		} else {
                     expression.append(prefix + varName);
-            } else {
+		}
+            } else if (varName.equals("True")) {
+		expression.append("$$true");
+            } else if (varName.equals("False")) {
+		expression.append("$$false");
+	    } else {
 		char firstChar = varName.charAt(0);
-		if (firstChar >= 'A' && firstChar <= 'Z')
+		if (firstChar >= 'A' && firstChar <= 'Z') {
+		    System.err.println("Capital var " + varName);
 		    expression.append(varName);
-		else
+		} else
 		    expression.append("#" + varName);
             }
         }
