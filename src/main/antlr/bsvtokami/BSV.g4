@@ -80,7 +80,7 @@ interfacememberdecl :
     | subinterfacedecl
     ;
 methodproto :
-    attributeinstance* 'method' bsvtype name=lowerCaseIdentifier ('(' methodprotoformals? ')')? ';'
+    attributeinstance* 'method' bsvtype name=lowerCaseIdentifier ('(' methodprotoformals? ')')? provisos? ';'
     ;
 methodprotoformals :
     methodprotoformal (',' methodprotoformal)*
