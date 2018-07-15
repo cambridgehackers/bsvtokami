@@ -470,8 +470,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		    BSVType argType = methodType.params.get(0);
 		    BSVType returnType = methodType.params.get(1);
 		    String methodInterfaceName = methodEntry.interfaceName;
-		    printstream.println(String.format("    Let %1$s%2$s := MethodSig (%5$s'%2$s %1$s) (%3$s) : %4$s.",
-						      instanceName, method, bsvTypeToKami(argType), bsvTypeToKami(returnType), methodInterfaceName));
+		    printstream.println(String.format("    Let %1$s%2$s : string := (%3$s'%2$s %1$s).",
+						      instanceName, method, methodInterfaceName));
 		} else {
 		    printstream.println(String.format("(* FIXME: interface %s subinterface %s *)", methodEntry.interfaceName, method));
 		}
@@ -604,7 +604,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 						       lsbWidth,
 						       visit(args.get(0))));
 		    } else {
-			statement.append(String.format("Call %s <- %s", varName, visit(rhs)));
+			statement.append(String.format("CallM %s : %s <- %s", varName, bsvTypeToKami(t), visit(rhs)));
 		    }
                 } else {
                     statement.append(String.format("        LET %s : %s <- ", varName, bsvTypeToKami(t)));
@@ -1408,6 +1408,20 @@ public class BSVToKami extends BSVBaseVisitor<String>
     @Override public String visitCallexpr(BSVParser.CallexprContext ctx) {
         InstanceNameVisitor inv = new InstanceNameVisitor(scope);
         String methodName = inv.visit(ctx.fcn);
+	BSVType argType = new BSVType();
+	BSVType resultType = new BSVType();
+	if (inv.methodsUsed.size() > 0) {
+	    System.err.println(String.format("First key %s", inv.methodsUsed.firstKey()));
+	    TreeSet<InstanceEntry> instanceEntries = inv.methodsUsed.get(inv.methodsUsed.firstKey());
+	    InstanceEntry instanceEntry = instanceEntries.first();
+	    System.err.println(String.format("Calling method %s (%s) at %s", methodName, instanceEntry.methodType, StaticAnalysis.sourceLocation(ctx)));
+
+	    BSVType methodType = instanceEntry.methodType;
+	    if (methodType.name.equals("Function")) {
+		argType = methodType.params.get(0);
+		resultType = methodType.params.get(1);
+	    }
+	}
         if (methodName == null)
             methodName = "FIXME$" + ctx.fcn.getText();
         assert methodName != null : "No methodName for " + ctx.fcn.getText();
@@ -1419,7 +1433,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
             String sep = "";
             for (BSVParser.ExpressionContext expr: ctx.expression()) {
                 statement.append(sep);
+		statement.append("(");
                 statement.append(visit(expr));
+		statement.append(") : ");
+		statement.append(bsvTypeToKami(argType));
                 sep = ", ";
             }
             statement.append(")");
