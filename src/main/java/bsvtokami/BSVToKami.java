@@ -1381,7 +1381,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		    prefix = "";
 
                 logger.fine("found binding " + varName + " " + entry.type);
-                if (entry.type.name.startsWith("Reg")) {
+                if (entry.type.name.equals("Reg")) {
                     expression.append(prefix + varName + "_v");
 		} else if (varName.equals("True")) {
 		    expression.append("$$true");
