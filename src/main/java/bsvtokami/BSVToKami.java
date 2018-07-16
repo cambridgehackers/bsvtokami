@@ -1391,6 +1391,19 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
         return expression.toString();
     }
+
+    @Override public String visitFieldexpr(BSVParser.FieldexprContext ctx) {
+	System.err.println(String.format("Visit field expr %s at %s", ctx.getText(), StaticAnalysis.sourceLocation(ctx)));
+	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
+	typeVisitor.pushScope(scope);
+
+	BSVType exprType = typeVisitor.visit(ctx.exprprimary());
+	return String.format("(%s ! %sFields @. \"%s\")",
+			     visit(ctx.exprprimary()),
+			     exprType.name,
+			     ctx.field.getText());
+    }
+
     @Override public String visitArraysub(BSVParser.ArraysubContext ctx) {
 	StringBuilder expression = new StringBuilder();
         expression.append(visit(ctx.array));
