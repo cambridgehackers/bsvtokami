@@ -1241,8 +1241,15 @@ public class BSVToKami extends BSVBaseVisitor<String>
             if (expr.left != null)
                 expression.append(visit(expr.left));
             if (inModule) {
+		String operator = expr.op.getText();
+		if (operator.equals("&"))
+		    operator = "~&";
+		else if (operator.equals("|"))
+		    operator = "~|";
+		else if (operator.equals("^"))
+		    operator = "~+";
                 expression.append(" ");
-                expression.append(expr.op.getText());
+                expression.append(operator);
                 expression.append(" ");
             } else {
                 expression.append(" ");
