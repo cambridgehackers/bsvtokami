@@ -983,10 +983,27 @@ public class BSVToKami extends BSVBaseVisitor<String>
     String destructurePattern(BSVParser.PatternContext pattern, String match, String tagName) {
         if (pattern.taggedunionpattern() != null) {
             BSVParser.TaggedunionpatternContext taggedunionpattern = pattern.taggedunionpattern();
-            if (taggedunionpattern.pattern() != null)
-                return destructurePattern(taggedunionpattern.pattern(),
-					  match,
-					  taggedunionpattern.tag.getText());
+	    tagName = taggedunionpattern.tag.getText();
+	    System.err.println(String.format("Matching %s looking up tag %s for pattern %s in scope %s", match, tagName, pattern.getText(), scope));
+            SymbolTableEntry tagEntry = scope.lookup(tagName);
+	    assert tagEntry != null : String.format("No entry for pattern tag %s at %s", tagName, StaticAnalysis.sourceLocation(pattern));
+	    BSVType tagType = tagEntry.type;
+	    BSVParser.PatternContext pat = taggedunionpattern.pattern();
+            if (pat != null) {
+		if (pat.var != null) {
+		    String fieldName = pat.var.getText();
+		    return String.format("            LET %s <- (#%s!%sFields@.\"%s\");",
+					 fieldName,
+					 match,
+					 bsvTypeToKami(tagType),
+					 ((tagName != null) ? tagName : ""));
+		} else {
+		    //FIXME
+		    return destructurePattern(taggedunionpattern.pattern(),
+					      match,
+					      taggedunionpattern.tag.getText());
+		}
+	    }
 	    else
 		return "";
         } else if (pattern.structpattern() != null) {
