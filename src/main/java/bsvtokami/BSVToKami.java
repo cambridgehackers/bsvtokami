@@ -1480,7 +1480,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    }
 	}
 
-	statement.append("        BKSTMTS {");
+	if (letBindings.size() > 0)
+	    statement.append("        BKSTMTS {");
 	statement.append(newline);
 	String separator = "";
 	String terminator = (actionContext) ? ";" : "";
