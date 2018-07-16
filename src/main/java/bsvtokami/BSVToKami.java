@@ -1225,6 +1225,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	return null;
     }
 
+    @Override public String visitCondexpr(BSVParser.CondexprContext ctx) {
+	return String.format("IF %s then %s else %s",
+			     visit(ctx.expression(0)),
+			     visit(ctx.expression(1)),
+			     visit(ctx.expression(2)));
+    }
+
     @Override public String visitBinopexpr(BSVParser.BinopexprContext expr) {
 	StringBuilder expression = new StringBuilder();
         if (expr.right != null) {
