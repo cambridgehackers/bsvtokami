@@ -1555,17 +1555,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	StringBuilder statement = new StringBuilder();
         if (methodName != null) {
             // "Call" is up where the binding is, hopefully
-            statement.append(String.format(" %s(", methodName));
-            String sep = "";
+            statement.append(String.format(" %s", methodName));
             for (BSVParser.ExpressionContext expr: ctx.expression()) {
-                statement.append(sep);
-		statement.append("(");
+		statement.append(" (");
                 statement.append(visit(expr));
-		statement.append(") : ");
+		statement.append(" : ");
 		statement.append(bsvTypeToKami(argType));
-                sep = ", ";
+		statement.append(")");
             }
-            statement.append(")");
         } else {
             logger.fine(String.format("How to call action function {%s}", ctx.fcn.getText()));
         }
