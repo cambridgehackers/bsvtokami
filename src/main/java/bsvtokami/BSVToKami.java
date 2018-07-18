@@ -684,9 +684,15 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    BSVType moduleType = fcnEntry.type;
 	    BSVType interfaceType = moduleType.params.get(0);
 	    String interfaceName = interfaceType.name;
+	    StringBuilder typeParameters = new StringBuilder();
+	    for (BSVType typeParam : interfaceType.params) {
+		typeParameters.append(" ");
+		typeParameters.append(bsvTypeToKami(typeParam));
+	    }
 	    System.err.println(String.format("Module instantiation fcn %s type %s interface %s at %s",
 					     fcnName, fcnEntry.type, interfaceType, StaticAnalysis.sourceLocation(ctx.rhs)));
-            letBindings.add(String.format("%s := %s (instancePrefix--\"%s\")", varName, fcnName, varName));
+            letBindings.add(String.format("%s := %s%s (instancePrefix--\"%s\")",
+					  varName, fcnName, typeParameters.toString(), varName));
             statement.append(String.format("(BKMod (%s'modules %s :: nil))", interfaceName, varName));
 
             String instanceName = String.format("%s", varName); //FIXME concat methodName
