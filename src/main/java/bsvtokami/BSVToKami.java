@@ -990,7 +990,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
         if (pattern.taggedunionpattern() != null) {
             BSVParser.TaggedunionpatternContext taggedunionpattern = pattern.taggedunionpattern();
 	    tagName = taggedunionpattern.tag.getText();
-	    System.err.println(String.format("Matching %s looking up tag %s for pattern %s in scope %s", match, tagName, pattern.getText(), scope));
+	    System.err.println(String.format("Matching %s looking up tag %s for pattern %s at %s", match, tagName, pattern.getText(),
+					     StaticAnalysis.sourceLocation(pattern)));
             SymbolTableEntry tagEntry = scope.lookup(tagName);
 	    assert tagEntry != null : String.format("No entry for pattern tag %s at %s", tagName, StaticAnalysis.sourceLocation(pattern));
 	    BSVType tagType = tagEntry.type;
@@ -1004,14 +1005,17 @@ public class BSVToKami extends BSVBaseVisitor<String>
 					 bsvTypeToKami(tagType),
 					 ((tagName != null) ? tagName : ""));
 		} else {
-		    //FIXME
-		    return destructurePattern(taggedunionpattern.pattern(),
+		    return "(* FIXME tagged union pattern *)" +
+			destructurePattern(taggedunionpattern.pattern(),
 					      match,
 					      taggedunionpattern.tag.getText());
 		}
 	    }
 	    else
-		return "";
+		return String.format("(#%s!%sFields@.\"%s\")",
+				     match,
+				     bsvTypeToKami(tagType),
+				     ((tagName != null) ? tagName : ""));
         } else if (pattern.structpattern() != null) {
             BSVParser.StructpatternContext structpattern = pattern.structpattern();
             tagName = structpattern.tag.getText();
@@ -1035,15 +1039,26 @@ public class BSVToKami extends BSVBaseVisitor<String>
                                  pattern.lowerCaseIdentifier().getText(),
                                  match,
                                  newline);
-        }
-	return "";
+        } else if (pattern.constantpattern() != null) {
+	    return "(* constantpattern *) " + pattern.getText();
+	} else if (pattern.tuplepattern() != null) {
+	    return "(* tuplepattern *) " + pattern.getText();
+	} else if (pattern.pattern() != null) {
+	    return destructurePattern(pattern.pattern(), match, tagName);
+	}
+	return "(* something went wrong *)";
     }
 
     @Override public String visitCaseexpr(BSVParser.CaseexprContext ctx) {
+
 	ArrayList<String> parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
 	letBindings = new ArrayList<>();
 	statements = new ArrayList<>();
+
+	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
+	typeVisitor.pushScope(scope);
+	BSVType exprType = typeVisitor.visit(ctx.expression());
 
         int branchnum = 0;
 	StringBuilder statement = new StringBuilder();
@@ -1058,14 +1073,23 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    : "Default clause required in case expression at " + StaticAnalysis.sourceLocation(ctx);
 
 	statement.append("(* case expr *)\n");
+
         for (BSVParser.CaseexpritemContext expritem: ctx.caseexpritem()) {
 	    if (itemnum < nitems - 1)
 		statement.append("    (IF (");
-	    if (expritem.pattern() != null) {
+	    if (expritem.pattern() != null && expritem.pattern().taggedunionpattern() != null) {
 		assert expritem.patterncond().size() == 0 : "pattern cond at " + StaticAnalysis.sourceLocation(expritem);
-		statement.append(visit(ctx.expression()));
+		statement.append(String.format("(%s ! %sFields @. \"$tag\")",
+					       visit(ctx.expression()),
+					       exprType.name
+					       ));
 		statement.append(" == ");
-		statement.append(expritem.pattern().getText());
+		String tag = expritem.pattern().taggedunionpattern().tag.getText();
+		SymbolTableEntry tagEntry = scope.lookup(tag);
+		assert tagEntry != null : "Case expr no entry found for tag " + tag;
+		IntValue tagValue = (IntValue)tagEntry.value;
+		statement.append("$");
+		statement.append(tagValue.value);
 	    } else if (expritem.exprprimary().size() > 0) {
 		int exprnum = 0;
 		int nexprs = expritem.exprprimary().size();
