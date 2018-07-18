@@ -1422,8 +1422,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitArraysub(BSVParser.ArraysubContext ctx) {
-	StringBuilder expression = new StringBuilder();
-        expression.append(visit(ctx.array));
         if (ctx.expression(1) != null) {
 	    BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
 	    typeVisitor.pushScope(scope);
@@ -1432,13 +1430,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    String exprWidth = bsvTypeSize(exprType, ctx.array);
 	    IntValue msb = new IntValue(ctx.expression(0).getText());
 	    IntValue lsb = new IntValue(ctx.expression(1).getText());
-	    expression.append(String.format("$[%d:%d]@%s",
-					    msb.value, lsb.value, exprWidth));
+	    return String.format("(%s$[%d:%d]@%s)",
+				 visit(ctx.array),
+				 msb.value, lsb.value, exprWidth);
         } else {
-	    expression.append(String.format("@[%s]", visit(ctx.expression(0))));
+	    return String.format("(%s@[%s])", visit(ctx.array), visit(ctx.expression(0)));
 	}
-        return expression.toString();
     }
+
     @Override public String visitLvalue(BSVParser.LvalueContext ctx) {
 	StringBuilder expression = new StringBuilder();
         if (ctx.lvalue() != null) {
