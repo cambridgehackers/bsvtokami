@@ -400,7 +400,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    BSVType freeType = entry.getValue();
 	    boolean isNumeric = freeType.numeric;
 	    // FIXME: heuristic
-	    if (freeType.name.endsWith("sz"))
+	    if (freeType.name.endsWith("sz") || freeType.name.equals("xlen"))
 		isNumeric = true;
 	    logger.fine("Module def: Free type variable " + freeType + (isNumeric ? " numeric" : " interface type"));
 
@@ -1034,9 +1034,73 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitCaseexpr(BSVParser.CaseexprContext ctx) {
-        System.err.println("visitCaseexpr");
-        return null;
+	ArrayList<String> parentLetBindings = letBindings;
+	ArrayList<String> parentStatements = statements;
+	letBindings = new ArrayList<>();
+	statements = new ArrayList<>();
+
+        int branchnum = 0;
+	StringBuilder statement = new StringBuilder();
+
+	System.err.println("case expr at " + StaticAnalysis.sourceLocation(ctx));
+
+	int itemnum = 0;
+	int nitems = ctx.caseexpritem().size();
+	assert nitems > 1 : "At least one case item required at " + StaticAnalysis.sourceLocation(ctx);
+	BSVParser.CaseexpritemContext lastitem = ctx.caseexpritem(nitems - 1);
+	assert lastitem.pattern() == null && lastitem.exprprimary().size() == 0
+	    : "Default clause required in case expression at " + StaticAnalysis.sourceLocation(ctx);
+
+	statement.append("(* case expr *)\n");
+        for (BSVParser.CaseexpritemContext expritem: ctx.caseexpritem()) {
+	    if (itemnum < nitems - 1)
+		statement.append("    (IF (");
+	    if (expritem.pattern() != null) {
+		assert expritem.patterncond().size() == 0 : "pattern cond at " + StaticAnalysis.sourceLocation(expritem);
+		statement.append(visit(ctx.expression()));
+		statement.append(" == ");
+		statement.append(expritem.pattern().getText());
+	    } else if (expritem.exprprimary().size() > 0) {
+		int exprnum = 0;
+		int nexprs = expritem.exprprimary().size();
+		for (BSVParser.ExprprimaryContext expr: expritem.exprprimary()) {
+		    if (exprnum > 0)
+			statement.append(" || ");
+		    if (nexprs > 0)
+			statement.append("(");
+		    statement.append(visit(ctx.expression()));
+		    statement.append(" == ");
+		    statement.append(visit(expr));
+		    if (nexprs > 0)
+			statement.append(")");
+		    exprnum++;
+		}
+	    } else {
+		// default
+		statement.append(String.format("(* default %d *)", nitems));
+	    }
+	    if (itemnum < nitems - 1) {
+		statement.append(") then ");
+		statement.append(newline);
+	    }
+	    statement.append(visit(expritem.expression()));
+	    if (itemnum != nitems - 1)
+		statement.append(" else ");
+	    statement.append(newline);
+	    itemnum++;
+	}
+	for (int i = 0; i < nitems - 1; i++) {
+	    statement.append(")");
+	    statement.append(newline);
+	}
+
+	assert letBindings.size() == 0;
+	assert statements.size() == 0;
+	letBindings = parentLetBindings;
+	statements  = parentStatements;
+        return statement.toString();
     }
+
     @Override public String visitCasestmt(BSVParser.CasestmtContext ctx) {
 	ArrayList<String> parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
@@ -1080,7 +1144,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             statement.append(") then (");
 	    statement.append(newline);
             statement.append(destructurePattern(pattern, ctx.expression().getText(), null));
-            assert patitem.patterncond().expression().size() == 0;
+            assert patitem.patterncond().size() == 0;
 
 	    letBindings = new ArrayList<>();
 	    statements = new ArrayList<>();

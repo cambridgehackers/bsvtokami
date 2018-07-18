@@ -720,8 +720,8 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         logger.fine("visit case stmt pat item " + ctx.getText());
         pushScope(ctx, SymbolTable.ScopeType.CaseStmt, ctx.pattern().getText());
         visit(ctx.pattern());
-        for (BSVParser.ExpressionContext expr: ctx.patterncond().expression())
-            visit(expr);
+        for (BSVParser.PatterncondContext patterncond: ctx.patterncond())
+            visit(patterncond.expression());
         visit(ctx.stmt());
         popScope();
         return null;
@@ -847,8 +847,11 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
             pushScope(item, SymbolTable.ScopeType.CaseStmt, "caseexpr");
             if (item.pattern() != null)
                 visit(item.pattern());
-            if (item.patterncond() != null)
-                visit(item.patterncond());
+            if (item.patterncond().size() > 0) {
+		for (BSVParser.PatterncondContext patterncond: item.patterncond()) {
+		    visit(patterncond.expression());
+		}
+	    }
             for (BSVParser.ExprprimaryContext expr: item.exprprimary()) {
                 visit(expr);
             }

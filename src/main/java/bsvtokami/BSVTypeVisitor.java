@@ -832,8 +832,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             matchType = visit(matchExpr);
         BSVType boolType = new BSVType("Bool");
         if (ctx.patterncond() != null) {
-            for (BSVParser.ExpressionContext condExpr : ctx.patterncond().expression()) {
-                BSVType condType = visit(condExpr);
+            for (BSVParser.PatterncondContext patternCond : ctx.patterncond()) {
+                BSVType condType = visit(patternCond.expression());
                 // boolType.unify(condType);
             }
         }
