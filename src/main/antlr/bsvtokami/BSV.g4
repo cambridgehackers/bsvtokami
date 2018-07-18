@@ -292,12 +292,12 @@ expression :
 
 caseexpritem :
     ('default'
-    | (pattern patterncond)
+    | (pattern patterncond*)
     | (exprprimary (',' exprprimary )* )) ':' body=expression ';'
     ;
 
 patterncond :
-    ('&&&' expression)*
+    ('&&&' expression)
     ;
 binopexpr :
        left=binopexpr op=('**' | '**') right=binopexpr
@@ -400,7 +400,7 @@ casestmtitem :
     expression (',' expression)* ':' stmt
     ;
 casestmtpatitem :
-    pattern patterncond ':' stmt
+    pattern patterncond* ':' stmt
     ;
 casestmtdefaultitem :
     'default' (':')? stmt
