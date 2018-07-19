@@ -999,10 +999,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
             if (pat != null) {
 		if (pat.var != null) {
 		    String fieldName = pat.var.getText();
-		    return String.format("            LET %s <- (#%s!%sFields@.\"%s\");",
+		    return String.format("            LET %s <- (#%s!(%sFields%s)@.\"%s\");",
 					 fieldName,
 					 match,
-					 bsvTypeToKami(tagType),
+					 tagType.name,
+					 ((tagType.params.size() > 0) ? String.format(" %s", bsvTypeToKami(tagType.params.get(0))) : ""),
 					 ((tagName != null) ? tagName : ""));
 		} else {
 		    return "(* FIXME tagged union pattern *)" +
@@ -1079,9 +1080,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		statement.append("    (IF (");
 	    if (expritem.pattern() != null && expritem.pattern().taggedunionpattern() != null) {
 		assert expritem.patterncond().size() == 0 : "pattern cond at " + StaticAnalysis.sourceLocation(expritem);
-		statement.append(String.format("(%s ! %sFields @. \"$tag\")",
+		assert expritem.pattern().taggedunionpattern().pattern() == null
+		    : "Case expr cannot handle tagged union pattern destructuring at " + StaticAnalysis.sourceLocation(expritem.pattern());
+		statement.append(String.format("(%s ! ( %sFields %s) @. \"$tag\")",
 					       visit(ctx.expression()),
-					       exprType.name
+					       exprType.name,
+					       ((exprType.params.size() > 0) ? bsvTypeToKami(exprType.params.get(0)) : "")
 					       ));
 		statement.append(" == ");
 		String tag = expritem.pattern().taggedunionpattern().tag.getText();
@@ -1168,7 +1172,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
             statement.append("    If (");
             statement.append(visit(ctx.expression()));
 	    if (tagName != null)
-		statement.append(String.format("!%sFields@.\"$tag\"", tagType.name));
+		statement.append(String.format("!( %sFields %s)@.\"$tag\"", tagType.name,
+					       ((tagType.params.size() > 0) ? bsvTypeToKami(tagType.params.get(0)) : "")
+					       ));
             statement.append(" == ");
             statement.append(String.format("$%d", tagValue.value));
             statement.append(") then (");
