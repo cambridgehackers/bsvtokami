@@ -1012,11 +1012,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 					      taggedunionpattern.tag.getText());
 		}
 	    }
-	    else
-		return String.format("(#%s!%sFields@.\"%s\")",
-				     match,
-				     bsvTypeToKami(tagType),
-				     ((tagName != null) ? tagName : ""));
+	    else {
+		// nothing to fetch from the struct representing the tagged union
+		return "";
+	    }
         } else if (pattern.structpattern() != null) {
             BSVParser.StructpatternContext structpattern = pattern.structpattern();
             tagName = structpattern.tag.getText();
@@ -1043,7 +1042,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         } else if (pattern.constantpattern() != null) {
 	    return "(* constantpattern " + pattern.getText() + " *)";
 	} else if (pattern.tuplepattern() != null) {
-	    return "(* tuplepattern *) " + pattern.getText();
+	    return "(* tuplepattern " + pattern.getText() + " *)";
 	} else if (pattern.pattern() != null) {
 	    return destructurePattern(pattern.pattern(), match, tagName);
 	}
