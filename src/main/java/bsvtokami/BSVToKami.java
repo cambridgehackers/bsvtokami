@@ -103,16 +103,17 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
 	String paramsString = paramsStringBuilder.toString();
 
-	printstream.println(String.format("Record %s%s := {", interfaceName, paramsString));
+	printstream.println(String.format("Record %s := {", interfaceName));
 	printstream.println(String.format("    %s'modules: Modules;", interfaceName));
 	for (BSVParser.InterfacememberdeclContext decl: ctx.interfacememberdecl()) {
 	    if (decl.methodproto() != null) {
 		printstream.println(String.format("    %s'%s : string;", interfaceName, decl.methodproto().name.getText()));
 	    } else {
+		BSVType subinterfacetype = typeVisitor.visit(decl.subinterfacedecl().bsvtype());
 		String kamiType = bsvTypeToKami(decl.subinterfacedecl().bsvtype());
 		assert kamiType != null;
 		printstream.println(String.format("    %s'%s : %s;",
-						  interfaceName, decl.subinterfacedecl().lowerCaseIdentifier().getText(), kamiType));
+						  interfaceName, decl.subinterfacedecl().lowerCaseIdentifier().getText(), subinterfacetype.name));
 	    }
 	}
 	printstream.println(String.format("}."));
@@ -516,12 +517,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	printstream.println(String.format("(* Module %s type %s return type %s *)",
 					  moduleName, moduleType, moduleReturnType));
         printstream.print(String.format("    Definition %1$s := Build_%2$s ", moduleName, interfaceName));
-	for (BSVType param: moduleReturnType.params) {
-	    printstream.print(String.format("(%s) ", bsvTypeToKami(param)));
-	}
-        //for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
-	//    printstream.print(String.format("%s ", entry.getKey()));
-	//}
+
         if (instances.size() > 0)
             printstream.print(String.format("(%1$sInstances ++ ",
                                             moduleName));
@@ -691,8 +687,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    }
 	    System.err.println(String.format("Module instantiation fcn %s type %s interface %s at %s",
 					     fcnName, fcnEntry.type, interfaceType, StaticAnalysis.sourceLocation(ctx.rhs)));
-            letBindings.add(String.format("%s := %s%s (instancePrefix--\"%s\")",
-					  varName, fcnName, typeParameters.toString(), varName));
+            letBindings.add(String.format("%s := %s (instancePrefix--\"%s\")",
+					  varName, fcnName, varName));
             statement.append(String.format("(BKMod (%s'modules %s :: nil))", interfaceName, varName));
 
             String instanceName = String.format("%s", varName); //FIXME concat methodName
