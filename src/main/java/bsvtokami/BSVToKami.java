@@ -1041,7 +1041,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
                                  match,
                                  newline);
         } else if (pattern.constantpattern() != null) {
-	    return "(* constantpattern *) " + pattern.getText();
+	    return "(* constantpattern " + pattern.getText() + " *)";
 	} else if (pattern.tuplepattern() != null) {
 	    return "(* tuplepattern *) " + pattern.getText();
 	} else if (pattern.pattern() != null) {
