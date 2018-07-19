@@ -1629,13 +1629,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	if (letBindings.size() > 0)
 	    statement.append("        BKSTMTS {");
 	statement.append(newline);
-	String separator = "";
-	String terminator = (actionContext) ? ";" : "";
-	for (String substatement: statements) {
-	    statement.append(String.format("        %s%s%s%s", separator, substatement, terminator, newline));
-	    if (!actionContext)
-		separator = "with ";
-	}
+	String separator = (actionContext) ? (";" + newline + "        ") : (newline + "        with ");
+	statement.append(String.join(separator, statements));
 
 	if (letBindings.size() != 0) {
 	    statement.append("        }");
