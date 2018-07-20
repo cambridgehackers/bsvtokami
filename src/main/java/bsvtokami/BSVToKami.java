@@ -1403,8 +1403,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
     @Override public String visitTaggedunionexpr(BSVParser.TaggedunionexprContext ctx) {
 	StringBuilder expression = new StringBuilder();
-        expression.append("STRUCT { ");
         String tagName = ctx.tag.getText();
+        expression.append(String.format("(* tagged union %s *) STRUCT { ", tagName));
         SymbolTableEntry tagEntry = scope.lookup(tagName);
         assert tagEntry != null;
         BSVType tagtype = tagEntry.type;
@@ -1419,9 +1419,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
         visitedFields.add("$tag");
         for (Map.Entry<String,SymbolTableEntry> iterator: typedefEntry.mappings.bindings.entrySet()) {
             String fieldName = iterator.getKey();
-
             if (ctx.exprprimary() != null) {
-                if (!visitedFields.contains(tagName)) {
+                if (fieldName.equals(tagName) && !visitedFields.contains(tagName)) {
                     expression.append(String.format("; \"%s\" ::= ", tagName));
                     expression.append(visit(ctx.exprprimary()));
                     visitedFields.add(tagName);
@@ -1431,7 +1430,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 for (BSVParser.MemberbindContext memberbind : ctx.memberbinds().memberbind()) {
                     String memberfieldname = String.format("%s$%s", tagName, memberbind.field.getText());
                     if (fieldName.equals(memberfieldname) && !visitedFields.contains(memberfieldname)) {
-                        visitedFields.add(memberfieldname);
+                        visitedFields.add(fieldName);
                         expression.append(String.format("; \"%s\" ::= ", memberfieldname));
                         expression.append(visit(memberbind.expression()));
                         i++;
