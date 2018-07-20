@@ -13,6 +13,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
     private static Logger logger = Logger.getGlobal();
     public static String newline = System.getProperty("line.separator");
 
+    private static boolean callRegMethods = true;
+
     private final File ofile;
     private PrintStream printstream;
     private final StaticAnalysis scopes;
@@ -25,7 +27,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     private boolean stmtEmitted;
     private boolean inModule;
     // for modules and rules
-    private ArrayList<String> letBindings;
+    private TreeSet<String> letBindings;
     private ArrayList<String> statements;
     private TreeMap<String,String> mSizeRelationshipProvisos;
 
@@ -130,7 +132,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	// 		fields.add(String.format("    \"%s\" :: %s", formalName, kamiType));
 	// 	    }
 	// 	    printstream.println(String.format("Notation %s'%s'args := STRUCT {", interfaceName, decl.methodproto().name.getText()));
-	// 	    printstream.println(String.join(';' + newline, fields));
+	// 	    printstream.println(String.join(";" + newline, fields));
 	// 	    printstream.println(String.format("}."));
 	// 	}
 	//     }
@@ -369,9 +371,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitModuledef(BSVParser.ModuledefContext ctx) {
-	ArrayList<String> parentLetBindings = letBindings;
+	TreeSet<String> parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
-	letBindings = new ArrayList<>();
+	letBindings = new TreeSet<>();
 	statements = new ArrayList<>();
 
         for (BSVParser.AttributeinstanceContext attrinstance: ctx.attributeinstance()) {
@@ -438,13 +440,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		BSVType bsvType = typeVisitor.visit(formal.bsvtype());
 		String typeName = bsvTypeToKami(formal.bsvtype());
 		if (bsvType.name.equals("Reg"))
-		    typeName = "string";
+		    typeName = (callRegMethods) ? "string" : "Reg";
 		if (bsvType.isVar)
 		    typeName = String.format("ConstT %s", typeName);
                 if (formal.name != null) {
 		    String formalName = formal.name.getText();
 		    formalNames.add(formalName);
-                    printstream.println(String.format("    Variable %s: %s.", formalName, typeName));
+                    printstream.println(String.format("    Variable %s: %s.", formalName, bsvType.name));
 		}
             }
         }
@@ -654,6 +656,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	return null;
     }
     @Override public String visitActionBinding(BSVParser.ActionBindingContext ctx) {
+	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
+	typeVisitor.pushScope(scope);
+
         String typeName = ctx.t.getText();
         String varName = ctx.var.getText();
         BSVParser.ExpressionContext rhs = ctx.rhs;
@@ -667,7 +672,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	StringBuilder statement = new StringBuilder();
 
-        if (typeName.startsWith("Reg")) {
+        if (!callRegMethods && typeName.startsWith("Reg")) {
             BSVType paramtype = bsvtype.params.get(0);
 	    letBindings.add(String.format("%s : string := instancePrefix--\"%s\"", varName, varName));
             statement.append("Register " + varName + " : " + bsvTypeToKami(paramtype)
@@ -689,7 +694,17 @@ public class BSVToKami extends BSVBaseVisitor<String>
             }
 
         } else if (calleeInstanceName != null && actionContext) {
-            statement.append(String.format("        Call %s <- %s()", varName, calleeInstanceName));
+            BSVParser.CallexprContext call = getCall(ctx.rhs);
+	    assert call != null && call.fcn != null: "Something wrong with action context " + ctx.rhs.getText() + " at " + StaticAnalysis.sourceLocation(ctx.rhs);
+
+	    statement.append(String.format("        CallM %s : %s <- %s",
+					   varName, bsvTypeToKami(bsvtype),calleeInstanceName));
+	    for (BSVParser.ExpressionContext arg: call.expression()) {
+		statement.append(String.format(" (%s : %s)",
+					       visit(arg),
+					       bsvTypeToKami(typeVisitor.visit(arg))));
+	    }
+
         } else if (!actionContext) {
             BSVParser.CallexprContext call = getCall(ctx.rhs);
 	    assert call != null && call.fcn != null: "Something wrong with " + ctx.rhs.getText() + " at " + StaticAnalysis.sourceLocation(ctx.rhs);
@@ -730,9 +745,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitRuledef(BSVParser.RuledefContext ruledef) {
-	ArrayList<String> parentLetBindings = letBindings;
+	TreeSet<String> parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
-	letBindings = new ArrayList<>();
+	letBindings = new TreeSet<>();
 	statements = new ArrayList<>();
 
         boolean outerContext = actionContext;
@@ -757,7 +772,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
         statement.append("Rule instancePrefix--\"" + ruleName + "\" :=\n");
         for (Map.Entry<String,BSVType> entry: regReadVisitor.regs.entrySet()) {
             String regName = entry.getKey();
-            statement.append("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- " + regName + ";\n");
+	    if (callRegMethods) {
+		letBindings.add(String.format("%s_read : string := (Reg'_read %s)", regName, regName));
+		statement.append(String.format("        CallM %s_v : %s <- %s_read();\n",
+					       regName, bsvTypeToKami(entry.getValue()), regName));
+	    } else {
+		statement.append("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- " + regName + ";\n");
+	    }
         }
 
         if (rulecond != null) {
@@ -787,9 +808,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitFunctiondef(BSVParser.FunctiondefContext ctx) {
-        ArrayList<String> parentLetBindings = letBindings;
+        TreeSet<String> parentLetBindings = letBindings;
         ArrayList<String> parentStatements = statements;
-        letBindings = new ArrayList<>();
+        letBindings = new TreeSet<>();
         statements = new ArrayList<>();
         scope = scopes.pushScope(ctx);
 
@@ -824,7 +845,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
             for (Map.Entry<String,BSVType> entry: regReadVisitor.regs.entrySet()) {
                 String regName = entry.getKey();
-                printstream.println("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- \"" + regName + "\";");
+		if (callRegMethods) {
+		    letBindings.add(String.format("%s_read : string := (Reg'_read %s)", regName, regName));
+		    printstream.println(String.format("CallM %s_v : %s <- %s_read();\n",
+						   regName, bsvTypeToKami(entry.getValue()), regName));
+		} else {
+		    printstream.println("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- \"" + regName + "\";");
+		}
             }
             for (BSVParser.StmtContext stmt: ctx.stmt())
                 regReadVisitor.visit(stmt);
@@ -850,12 +877,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
     @Override public String visitMethoddef(BSVParser.MethoddefContext ctx) {
         boolean outerContext = actionContext;
         actionContext = true;
-	ArrayList<String> parentLetBindings = letBindings;
+	//TreeSet<String> parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
         scope = scopes.pushScope(ctx);
 
-	letBindings = new ArrayList<>();
-	statements = new ArrayList<>();
 	StringBuilder statement = new StringBuilder();
 
         String methodName = ctx.name.getText();
@@ -888,8 +913,18 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         for (Map.Entry<String,BSVType> entry: regReadVisitor.regs.entrySet()) {
             String regName = entry.getKey();
-            statement.append("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- \"" + regName + "\";");
+	    if (callRegMethods) {
+		letBindings.add(String.format("%s_read : string := (Reg'_read %s)", regName, regName));
+		statement.append(String.format("CallM %s_v : %s <- %s_read();\n",
+					       regName, bsvTypeToKami(entry.getValue()), regName));
+	    } else {
+		statement.append("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- \"" + regName + "\";");
+	    }
         }
+
+	//letBindings = new TreeSet<>();
+	statements = new ArrayList<>();
+
         for (BSVParser.StmtContext stmt: ctx.stmt())
             visit(stmt);
 	boolean hasStatements = statements.size() > 0;
@@ -910,7 +945,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         actionContext = outerContext;
 
-	letBindings = parentLetBindings;
+	//letBindings = parentLetBindings;
 	statements  = parentStatements;
 	statements.add(statement.toString());
         scope = scopes.popScope();
@@ -918,19 +953,36 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitRegwrite(BSVParser.RegwriteContext regwrite) {
-	StringBuilder statement = new StringBuilder();
-        statement.append("        Write ");
-        statement.append(visit(regwrite.lhs));
-        String regName = regwrite.lhs.getText();
-        SymbolTableEntry entry = scope.lookup(regName);
-        if (entry != null) {
-            statement.append(" : ");
-            statement.append(bsvTypeToKami(entry.type.params.get(0)));
-        }
-        statement.append(" <- ");
-        statement.append(visit(regwrite.rhs));
+	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
+	typeVisitor.pushScope(scope);
 
-	statements.add(statement.toString());
+	StringBuilder statement = new StringBuilder();
+	BSVParser.ExpressionContext rhs = regwrite.rhs;
+	BSVType rhsType = typeVisitor.visit(rhs);
+
+	if (callRegMethods) {
+	    String regName = regwrite.lhs.getText();
+	    letBindings.add(String.format("%1$s_write : string := (Reg'_write %1$s)",
+					  regName));
+	    statement.append(String.format("        CallM %s_write ( %s : %s )",
+					   regName,
+					   visit(rhs),
+					   bsvTypeToKami(rhsType)));
+	    statements.add(statement.toString());
+	} else {
+	    statement.append("        Write ");
+	    statement.append(visit(regwrite.lhs));
+	    String regName = regwrite.lhs.getText();
+	    SymbolTableEntry entry = scope.lookup(regName);
+	    if (entry != null) {
+		statement.append(" : ");
+		statement.append(bsvTypeToKami(entry.type.params.get(0)));
+	    }
+	    statement.append(" <- ");
+	    statement.append(visit(regwrite.rhs));
+
+	    statements.add(statement.toString());
+	}
         return null;
     }
 
@@ -964,13 +1016,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     @Override
     public String visitIfstmt(BSVParser.IfstmtContext ctx) {
-	ArrayList<String> parentLetBindings = letBindings;
+	TreeSet<String> parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
-	letBindings = new ArrayList<>();
+	letBindings = new TreeSet<>();
 	statements = new ArrayList<>();
 
         visit(ctx.stmt(0));
-	assert(letBindings.size() == 0);
+	assert(letBindings.size() == 0) : "Unexpected let bindings:\n" + String.join("\n", letBindings);
 
 	StringBuilder statement = new StringBuilder();
         statement.append("        If ");
@@ -983,7 +1035,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         if (ctx.stmt(1) != null) {
             statement.append(newline);
             statement.append("        else ");
-	    letBindings = new ArrayList<>();
+	    letBindings = new TreeSet<>();
 	    statements = new ArrayList<>();
             visit(ctx.stmt(1));
 	    assert(letBindings.size() == 0);
@@ -1065,9 +1117,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     @Override public String visitCaseexpr(BSVParser.CaseexprContext ctx) {
 
-	ArrayList<String> parentLetBindings = letBindings;
+	TreeSet<String> parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
-	letBindings = new ArrayList<>();
+	letBindings = new TreeSet<>();
 	statements = new ArrayList<>();
 
 	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
@@ -1149,9 +1201,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitCasestmt(BSVParser.CasestmtContext ctx) {
-	ArrayList<String> parentLetBindings = letBindings;
+	TreeSet<String> parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
-	letBindings = new ArrayList<>();
+	letBindings = new TreeSet<>();
 	statements = new ArrayList<>();
 
 	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
@@ -1199,7 +1251,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             statement.append(destructurePattern(pattern, ctx.expression().getText(), null));
             assert patitem.patterncond().size() == 0;
 
-	    letBindings = new ArrayList<>();
+	    letBindings = new TreeSet<>();
 	    statements = new ArrayList<>();
             visit(patitem.stmt());
 	    assert(letBindings.size() == 0);
@@ -1216,7 +1268,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	assert ctx.casestmtdefaultitem() != null : "default clause required at " + StaticAnalysis.sourceLocation(ctx);
 	{
-	    letBindings = new ArrayList<>();
+	    letBindings = new TreeSet<>();
 	    statements = new ArrayList<>();
             visit(ctx.casestmtdefaultitem().stmt());
 	    assert(letBindings.size() == 0);
@@ -1243,7 +1295,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitForstmt(BSVParser.ForstmtContext ctx) {
-	ArrayList<String> parentLetBindings = letBindings;
+	TreeSet<String> parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
         scope = scopes.pushScope(ctx);
 
@@ -1289,7 +1341,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         statement.append("          in ConsInBKModule");
 	statement.append(newline);
 
-	letBindings = new ArrayList<>();
+	letBindings = new TreeSet<>();
 	statements = new ArrayList<>();
         visit(ctx.stmt());
 	assert(letBindings.size() == 0);
@@ -1629,12 +1681,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitBeginendblock(BSVParser.BeginendblockContext ctx) {
-	ArrayList<String> parentLetBindings = letBindings;
+	TreeSet<String> parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
 	// rule context
         scope = scopes.pushScope(ctx);
 
-	letBindings = new ArrayList<>();
+	letBindings = new TreeSet<>();
 	statements = new ArrayList<>();
         for (BSVParser.StmtContext stmt: ctx.stmt()) {
             stmtEmitted = true;
