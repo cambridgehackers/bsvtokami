@@ -450,6 +450,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
 
 	boolean hasProvisos = moduleproto.provisos() != null;
+	boolean useAbstractOmega = true || hasProvisos;
 	if (hasProvisos) {
 	    for (BSVParser.ProvisoContext proviso: moduleproto.provisos().proviso()) {
 		// emit Variable declaration for free variable in proviso
@@ -497,8 +498,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
 
         printstream.println("    Definition " + moduleName + "Module: Modules"
-			    + (hasProvisos ? "." : " :="));
-	printstream.println(String.format("        %s (BKMODULE {", (hasProvisos ? "refine " : "")));
+			    + (useAbstractOmega ? "." : " :="));
+	printstream.println(String.format("        %s (BKMODULE {", (useAbstractOmega ? "refine " : "")));
 	if (statements.size() > 0) {
 	    String sep = "    ";
 	    for (String statement: statements) {
@@ -507,7 +508,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    }
 	}
         printstream.print("    })");
-	if (hasProvisos) {
+	if (useAbstractOmega) {
 	    printstream.print("; abstract omega. Qed");
 	}
 	printstream.println(". (* " + ctx.moduleproto().name.getText() + " *)" + "\n");
