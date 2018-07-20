@@ -203,15 +203,24 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         printstream.println(String.format("Definition %sFields%s := (STRUCT {", typeName, constructorParams));
         ArrayList<String> members = new ArrayList<>();
-        for (BSVParser.StructmemberContext member: ctx.structmember()) {
-            assert member.subunion() == null;
-            if (member.bsvtype() != null) {
-                members.add(String.format("    \"%s\" :: %s",
-                                          member.lowerCaseIdentifier().getText(),
-                                          bsvTypeToKami(member.bsvtype())));
-            } else {
-            }
-        }
+	SymbolTableEntry structTypeEntry = scope.lookupType(typeName);
+	assert structTypeEntry != null : "No entry for type name " + typeName;;
+        for (Map.Entry<String,SymbolTableEntry> iterator: structTypeEntry.mappings.bindings.entrySet()) {
+	    String fieldName = iterator.getKey();
+	    // emit them in the order they are stored in the mapping
+	    for (BSVParser.StructmemberContext member: ctx.structmember()) {
+		String memberName = member.lowerCaseIdentifier().getText();
+		if (!memberName.equals(fieldName))
+		    continue;
+		assert member.subunion() == null;
+		if (member.bsvtype() != null) {
+		    members.add(String.format("    \"%s\" :: %s",
+					      memberName,
+					      bsvTypeToKami(member.bsvtype())));
+		} else {
+		}
+	    }
+	}
         printstream.print(String.join(";\n", members));
         printstream.println("}).");
         printstream.println(String.format("Definition %s %s := Struct (%sFields%s).", typeName, constructorParams, typeName, params));
@@ -331,18 +340,26 @@ public class BSVToKami extends BSVBaseVisitor<String>
         printstream.println(String.format("Definition %sFields%s := (STRUCT {", typeName, constructorParams));
         ArrayList<String> members = new ArrayList<>();
         members.add(String.format("    \"$tag\" :: (Bit 8)"));
-        for (BSVParser.UnionmemberContext member: ctx.unionmember()) {
-            assert member.subunion() == null;
-            if (member.bsvtype() != null) {
-                members.add(String.format("    \"%s\" :: %s",
-                                          member.upperCaseIdentifier().getText(),
-                                          bsvTypeToKami(member.bsvtype())));
-            } else if (member.substruct() != null) {
-                String memberName = member.upperCaseIdentifier().getText();
-                declareSubstruct(members, memberName, member.substruct());
-            } else {
-            }
-        }
+	SymbolTableEntry typeEntry = scope.lookupType(typeName);
+	assert typeEntry != null;
+        for (Map.Entry<String,SymbolTableEntry> iterator: typeEntry.mappings.bindings.entrySet()) {
+	    String fieldName = iterator.getKey();
+
+	    for (BSVParser.UnionmemberContext member: ctx.unionmember()) {
+		String memberName = member.upperCaseIdentifier().getText();
+		if (!memberName.equals(fieldName))
+		    continue;
+		assert member.subunion() == null;
+		if (member.bsvtype() != null) {
+		    members.add(String.format("    \"%s\" :: %s",
+					      memberName,
+					      bsvTypeToKami(member.bsvtype())));
+		} else if (member.substruct() != null) {
+		    declareSubstruct(members, memberName, member.substruct());
+		} else {
+		}
+	    }
+	}
         printstream.print(String.join(";\n", members));
         printstream.println("}).");
         printstream.println(String.format("Definition %s%s := Struct (%sFields%s).", typeName, constructorParams, typeName, params));
@@ -1136,8 +1153,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	letBindings = new ArrayList<>();
 	statements = new ArrayList<>();
 
+	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
+	typeVisitor.pushScope(scope);
+
         int branchnum = 0;
         logger.fine("visitCasestmt " + ctx.getText());
+	BSVType matchType = typeVisitor.visit(ctx.expression());
 	StringBuilder statement = new StringBuilder();
         for (BSVParser.CasestmtpatitemContext patitem: ctx.casestmtpatitem()) {
             BSVParser.PatternContext pattern = patitem.pattern();
@@ -1168,7 +1189,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             statement.append(visit(ctx.expression()));
 	    if (tagName != null)
 		statement.append(String.format("!( %sFields %s)@.\"$tag\"", tagType.name,
-					       ((tagType.params.size() > 0) ? bsvTypeToKami(tagType.params.get(0)) : "")
+					       ((matchType.params.size() > 0) ? bsvTypeToKami(matchType.params.get(0)) : "")
 					       ));
             statement.append(" == ");
             statement.append(String.format("$%d", tagValue.value));
@@ -1391,13 +1412,23 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	StringBuilder expression = new StringBuilder();
         expression.append("STRUCT { ");
         int i = 0;
-        for (BSVParser.MemberbindContext memberbind : ctx.memberbinds().memberbind()) {
-            expression.append(String.format("\"%s\" ::= (%s)%s",
-                                            memberbind.field.getText(),
-					    visit(memberbind.expression()),
-					    ((i == ctx.memberbinds().memberbind().size() - 1) ? " " : "; ")));
-            i++;
-        }
+	String tagName = ctx.tag.getText();
+	SymbolTableEntry structTypeEntry = scope.lookupType(tagName);
+	assert structTypeEntry != null : String.format("No symbol table entry for type %s at %s",
+						       tagName, StaticAnalysis.sourceLocation(ctx.tag));
+        for (Map.Entry<String,SymbolTableEntry> iterator: structTypeEntry.mappings.bindings.entrySet()) {
+	    String fieldName = iterator.getKey();
+	    for (BSVParser.MemberbindContext memberbind : ctx.memberbinds().memberbind()) {
+		String memberName = memberbind.field.getText();
+		if (!fieldName.equals(memberName))
+		    continue;
+		expression.append(String.format("\"%s\" ::= (%s)%s",
+						memberName,
+						visit(memberbind.expression()),
+						((i == ctx.memberbinds().memberbind().size() - 1) ? " " : "; ")));
+		i++;
+	    }
+	}
         expression.append(" }");
         return expression.toString();
     }
