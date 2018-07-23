@@ -143,6 +143,11 @@ public class BSVType {
 	Map<BSVType,BSVType> mappings = new HashMap<>();
 	return freshrec(this, non_generics, mappings);
     }
+    public BSVType fresh() {
+	List<BSVType> non_generics = new ArrayList<>();
+	Map<BSVType,BSVType> mappings = new HashMap<>();
+	return freshrec(this, non_generics, mappings);
+    }
     public void unify(BSVType t) throws InferenceError {
 	if (skipUnify)
 	    return;
