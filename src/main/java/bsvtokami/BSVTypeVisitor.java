@@ -17,6 +17,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
     private SymbolTable scope;
     private Stack<SymbolTable> scopeStack = new Stack<>();
     private static Logger logger = Logger.getGlobal();
+    private static boolean callUnify = false;
 
     BSVTypeVisitor(StaticAnalysis staticAnalyzer) {
         this.staticAnalyzer = staticAnalyzer;
@@ -39,8 +40,11 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         assert bsvtype != null;
         SymbolTableEntry entry = scope.lookupType(bsvtype.name);
         if (entry != null) {
-            //fixme
-            return entry.type;
+	    //fixme
+	    if (entry.pkgName != null)
+		return entry.type.fresh(new ArrayList<>());
+	    else
+		return entry.type;
         }
         return bsvtype;
     }
@@ -732,7 +736,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                     for (BSVParser.BsvtypeContext param : ctx.bsvtype()) {
                         typeparams.add(visit(param));
                     }
-                    return new BSVType(ctx.typeide().getText(), typeparams);
+                    BSVType bsvtype = new BSVType(ctx.typeide().getText(), typeparams);
+		    return bsvtype;
                 }
             }
         }
@@ -751,11 +756,15 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                     bsvtype = new BSVType(typeide);
                     scope.bindType(typeide, bsvtype);
                 } else {
-                    bsvtype = entry.type;
+		    if (entry.pkgName != null)
+			bsvtype = entry.type.fresh(new ArrayList<>());
+		    else
+			bsvtype = entry.type;
                 }
                 return bsvtype;
             } else {
                 String typeide = ctx.getText(); //FIXME
+		System.err.println("fixme typeide " + ctx.getText());
                 return new BSVType(typeide);
             }
         }
@@ -796,7 +805,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             try {
                 for (BSVParser.CaseexpritemContext item: ctx.caseexpritem()) {
                     BSVType itemtype = visit(item);
-                    returnType.unify(itemtype);
+		    if (callUnify)
+			returnType.unify(itemtype);
                 }
             } catch (InferenceError e) {
                 logger.fine(e.toString());
@@ -812,13 +822,15 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         @Override public BSVType visitCondexpr(BSVParser.CondexprContext ctx) {
             BSVType boolType = new BSVType("Bool");
             BSVType resultType = new BSVType();
-            try {
-                boolType.unify(visit(ctx.expression(0)));
-                resultType.unify(visit(ctx.expression(1)));
-                resultType.unify(visit(ctx.expression(2)));
-            } catch (InferenceError e) {
-                logger.fine(e.toString());
-            }
+	    if (callUnify) {
+		try {
+		    boolType.unify(visit(ctx.expression(0)));
+		    resultType.unify(visit(ctx.expression(1)));
+		    resultType.unify(visit(ctx.expression(2)));
+		} catch (InferenceError e) {
+		    logger.fine(e.toString());
+		}
+	    }
             return resultType;
         }
 
@@ -834,7 +846,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         if (ctx.patterncond() != null) {
             for (BSVParser.PatterncondContext patternCond : ctx.patterncond()) {
                 BSVType condType = visit(patternCond.expression());
-                // boolType.unify(condType);
+		//if (callUnify)
+		//    boolType.unify(condType);
             }
         }
         BSVType bodyType = visit(ctx.body);
@@ -858,12 +871,14 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                                                        ctx.left.getText(), StaticAnalysis.sourceLocation(ctx.left));
                 assert rhstype != null : String.format("Binopexpr rhstype is null for expr %s at %s",
                                                        ctx.right.getText(), StaticAnalysis.sourceLocation(ctx.right));
-                try {
-                    if (lhstype.prune() != rhstype.prune())
-                        lhstype.unify(rhstype);
-                } catch (InferenceError e) {
-                    logger.fine("binop " + op + ": " + e);
-                }
+		if (callUnify) {
+		    try {
+			if (lhstype.prune() != rhstype.prune())
+			    lhstype.unify(rhstype);
+		    } catch (InferenceError e) {
+			logger.fine("binop " + op + ": " + e);
+		    }
+		}
                 if (op.equals("==") || op.equals("!=")
                     || op.equals("<") || op.equals(">")
                     || op.equals("<=") || op.equals(">=")) {
@@ -888,7 +903,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             String op = ctx.op.getText();
             if (op.equals("!")) {
                 try {
-                    bsvtype.unify(new BSVType("Bool"));
+		    if (callUnify)
+			bsvtype.unify(new BSVType("Bool"));
                 } catch (InferenceError e) {
                     logger.fine(e.toString());
                 }
@@ -896,7 +912,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             if (op.equals("&") || op.equals("|") || op.equals("~&") || op.equals("~|")
                 || op.equals("^") || op.equals("^~") || op.equals("~^")) {
                 try {
-                    bsvtype.unify(new BSVType("Bit", new BSVType(null, true)));
+		    if (callUnify)
+			bsvtype.unify(new BSVType("Bit", new BSVType(null, true)));
                 } catch (InferenceError e) {
                     logger.fine(e.toString());
                 }
@@ -955,7 +972,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             assert (ctx.pkg == null);
 	    assert scope != null : "no scope for " + StaticAnalysis.sourceLocation(ctx);
             SymbolTableEntry entry = scope.lookup(varName);
-            logger.fine("var expr " + varName + " entry " + entry);
+            System.err.println("var expr " + varName + " entry " + entry + " pkgName " + entry.pkgName + " type " + entry.type);
             logger.fine("var expr " + varName + " entry " + entry + " : " + ((entry != null) ? entry.type : ""));
             assert entry != null : String.format("No symbol table entry for %s at %s", varName, StaticAnalysis.sourceLocation(ctx));
             if (entry.instances != null) {
@@ -965,8 +982,13 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             }
             if (varName.startsWith("$"))
                 return new BSVType();
-            else
-                return entry.type;
+            else {
+		BSVType entryType = entry.type;
+		if (entry.pkgName != null)
+		    return entryType.fresh(new ArrayList<>());
+		else
+		    return entryType;
+	    }
         }
         /**
          * {@inheritDoc}
@@ -1016,6 +1038,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             IntValue value = new IntValue(literal);
             if (value.width != 0)
                 return new BSVType("Bit", new BSVType(value.width));
+	    System.err.println("Integer type at " + StaticAnalysis.sourceLocation(ctx));
             return new BSVType("Integer");
         }
         /**
@@ -1143,7 +1166,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                     assert argtype != null : String.format("Null type for %s at %s", expr.getText(), StaticAnalysis.sourceLocation(ctx));
                     BSVType ftype = new BSVType("Function", argtype, resulttype);
                     logger.fine("Apply (" + fcntype + ") to (" + ftype + ")");
-                    fcntype.unify(ftype);
+		    if (callUnify)
+			fcntype.unify(ftype);
                     logger.fine("   -> " + resulttype.prune());
                 } catch (InferenceError e) {
                     logger.fine("Apply InferenceError " + e);

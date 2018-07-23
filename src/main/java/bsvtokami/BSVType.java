@@ -14,6 +14,7 @@ public class BSVType {
     public BSVType instance;
 
     private static int count = 0;
+    private static boolean skipUnify = false;
 
     private void init(String name, boolean numeric) {
 	params = new ArrayList<BSVType>();
@@ -143,39 +144,43 @@ public class BSVType {
 	return freshrec(this, non_generics, mappings);
     }
     public void unify(BSVType t) throws InferenceError {
-	// BSVType a = prune();
-	// BSVType b = t.prune();
-	// if (a.isVar) {
-	//     if (a.occurs_in(b)) {
-	// 	throw new InferenceError("recursive unification\n");
-	//     }
-	//     a.instance = b;
-	// } else if (b.isVar) {
-	//     b.unify(a);
-	// } else {
-	//     if (!a.name.equals(b.name)) {
-	// 	if (a.name.equals("Reg")) {
-	// 	    a.params.get(0).unify(b);
-	// 	    return;
-	// 	}
-	// 	if (b.name.equals("Reg")) {
-	// 	    b.params.get(0).unify(a);
-	// 	    return;
-	// 	}
-	//     }
-	//     if ((a.name.equals("Reg") || b.name.equals("Reg"))
-	// 	&& !a.name.equals(b.name)) {
-	// 	// FIXME
-	//     }
-	//     if (!a.name.equals(b.name)
-	// 	|| a.params.size() != b.params.size()
-	// 	) {
-	// 	throw new InferenceError("Type mismatch (" + a + ") with (" + b + ")");
-	//     }
-	//     for (int i = 0; i < a.params.size(); i++) {
-	// 	a.params.get(i).unify(b.params.get(i));
-	//     }
-	// }
+	if (skipUnify)
+	    return;
+        BSVType a = prune();
+        BSVType b = t.prune();
+	if (a.name.equals("Maybe") || b.name.equals("Maybe"))
+	    System.err.println(String.format("Unify %s and %s", a, b));
+        if (a.isVar) {
+            if (a.occurs_in(b)) {
+                throw new InferenceError("recursive unification\n");
+            }
+            a.instance = b;
+        } else if (b.isVar) {
+            b.unify(a);
+        } else {
+            if (!a.name.equals(b.name)) {
+                if (a.name.equals("Reg")) {
+                    a.params.get(0).unify(b);
+                    return;
+                }
+                if (b.name.equals("Reg")) {
+                    b.params.get(0).unify(a);
+                    return;
+                }
+            }
+            if ((a.name.equals("Reg") || b.name.equals("Reg"))
+                && !a.name.equals(b.name)) {
+                // FIXME
+            }
+            if (!a.name.equals(b.name)
+                || a.params.size() != b.params.size()
+                ) {
+                throw new InferenceError("Type mismatch (" + a + ") with (" + b + ")");
+            }
+            for (int i = 0; i < a.params.size(); i++) {
+                a.params.get(i).unify(b.params.get(i));
+            }
+        }
     }
     public boolean occurs_in(BSVType b) {
 	b = b.prune();

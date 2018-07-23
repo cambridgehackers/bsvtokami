@@ -18,6 +18,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     private BSVTypeVisitor typeVisitor;
     private boolean declOnly;
     private static Logger logger = Logger.getGlobal();
+    private static boolean callUnify = false;
 
     StaticAnalysis() {
         scopes = new HashMap<ParserRuleContext, SymbolTable>();
@@ -601,11 +602,13 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
                 BSVType rhstype = new BSVType(); //typeVisitor.visit(varinit.rhs);
                 assert rhstype != null : "Null rhstype " + varinit.getText() + " at " + sourceLocation(varinit.rhs);
                 logger.fine("varbinding " + rhstype + " " + varinit.getText());
-                try {
-                    bsvtype.unify(rhstype);
-                } catch (InferenceError e) {
-                    logger.fine("Var binding InferenceError " + e);
-                }
+		if (callUnify) {
+		    try {
+			bsvtype.unify(rhstype);
+		    } catch (InferenceError e) {
+			logger.fine("Var binding InferenceError " + e);
+		    }
+		}
             }
             //logger.fine("VarInit " + typeName + " " + varName);
             if (symbolTable.scopeType == SymbolTable.ScopeType.Package) {
@@ -630,11 +633,13 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         BSVType lhstype = new BSVType((symbolTable.scopeType == SymbolTable.ScopeType.Module)
                                       ? "Module" : "ActionValue",
                                       lhsparamtype);
-        try {
-            lhstype.unify(rhstype);
-        } catch (InferenceError e) {
-            logger.fine("Action binding InferenceError " + e);
-        }
+	if (callUnify) {
+	    try {
+		lhstype.unify(rhstype);
+	    } catch (InferenceError e) {
+		logger.fine("Action binding InferenceError " + e);
+	    }
+	}
         logger.fine("ArrowBinding  " + varName + " : " + lhsparamtype);
         logger.fine("    bsvtype (" + lhstype + ") rhstype (" + rhstype + ")");
 
