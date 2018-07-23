@@ -710,18 +710,46 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    assert call != null && call.fcn != null: "Something wrong with " + ctx.rhs.getText() + " at " + StaticAnalysis.sourceLocation(ctx.rhs);
 	    String fcnName = call.fcn.getText();
 	    SymbolTableEntry fcnEntry = scope.lookup(fcnName);
-	    BSVType moduleType = fcnEntry.type;
+	    BSVType moduleType = fcnEntry.type.fresh();
+	    TreeMap<String,BSVType> moduleFreeTypeVars = moduleType.getFreeVariables();
 	    BSVType interfaceType = moduleType.params.get(0);
 	    String interfaceName = interfaceType.name;
 	    StringBuilder typeParameters = new StringBuilder();
-	    for (BSVType typeParam : interfaceType.params) {
-		typeParameters.append(" ");
-		typeParameters.append(bsvTypeToKami(typeParam));
+	    BSVType t = moduleType;
+	    for (BSVParser.ExpressionContext arg: call.expression()) {
+		BSVType argType = typeVisitor.visit(arg);
+		System.err.println(String.format("    arg %s type %s", arg.getText(), argType));
+		assert t.name.equals("Function");
+		try {
+		    argType.unify(t.params.get(0));
+		} catch (InferenceError e) {
+		    logger.fine(e.toString());
+		}
+		t = t.params.get(1);
 	    }
-	    System.err.println(String.format("Module instantiation fcn %s type %s interface %s at %s",
-					     fcnName, fcnEntry.type, interfaceType, StaticAnalysis.sourceLocation(ctx.rhs)));
-            letBindings.add(String.format("%s := %s (instancePrefix--\"%s\")",
-					  varName, fcnName, varName));
+	    assert t.name.equals("Module");
+	    BSVType lhstype = typeVisitor.visit(ctx.t);
+	    try {
+		t.params.get(0).unify(lhstype);
+	    } catch (InferenceError e) {
+		logger.fine(e.toString());
+	    }
+	    System.err.println(String.format("lhstype %s %s",
+					     ctx.var.getText(), lhstype));
+	    for (BSVType ft: moduleFreeTypeVars.values()) {
+		typeParameters.append(" (");
+		typeParameters.append(bsvTypeToKami(ft));
+		typeParameters.append(")");
+	    }
+
+	    System.err.println(String.format("Module instantiation fcn %s type %s interface %s free %s at %s",
+					     fcnName, fcnEntry.type, interfaceType,
+					     String.join(", ", moduleFreeTypeVars.keySet()),
+					     StaticAnalysis.sourceLocation(ctx.rhs)));
+	    if (moduleFreeTypeVars.size() != 0)
+		System.err.println("   freeTypeVars: " + typeParameters.toString());
+            letBindings.add(String.format("%s := %s%s (instancePrefix--\"%s\")",
+					  varName, fcnName, typeParameters.toString(), varName));
             statement.append(String.format("(BKMod (%s'modules %s :: nil))", interfaceName, varName));
 
             String instanceName = String.format("%s", varName); //FIXME concat methodName
