@@ -123,9 +123,9 @@ public class BSVType {
     private BSVType freshrec(BSVType tp, List<BSVType> non_generics, Map<BSVType, BSVType> mappings) {
 	    tp = tp.prune();
 	    if (tp.isVar) {
-		if (non_generics.contains(tp)) {
-		    if (!mappings.containsKey(tp)) {
-			mappings.put(tp, new BSVType());
+		if (!non_generics.contains(tp)) {
+		    if (!mappings.containsKey(tp.name)) {
+			mappings.put(tp, new BSVType(tp.name, tp.numeric));
 		    }
 		    return mappings.get(tp);
 		} else {
