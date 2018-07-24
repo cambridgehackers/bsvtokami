@@ -623,14 +623,20 @@ public class BSVToKami extends BSVBaseVisitor<String>
 			statement.append(String.format("CallM %s : %s <- %s", varName, bsvTypeToKami(t), visit(rhs)));
 		    }
                 } else {
-                    statement.append(String.format("        LET %s : %s <- ", varName, bsvTypeToKami(t)));
-		    statement.append(visit(rhs));
+		    if (actionContext) {
+			statement.append(String.format("        LET %s : %s <- ", varName, bsvTypeToKami(t)));
+			statement.append(visit(rhs));
+		    } else {
+			letBindings.add(String.format("%s : ConstT %s := (%s)%%kami", varName, bsvTypeToKami(t), visit(rhs)));
+			statement.append("(* varbinding in action context *)");
+		    }
                 }
             } else {
                 System.err.println("No rhs for " + ctx.getText() + " at " + StaticAnalysis.sourceLocation(ctx));
                 statement.append(String.format("        LET %s : %s", varName, bsvTypeToKami(t)));
             }
-	    statements.add(statement.toString());
+	    if (actionContext)
+		statements.add(statement.toString());
         }
 	return null;
     }
@@ -1592,6 +1598,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		if (entry.type.name.equals("Integer"))
 		    prefix = "$";
 		else if (firstChar >= 'A' && firstChar <= 'Z')
+		    prefix = "";
+		if (!actionContext)
 		    prefix = "";
 
                 logger.fine("found binding " + varName + " " + entry.type);
