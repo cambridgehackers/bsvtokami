@@ -715,7 +715,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    BSVType interfaceType = moduleType.params.get(0);
 	    String interfaceName = interfaceType.name;
 	    StringBuilder typeParameters = new StringBuilder();
+	    StringBuilder params = new StringBuilder();
 	    BSVType t = moduleType;
+	    int argNum = 0;
 	    for (BSVParser.ExpressionContext arg: call.expression()) {
 		BSVType argType = typeVisitor.visit(arg);
 		System.err.println(String.format("    arg %s type %s", arg.getText(), argType));
@@ -725,6 +727,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		} catch (InferenceError e) {
 		    logger.fine(e.toString());
 		}
+		params.append(" ");
+		params.append(visit(call.expression(argNum++)));
 		t = t.params.get(1);
 	    }
 	    assert t.name.equals("Module");
@@ -748,8 +752,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 					     StaticAnalysis.sourceLocation(ctx.rhs)));
 	    if (moduleFreeTypeVars.size() != 0)
 		System.err.println("   freeTypeVars: " + typeParameters.toString());
-            letBindings.add(String.format("%s := %s%s (instancePrefix--\"%s\")",
-					  varName, fcnName, typeParameters.toString(), varName));
+            letBindings.add(String.format("%s := %s%s (instancePrefix--\"%s\")%s",
+					  varName, fcnName, typeParameters.toString(), varName,
+					  params.toString()));
             statement.append(String.format("(BKMod (%s'modules %s :: nil))", interfaceName, varName));
 
             String instanceName = String.format("%s", varName); //FIXME concat methodName
