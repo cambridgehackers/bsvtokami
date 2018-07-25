@@ -420,7 +420,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    BSVType freeType = entry.getValue();
 	    boolean isNumeric = freeType.numeric;
 	    // FIXME: heuristic
-	    if (freeType.name.endsWith("sz") || freeType.name.equals("xlen"))
+	    if (freeType.name.endsWith("sz") || freeType.name.endsWith("Sz") || freeType.name.equals("xlen"))
 		isNumeric = true;
 	    logger.fine("Module def: Free type variable " + freeType + (isNumeric ? " numeric" : " interface type"));
 
