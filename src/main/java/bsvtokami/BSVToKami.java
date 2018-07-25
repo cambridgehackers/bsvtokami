@@ -1840,7 +1840,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    bsvtype = dereftype.instantiate(dereftype.params, bsvtype.params);
 	else
 	    bsvtype = dereftype;
-	if (bsvtype.name.equals("Reg")) {
+	if (bsvtype.name.equals("Reg") || bsvtype.name.equals("Wire")) {
 	    assert bsvtype.params != null;
 	    assert bsvtype.params.size() == 1;
 	    BSVType elementType = bsvtype.params.get(0);
