@@ -446,7 +446,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 if (formal.name != null) {
 		    String formalName = formal.name.getText();
 		    formalNames.add(formalName);
-                    printstream.println(String.format("    Variable %s: %s.", formalName, bsvType.name));
+                    printstream.println(String.format("    Variable %s: ConstT (%s).", formalName, bsvTypeToKami(bsvType)));
 		}
             }
         }
@@ -748,8 +748,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		} catch (InferenceError e) {
 		    logger.fine(e.toString());
 		}
-		params.append(" ");
-		params.append(visit(call.expression(argNum++)));
 		t = t.params.get(1);
 	    }
 	    assert t.name.equals("Module");
@@ -761,11 +759,20 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    }
 	    System.err.println(String.format("lhstype %s %s",
 					     ctx.var.getText(), lhstype));
+
+	    for (BSVParser.ExpressionContext arg: call.expression()) {
+		params.append(" ");
+		params.append(visit(call.expression(argNum++)));
+	    }
+
+	    boolean wasActionContext = actionContext;
+	    actionContext = true;
 	    for (BSVType ft: moduleFreeTypeVars.values()) {
 		typeParameters.append(" (");
 		typeParameters.append(bsvTypeToKami(ft));
 		typeParameters.append(")");
 	    }
+	    actionContext = wasActionContext;
 
 	    System.err.println(String.format("Module instantiation fcn %s type %s interface %s free %s at %s",
 					     fcnName, fcnEntry.type, interfaceType,
