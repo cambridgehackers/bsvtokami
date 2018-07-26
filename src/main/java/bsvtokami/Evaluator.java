@@ -1132,8 +1132,11 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
     }
 
     BSVType evaluateType(BSVType bsvtype) {
+	System.err.println("evaluateType " + bsvtype + " in scope " + scope.name);
 	logger.fine("evaluateType " + bsvtype + " in scope " + scope.name);
+	typeVisitor.pushScope(scope);
 	bsvtype = typeVisitor.dereferenceTypedef(bsvtype);
+	typeVisitor.popScope();
 	if (bsvtype.name.equals("TLog")) {
 	    assert bsvtype.params.size() == 1;
 	    BSVType paramtype = evaluateType(bsvtype.params.get(0));
