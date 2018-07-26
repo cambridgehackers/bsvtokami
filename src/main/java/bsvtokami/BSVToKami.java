@@ -902,6 +902,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
         String returntype = (functionproto.bsvtype() != null) ? bsvTypeToKami(functionproto.bsvtype()) : "";
         printstream.println(String.format(": %s := ", returntype));
 
+	boolean wasActionContext = actionContext;
+	actionContext = true;
+
         RegReadVisitor regReadVisitor = new RegReadVisitor(scope);
         if (ctx.expression() != null) {
             printstream.print("    ");
@@ -929,11 +932,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    //assert(letBindings.size() == 0) : "Unexpected let bindings at " + StaticAnalysis.sourceLocation(ctx);;
 	    if (letBindings.size() > 0)
 		System.err.println("Unexpected let bindings at " + StaticAnalysis.sourceLocation(ctx) + "\n" + String.join("\n    ", letBindings));
-	    for (String statement: statements)
-		printstream.println(String.format("        %s%s", statement, newline));
-
+	    if (statements.size() > 0) {
+		printstream.println("        ");
+		printstream.println(String.join(";\n        ", statements));
+	    }
             if (returntype.equals("Action") || returntype.equals("Void"))
-                printstream.println("        Retv");
+                printstream.println(String.format("%s        Retv", ((statements.size() > 0) ? ";\n" : "")));
         }
 
         printstream.println(String.format("    }); abstract omega. Qed. (* %s *)", functionName));
@@ -943,6 +947,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	printstream.println("");
         printstream.println(String.format("Definition %1$s := module'%1$s.%1$s.", functionName));
 
+	actionContext = wasActionContext;
         letBindings = parentLetBindings;
         statements  = parentStatements;
         scope = scopes.popScope();
