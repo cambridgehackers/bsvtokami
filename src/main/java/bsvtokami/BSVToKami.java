@@ -602,23 +602,25 @@ public class BSVToKami extends BSVBaseVisitor<String>
 			String lsbWidth = bsvTypeSize(varType, varinit.var);
 			String exprWidth = bsvTypeSize(arg0Type, args.get(0));
 			String msbWidth = String.format("(%s - %s)", exprWidth, lsbWidth);
-			statement.append(String.format("LET %s : %s <- UniBit (Trunc %s %s) (castBits _ _ _ _ %s)",
+			statement.append(String.format("LET %1$s : %2$s <- UniBit (Trunc %3$s %4$s) (castBits _ %6$s %6$s _ %5$s)",
 						       varName,
 						       bsvTypeToKami(t),
 						       lsbWidth,
 						       msbWidth,
-						       visit(args.get(0))));
+						       visit(args.get(0)),
+						       exprWidth));
 		    } else if (functionName.equals("truncateLSB")) {
 			BSVType arg0Type = typeVisitor.visit(args.get(0));
 			String lsbWidth = bsvTypeSize(varType, varinit.var);
 			String exprWidth = bsvTypeSize(arg0Type, args.get(0));
 			String msbWidth = String.format("(%s - %s)", exprWidth, lsbWidth);
-			statement.append(String.format("LET %s : %s <-  UniBit (TruncLsb %s %s) (castBits _ _ _ _ %s)",
+			statement.append(String.format("LET %1$s : %2$s <-  UniBit (TruncLsb %3$s %4$s) (castBits _ %6$s %6$s _ %5$s)",
 						       varName,
 						       bsvTypeToKami(t),
 						       msbWidth,
 						       lsbWidth,
-						       visit(args.get(0))));
+						       visit(args.get(0)),
+						       exprWidth));
 		    } else if (functionName.equals("signExtend") || functionName.equals("zeroExtend") || functionName.equals("extend")) {
 			BSVType arg0Type = typeVisitor.visit(args.get(0));
 			if (functionName.equals("extend"))
@@ -626,7 +628,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 			String op = (functionName.equals("signExtend")) ? "SignExtendTrunc" : "ZeroExtendTrunc";
 			String arg0Width = bsvTypeSize(arg0Type, args.get(0));
 			String varWidth = bsvTypeSize(varType, varinit.var);
-			statement.append(String.format("LET %s : %s <-  UniBit (SignExtendTrunc %s %s) (castBits _ _ _ _ %s)",
+			statement.append(String.format("LET %1$s : %2$s <-  UniBit (SignExtendTrunc %3$s %4$s) (castBits _ %3$s %3$s _ %5$s)",
 						       varName,
 						       bsvTypeToKami(varType),
 						       arg0Width,
@@ -1533,7 +1535,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	BSVParser.ExpressionContext arg1 = ctx.expression(1);
 	BSVType arg0Type = typeVisitor.visit(arg0);
 	BSVType arg1Type = typeVisitor.visit(arg1);
-	return String.format("castBits _ _ _ _ (BinBit (Concat %s %s) %s %s)",
+	return String.format("castBits _ (%1$s + %2$s)  _ _ (BinBit (Concat %1$s %2$s) %3$s %4$s)",
 			     bsvTypeSize(arg0Type, arg0),
 			     bsvTypeSize(arg1Type, arg1),
 			     visit(arg0),
