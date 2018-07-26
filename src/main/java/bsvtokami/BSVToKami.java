@@ -595,8 +595,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 						     functionName,
 						     StaticAnalysis.sourceLocation(ctx)));
 
+		    List<BSVParser.ExpressionContext> args = call.expression();
+
 		    if (functionName.equals("truncate")) {
-			List<BSVParser.ExpressionContext> args = call.expression();
 			BSVType arg0Type = typeVisitor.visit(args.get(0));
 			String lsbWidth = bsvTypeSize(varType, varinit.var);
 			String exprWidth = bsvTypeSize(arg0Type, args.get(0));
@@ -608,7 +609,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 						       msbWidth,
 						       visit(args.get(0))));
 		    } else if (functionName.equals("truncateLSB")) {
-			List<BSVParser.ExpressionContext> args = call.expression();
 			BSVType arg0Type = typeVisitor.visit(args.get(0));
 			String lsbWidth = bsvTypeSize(varType, varinit.var);
 			String exprWidth = bsvTypeSize(arg0Type, args.get(0));
@@ -618,6 +618,19 @@ public class BSVToKami extends BSVBaseVisitor<String>
 						       bsvTypeToKami(t),
 						       msbWidth,
 						       lsbWidth,
+						       visit(args.get(0))));
+		    } else if (functionName.equals("signExtend") || functionName.equals("zeroExtend") || functionName.equals("extend")) {
+			BSVType arg0Type = typeVisitor.visit(args.get(0));
+			if (functionName.equals("extend"))
+			    functionName = (arg0Type.name.startsWith("Int")) ? "signExtend" : "zeroExtend";
+			String op = (functionName.equals("signExtend")) ? "SignExtendTrunc" : "ZeroExtendTrunc";
+			String arg0Width = bsvTypeSize(arg0Type, args.get(0));
+			String varWidth = bsvTypeSize(varType, varinit.var);
+			statement.append(String.format("LET %s : %s <-  UniBit (SignExtendTrunc %s %s) (castBits _ _ _ _ %s)",
+						       varName,
+						       bsvTypeToKami(varType),
+						       arg0Width,
+						       varWidth,
 						       visit(args.get(0))));
 		    } else {
 			statement.append(String.format("CallM %s : %s <- %s", varName, bsvTypeToKami(t), visit(rhs)));
@@ -915,7 +928,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	    //assert(letBindings.size() == 0) : "Unexpected let bindings at " + StaticAnalysis.sourceLocation(ctx);;
 	    if (letBindings.size() > 0)
-		System.err.println("Unexpected let bindings at " + StaticAnalysis.sourceLocation(ctx));
+		System.err.println("Unexpected let bindings at " + StaticAnalysis.sourceLocation(ctx) + "\n" + String.join("\n    ", letBindings));
 	    for (String statement: statements)
 		printstream.println(String.format("        %s%s", statement, newline));
 
