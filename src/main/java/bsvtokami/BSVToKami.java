@@ -913,7 +913,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
             for (BSVParser.StmtContext stmt: ctx.stmt())
                 visit(stmt);
 
-	    assert(letBindings.size() == 0);
+	    //assert(letBindings.size() == 0) : "Unexpected let bindings at " + StaticAnalysis.sourceLocation(ctx);;
+	    if (letBindings.size() > 0)
+		System.err.println("Unexpected let bindings at " + StaticAnalysis.sourceLocation(ctx));
 	    for (String statement: statements)
 		printstream.println(String.format("        %s%s", statement, newline));
 
@@ -1666,13 +1668,21 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
 	    typeVisitor.pushScope(scope);
 
+	    Evaluator evaluator = new Evaluator(scopes, typeVisitor);
+	    typeVisitor.pushScope(scope);
+	    Value msb = evaluator.evaluate(ctx.expression(0), scope);
+	    typeVisitor.pushScope(scope);
+	    Value lsb = evaluator.evaluate(ctx.expression(1), scope);
 	    BSVType exprType = typeVisitor.visit(ctx.array);
 	    String exprWidth = bsvTypeSize(exprType, ctx.array);
-	    IntValue msb = new IntValue(ctx.expression(0).getText());
-	    IntValue lsb = new IntValue(ctx.expression(1).getText());
+
+	    IntValue imsb = (IntValue)msb;
+	    IntValue ilsb = (IntValue)lsb;
+	    //IntValue msb = new IntValue(ctx.expression(0).getText());
+	    //IntValue lsb = new IntValue(ctx.expression(1).getText());
 	    return String.format("(%s$[%d:%d]@%s)",
 				 visit(ctx.array),
-				 msb.value, lsb.value, exprWidth);
+				 imsb.value, ilsb.value, exprWidth);
         } else {
 	    return String.format("(%s@[%s])", visit(ctx.array), visit(ctx.expression(0)));
 	}
