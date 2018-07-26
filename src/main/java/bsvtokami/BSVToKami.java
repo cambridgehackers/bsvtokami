@@ -1531,16 +1531,30 @@ public class BSVToKami extends BSVBaseVisitor<String>
     @Override public String visitBitconcat(BSVParser.BitconcatContext ctx) {
 	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
 	typeVisitor.pushScope(scope);
-	BSVParser.ExpressionContext arg0 = ctx.expression(0);
-	BSVParser.ExpressionContext arg1 = ctx.expression(1);
-	BSVType arg0Type = typeVisitor.visit(arg0);
-	BSVType arg1Type = typeVisitor.visit(arg1);
-	return String.format("castBits _ (%1$s + %2$s)  _ _ (BinBit (Concat %1$s %2$s) %3$s %4$s)",
-			     bsvTypeSize(arg0Type, arg0),
-			     bsvTypeSize(arg1Type, arg1),
-			     visit(arg0),
-			     visit(arg1)
-			     );
+	if (ctx.expression().size() == 1)
+	    return visit(ctx.expression(0));
+
+	BSVParser.ExpressionContext leftarg = ctx.expression(0);
+	BSVType leftargType = typeVisitor.visit(leftarg);
+	String leftargSize = bsvTypeSize(leftargType, leftarg);
+	String leftexpr = visit(leftarg);
+
+	List<String> argSizes = new ArrayList<>();
+	argSizes.add(leftargSize);
+	for (int i = 1; i < ctx.expression().size(); i++) {
+	    BSVParser.ExpressionContext rightarg = ctx.expression(i);
+	    BSVType rightargType = typeVisitor.visit(rightarg);
+	    String rightargSize = bsvTypeSize(rightargType, rightarg);
+	    argSizes.add(rightargSize);
+	    leftexpr = String.format("(BinBit (Concat (%1$s) %2$s) %3$s %4$s)",
+				     leftargSize,
+				     rightargSize,
+				     leftexpr,
+				     visit(rightarg));
+	    leftargSize = String.join(" + ", argSizes);
+	}
+	return String.format("castBits _ (%s) _ _ %s",
+			     leftargSize, leftexpr);
     }
 
     @Override public String visitStructexpr(BSVParser.StructexprContext ctx) {
