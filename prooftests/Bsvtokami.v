@@ -2,52 +2,7 @@ Require Import Kami.
 Require Import Kami.Lib.Struct.
 Require Import Bool Arith String Nat ZArith.
 
-Definition MaybeFields (a : Kind) := (STRUCT { "$tag" :: (Bit 1); "Invalid" :: (Bit 1); "Valid" :: a }).
-Definition Maybe (a : Kind) := (Struct (MaybeFields a)).
-
-Definition castBits ty ni no (pf: ni = no) (e: Expr ty (SyntaxKind (Bit ni))) :=
-  match pf in _ = Y return Expr ty (SyntaxKind (Bit Y)) with
-    | eq_refl => e
-  end.
-
-Record Empty := {
-    Empty'modules: Modules;
-}.
-
-
-Definition Tuple2Fields (t1 t2: Kind) := (STRUCT {
-    "tpl_1" :: t1;
-    "tpl_2" :: t2
-}).
-Definition Tuple2 (t1 t2: Kind) := Struct (Tuple2Fields t1 t2).
-
-Record Reg := {
-    Reg'modules: Modules;
-    Reg'_read : string;
-    Reg'_write : string;
-}.
-
-Fixpoint toBinaryP (p: positive) : string :=
-  match p with
-  | xI p' => String "1" (toBinaryP p')
-  | xO p' => String "0" (toBinaryP p')
-  | xH => ""
-  end.
-
-Definition toBinaryN (n: N): string :=
-  match n with
-  | N0 => "0"
-  | Npos p => toBinaryP p
-  end.
-
-Definition toBinaryString (n: nat) := (toBinaryN (N.of_nat n)).
-
-Record ModuleInstance intT :=
-    { module : Modules;
-      interface : intT;
-    }.
-
-Definition bitlt (x : nat) (y: nat): bool := (Nat.ltb x y).
+Definition Integer := nat.
 
 (** * Notation for BSV to Kami modules *)
 
@@ -91,6 +46,8 @@ Definition makeBKModule (im : InBKModule) :=
 (* * BSV to Kami Notation *)
 
 Delimit Scope bk_scope with bk.
+
+Notation "$$ v" := (ConstBit v%kami) (at level 0) : bk_scope.
 
 Notation "'BKSTMTS' { s1 'with' .. 'with' sN }" :=
   (ConsInBKModule s1%bk .. (ConsInBKModule sN%bk NilInBKModule) ..)
@@ -238,3 +195,132 @@ Notation "'Method5' name ( p1 : d1 ) ( p2 : d2 )  ( p3 : d3 ) ( p4 : d4 ) ( p5 :
                                                   LET p5 : d5g <-  #param!fields @."_5";
                                                   c)%kami_action : ActionT ty retT)))))
     (at level 0, name at level 0, p1 at level 0, d1 at level 0, p2 at level 0, d2 at level 0, p3 at level 0, d3 at level 0, p4 at level 0, d4 at level 0, p5 at level 0, d5 at level 0).
+
+
+Definition MaybeFields (a : Kind) := (STRUCT { "$tag" :: (Bit 1); "Invalid" :: (Bit 1); "Valid" :: a }).
+Definition Maybe (a : Kind) := (Struct (MaybeFields a)).
+
+Definition castBits ty ni no (pf: ni = no) (e: Expr ty (SyntaxKind (Bit ni))) :=
+  match pf in _ = Y return Expr ty (SyntaxKind (Bit Y)) with
+    | eq_refl => e
+  end.
+
+Record Empty := {
+    Empty'modules: Modules;
+}.
+
+
+Definition Tuple2Fields (t1 t2: Kind) := (STRUCT {
+    "tpl_1" :: t1;
+    "tpl_2" :: t2
+}).
+Definition Tuple2 (t1 t2: Kind) := Struct (Tuple2Fields t1 t2).
+
+Record Reg := {
+    Reg'modules: Modules;
+    Reg'_read : string;
+    Reg'_write : string;
+}.
+
+Module module'mkReg.
+    Section Section'mkReg.
+    Variable a : Kind.
+    Variable instancePrefix: string.
+    Variable v: ConstT a.
+    Definition reg : string := instancePrefix--"reg".
+    Definition mkRegModule: Modules :=
+      (BKMODULE {
+           Register reg : a <- v
+           with Method instancePrefix--"_read" () : a :=
+             Read v : a <- reg ;
+           Ret #v
+
+           with Method instancePrefix--"_write" (v : a) : Void :=
+             Write reg : a <- #v;
+           Retv
+
+         }). (* mkReg *)
+
+(* Module mkReg type a -> Module#(Reg#(a)) return type Reg#(a) *)
+    Definition mkReg := Build_Reg mkRegModule%kami (instancePrefix--"_read") (instancePrefix--"_write").
+    End Section'mkReg.
+End module'mkReg.
+
+Definition mkReg := module'mkReg.mkReg.
+
+Module module'mkReadOnlyReg.
+    Section Section'mkReadOnlyReg.
+    Variable a : Kind.
+    Variable instancePrefix: string.
+    Variable v: ConstT a.
+    Definition reg : string := instancePrefix--"reg".
+    Definition mkReadOnlyRegModule: Modules :=
+      (BKMODULE {
+           Register reg : a <- v
+           with Method instancePrefix--"_read" () : a :=
+             Read v : a <- reg ;
+           Ret #v
+
+           with Method instancePrefix--"_write" (v : a) : Void :=
+             Retv
+
+         }). (* mkReadOnlyReg *)
+
+(* Module mkReadOnlyReg type a -> Module#(Reg#(a)) return type Reg#(a) *)
+    Definition mkReadOnlyReg := Build_Reg mkReadOnlyRegModule%kami (instancePrefix--"_read") (instancePrefix--"_write").
+    End Section'mkReadOnlyReg.
+End module'mkReadOnlyReg.
+
+Definition mkReadOnlyReg := module'mkReadOnlyReg.mkReadOnlyReg.
+
+(* mkRegU *)
+Module module'mkRegU.
+    Section Section'mkRegU.
+    Variable a : Kind.
+    Variable instancePrefix: string.
+    Variable v: ConstT a.
+    Definition reg : string := instancePrefix--"reg".
+    Definition mkRegUModule: Modules :=
+        (BKMODULE {
+           Register reg : a <- Default
+           with Method instancePrefix--"_read" () : a :=
+             Read v : a <- reg ;
+             Ret #v
+
+           with Method instancePrefix--"_write" (v : a) : Void :=
+             Write reg : a <- #v;
+             Retv
+
+           }). (* mkRegU *)
+
+(* Module mkRegU type a -> Module#(Reg#(a)) return type Reg#(a) *)
+    Definition mkRegU := Build_Reg mkRegUModule%kami (instancePrefix--"_read") (instancePrefix--"_write").
+    End Section'mkRegU.
+End module'mkRegU.
+
+Definition mkRegU := module'mkRegU.mkRegU.
+
+(* more stuff *)
+
+Fixpoint toBinaryP (p: positive) : string :=
+  match p with
+  | xI p' => String "1" (toBinaryP p')
+  | xO p' => String "0" (toBinaryP p')
+  | xH => ""
+  end.
+
+Definition toBinaryN (n: N): string :=
+  match n with
+  | N0 => "0"
+  | Npos p => toBinaryP p
+  end.
+
+Definition toBinaryString (n: nat) := (toBinaryN (N.of_nat n)).
+
+Record ModuleInstance intT :=
+    { module : Modules;
+      interface : intT;
+    }.
+
+Definition bitlt (x : nat) (y: nat): bool := (Nat.ltb x y).
+
