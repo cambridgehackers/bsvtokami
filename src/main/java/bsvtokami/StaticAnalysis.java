@@ -14,7 +14,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     private HashMap<ParserRuleContext, SymbolTable> scopes;
     private HashMap<String, SymbolTable> packages;
     private Stack<SymbolTable> scopeStack = new Stack<>();
-    private Stack<ParserRuleContext> ctxStack = new Stack<>();
+    private Stack<String> sourceLocationStack = new Stack<>();
     private BSVTypeVisitor typeVisitor;
     private boolean declOnly;
     private static Logger logger = Logger.getGlobal();
@@ -66,13 +66,20 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     private void pushScope(ParserRuleContext ctx, SymbolTable.ScopeType st, String name) {
         if (scopes.containsKey(ctx)) {
             symbolTable = scopes.get(ctx);
+	    System.err.println(String.format("Found scope %s for %s at %s", symbolTable.name, name, sourceLocation(ctx)));
         } else {
             symbolTable = new SymbolTable(symbolTable, st, name);
             scopes.put(ctx, symbolTable);
         }
-        ctxStack.push(ctx);
+        sourceLocationStack.push(sourceLocation(ctx));
         logger.fine("pushScope { " + name + "-" + symbolTable + " " + ctx + " " + st
                      + " at " + sourceLocation(ctx));
+        typeVisitor.pushScope(symbolTable);
+    }
+    private void pushScope(SymbolTable.ScopeType st, String name) {
+	symbolTable = new SymbolTable(symbolTable, st, name);
+        sourceLocationStack.push("<noloc>");
+        logger.fine("pushScope { " + name + "-" + symbolTable + " " + st);
         typeVisitor.pushScope(symbolTable);
     }
 
@@ -80,7 +87,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         assert scopes.containsKey(ctx) : String.format("Expected to find scope for %s at %s",
                                                        ctx.getText(), sourceLocation(ctx));
         symbolTable = scopes.get(ctx);
-        ctxStack.push(ctx);
+        sourceLocationStack.push(sourceLocation(ctx));
         logger.fine("pushScope { " + symbolTable.name + "-" + symbolTable + " " + symbolTable.scopeType
                     + " at " + sourceLocation(ctx));
         typeVisitor.pushScope(symbolTable);
@@ -91,9 +98,9 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         assert symbolTable.parent != null : String.format("Symbol table %s:%s has no parent", symbolTable.name, symbolTable);
         logger.fine(String.format("popScope -1- %s-%s parent %s-%s at %s }",
                                    symbolTable.name, symbolTable, symbolTable.parent.name, symbolTable.parent,
-                                   sourceLocation(ctxStack.peek())));
+                                   sourceLocationStack.peek()));
         assert typeVisitor != null;
-        ctxStack.pop();
+        sourceLocationStack.pop();
         typeVisitor.popScope();
         symbolTable = symbolTable.parent;
         return symbolTable;
@@ -369,7 +376,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
             BSVParser.ModuledefContext moduledef = def.moduledef();
             BSVParser.VarassignContext varassign = def.varassign();
             // Add a scope to catch the symbol table entry
-            int depth = ctxStack.size();
+            int depth = sourceLocationStack.size();
             if (!declOnly)
                 return null;
             pushScope(ctx, SymbolTable.ScopeType.TypeClassInstance, ctx.typeclasside(0).getText());
@@ -392,7 +399,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
                     classEntry.addInstance(instanceEntry);
                 }
             popScope();
-            assert depth == ctxStack.size() : "scope stack push/pop mismatch";
+            assert depth == sourceLocationStack.size() : "scope stack push/pop mismatch";
         }
 
         return null;
@@ -554,15 +561,28 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 
     @Override public Void visitFunctiondef(BSVParser.FunctiondefContext ctx) {
         BSVParser.FunctionprotoContext functionproto = ctx.functionproto();
-        String functionname = functionproto.name.getText();
+        String functionname = unescape(functionproto.name.getText());
+        boolean isTopLevel = (symbolTable.scopeType == SymbolTable.ScopeType.Package);
+
         logger.fine("visit functiondef " + functionname);
-        visit(functionproto);
         if (declOnly) {
             return null;
         }
         logger.fine(String.format("entering functiondef %s %s {", functionname, declOnly));
+	// convert top level function definitions to interface + moduledef
+	String interfaceName = String.format("Interface'%s", functionname);
+	BSVType interfaceType = new BSVType(interfaceName);
+	if (isTopLevel) {
+	    pushScope(SymbolTable.ScopeType.Declaration, interfaceName);
+	}
+	SymbolTable interfaceMappings = symbolTable;
+        visit(functionproto);
+	SymbolTableEntry entry = symbolTable.lookup(functionname);
+
+	assert symbolTable == interfaceMappings;
         // save the lexical scope
         pushScope(ctx, SymbolTable.ScopeType.Action, functionname);
+	SymbolTable functiondefScope = symbolTable;
         if (ctx.functionproto().provisos() != null)
             visit(ctx.functionproto().provisos());
         if (functionproto.methodprotoformals() != null) {
@@ -570,13 +590,31 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
                 visit(formal);
             }
         }
-        visit(functionproto);
+        //visit(functionproto);
         if (ctx.expression() != null)
             visit(ctx.expression());
         for (BSVParser.StmtContext stmt: ctx.stmt())
             visit(stmt);
+	assert symbolTable == functiondefScope;
+	assert symbolTable.parent == interfaceMappings;
         popScope();
         logger.fine("} exiting functiondef " + functionname);
+
+	if (isTopLevel) {
+	    assert symbolTable == interfaceMappings;
+	    for (Map.Entry<String,SymbolTableEntry> mapping: interfaceMappings.bindings.entrySet()) {
+		logger.fine(String.format("interface mapping  %s  %s : %s", interfaceName, mapping.getKey(), mapping.getValue().type));
+	    }
+	    for (Map.Entry<String,SymbolTableEntry> mapping: interfaceMappings.typeBindings.entrySet()) {
+		logger.fine(String.format("interface tmapping %s  %s : %s", interfaceName, mapping.getKey(), mapping.getValue().type));
+	    }
+	    popScope();
+	    SymbolTableEntry functionEntry = interfaceMappings.lookup(functionname);
+	    assert functionEntry != null;
+	    symbolTable.bind(packageName, functionname, new SymbolTableEntry(functionname, functionEntry.type));
+	    symbolTable.bindType(packageName, interfaceName, interfaceType, interfaceMappings);
+	    SymbolTableEntry interfaceEntry = symbolTable.lookupType(interfaceName);
+	}
         return null;
     }
     @Override public Void visitMethodprotoformal(BSVParser.MethodprotoformalContext ctx) {

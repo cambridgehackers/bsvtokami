@@ -861,7 +861,23 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
 
         BSVParser.FunctionprotoContext functionproto = ctx.functionproto();
-        printstream.print(String.format("Definition %s", functionproto.name.getText()));
+	String functionName = functionproto.name.getText();
+	printstream.println(String.format("(* interface for module wrapper for %s *)", functionName));
+	printstream.println(String.format("Record Interface'%s := {", functionName));
+	printstream.println(String.format("    Interface'%s'modules: Modules;", functionName));
+	printstream.println(String.format("    Interface'%s'%s: string;", functionName, functionName));
+	printstream.println(String.format("}."));
+	printstream.println(String.format(""));
+	printstream.println(String.format("Module module'%s.", functionName));
+	printstream.println(String.format("    Section Section'%s.", functionName));
+	printstream.println(String.format("    Variable instancePrefix: string."));
+	//FIXME letBindings go here
+
+	printstream.println(String.format("    Definition %s: Modules.", functionName));
+	printstream.println(String.format("        refine (BKMODULE {"));
+	//FIXME module instantiations go here
+	printstream.print(String.format("        Method instancePrefix--\"%s\"", functionName));
+
         if (functionproto.methodprotoformals() != null) {
             for (BSVParser.MethodprotoformalContext formal: functionproto.methodprotoformals().methodprotoformal()) {
                 BSVType bsvtype = StaticAnalysis.getBsvType(formal);
@@ -904,8 +920,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
             if (returntype.equals("Action") || returntype.equals("Void"))
                 printstream.println("        Retv");
         }
-        printstream.println(".");
-        printstream.println("");
+
+        printstream.println(String.format("    }); abstract omega. Qed. (* %s *)", functionName));
+        printstream.println(String.format("    Definition %1$s := Build_Interface'%1$s %1$s (instancePrefix--\"%1$s\".", functionName));
+	printstream.println(String.format("    End Section'%s.", functionName));
+	printstream.println(String.format("End Module'%s.", functionName));
+	printstream.println("");
+        printstream.println(String.format("Definition %1$s := module'%1$s.%1$s.", functionName));
 
         letBindings = parentLetBindings;
         statements  = parentStatements;

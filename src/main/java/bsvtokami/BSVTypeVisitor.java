@@ -27,10 +27,10 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
     {
         scopeStack.push(scope);
         scope = newScope;
-        logger.fine(String.format("BSVTypeVisitor.pushScope()  %d {", scopeStack.size()));
+        //logger.fine(String.format("BSVTypeVisitor.pushScope()  %d {", scopeStack.size()));
     }
     public void popScope() {
-        logger.fine(String.format("} BSVTypeVisitor.popScope() %d", scopeStack.size()));
+        //logger.fine(String.format("} BSVTypeVisitor.popScope() %d", scopeStack.size()));
         scope = scopeStack.pop();
 	assert scopeStack.size() > 0; // nobody should pop the global scope
     }
