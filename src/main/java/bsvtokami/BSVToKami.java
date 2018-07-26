@@ -1355,6 +1355,41 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    statement.append(newline);
         }
 
+	for (BSVParser.CasestmtitemContext item: ctx.casestmtitem()) {
+	    boolean multivalue = item.expression().size() > 0;
+            statement.append("    If (");
+	    if (multivalue)
+		statement.append("(");
+	    statement.append(visit(item.expression(0)));
+	    statement.append(" == ");
+	    statement.append(visit(ctx.expression()));
+	    if (multivalue)
+		statement.append(")");
+	    for (int i = 1; i < item.expression().size(); i++) {
+		statement.append(" || (");
+		statement.append(visit(item.expression(i)));
+		statement.append(" == ");
+		statement.append(visit(ctx.expression()));
+		statement.append(")");
+	    }
+            statement.append(") then (");
+	    statement.append(newline);
+
+	    letBindings = new TreeSet<>();
+	    statements = new ArrayList<>();
+            visit(item.stmt());
+	    assert(letBindings.size() == 0);
+            for (String substatement: statements) {
+                statement.append(substatement);
+                statement.append(newline);
+            }
+
+            //statement.append("        Retv");
+	    statement.append(newline);
+            statement.append("   ) else (");
+	    statement.append(newline);
+	}
+
 	assert ctx.casestmtdefaultitem() != null : "default clause required at " + StaticAnalysis.sourceLocation(ctx);
 	{
 	    letBindings = new TreeSet<>();
@@ -1366,7 +1401,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 statement.append(newline);
             }
 	}
-        for (int i = 0; i < ctx.casestmtpatitem().size(); i += 1) {
+        for (int i = 0; i < ctx.casestmtpatitem().size() + ctx.casestmtitem().size(); i += 1) {
 	    //statement.append("        Retv");
 	    statement.append(") as retval; Ret #retval");
 	    statement.append(newline);
