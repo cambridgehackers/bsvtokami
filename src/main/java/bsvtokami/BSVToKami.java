@@ -25,6 +25,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     private ArrayList<String> instances;
     private boolean actionContext;
     private boolean stmtEmitted;
+    private boolean returnEmitted;
     private boolean inModule;
     // for modules and rules
     private TreeSet<String> letBindings;
@@ -1401,10 +1402,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 statement.append(newline);
             }
 	}
-        for (int i = 0; i < ctx.casestmtpatitem().size() + ctx.casestmtitem().size(); i += 1) {
+	int numBranches = ctx.casestmtpatitem().size() + ctx.casestmtitem().size();
+        for (int i = 0; i < numBranches; i += 1) {
 	    //statement.append("        Retv");
-	    statement.append(") as retval; Ret #retval");
-	    statement.append(newline);
+	    statement.append(") as retval");
+	    if (i < numBranches - 1) {
+		statement.append("; Ret #retval");
+		statement.append(newline);
+	    }
 	}
 
 	letBindings = parentLetBindings;
@@ -1680,6 +1685,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	StringBuilder expression = new StringBuilder();
         expression.append("        Ret ");
         expression.append(visit(ctx.expression()));
+	returnEmitted = true;
         return expression.toString();
     }
     @Override public String visitVarexpr(BSVParser.VarexprContext ctx) {
@@ -1836,6 +1842,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	letBindings = new TreeSet<>();
 	statements = new ArrayList<>();
+	boolean wasReturnEmitted = returnEmitted;
+	returnEmitted = false;
         for (BSVParser.StmtContext stmt: ctx.stmt()) {
             stmtEmitted = true;
             visit(stmt);
@@ -1858,11 +1866,19 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	String separator = (actionContext) ? (";" + newline + "        ") : (newline + "        with ");
 	statement.append(String.join(separator, statements));
 
+	if (!returnEmitted) {
+	    if (statements.size() > 0) {
+		statement.append(";\n");
+	    }
+	    statement.append("        Retv");
+	}
+
 	if (letBindings.size() != 0) {
 	    statement.append("        }");
 	    statement.append("))");
 	}
 
+	returnEmitted = wasReturnEmitted;
         scope = scopes.popScope();
 	letBindings = parentLetBindings;
 	statements  = parentStatements;
