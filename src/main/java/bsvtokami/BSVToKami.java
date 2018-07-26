@@ -762,7 +762,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	    for (BSVParser.ExpressionContext arg: call.expression()) {
 		params.append(" ");
-		params.append(visit(call.expression(argNum++)));
+		params.append(String.format("(%s)%%bk", visit(call.expression(argNum++))));
 	    }
 
 	    boolean wasActionContext = actionContext;
