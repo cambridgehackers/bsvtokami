@@ -888,7 +888,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	printstream.println(String.format("    Variable instancePrefix: string."));
 	//FIXME letBindings go here
 
-	printstream.println(String.format("    Definition %s: Modules.", functionName));
+	printstream.println(String.format("    Definition Modules'%s: Modules.", functionName));
 	printstream.println(String.format("        refine (BKMODULE {"));
 	//FIXME module instantiations go here
 	printstream.print(String.format("        Method instancePrefix--\"%s\"", functionName));
@@ -943,9 +943,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
 
         printstream.println(String.format("    }); abstract omega. Qed. (* %s *)", functionName));
-        printstream.println(String.format("    Definition %1$s := Build_Interface'%1$s %1$s (instancePrefix--\"%1$s\".", functionName));
+        printstream.println(String.format("    Definition %1$s := Build_Interface'%1$s Modules'%1$s (instancePrefix--\"%1$s\").", functionName));
 	printstream.println(String.format("    End Section'%s.", functionName));
-	printstream.println(String.format("End Module'%s.", functionName));
+	printstream.println(String.format("End module'%s.", functionName));
 	printstream.println("");
         printstream.println(String.format("Definition %1$s := module'%1$s.%1$s.", functionName));
 
