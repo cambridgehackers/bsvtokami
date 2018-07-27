@@ -32,7 +32,7 @@ public class BSVType {
 	    name  = "Bit";
 	    params.add(new BSVType("1"));
 	}
-	this.numeric = numeric || name.matches("[0-9]+");
+	this.numeric = numeric || name.matches("[0-9]+") || name.endsWith("sz") || name.endsWith("Sz");
 	isVar = name.matches("[a-z].*");
 	this.name = name;
     }

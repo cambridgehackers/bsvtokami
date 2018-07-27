@@ -488,7 +488,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 if (formal.name != null) {
 		    String formalName = formal.name.getText();
 		    formalNames.add(formalName);
-                    printstream.println(String.format("    Variable %s: ConstT (%s).", formalName, bsvTypeToKami(bsvType)));
+                    printstream.println(String.format("    Variable %s: ConstT %s.", formalName, bsvTypeToKami(bsvType, 1)));
 		}
             }
         }
@@ -612,7 +612,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitVarBinding(BSVParser.VarBindingContext ctx) {
-        BSVParser.BsvtypeContext t = ctx.t;
 	if (statements == null) {
 	    logger.fine("Visiting var binding but not collecting statements at " + StaticAnalysis.sourceLocation(ctx));
 	    return "";
@@ -620,6 +619,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
 	typeVisitor.pushScope(scope);
 	
+	BSVType t = typeVisitor.visit(ctx.t);
+
         for (BSVParser.VarinitContext varinit: ctx.varinit()) {
 	    StringBuilder statement = new StringBuilder();
             String varName = varinit.var.getText();
@@ -648,7 +649,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 			String msbWidth = String.format("(%s - %s)", exprWidth, lsbWidth);
 			statement.append(String.format("LET %1$s : %2$s <- UniBit (Trunc %3$s %4$s) (castBits _ %6$s %6$s _ %5$s)",
 						       varName,
-						       bsvTypeToKami(t),
+						       bsvTypeToKami(t, 1),
 						       lsbWidth,
 						       msbWidth,
 						       visit(args.get(0)),
@@ -660,7 +661,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 			String msbWidth = String.format("(%s - %s)", exprWidth, lsbWidth);
 			statement.append(String.format("LET %1$s : %2$s <-  UniBit (TruncLsb %3$s %4$s) (castBits _ %6$s %6$s _ %5$s)",
 						       varName,
-						       bsvTypeToKami(t),
+						       bsvTypeToKami(t, 1),
 						       msbWidth,
 						       lsbWidth,
 						       visit(args.get(0)),
@@ -674,7 +675,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 			String varWidth = bsvTypeSize(varType, varinit.var);
 			statement.append(String.format("LET %1$s : %2$s <-  UniBit (SignExtendTrunc %3$s %4$s) (castBits _ %3$s %3$s _ %5$s)",
 						       varName,
-						       bsvTypeToKami(varType),
+						       bsvTypeToKami(varType, 1),
 						       arg0Width,
 						       varWidth,
 						       visit(args.get(0))));
@@ -686,7 +687,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 			statement.append(String.format("        LET %s : %s <- ", varName, bsvTypeToKami(t)));
 			statement.append(visit(rhs));
 		    } else {
-			letBindings.add(String.format("%s : ConstT %s := (%s)%%kami", varName, bsvTypeToKami(t), visit(rhs)));
+			letBindings.add(String.format("%s : ConstT %s := (%s)%%kami", varName, bsvTypeToKami(t, 1), visit(rhs)));
 			statement.append("(* varbinding in action context *)");
 		    }
                 }
@@ -1787,16 +1788,16 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 if (entry.type.name.equals("Reg")) {
                     expression.append(prefix + varName + "_v");
 		} else if (varName.equals("True")) {
-		    expression.append("$$true");
+		    expression.append("ConstBool true");
 		} else if (varName.equals("False")) {
-		    expression.append("$$false");
+		    expression.append("ConstBool false");
 		} else {
                     expression.append(prefix + varName);
 		}
             } else if (varName.equals("True")) {
-		expression.append("$$true");
+		expression.append("ConstBool true");
             } else if (varName.equals("False")) {
-		expression.append("$$false");
+		expression.append("ConstBool false");
 	    } else {
 		char firstChar = varName.charAt(0);
 		if (firstChar >= 'A' && firstChar <= 'Z') {
@@ -1998,7 +1999,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	if (kamitype.equals("Bit") && !inModule)
 	    kamitype = "Bit";
 	else if (kamitype.equals("Bool") && !inModule)
-	    kamitype = "bool";
+	    kamitype = "Bool";
 	else if (kamitype.equals("Integer"))
 	    kamitype = "nat";
 	else if (kamitype.equals("Action"))
@@ -2011,15 +2012,30 @@ public class BSVToKami extends BSVBaseVisitor<String>
         if (t == null)
             return "<nulltype>";
         t = t.prune();
-        String kamitype = bsvTypeToKami(t.name);
-        for (BSVType p: t.params)
-            kamitype += " " + bsvTypeToKami(p);
-        if (level > 0)
-            kamitype = String.format("&%s)", kamitype);
+	
+	String kamitype = bsvTypeToKami(t.name);
+	ArrayList<String> convertedParams = new ArrayList<>();
+	for (BSVType p: t.params) {
+	    convertedParams.add(bsvTypeToKami(p, 1));
+	}
+	if (t.name.equals("TAdd")) {
+	    kamitype = String.join(" + ", convertedParams);
+	} else if (t.name.equals("TSub")) {
+	    kamitype = String.join(" - ", convertedParams);
+	} else if (t.name.equals("TLog")) {
+	    kamitype = String.format("log2 %s", convertedParams.get(0));
+	} else if (convertedParams.size() > 0) {
+	    kamitype = String.format("%s %s", t.name, String.join(" ", convertedParams));
+	} else {
+	    level = 0;
+	    kamitype = t.name;
+	}
+	if (level > 0)
+	    kamitype = String.format("(%s)", kamitype);
         return kamitype;
     }
     public String bsvTypeToKami(BSVParser.BsvtypeContext t) {
-        return bsvTypeToKami(t, 0);
+        return String.format("(* from BsvtypeContext *) %s", bsvTypeToKami(t, 0));
     }
     public String bsvTypeToKami(BSVParser.BsvtypeContext t, int level) {
         if (t == null)
@@ -2060,9 +2076,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	BSVType dereftype = typeVisitor.dereferenceTypedef(bsvtype);
         logger.fine(String.format("bsvtypesize %s dereftype %s at %s", bsvtype, dereftype, StaticAnalysis.sourceLocation(ctx)));
 	if (bsvtype.params.size() > 0)
-	    bsvtype = dereftype.instantiate(dereftype.params, bsvtype.params);
-	else
-	    bsvtype = dereftype;
+	    dereftype = dereftype.instantiate(dereftype.params, bsvtype.params);
+	//System.err.println(String.format("bsvTypeSize %s deref %s", bsvtype, dereftype));
+	bsvtype = dereftype;
 	if (bsvtype.name.equals("Reg") || bsvtype.name.equals("Wire")) {
 	    assert bsvtype.params != null;
 	    assert bsvtype.params.size() == 1;
@@ -2071,29 +2087,28 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    if (elementType.params.size() > 0) {
 		dereftype = dereftype.instantiate(dereftype.params, elementType.params);
 	    }
-	    System.err.println(String.format("bsvtype %s dereftype %s at %s", bsvtype.params.get(0), dereftype, StaticAnalysis.sourceLocation(ctx)));
+	    //System.err.println(String.format("bsvtype %s dereftype %s at %s", bsvtype.params.get(0), dereftype, StaticAnalysis.sourceLocation(ctx)));
 	    return bsvTypeSize(dereftype, ctx);
 	} else if (bsvtype.name.equals("TAdd")) {
-	    return String.format("%s + %s",
+	    return String.format("(%s + %s)",
 				 bsvTypeSize(bsvtype.params.get(0), ctx),
 				 bsvTypeSize(bsvtype.params.get(1), ctx));
 	} else if (bsvtype.name.equals("TSub")) {
-	    return String.format("%s - %s",
+	    return String.format("(%s - %s)",
 				 bsvTypeSize(bsvtype.params.get(0), ctx),
 				 bsvTypeSize(bsvtype.params.get(1), ctx));
-	} else if (bsvtype.name.equals("TAdd")) {
-	    return String.format("%s / %s",
+	} else if (bsvtype.name.equals("TDiv")) {
+	    return String.format("(%s / %s)",
 				 bsvTypeSize(bsvtype.params.get(0), ctx),
 				 bsvTypeSize(bsvtype.params.get(1), ctx));
+	} else if (bsvtype.name.equals("TLog")) {
+	    return String.format("log2(%s)",
+				 bsvTypeSize(bsvtype.params.get(0), ctx));
+	} else if (bsvtype.name.equals("Bit") || bsvtype.name.equals("Int") || bsvtype.name.equals("UInt")) {
+	    return bsvTypeSize(bsvtype.params.get(0), ctx);
 	}
-	assert (bsvtype.name.equals("Bit") || bsvtype.name.equals("Int")) : "Unable to calculate size of " + bsvtype + " of "
-	    + ctx.getText() + " at "
-	    + StaticAnalysis.sourceLocation(ctx);
-	assert bsvtype.params != null;
-	assert bsvtype.params.size() == 1;
-	BSVType bitsize = bsvtype.params.get(0);
-	bitsize = typeVisitor.dereferenceTypedef(bitsize);
-	return bitsize.toString();
+	assert bsvtype.numeric : "Expecting numeric type, got " + bsvtype + " at " + StaticAnalysis.sourceLocation(ctx);
+	return bsvtype.toString();
     }
 
     protected String aggregateResult(String aggregate, String nextResult)
