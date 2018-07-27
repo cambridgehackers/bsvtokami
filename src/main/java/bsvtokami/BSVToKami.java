@@ -1699,7 +1699,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		i++;
 	    }
 	}
-        expression.append(" }");
+        expression.append(" }%kami_expr");
         return expression.toString();
     }
     @Override public String visitTaggedunionexpr(BSVParser.TaggedunionexprContext ctx) {
@@ -1742,7 +1742,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 expression.append(String.format("; \"%s\" ::= $0", fieldName));
             }
         }
-        expression.append(" }");
+        expression.append(" }%kami_expr");
         return expression.toString();
     }
     @Override public String visitIntliteral(BSVParser.IntliteralContext ctx) {
