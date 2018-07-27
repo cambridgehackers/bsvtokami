@@ -48,6 +48,7 @@ Definition makeBKModule (im : InBKModule) :=
 Delimit Scope bk_scope with bk.
 
 Notation "$$ v" := (ConstBit v%kami) (at level 0) : bk_scope.
+Notation "$$ v" := (ConstBit v%kami) (at level 0) : kami_scope.
 
 Notation "'BKSTMTS' { s1 'with' .. 'with' sN }" :=
   (ConsInBKModule s1%bk .. (ConsInBKModule sN%bk NilInBKModule) ..)
