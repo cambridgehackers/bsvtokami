@@ -119,7 +119,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	statements = new ArrayList<>();
 	letBindings = new LetBindings();
 	visitChildren(ctx);
-	System.err.println(String.format("visit package stmt at %s", StaticAnalysis.sourceLocation(ctx)));
 	assert statements.size() == 0 : "Unexpected statements at " + StaticAnalysis.sourceLocation(ctx);
 	for (String letBinding: letBindings) {
 	    printstream.println(String.format("Definition %s.\n", letBinding));
@@ -1295,8 +1294,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         int branchnum = 0;
 	StringBuilder statement = new StringBuilder();
-
-	System.err.println("case expr at " + StaticAnalysis.sourceLocation(ctx));
 
 	int itemnum = 0;
 	int nitems = ctx.caseexpritem().size();
