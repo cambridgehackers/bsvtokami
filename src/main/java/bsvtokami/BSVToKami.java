@@ -459,6 +459,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		// emit Variable declaration for free variable in proviso
 		for (BSVParser.BsvtypeContext bsvtype: proviso.bsvtype()) {
 		    String typeVariable = bsvtype.getText();
+		    if (typeVariable.matches("[0-9]+"))
+			continue;
 		    if (!freeTypeVariables.containsKey(typeVariable)) {
 			printstream.println(String.format("    Variable %s: %s.", typeVariable, "nat"));
 			freeTypeVariables.put(typeVariable, typeVisitor.visit(bsvtype));
@@ -2021,7 +2023,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 				 bsvTypeSize(bsvtype.params.get(0), ctx),
 				 bsvTypeSize(bsvtype.params.get(1), ctx));
 	}
-	assert (bsvtype.name.equals("Bit")) : "Unable to calculate size of " + bsvtype + " of "
+	assert (bsvtype.name.equals("Bit") || bsvtype.name.equals("Int")) : "Unable to calculate size of " + bsvtype + " of "
 	    + ctx.getText() + " at "
 	    + StaticAnalysis.sourceLocation(ctx);
 	assert bsvtype.params != null;
