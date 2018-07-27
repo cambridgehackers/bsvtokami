@@ -25,7 +25,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     private ArrayList<String> instances;
     private boolean actionContext;
     private boolean stmtEmitted;
-    private boolean returnEmitted;
+    private String returnPending;
     private boolean inModule;
     // for modules and rules
     private TreeSet<String> letBindings;
@@ -811,6 +811,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	ArrayList<String> parentStatements = statements;
 	letBindings = new TreeSet<>();
 	statements = new ArrayList<>();
+	returnPending = "Retv";
 
         boolean outerContext = actionContext;
         actionContext = true;
@@ -875,6 +876,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         letBindings = new TreeSet<>();
         statements = new ArrayList<>();
         scope = scopes.pushScope(ctx);
+	returnPending = "Retv";
 
         for (BSVParser.AttributeinstanceContext attrinstance: ctx.attributeinstance()) {
             for (BSVParser.AttrspecContext attr: attrinstance.attrspec()) {
@@ -946,8 +948,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		printstream.println("        ");
 		printstream.println(String.join(";\n        ", statements));
 	    }
-            if (returntype.equals("Action") || returntype.equals("Void"))
-                printstream.println(String.format("%s        Retv", ((statements.size() > 0) ? ";\n" : "")));
+	    if (returnPending != null) {
+		if (statements.size() > 0) {
+		    printstream.println(";");
+		}
+		printstream.println("        " + returnPending);
+		System.err.println("end of functiondef clearing returnPending at " + StaticAnalysis.sourceLocation(ctx));
+		returnPending = null;
+	    }
         }
 
         printstream.println(String.format("    }); abstract omega. Qed. (* %s *)", functionName));
@@ -972,6 +980,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         scope = scopes.pushScope(ctx);
 
 	StringBuilder statement = new StringBuilder();
+	returnPending = "Retv";
 
         String methodName = ctx.name.getText();
 	String methodSuffix = "";
@@ -1015,21 +1024,27 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	//letBindings = new TreeSet<>();
 	statements = new ArrayList<>();
 
+	System.err.println("-1- returnPending " + returnPending);
         for (BSVParser.StmtContext stmt: ctx.stmt())
             visit(stmt);
+	System.err.println("-2- returnPending " + returnPending);
 	boolean hasStatements = statements.size() > 0;
 	statement.append(String.join(";" + newline, statements));
         if (ctx.expression() != null) {
             statement.append(visit(ctx.expression()));
 	    hasStatements = true;
 	}
+	System.err.println("-3- returnPending " + returnPending);
 
-        if (returntype.equals("Action") || returntype.equals("Void")) {
+        if (returnPending != null) {
 	    if (hasStatements) {
 		statement.append(";");
 		statement.append(newline);
 	    }
-            statement.append("        Retv");
+            statement.append("        ");
+	    statement.append(returnPending);
+	    System.err.println("end of methoddef clearing returnPending " + returnPending + " at " + StaticAnalysis.sourceLocation(ctx));
+	    returnPending = null;
 	}
 	statement.append(newline);
 
@@ -1106,42 +1121,58 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     @Override
     public String visitIfstmt(BSVParser.IfstmtContext ctx) {
-	TreeSet<String> parentLetBindings = letBindings;
-	ArrayList<String> parentStatements = statements;
-	letBindings = new TreeSet<>();
-	statements = new ArrayList<>();
+        TreeSet<String> parentLetBindings = letBindings;
+        ArrayList<String> parentStatements = statements;
+        letBindings = new TreeSet<>();
+        statements = new ArrayList<>();
 
+        returnPending = "Retv";
         visit(ctx.stmt(0));
-	assert(letBindings.size() == 0) : "Unexpected let bindings:\n" + String.join("\n", letBindings);
+        assert(letBindings.size() == 0) : "Unexpected let bindings:\n" + String.join("\n", letBindings);
 
-	StringBuilder statement = new StringBuilder();
+        StringBuilder statement = new StringBuilder();
         statement.append("        If ");
         statement.append(visit(ctx.expression()));
-        statement.append(newline);
-        statement.append("        then ");
-	for (String substatement: statements)
-	    statement.append(String.format("        %s;%s", substatement, newline));
-        statement.append("        Retv");
+        statement.append(" then (\n        ");
+        statement.append(String.join(";\n        ", statements));
+        if (returnPending != null) {
+            if (statements.size() > 0)
+                statement.append(";\n        ");
+            statement.append("        ");
+	    statement.append(returnPending);
+        }
         if (ctx.stmt(1) != null) {
             statement.append(newline);
-            statement.append("        else ");
-	    letBindings = new TreeSet<>();
-	    statements = new ArrayList<>();
+            statement.append("        ) else (\n        ");
+            letBindings = new TreeSet<>();
+            statements = new ArrayList<>();
+            returnPending = "Retv";
             visit(ctx.stmt(1));
-	    assert(letBindings.size() == 0);
-	    for (String substatement: statements)
-		statement.append(String.format("        %s;%s", substatement, newline));
-            statement.append("        Retv;");
-        }
+            assert(letBindings.size() == 0);
+            statement.append(String.join(";\n        ", statements));
+            if (returnPending != null) {
+                if (statements.size() > 0)
+                    statement.append(";\n        ");
+                statement.append("        ");
+		statement.append(returnPending);
+            }
+	    statement.append(") as retval\n");
+        } else {
+	    statement.append(") else (\n");
+	    statement.append("            Retv\n");
+	    statement.append("        ) as retval\n");
+	}
+	returnPending = "Ret #retval";
 
-	letBindings = parentLetBindings;
-	statements  = parentStatements;
-	if (statements == null)
-	    System.err.println("Not gathering statements at " + StaticAnalysis.sourceLocation(ctx));
+        letBindings = parentLetBindings;
+        statements  = parentStatements;
+        if (statements == null)
+            System.err.println("Not gathering statements at " + StaticAnalysis.sourceLocation(ctx));
 
-	statements.add(statement.toString());
-	return null;
+        statements.add(statement.toString());
+        return null;
     }
+
     String destructurePattern(BSVParser.PatternContext pattern, String match, String tagName) {
         if (pattern.taggedunionpattern() != null) {
             BSVParser.TaggedunionpatternContext taggedunionpattern = pattern.taggedunionpattern();
@@ -1411,6 +1442,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		statement.append(newline);
 	    }
 	}
+	returnPending = "Ret #retval";
 
 	letBindings = parentLetBindings;
 	statements  = parentStatements;
@@ -1685,7 +1717,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	StringBuilder expression = new StringBuilder();
         expression.append("        Ret ");
         expression.append(visit(ctx.expression()));
-	returnEmitted = true;
+	System.err.println("return setting returnPending to null");
+	returnPending = null;
         return expression.toString();
     }
     @Override public String visitVarexpr(BSVParser.VarexprContext ctx) {
@@ -1842,8 +1875,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	letBindings = new TreeSet<>();
 	statements = new ArrayList<>();
-	boolean wasReturnEmitted = returnEmitted;
-	returnEmitted = false;
+	String wasReturnPending = returnPending;
+	returnPending = "Retv";
         for (BSVParser.StmtContext stmt: ctx.stmt()) {
             stmtEmitted = true;
             visit(stmt);
@@ -1866,11 +1899,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	String separator = (actionContext) ? (";" + newline + "        ") : (newline + "        with ");
 	statement.append(String.join(separator, statements));
 
-	if (!returnEmitted) {
+	if (returnPending != null) {
 	    if (statements.size() > 0) {
 		statement.append(";\n");
 	    }
-	    statement.append("        Retv");
+	    statement.append("        ");
+	    statement.append(returnPending);
+	    System.err.println("block stmt clearing returnPending at " + StaticAnalysis.sourceLocation(ctx));
+	    returnPending = null;
 	}
 
 	if (letBindings.size() != 0) {
@@ -1878,7 +1914,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    statement.append("))");
 	}
 
-	returnEmitted = wasReturnEmitted;
         scope = scopes.popScope();
 	letBindings = parentLetBindings;
 	statements  = parentStatements;
