@@ -1598,7 +1598,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitCondexpr(BSVParser.CondexprContext ctx) {
-	return String.format("IF %s then %s else %s",
+	return String.format("(IF %s then %s else %s)",
 			     visit(ctx.expression(0)),
 			     visit(ctx.expression(1)),
 			     visit(ctx.expression(2)));
