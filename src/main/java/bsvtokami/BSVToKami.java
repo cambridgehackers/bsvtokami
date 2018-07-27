@@ -2018,7 +2018,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	for (BSVType p: t.params) {
 	    convertedParams.add(bsvTypeToKami(p, 1));
 	}
-	if (t.name.equals("TAdd")) {
+	if (t.name.equals("ActionValue")) {
+	    kamitype = convertedParams.get(0);
+	} else if (t.name.equals("TAdd")) {
 	    kamitype = String.join(" + ", convertedParams);
 	} else if (t.name.equals("TSub")) {
 	    kamitype = String.join(" - ", convertedParams);
