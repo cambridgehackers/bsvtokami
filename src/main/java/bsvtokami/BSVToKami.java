@@ -7,6 +7,33 @@ import java.io.*;
 import java.util.*;
 import java.util.logging.Logger;
 
+class LetBindings implements Iterable<String>
+{
+    private ArrayList<String> bindings;
+
+    LetBindings() {
+	bindings = new ArrayList<>();
+    }
+    public void add(String binding) {
+	boolean found = false;
+	for (String b: bindings) {
+	    if (b.equals(binding)) {
+		found = true;
+		break;
+	    }
+	}
+	if (!found)
+	    bindings.add(binding);
+    }
+
+    public long size() {
+	return bindings.size();
+    }
+
+    public Iterator<String> iterator() {
+	return bindings.iterator();
+    }
+}
 
 public class BSVToKami extends BSVBaseVisitor<String>
 {
@@ -28,7 +55,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     private String returnPending;
     private boolean inModule;
     // for modules and rules
-    private TreeSet<String> letBindings;
+    private LetBindings letBindings;
     private ArrayList<String> statements;
     private TreeMap<String,String> mSizeRelationshipProvisos;
 
@@ -90,7 +117,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     @Override
     public String visitPackagestmt(BSVParser.PackagestmtContext ctx) {
 	statements = new ArrayList<>();
-	letBindings = new TreeSet<>();
+	letBindings = new LetBindings();
 	visitChildren(ctx);
 	System.err.println(String.format("visit package stmt at %s", StaticAnalysis.sourceLocation(ctx)));
 	assert statements.size() == 0 : "Unexpected statements at " + StaticAnalysis.sourceLocation(ctx);
@@ -386,9 +413,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitModuledef(BSVParser.ModuledefContext ctx) {
-	TreeSet<String> parentLetBindings = letBindings;
+	LetBindings parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
-	letBindings = new TreeSet<>();
+	letBindings = new LetBindings();
 	statements = new ArrayList<>();
 
         for (BSVParser.AttributeinstanceContext attrinstance: ctx.attributeinstance()) {
@@ -825,9 +852,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitRuledef(BSVParser.RuledefContext ruledef) {
-	TreeSet<String> parentLetBindings = letBindings;
+	LetBindings parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
-	letBindings = new TreeSet<>();
+	letBindings = new LetBindings();
 	statements = new ArrayList<>();
 	returnPending = "Retv";
 
@@ -889,9 +916,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitFunctiondef(BSVParser.FunctiondefContext ctx) {
-        TreeSet<String> parentLetBindings = letBindings;
+        LetBindings parentLetBindings = letBindings;
         ArrayList<String> parentStatements = statements;
-        letBindings = new TreeSet<>();
+        letBindings = new LetBindings();
         statements = new ArrayList<>();
         scope = scopes.pushScope(ctx);
 	returnPending = "Retv";
@@ -993,7 +1020,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     @Override public String visitMethoddef(BSVParser.MethoddefContext ctx) {
         boolean outerContext = actionContext;
         actionContext = true;
-	//TreeSet<String> parentLetBindings = letBindings;
+	//LetBindings parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
         scope = scopes.pushScope(ctx);
 
@@ -1039,7 +1066,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    }
         }
 
-	//letBindings = new TreeSet<>();
+	//letBindings = new LetBindings();
 	statements = new ArrayList<>();
 
         for (BSVParser.StmtContext stmt: ctx.stmt())
@@ -1135,9 +1162,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     @Override
     public String visitIfstmt(BSVParser.IfstmtContext ctx) {
-        TreeSet<String> parentLetBindings = letBindings;
+        LetBindings parentLetBindings = letBindings;
         ArrayList<String> parentStatements = statements;
-        letBindings = new TreeSet<>();
+        letBindings = new LetBindings();
         statements = new ArrayList<>();
 
         returnPending = "Retv";
@@ -1158,7 +1185,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         if (ctx.stmt(1) != null) {
             statement.append(newline);
             statement.append("        ) else (\n        ");
-            letBindings = new TreeSet<>();
+            letBindings = new LetBindings();
             statements = new ArrayList<>();
             returnPending = "Retv";
             visit(ctx.stmt(1));
@@ -1252,9 +1279,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     @Override public String visitCaseexpr(BSVParser.CaseexprContext ctx) {
 
-	TreeSet<String> parentLetBindings = letBindings;
+	LetBindings parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
-	letBindings = new TreeSet<>();
+	letBindings = new LetBindings();
 	statements = new ArrayList<>();
 
 	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
@@ -1336,9 +1363,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitCasestmt(BSVParser.CasestmtContext ctx) {
-	TreeSet<String> parentLetBindings = letBindings;
+	LetBindings parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
-	letBindings = new TreeSet<>();
+	letBindings = new LetBindings();
 	statements = new ArrayList<>();
 
 	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
@@ -1386,7 +1413,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             statement.append(destructurePattern(pattern, ctx.expression().getText(), null));
             assert patitem.patterncond().size() == 0;
 
-	    letBindings = new TreeSet<>();
+	    letBindings = new LetBindings();
 	    statements = new ArrayList<>();
             visit(patitem.stmt());
 	    assert(letBindings.size() == 0);
@@ -1421,7 +1448,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             statement.append(") then (");
 	    statement.append(newline);
 
-	    letBindings = new TreeSet<>();
+	    letBindings = new LetBindings();
 	    statements = new ArrayList<>();
             visit(item.stmt());
 	    assert(letBindings.size() == 0);
@@ -1438,7 +1465,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	assert ctx.casestmtdefaultitem() != null : "default clause required at " + StaticAnalysis.sourceLocation(ctx);
 	{
-	    letBindings = new TreeSet<>();
+	    letBindings = new LetBindings();
 	    statements = new ArrayList<>();
             visit(ctx.casestmtdefaultitem().stmt());
 	    assert(letBindings.size() == 0);
@@ -1470,7 +1497,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitForstmt(BSVParser.ForstmtContext ctx) {
-	TreeSet<String> parentLetBindings = letBindings;
+	LetBindings parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
         scope = scopes.pushScope(ctx);
 
@@ -1516,7 +1543,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         statement.append("          in ConsInBKModule");
 	statement.append(newline);
 
-	letBindings = new TreeSet<>();
+	letBindings = new LetBindings();
 	statements = new ArrayList<>();
         visit(ctx.stmt());
 	assert(letBindings.size() == 0);
@@ -1881,12 +1908,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitBeginendblock(BSVParser.BeginendblockContext ctx) {
-	TreeSet<String> parentLetBindings = letBindings;
+	LetBindings parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
 	// rule context
         scope = scopes.pushScope(ctx);
 
-	letBindings = new TreeSet<>();
+	letBindings = new LetBindings();
 	statements = new ArrayList<>();
 	String wasReturnPending = returnPending;
 	returnPending = "Retv";
