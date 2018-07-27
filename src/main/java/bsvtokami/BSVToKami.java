@@ -488,7 +488,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 if (formal.name != null) {
 		    String formalName = formal.name.getText();
 		    formalNames.add(formalName);
-                    printstream.println(String.format("    Variable %s: ConstT %s.", formalName, bsvTypeToKami(bsvType, 1)));
+		    printstream.println(String.format("    Variable %s: %s.",
+						      formalName,
+						      (isKamiKind(bsvType)
+						       ? String.format("ConstT %s", bsvTypeToKami(bsvType, 1))
+						       : bsvType.name)));
 		}
             }
         }
@@ -1985,6 +1989,20 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    woNotation.append(" )");
 	    return woNotation.toString();
 	}
+    }
+
+    public boolean isKamiKind(BSVType t) {
+	if (t.name.equals("Bit")
+	    || t.name.equals("Bool")
+	    || t.name.equals("UInt")
+	    || t.name.equals("Function")
+	    || t.name.equals("Vector")
+	    || t.name.equals("Void")
+	    || t.name.equals("void")
+	    )
+	    return true;
+	// fixme struct
+	return false;
     }
 
     public String bsvTypeToKami(BSVType t) {
