@@ -973,7 +973,6 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	    assert scope != null : "no scope for " + StaticAnalysis.sourceLocation(ctx);
             SymbolTableEntry entry = scope.lookup(varName);
             assert entry != null : String.format("No symbol table entry for %s at %s", varName, StaticAnalysis.sourceLocation(ctx));
-            System.err.println("var expr " + varName + " entry " + entry + " pkgName " + entry.pkgName + " type " + entry.type);
             logger.fine("var expr " + varName + " entry " + entry + " : " + ((entry != null) ? entry.type : ""));
             if (entry.instances != null) {
                 for (SymbolTableEntry instance: entry.instances) {
@@ -1039,7 +1038,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             if (value.width != 0)
                 return new BSVType("Bit", new BSVType(value.width));
 	    System.err.println("Integer type at " + StaticAnalysis.sourceLocation(ctx));
-            return new BSVType("Integer");
+            return new BSVType("Bit", new BSVType(null, true));
         }
         /**
          * {@inheritDoc}

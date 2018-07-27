@@ -66,7 +66,6 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     private void pushScope(ParserRuleContext ctx, SymbolTable.ScopeType st, String name) {
         if (scopes.containsKey(ctx)) {
             symbolTable = scopes.get(ctx);
-	    System.err.println(String.format("Found scope %s for %s at %s", symbolTable.name, name, sourceLocation(ctx)));
         } else {
             symbolTable = new SymbolTable(symbolTable, st, name);
             scopes.put(ctx, symbolTable);

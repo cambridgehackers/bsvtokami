@@ -87,6 +87,19 @@ public class BSVToKami extends BSVBaseVisitor<String>
         return null;
     }
 
+    @Override
+    public String visitPackagestmt(BSVParser.PackagestmtContext ctx) {
+	statements = new ArrayList<>();
+	letBindings = new TreeSet<>();
+	visitChildren(ctx);
+	System.err.println(String.format("visit package stmt at %s", StaticAnalysis.sourceLocation(ctx)));
+	assert statements.size() == 0 : "Unexpected statements at " + StaticAnalysis.sourceLocation(ctx);
+	for (String letBinding: letBindings) {
+	    printstream.println(String.format("Definition %s.\n", letBinding));
+	}
+	return null;
+    }
+
     @Override public String visitInterfacedecl(BSVParser.InterfacedeclContext ctx) {
 	// modules are represented by a string: the name of the instance
 	String interfaceName = ctx.typedeftype().typeide().getText();
@@ -298,7 +311,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    tagFrom += tagCount;
         }
 	maxValue += 1;
-	long tagSize = (long)java.lang.Math.ceil(java.lang.Math.log(maxValue) / java.lang.Math.log(2.0));
+	int tagSize = (int)java.lang.Math.ceil(java.lang.Math.log(maxValue) / java.lang.Math.log(2.0));
 	System.err.println(String.format("%sFields maxValue=%d log maxValue %f tagSize=%d at %s",
 					 typeName, maxValue, java.lang.Math.log(maxValue), tagSize,
 					 StaticAnalysis.sourceLocation(ctx)));
@@ -306,8 +319,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
         printstream.println(String.format("Definition %s := (Struct %sFields).", typeName, typeName));
 
 	for (TagValue pair: tagsAndValues) {
-	    printstream.println(String.format("Notation %s := (STRUCT { \"$tag\" ::= $$(natToWord %d %d) })%%kami_expr.",
-					      pair.tag, tagSize, pair.value));
+	    if (pair.value < 128)
+		printstream.println(String.format("Notation %s := (STRUCT { \"$tag\" ::= $$%s })%%kami_expr.",
+						  pair.tag, intToWord(tagSize, pair.value)));
 
 	}
 
@@ -1028,17 +1042,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	//letBindings = new TreeSet<>();
 	statements = new ArrayList<>();
 
-	System.err.println("-1- returnPending " + returnPending);
         for (BSVParser.StmtContext stmt: ctx.stmt())
             visit(stmt);
-	System.err.println("-2- returnPending " + returnPending);
 	boolean hasStatements = statements.size() > 0;
 	statement.append(String.join(";" + newline, statements));
         if (ctx.expression() != null) {
             statement.append(visit(ctx.expression()));
 	    hasStatements = true;
 	}
-	System.err.println("-3- returnPending " + returnPending);
 
         if (returnPending != null) {
 	    if (hasStatements) {
@@ -1047,7 +1058,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    }
             statement.append("        ");
 	    statement.append(returnPending);
-	    System.err.println("end of methoddef clearing returnPending " + returnPending + " at " + StaticAnalysis.sourceLocation(ctx));
 	    returnPending = null;
 	}
 	statement.append(newline);
@@ -1132,7 +1142,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         returnPending = "Retv";
         visit(ctx.stmt(0));
-        assert(letBindings.size() == 0) : "Unexpected let bindings:\n" + String.join("\n", letBindings);
+        assert(letBindings.size() == 0) : "Unexpected let bindings at " + StaticAnalysis.sourceLocation(ctx) + "\n" + String.join("\n", letBindings);
 
         StringBuilder statement = new StringBuilder();
         statement.append("        If ");
@@ -1710,7 +1720,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     @Override public String visitIntliteral(BSVParser.IntliteralContext ctx) {
 	IntValue intValue = new IntValue(ctx.IntLiteral().getText());
 	if (intValue.width != 0)
-	    return String.format("$$(natToWord %d %d)", intValue.width, intValue.value);
+	    return String.format("$$%s", intToWord(intValue.width, intValue.value));
 	else
 	    return (String.format("$%d", intValue.value));
     }
@@ -1721,7 +1731,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	StringBuilder expression = new StringBuilder();
         expression.append("        Ret ");
         expression.append(visit(ctx.expression()));
-	System.err.println("return setting returnPending to null");
 	returnPending = null;
         return expression.toString();
     }
@@ -1909,7 +1918,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    }
 	    statement.append("        ");
 	    statement.append(returnPending);
-	    System.err.println("block stmt clearing returnPending at " + StaticAnalysis.sourceLocation(ctx));
 	    returnPending = null;
 	}
 
@@ -1932,6 +1940,19 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    return t.params.get(0);
 	} else {
 	    return t;
+	}
+    }
+
+    String intToWord(int width, long value) {
+	if (value < 128 || width == 0) {
+	    return String.format("(natToWord %d %d)", width, value);
+	} else {
+	    StringBuilder woNotation = new StringBuilder();
+	    woNotation.append(String.format("( (* %d'h%x *) WO", width, value));
+	    for (int i = 0; i < width; i++)
+		woNotation.append(String.format("~%d", (value >> (width - 1 - i)) & 1));
+	    woNotation.append(" )");
+	    return woNotation.toString();
 	}
     }
 
@@ -2007,7 +2028,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
 	typeVisitor.pushScope(scope);
 	BSVType dereftype = typeVisitor.dereferenceTypedef(bsvtype);
-        System.err.println(String.format("bsvtype %s dereftype %s at %s", bsvtype, dereftype, StaticAnalysis.sourceLocation(ctx)));
+        logger.fine(String.format("bsvtypesize %s dereftype %s at %s", bsvtype, dereftype, StaticAnalysis.sourceLocation(ctx)));
 	if (bsvtype.params.size() > 0)
 	    bsvtype = dereftype.instantiate(dereftype.params, bsvtype.params);
 	else
