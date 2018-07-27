@@ -947,6 +947,24 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 	}
     }
 
+    static BSVType getBsvType(BSVParser.TypedeftypeContext typedef) {
+	if (typedef.typeformals() != null) {
+	    ArrayList<BSVType> params = new ArrayList<>();
+	    for (BSVParser.TypeformalContext formal: typedef.typeformals().typeformal()) {
+		params.add(getBsvType(formal));
+	    }
+	    return new BSVType(typedef.typeide().getText(),
+			       params);
+	} else {
+	    return new BSVType(typedef.typeide().getText());
+	}
+    }
+
+    static BSVType getBsvType(BSVParser.TypeformalContext formal) {
+	return new BSVType(formal.typeide().getText(),
+			   formal.numeric != null);
+    }
+
     static BSVType getBsvType(BSVParser.MethodprotoformalContext formal) {
 	if (formal.bsvtype() != null) {
 	    return getBsvType(formal.bsvtype());
