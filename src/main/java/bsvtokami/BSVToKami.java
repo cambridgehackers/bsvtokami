@@ -1912,6 +1912,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
         return statement.toString();
     }
 
+    @Override public String visitValueofexpr(BSVParser.ValueofexprContext ctx) {
+	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
+	typeVisitor.pushScope(scope);
+
+	BSVType bsvtype = typeVisitor.visit(ctx.bsvtype());
+	return String.format("($ %s)", bsvTypeValue(bsvtype, ctx.bsvtype(), 1));
+    }
+
     @Override public String visitBeginendblock(BSVParser.BeginendblockContext ctx) {
 	LetBindings parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
@@ -2119,13 +2127,48 @@ public class BSVToKami extends BSVBaseVisitor<String>
 				 bsvTypeSize(bsvtype.params.get(0), ctx),
 				 bsvTypeSize(bsvtype.params.get(1), ctx));
 	} else if (bsvtype.name.equals("TLog")) {
-	    return String.format("log2(%s)",
+	    return String.format("log2 %s",
 				 bsvTypeSize(bsvtype.params.get(0), ctx));
 	} else if (bsvtype.name.equals("Bit") || bsvtype.name.equals("Int") || bsvtype.name.equals("UInt")) {
 	    return bsvTypeSize(bsvtype.params.get(0), ctx);
 	}
 	assert bsvtype.numeric : "Expecting numeric type, got " + bsvtype + " at " + StaticAnalysis.sourceLocation(ctx);
 	return bsvtype.toString();
+    }
+
+    String bsvTypeValue(BSVType bsvtype, ParserRuleContext ctx, int level) {
+	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
+	typeVisitor.pushScope(scope);
+	BSVType dereftype = typeVisitor.dereferenceTypedef(bsvtype);
+        logger.fine(String.format("bsvtypevalue %s dereftype %s at %s", bsvtype, dereftype, StaticAnalysis.sourceLocation(ctx)));
+	if (bsvtype.params.size() > 0)
+	    dereftype = dereftype.instantiate(dereftype.params, bsvtype.params);
+	//System.err.println(String.format("bsvTypeSize %s deref %s", bsvtype, dereftype));
+	bsvtype = dereftype;
+	String value;
+	if (bsvtype.name.equals("TAdd")) {
+	    value = String.format("%s + %s",
+				  bsvTypeValue(bsvtype.params.get(0), ctx, 1),
+				  bsvTypeValue(bsvtype.params.get(1), ctx, 1));
+	} else if (bsvtype.name.equals("TSub")) {
+	    value = String.format("%s - %s",
+				  bsvTypeValue(bsvtype.params.get(0), ctx, 1),
+				  bsvTypeValue(bsvtype.params.get(1), ctx, 1));
+	} else if (bsvtype.name.equals("TDiv")) {
+	    value = String.format("%s / %s",
+				  bsvTypeValue(bsvtype.params.get(0), ctx, 1),
+				  bsvTypeValue(bsvtype.params.get(1), ctx, 1));
+	} else if (bsvtype.name.equals("TLog")) {
+	    value = String.format("log2 %s",
+				  bsvTypeValue(bsvtype.params.get(0), ctx, 1));
+	} else {
+	    assert bsvtype.numeric : "bsvTypeValue expected numeric type, got " + bsvtype + " at " + StaticAnalysis.sourceLocation(ctx);
+	    level = 0;
+	    value = bsvtype.toString();
+	}
+	if (level > 0)
+	    value = String.format("(%s)", value);
+	return value;
     }
 
     protected String aggregateResult(String aggregate, String nextResult)
