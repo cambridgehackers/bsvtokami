@@ -736,7 +736,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    SymbolTableEntry fcnEntry = scope.lookup(fcnName);
 	    BSVType moduleType = fcnEntry.type.fresh();
 	    TreeMap<String,BSVType> moduleFreeTypeVars = moduleType.getFreeVariables();
-	    BSVType interfaceType = moduleType.params.get(0);
+	    BSVType interfaceType = getModuleType(moduleType);
+	    System.err.println(String.format("fcnName %s moduleType %s interfaceType %s",
+					     fcnName, moduleType, interfaceType));
 	    String interfaceName = interfaceType.name;
 	    StringBuilder typeParameters = new StringBuilder();
 	    StringBuilder params = new StringBuilder();
@@ -1921,6 +1923,16 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	statements  = parentStatements;
 	statements.add(statement.toString());
         return null;
+    }
+
+    BSVType getModuleType(BSVType t) {
+	if (t.name.equals("Function")) {
+	    return getModuleType(t.params.get(1));
+	} else if (t.name.equals("Module")) {
+	    return t.params.get(0);
+	} else {
+	    return t;
+	}
     }
 
     public String bsvTypeToKami(BSVType t) {
