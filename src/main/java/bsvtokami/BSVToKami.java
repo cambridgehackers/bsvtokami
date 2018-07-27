@@ -1746,10 +1746,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
     @Override public String visitIntliteral(BSVParser.IntliteralContext ctx) {
 	IntValue intValue = new IntValue(ctx.IntLiteral().getText());
-	if (intValue.width != 0)
+	if (intValue.width != 0) {
 	    return String.format("$$%s", intToWord(intValue.width, intValue.value));
-	else
+	} else {
+	    //FIXME width from type
+	    assert (intValue.value < 128) : "Specify width of int literal %d at " + StaticAnalysis.sourceLocation(ctx);
 	    return (String.format("$%d", intValue.value));
+	}
     }
     @Override public String visitRealliteral(BSVParser.RealliteralContext ctx) {
         return ("$" + ctx.RealLiteral().getText());
