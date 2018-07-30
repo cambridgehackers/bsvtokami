@@ -2150,6 +2150,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	} else if (bsvtype.name.equals("TExp")) {
 	    value = String.format("exp2 %s",
 				  bsvTypeValue(bsvtype.params.get(0), ctx, 1));
+	} else if (bsvtype.numeric) {
+	    level = 0;
+	    value = bsvtype.toString();
 	} else {
 	    assert bsvtype.numeric : "bsvTypeValue expected numeric type, got " + bsvtype + " at " + StaticAnalysis.sourceLocation(ctx);
 	    level = 0;
