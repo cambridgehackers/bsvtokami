@@ -1002,7 +1002,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	    //assert(letBindings.size() == 0) : "Unexpected let bindings at " + StaticAnalysis.sourceLocation(ctx);;
 	    if (letBindings.size() > 0)
-		System.err.println("Unexpected let bindings at " + StaticAnalysis.sourceLocation(ctx) + "\n" + String.join("\n    ", letBindings));
+		System.err.println("Unexpected let bindings in function def at " + StaticAnalysis.sourceLocation(ctx) + "\n" + String.join("\n    ", letBindings));
 	    if (statements.size() > 0) {
 		printstream.println("        ");
 		printstream.println(String.join(";\n        ", statements));
