@@ -1731,7 +1731,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 				     visit(rightarg));
 	    leftargSize = String.join(" + ", argSizes);
 	}
-	return String.format("castBits _ (%s) _ _ %s",
+	return String.format("castBits _ (%1$s) (%1$s) _ %2$s",
 			     leftargSize, leftexpr);
     }
 
@@ -1847,16 +1847,16 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 if (entry.type.name.equals("Reg")) {
                     expression.append(prefix + varName + "_v");
 		} else if (varName.equals("True")) {
-		    expression.append("($1 == $1)%kami_expr");
+		    expression.append("($$true)%kami_expr");
 		} else if (varName.equals("False")) {
-		    expression.append("($1 == $0)%kami_expr");
+		    expression.append("($$false)%kami_expr");
 		} else {
                     expression.append(prefix + varName);
 		}
             } else if (varName.equals("True")) {
-		expression.append("($1 == $1)%kami_expr");
+		expression.append("($$true)%kami_expr");
             } else if (varName.equals("False")) {
-		expression.append("($1 == $0)%kami_expr");
+		expression.append("($$false)%kami_expr");
 	    } else {
 		char firstChar = varName.charAt(0);
 		if (firstChar >= 'A' && firstChar <= 'Z') {
