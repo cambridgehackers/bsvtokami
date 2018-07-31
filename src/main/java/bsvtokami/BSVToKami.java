@@ -56,6 +56,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     private boolean inModule;
     // for modules and rules
     private LetBindings letBindings;
+    private LetBindings methodBindings;
     private ArrayList<String> statements;
     private TreeMap<String,String> mSizeRelationshipProvisos;
 
@@ -412,8 +413,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitModuledef(BSVParser.ModuledefContext ctx) {
+	LetBindings parentMethodBindings = methodBindings;
 	LetBindings parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
+	methodBindings = new LetBindings();
 	letBindings = new LetBindings();
 	statements = new ArrayList<>();
 
@@ -526,6 +529,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		printstream.println(String.format("       Let %s.", letBinding));
 	    }
 	}
+	if (methodBindings.size() > 0) {
+	    for (String methodBinding: methodBindings) {
+		printstream.println(String.format("       Let %s.", methodBinding));
+	    }
+	}
 
         for (Map.Entry<String,TreeSet<InstanceEntry>> iter: inv.methodsUsed.entrySet()) {
             String instanceName = iter.getKey();
@@ -605,6 +613,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         logger.fine("endmodule : " + moduleName);
         inModule = wasInModule;
 
+	methodBindings = parentMethodBindings;
 	letBindings = parentLetBindings;
 	statements  = parentStatements;
         return null;
@@ -751,7 +760,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         if (!callRegMethods && typeName.startsWith("Reg")) {
             BSVType paramtype = bsvtype.params.get(0);
-	    letBindings.add(String.format("%s : string := instancePrefix--\"%s\"", varName, varName));
+	    methodBindings.add(String.format("%s : string := instancePrefix--\"%s\"", varName, varName));
             statement.append("Register " + varName + " : " + bsvTypeToKami(paramtype)
                              + " <- ");
 
@@ -838,9 +847,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 					     StaticAnalysis.sourceLocation(ctx.rhs)));
 	    if (moduleFreeTypeVars.size() != 0)
 		System.err.println("   freeTypeVars: " + typeParameters.toString());
-            letBindings.add(String.format("%s := %s%s (instancePrefix--\"%s\")%s",
-					  varName, fcnName, typeParameters.toString(), varName,
-					  params.toString()));
+            methodBindings.add(String.format("%s := %s%s (instancePrefix--\"%s\")%s",
+					     varName, fcnName, typeParameters.toString(), varName,
+					     params.toString()));
             statement.append(String.format("(BKMod (%s'modules %s :: nil))", interfaceName, varName));
 
             String instanceName = String.format("%s", varName); //FIXME concat methodName
@@ -893,7 +902,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         for (Map.Entry<String,BSVType> entry: regReadVisitor.regs.entrySet()) {
             String regName = entry.getKey();
 	    if (callRegMethods) {
-		letBindings.add(String.format("%s_read : string := (Reg'_read %s)", regName, regName));
+		methodBindings.add(String.format("%s_read : string := (Reg'_read %s)", regName, regName));
 		statement.append(String.format("        CallM %s_v : %s <- %s_read();\n",
 					       regName, bsvTypeToKami(entry.getValue()), regName));
 	    } else {
@@ -928,8 +937,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitFunctiondef(BSVParser.FunctiondefContext ctx) {
+        LetBindings parentMethodBindings = methodBindings;
         LetBindings parentLetBindings = letBindings;
         ArrayList<String> parentStatements = statements;
+        methodBindings = new LetBindings();
         letBindings = new LetBindings();
         statements = new ArrayList<>();
         scope = scopes.pushScope(ctx);
@@ -988,7 +999,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             for (Map.Entry<String,BSVType> entry: regReadVisitor.regs.entrySet()) {
                 String regName = entry.getKey();
 		if (callRegMethods) {
-		    letBindings.add(String.format("%s_read : string := (Reg'_read %s)", regName, regName));
+		    methodBindings.add(String.format("%s_read : string := (Reg'_read %s)", regName, regName));
 		    printstream.println(String.format("CallM %s_v : %s <- %s_read();\n",
 						   regName, bsvTypeToKami(entry.getValue()), regName));
 		} else {
@@ -1025,6 +1036,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         printstream.println(String.format("Definition %1$s := module'%1$s.%1$s.", functionName));
 
 	actionContext = wasActionContext;
+	methodBindings = parentMethodBindings;
         letBindings = parentLetBindings;
         statements  = parentStatements;
         scope = scopes.popScope();
@@ -1074,7 +1086,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         for (Map.Entry<String,BSVType> entry: regReadVisitor.regs.entrySet()) {
             String regName = entry.getKey();
 	    if (callRegMethods) {
-		letBindings.add(String.format("%s_read : string := (Reg'_read %s)", regName, regName));
+		methodBindings.add(String.format("%s_read : string := (Reg'_read %s)", regName, regName));
 		statement.append(String.format("CallM %s_v : %s <- %s_read();\n",
 					       regName, bsvTypeToKami(entry.getValue()), regName));
 	    } else {
@@ -1124,8 +1136,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	if (callRegMethods) {
 	    String regName = regwrite.lhs.getText();
-	    letBindings.add(String.format("%1$s_write : string := (Reg'_write %1$s)",
-					  regName));
+	    methodBindings.add(String.format("%1$s_write : string := (Reg'_write %1$s)",
+					     regName));
 	    statement.append(String.format("        CallM %s_write ( %s : %s )",
 					   regName,
 					   visit(rhs),
