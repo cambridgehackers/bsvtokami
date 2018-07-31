@@ -709,6 +709,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		    } else {
 			letBindings.add(String.format("%s : ConstT %s := (%s)%%kami", varName, bsvTypeToKami(t, 1), visit(rhs)));
 			statement.append("(* varbinding in action context *)");
+			varEntry.isConstT = true;
 		    }
                 }
             } else {
@@ -1802,7 +1803,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		if (entry.symbolType == SymbolType.ModuleParam
 		    && entry.type.isVar)
 		    prefix = "$$";
-		if (entry.type.name.equals("Integer"))
+		if (entry.isConstT)
+		    prefix = "$$";
+		else if (entry.type.name.equals("Integer"))
 		    prefix = "$";
 		else if (firstChar >= 'A' && firstChar <= 'Z')
 		    prefix = "";
@@ -2020,7 +2023,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
     }
 
-    public boolean isKamiKind(BSVType t) {
+    public static boolean isKamiKind(BSVType t) {
 	if (t.name.equals("Bit")
 	    || t.name.equals("Bool")
 	    || t.name.equals("UInt")

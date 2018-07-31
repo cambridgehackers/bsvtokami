@@ -14,6 +14,7 @@ class SymbolTableEntry implements java.lang.Comparable {
     public String instanceName;
     public String pkgName;
     public SymbolTableEntry parent; // which interface a method belongs to, etc.
+    public boolean isConstT;
     SymbolTableEntry(String name, BSVType type) {
         this.name = name;
         this.type = type;
@@ -21,8 +22,9 @@ class SymbolTableEntry implements java.lang.Comparable {
     public SymbolTableEntry copy() {
         return new SymbolTableEntry(name, type);
     }
-    public void setValue(Value v) {
+    public SymbolTableEntry setValue(Value v) {
         value = v;
+	return this;
     }
     public void addInstance(SymbolTableEntry instanceEntry) {
 	if (instances == null)
@@ -35,6 +37,10 @@ class SymbolTableEntry implements java.lang.Comparable {
     }
     public SymbolTableEntry setSymbolType(SymbolType st) {
 	symbolType = st;
+	return this;
+    }
+    public SymbolTableEntry setIsConstT(boolean v) {
+        isConstT = v;
 	return this;
     }
 }
