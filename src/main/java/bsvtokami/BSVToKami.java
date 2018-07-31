@@ -658,10 +658,17 @@ public class BSVToKami extends BSVBaseVisitor<String>
 			//String lsbWidth = bsvTypeSize(varType, varinit.var);
 			//String exprWidth = bsvTypeSize(arg0Type, args.get(0));
 			//String msbWidth = String.format("(%s - %s)", exprWidth, lsbWidth);
-			statement.append(String.format("LET %1$s : %2$s <- %3$s",
+			if (actionContext) {
+			statement.append(String.format("LET %1$s : %2$s <- $%3$s",
 						       varName,
 						       bsvTypeToKami(t, 1),
 						       visit(args.get(0))));
+			} else {
+			    letBindings.add(String.format("%1$s : ConstT %2$s := $%3$s",
+							  varName,
+							  bsvTypeToKami(t, 1),
+							  visit(args.get(0))));
+			}
 		    } else if (functionName.equals("truncate")) {
 			BSVType arg0Type = typeVisitor.visit(args.get(0));
 			String lsbWidth = bsvTypeSize(varType, varinit.var);
@@ -1970,7 +1977,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	typeVisitor.pushScope(scope);
 
 	BSVType bsvtype = typeVisitor.visit(ctx.bsvtype());
-	return String.format("($ %s)", bsvTypeValue(bsvtype, ctx.bsvtype(), 1));
+	return bsvTypeValue(bsvtype, ctx.bsvtype(), 1);
     }
 
     @Override public String visitBeginendblock(BSVParser.BeginendblockContext ctx) {
