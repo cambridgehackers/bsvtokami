@@ -1801,16 +1801,16 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 if (entry.type.name.equals("Reg")) {
                     expression.append(prefix + varName + "_v");
 		} else if (varName.equals("True")) {
-		    expression.append("ConstBool true");
+		    expression.append("($1 == $1)%kami_expr");
 		} else if (varName.equals("False")) {
-		    expression.append("ConstBool false");
+		    expression.append("($1 == $0)%kami_expr");
 		} else {
                     expression.append(prefix + varName);
 		}
             } else if (varName.equals("True")) {
-		expression.append("ConstBool true");
+		expression.append("($1 == $1)%kami_expr");
             } else if (varName.equals("False")) {
-		expression.append("ConstBool false");
+		expression.append("($1 == $0)%kami_expr");
 	    } else {
 		char firstChar = varName.charAt(0);
 		if (firstChar >= 'A' && firstChar <= 'Z') {
