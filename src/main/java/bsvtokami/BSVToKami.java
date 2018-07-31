@@ -1621,7 +1621,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	StringBuilder expression = new StringBuilder();
         if (expr.right != null) {
             expression.append("(");
-            if (!inModule) {
+            if (!inModule && false) {
                 if (expr.op != null) {
                     String op = expr.op.getText();
                     if (op.equals("<"))
@@ -1632,7 +1632,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             }
             if (expr.left != null)
                 expression.append(visit(expr.left));
-            if (inModule) {
+            if (inModule || true) {
 		String operator = expr.op.getText();
 		if (operator.equals("&"))
 		    operator = "~&";
