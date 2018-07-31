@@ -1636,39 +1636,58 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitBinopexpr(BSVParser.BinopexprContext expr) {
+	if (expr.unopexpr() != null)
+	    return (visit(expr.unopexpr()));
+
+	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
+	typeVisitor.pushScope(scope);
+
+	assert expr.op != null;
+	assert expr.right != null;
+
+	String op = expr.op.getText();
+	String leftValue = visit(expr.left);
+	String rightValue = visit(expr.right);
+	BSVType leftType = typeVisitor.visit(expr.left);
+	BSVType rightType = typeVisitor.visit(expr.right);
+	if (op.equals(">>") || op.equals("<<")) {
+	    String leftWidth = bsvTypeSize(leftType, expr.left);
+	    String rightWidth = bsvTypeSize(rightType, expr.right);
+	    String kamiOp = (op.equals(">>") ? "Srl" : "Sll");
+	    return String.format("(BinBit (%5$s %1$s %2$s) %3$s %4$s)",
+				 leftWidth, rightWidth,
+				 leftValue, rightValue,
+				 kamiOp);
+	}
+
 	StringBuilder expression = new StringBuilder();
-        if (expr.right != null) {
-            expression.append("(");
-            if (!inModule && false) {
-                if (expr.op != null) {
-                    String op = expr.op.getText();
-                    if (op.equals("<"))
-                        op = "bitlt";
-                    expression.append(op);
-                }
-                expression.append(" ");
-            }
-            if (expr.left != null)
-                expression.append(visit(expr.left));
-            if (inModule || true) {
-		String operator = expr.op.getText();
-		if (operator.equals("&"))
-		    operator = "~&";
-		else if (operator.equals("|"))
-		    operator = "~|";
-		else if (operator.equals("^"))
-		    operator = "~+";
-                expression.append(" ");
-                expression.append(operator);
-                expression.append(" ");
-            } else {
-                expression.append(" ");
-            }
-            expression.append(visit(expr.right));
-            expression.append(")");
-        } else {
-            expression.append(visit(expr.unopexpr()));
-        }
+	expression.append("(");
+	if (!inModule && false) {
+	    if (expr.op != null) {
+		if (op.equals("<"))
+		    op = "bitlt";
+		expression.append(op);
+	    }
+	    expression.append(" ");
+	}
+	if (expr.left != null)
+	    expression.append(leftValue);
+	if (inModule || true) {
+	    if (op.equals("&"))
+		op = "~&";
+	    else if (op.equals("|"))
+		op = "~|";
+	    else if (op.equals("^"))
+		op = "~+";
+	    expression.append(" ");
+	    expression.append(op);
+	    expression.append(" ");
+	} else {
+	    expression.append(" ");
+	}
+	expression.append(rightValue);
+	expression.append(")");
+
         return expression.toString();
     }
     @Override public String visitUnopexpr(BSVParser.UnopexprContext ctx) {
