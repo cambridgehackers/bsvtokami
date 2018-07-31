@@ -43,6 +43,10 @@ class SymbolTableEntry implements java.lang.Comparable {
         isConstT = v;
 	return this;
     }
+    public SymbolTableEntry setInstanceName(String v) {
+	instanceName = v;
+	return this;
+    }
 }
 
 class SymbolTable {
