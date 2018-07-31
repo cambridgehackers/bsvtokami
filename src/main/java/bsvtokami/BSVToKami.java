@@ -667,7 +667,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 			String lsbWidth = bsvTypeSize(varType, varinit.var);
 			String exprWidth = bsvTypeSize(arg0Type, args.get(0));
 			String msbWidth = String.format("(%s - %s)", exprWidth, lsbWidth);
-			statement.append(String.format("LET %1$s : %2$s <- UniBit (Trunc %3$s %4$s) (castBits _ %6$s %6$s _ %5$s)",
+			statement.append(String.format("LET %1$s : %2$s <- UniBit (Trunc %3$s %4$s) (castBits _ %6$s (%3$s + %4$s) _ %5$s)",
 						       varName,
 						       bsvTypeToKami(t, 1),
 						       lsbWidth,
