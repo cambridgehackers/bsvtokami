@@ -784,12 +784,15 @@ public class BSVToKami extends BSVBaseVisitor<String>
             BSVParser.CallexprContext call = getCall(ctx.rhs);
 	    assert call != null && call.fcn != null: "Something wrong with action context " + ctx.rhs.getText() + " at " + StaticAnalysis.sourceLocation(ctx.rhs);
 
-	    statement.append(String.format("        CallM %s : %s <- %s",
+	    statement.append(String.format("        CallM %s : %s (* actionBinding *) <- %s",
 					   varName, bsvTypeToKami(bsvtype),calleeInstanceName));
 	    for (BSVParser.ExpressionContext arg: call.expression()) {
+		BSVType argType = typeVisitor.visit(arg);
+		if (argType.name.equals("Reg"))
+		    argType = argType.params.get(0);
 		statement.append(String.format(" (%s : %s)",
 					       visit(arg),
-					       bsvTypeToKami(typeVisitor.visit(arg))));
+					       bsvTypeToKami(argType)));
 	    }
 
         } else if (!actionContext) {
@@ -1139,6 +1142,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    String regName = regwrite.lhs.getText();
 	    methodBindings.add(String.format("%1$s_write : string := (Reg'_write %1$s)",
 					     regName));
+	    if (rhsType.name.equals("Reg"))
+		rhsType = rhsType.params.get(0);
 	    statement.append(String.format("        CallM %s_write ( %s : %s )",
 					   regName,
 					   visit(rhs),
@@ -1927,6 +1932,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		statement.append(" (");
                 statement.append(visit(expr));
 		statement.append(" : ");
+		if (argType.name.equals("Reg"))
+		    argType = argType.params.get(0);
 		statement.append(bsvTypeToKami(argType));
 		statement.append(")");
 		System.err.println("callm resultType " + resultType);
