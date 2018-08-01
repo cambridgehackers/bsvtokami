@@ -2180,6 +2180,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    kamitype = String.join(" + ", convertedParams);
 	} else if (t.name.equals("TSub")) {
 	    kamitype = String.join(" - ", convertedParams);
+	} else if (t.name.equals("TDiv")) {
+	    kamitype = String.join(" / ", convertedParams);
 	} else if (t.name.equals("TLog")) {
 	    kamitype = String.format("log2 %s", convertedParams.get(0));
 	} else if (t.name.equals("TExp")) {
