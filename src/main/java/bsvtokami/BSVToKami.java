@@ -454,7 +454,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	moduleDef = new ModuleDef(moduleName);
         pkg.addStatement(moduleDef);
-        InstanceNameVisitor inv = new InstanceNameVisitor(scope);
+        InstanceNameVisitor inv = new InstanceNameVisitor(scopes);
         inv.visit(ctx);
 
         logger.fine("module " + moduleName);
@@ -762,7 +762,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
         SymbolTableEntry entry = scope.lookup(varName);
         assert entry != null: "Null var name in " + ctx.getText();
         BSVType bsvtype = entry.type;
-        InstanceNameVisitor inv = new InstanceNameVisitor(scope);
+        InstanceNameVisitor inv = new InstanceNameVisitor(scopes);
+	inv.pushScope(scope);
         String calleeInstanceName = inv.visit(ctx.rhs);
         if (calleeInstanceName != null && actionContext)
             calleeInstanceName = calleeInstanceName.replace(".", "");
@@ -969,7 +970,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             }
         }
 
-        InstanceNameVisitor inv = new InstanceNameVisitor(scope);
+        InstanceNameVisitor inv = new InstanceNameVisitor(scopes);
         inv.visit(ctx);
 
         BSVParser.FunctionprotoContext functionproto = ctx.functionproto();
@@ -1977,7 +1978,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitCallexpr(BSVParser.CallexprContext ctx) {
-        InstanceNameVisitor inv = new InstanceNameVisitor(scope);
+        InstanceNameVisitor inv = new InstanceNameVisitor(scopes);
+	inv.pushScope(scope);
         String methodName = inv.visit(ctx.fcn);
 	BSVType argType = new BSVType();
 	BSVType resultType = new BSVType();

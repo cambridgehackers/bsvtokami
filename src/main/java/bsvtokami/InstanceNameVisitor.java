@@ -23,10 +23,12 @@ class InstanceEntry implements java.lang.Comparable {
 
 class InstanceNameVisitor extends BSVBaseVisitor<String> {
     private static Logger logger = Logger.getGlobal();
+    private final StaticAnalysis scopes;
+    private Stack<SymbolTable> scopeStack = new Stack<>();
     private SymbolTable scope;
     public TreeMap<String,TreeSet<InstanceEntry>> methodsUsed;
-    InstanceNameVisitor(SymbolTable scope) {
-        this.scope = scope;
+    InstanceNameVisitor(StaticAnalysis scopes) {
+	this.scopes = scopes;
         methodsUsed = new TreeMap<>();
     }
 
@@ -40,6 +42,23 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
         }
         return bsvtype;
     }
+
+    void pushScope(SymbolTable newScope) {
+	scopeStack.push(scope);
+	scope = newScope;
+    }
+
+    void pushScope(ParserRuleContext ctx) {
+	scopeStack.push(scope);
+	if (scopes.getScope(ctx) != null)
+            scope = scopes.getScope(ctx);
+    }
+
+    private void popScope() {
+	scope = scopeStack.pop();
+    }
+
+
 
     @Override public String visitOperatorexpr(BSVParser.OperatorexprContext ctx) {
         String instanceName = visit(ctx.binopexpr());
@@ -70,7 +89,8 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
             String fieldName = ctx.field.getText();
             String methodName = String.format("%s.%s", instanceName, fieldName);
             SymbolTableEntry entry = scope.lookup(instanceName);
-            assert entry != null: "Field expr problem at " + StaticAnalysis.sourceLocation(ctx);
+            assert entry != null: String.format("No entry for field expr instance %s at %s",
+						instanceName, StaticAnalysis.sourceLocation(ctx));
 	    BSVType interfaceType = dereferenceTypedef(entry.type);
 	    System.err.println(String.format("Type %s interface %s instance %s at %s",
 					     entry.type, interfaceType, instanceName, StaticAnalysis.sourceLocation(ctx)));
@@ -121,4 +141,81 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
         }
         return null;
     }
+
+    @Override public String visitTypeclassinstance(BSVParser.TypeclassinstanceContext ctx) {
+	pushScope(ctx);
+	visitChildren(ctx);
+	popScope();
+	return null;
+    }
+
+    @Override public String visitModuledef(BSVParser.ModuledefContext ctx) {
+	pushScope(ctx);
+	visitChildren(ctx);
+	popScope();
+	return null;
+    }
+    @Override public String visitMethoddef(BSVParser.MethoddefContext ctx) {
+	pushScope(ctx);
+	visitChildren(ctx);
+	popScope();
+	return null;
+    }
+
+    @Override public String visitRuledef(BSVParser.RuledefContext ctx) {
+	pushScope(ctx);
+	visitChildren(ctx);
+	popScope();
+	return null;
+    }
+
+    @Override public String visitFunctiondef(BSVParser.FunctiondefContext ctx) {
+	pushScope(ctx);
+	visitChildren(ctx);
+	popScope();
+	return null;
+    }
+
+    @Override public String visitIfstmt(BSVParser.IfstmtContext ctx) {
+	pushScope(ctx);
+	visitChildren(ctx);
+	popScope();
+	return null;
+    }	
+
+    @Override public String visitCasestmtpatitem(BSVParser.CasestmtpatitemContext ctx) {
+	pushScope(ctx);
+	visitChildren(ctx);
+	popScope();
+	return null;
+    }
+
+    @Override public String visitForstmt(BSVParser.ForstmtContext ctx)  {
+	pushScope(ctx);
+	visitChildren(ctx);
+	popScope();
+	return null;
+    }
+
+    @Override public String visitBeginendblock(BSVParser.BeginendblockContext ctx) {
+	pushScope(ctx);
+	visitChildren(ctx);
+	popScope();
+	return null;
+    }
+
+    @Override public String visitCondexpr(BSVParser.CondexprContext ctx) {
+	pushScope(ctx);
+	visitChildren(ctx);
+	popScope();
+	return null;
+    }
+
+    @Override public String visitCaseexpr(BSVParser.CaseexprContext ctx) {
+	pushScope(ctx);
+	visitChildren(ctx);
+	popScope();
+	return null;
+    }
+
 }
