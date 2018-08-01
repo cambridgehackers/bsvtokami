@@ -116,6 +116,7 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
                 }
             } else {
                 logger.fine(String.format("No symbol table entry for %s", varName));
+		return varName;
             }
         }
         return null;
