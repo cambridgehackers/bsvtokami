@@ -547,9 +547,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		    BSVType returnType = methodType.params.get(1);
 		    String methodInterfaceName = methodEntry.interfaceName;
 		    printstream.println(String.format("    Let %1$s%2$s : string := (%3$s'%2$s %1$s).",
-						      instanceName, method, methodInterfaceName));
+						      instanceName,
+						      method,
+						      methodInterfaceName));
 		} else {
-		    printstream.println(String.format("(* FIXME: interface %s subinterface %s *)", methodEntry.interfaceName, method));
+		    //printstream.println(String.format("(* FIXME: interface %s subinterface %s *)", methodEntry.interfaceName, method));
 		}
             }
         }
@@ -707,7 +709,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 						       varWidth,
 						       visit(args.get(0))));
 		    } else {
-			statement.append(String.format("CallM %s : %s <- %s", varName, bsvTypeToKami(t), visit(rhs)));
+			System.err.println(String.format("CallM varbinding %s fcn %s", varName, functionName));
+			statement.append(String.format("CallM %s : %s (* varbinding *) <- %s", varName, bsvTypeToKami(t), visit(rhs)));
 		    }
                 } else {
 		    if (actionContext) {
@@ -914,7 +917,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             String regName = entry.getKey();
 	    if (callRegMethods) {
 		methodBindings.add(String.format("%s_read : string := (Reg'_read %s)", regName, regName));
-		statement.append(String.format("        CallM %s_v : %s <- %s_read();\n",
+		statement.append(String.format("        CallM %s_v : %s (* regRead *) <- %s_read();\n",
 					       regName, bsvTypeToKami(entry.getValue()), regName));
 	    } else {
 		statement.append("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- " + regName + ";\n");
@@ -966,8 +969,15 @@ public class BSVToKami extends BSVBaseVisitor<String>
             }
         }
 
+        InstanceNameVisitor inv = new InstanceNameVisitor(scope);
+        inv.visit(ctx);
+
         BSVParser.FunctionprotoContext functionproto = ctx.functionproto();
 	String functionName = functionproto.name.getText();
+	System.err.println(String.format("Translating function def %s scope name %s looking up inst: %s",
+					 functionName, scope.name,
+					 (scope.lookup("inst") != null ? "found it" : "huh")));
+
 	printstream.println(String.format("(* interface for module wrapper for %s *)", functionName));
 	printstream.println(String.format("Record Interface'%s := {", functionName));
 	printstream.println(String.format("    Interface'%s'modules: Modules;", functionName));
@@ -977,7 +987,86 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	printstream.println(String.format("Module module'%s.", functionName));
 	printstream.println(String.format("    Section Section'%s.", functionName));
 	printstream.println(String.format("    Variable instancePrefix: string."));
+
+	boolean wasActionContext = actionContext;
+	actionContext = true;
+	StringBuilder functionBody = new StringBuilder();
+
+        RegReadVisitor regReadVisitor = new RegReadVisitor(scope);
+        if (ctx.expression() != null) {
+            printstream.print("    ");
+            regReadVisitor.visit(ctx.expression());
+
+        if (ctx.expression() != null)
+            functionBody.append(visit(ctx.expression()));
+        } else {
+
+            for (Map.Entry<String,BSVType> entry: regReadVisitor.regs.entrySet()) {
+                String regName = entry.getKey();
+		if (callRegMethods) {
+		    methodBindings.add(String.format("%s_read : string := (Reg'_read %s)", regName, regName));
+		    functionBody.append(String.format("CallM %s_v : %s (* funcdef regread *) <- %s_read();\nL",
+						      regName, bsvTypeToKami(entry.getValue()), regName));
+		} else {
+		    functionBody.append("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- \"" + regName + "\";");
+		    functionBody.append(newline);
+		}
+            }
+            for (BSVParser.StmtContext stmt: ctx.stmt())
+                regReadVisitor.visit(stmt);
+            for (BSVParser.StmtContext stmt: ctx.stmt())
+                visit(stmt);
+
+	    //assert(letBindings.size() == 0) : "Unexpected let bindings at " + StaticAnalysis.sourceLocation(ctx);;
+	    if (letBindings.size() > 0)
+		System.err.println("Unexpected let bindings in function def at " + StaticAnalysis.sourceLocation(ctx) + "\n" + String.join("\n    ", letBindings));
+	    if (statements.size() > 0) {
+		functionBody.append("        ");
+		functionBody.append(String.join(";\n        ", statements));
+	    }
+	    if (returnPending != null) {
+		if (statements.size() > 0) {
+		    functionBody.append(";");
+		    functionBody.append(newline);
+		}
+		functionBody.append("        ");
+		functionBody.append(returnPending);
+		functionBody.append(newline);
+		System.err.println("end of functiondef clearing returnPending at " + StaticAnalysis.sourceLocation(ctx));
+		returnPending = null;
+	    }
+        }
+
+	actionContext = wasActionContext;
+
 	//FIXME letBindings go here
+
+        for (Map.Entry<String,TreeSet<InstanceEntry>> iter: inv.methodsUsed.entrySet()) {
+            String instanceName = iter.getKey();
+            TreeSet<InstanceEntry> methods = iter.getValue();
+            for (InstanceEntry methodEntry: methods) {
+                String method = methodEntry.methodName;
+                BSVType methodType = methodEntry.methodType;
+		System.err.println(String.format("INV: function def instance %s method %s : %s",
+						 instanceName, method, methodType));
+		if (methodType.name.equals("Function"))  {
+		    assert methodType.params.size() == 2: "Unhandled method " + method + " has type " + methodType + " from interface " + methodEntry.interfaceName;
+		    BSVType argType = methodType.params.get(0);
+		    BSVType returnType = methodType.params.get(1);
+		    String methodInterfaceName = methodEntry.interfaceName;
+		    printstream.println(String.format("    Let %1$s%2$s : string := (%3$s'%2$s %1$s).",
+						      instanceName, method, methodInterfaceName));
+		} else {
+		    printstream.println(String.format("(* FIXME: interface %s subinterface %s *)", methodEntry.interfaceName, method));
+		}
+            }
+        }
+	for (String letBinding: letBindings) {
+	    printstream.println(String.format("       Let %s.", letBinding));
+	}
+	for (String methodBinding: methodBindings) {
+	    printstream.println(String.format("       Definition %s.\n", methodBinding));
+	}
 
 	printstream.println(String.format("    Definition Modules'%s: Modules.", functionName));
 	printstream.println(String.format("        refine (BKMODULE {"));
@@ -995,56 +1084,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
         String returntype = (functionproto.bsvtype() != null) ? bsvTypeToKami(StaticAnalysis.getBsvType(functionproto.bsvtype())) : "";
         printstream.println(String.format(": %s := ", returntype));
 
-	boolean wasActionContext = actionContext;
-	actionContext = true;
-
-        RegReadVisitor regReadVisitor = new RegReadVisitor(scope);
-        if (ctx.expression() != null) {
-            printstream.print("    ");
-            regReadVisitor.visit(ctx.expression());
-
-        if (ctx.expression() != null)
-            printstream.println(visit(ctx.expression()));
-        } else {
-
-            for (Map.Entry<String,BSVType> entry: regReadVisitor.regs.entrySet()) {
-                String regName = entry.getKey();
-		if (callRegMethods) {
-		    methodBindings.add(String.format("%s_read : string := (Reg'_read %s)", regName, regName));
-		    printstream.println(String.format("CallM %s_v : %s <- %s_read();\n",
-						   regName, bsvTypeToKami(entry.getValue()), regName));
-		} else {
-		    printstream.println("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- \"" + regName + "\";");
-		}
-            }
-            for (BSVParser.StmtContext stmt: ctx.stmt())
-                regReadVisitor.visit(stmt);
-            for (BSVParser.StmtContext stmt: ctx.stmt())
-                visit(stmt);
-
-	    //assert(letBindings.size() == 0) : "Unexpected let bindings at " + StaticAnalysis.sourceLocation(ctx);;
-	    if (letBindings.size() > 0)
-		System.err.println("Unexpected let bindings in function def at " + StaticAnalysis.sourceLocation(ctx) + "\n" + String.join("\n    ", letBindings));
-	    if (statements.size() > 0) {
-		printstream.println("        ");
-		printstream.println(String.join(";\n        ", statements));
-	    }
-	    if (returnPending != null) {
-		if (statements.size() > 0) {
-		    printstream.println(";");
-		}
-		printstream.println("        " + returnPending);
-		System.err.println("end of functiondef clearing returnPending at " + StaticAnalysis.sourceLocation(ctx));
-		returnPending = null;
-	    }
-        }
+	printstream.println(functionBody.toString());
 
         printstream.println(String.format("    }); abstract omega. Qed. (* %s *)", functionName));
         printstream.println(String.format("    Definition %1$s := Build_Interface'%1$s Modules'%1$s (instancePrefix--\"%1$s\").", functionName));
 	printstream.println(String.format("    End Section'%s.", functionName));
 	printstream.println(String.format("End module'%s.", functionName));
 	printstream.println("");
-        printstream.println(String.format("Definition %1$s := module'%1$s.%1$s.", functionName));
+        printstream.println(String.format("Definition function'%1$s := module'%1$s.%1$s.", functionName));
 
 	actionContext = wasActionContext;
 	methodBindings = parentMethodBindings;
@@ -1098,7 +1145,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             String regName = entry.getKey();
 	    if (callRegMethods) {
 		methodBindings.add(String.format("%s_read : string := (Reg'_read %s)", regName, regName));
-		statement.append(String.format("CallM %s_v : %s <- %s_read();\n",
+		statement.append(String.format("CallM %s_v : %s (* methoddef regread *) <- %s_read();\n",
 					       regName, bsvTypeToKami(entry.getValue()), regName));
 	    } else {
 		statement.append("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- \"" + regName + "\";");
@@ -1945,6 +1992,20 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		argType = methodType.params.get(0);
 		resultType = methodType.params.get(1);
 	    }
+	} else {
+	    assert methodName != null : "No method name at " + StaticAnalysis.sourceLocation(ctx);
+	    assert scope != null;
+	    SymbolTableEntry functionEntry = scope.lookup(methodName);
+	    if (functionEntry != null && functionEntry.type.name.equals("Function")) {
+		BSVType functionType = functionEntry.type;
+		//FIXME: copy and instantiate type
+		argType = functionType.params.get(0);
+		resultType = functionType.params.get(1);
+		System.err.println(String.format("Call expr function %s : %s\n", methodName, functionType));
+		methodBindings.add(String.format("instance'%1$s := function'%1$s (instancePrefix--\"%1$s\")", methodName));
+		methodBindings.add(String.format("%1$s := Interface'%1$s'%1$s instance'%1$s", methodName));
+		System.err.println("Added methodBindings \n" + String.join("\n", methodBindings));
+	    }
 	}
         if (methodName == null)
             methodName = "FIXME$" + ctx.fcn.getText();
@@ -1953,7 +2014,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	StringBuilder statement = new StringBuilder();
         if (methodName != null) {
             // "Call" is up where the binding is, hopefully
-            statement.append(String.format(" %s", methodName));
+	    statement.append(" ");
+            statement.append(methodName);
+	    int argNumber = 0;
             for (BSVParser.ExpressionContext expr: ctx.expression()) {
 		statement.append(" (");
                 statement.append(visit(expr));
@@ -1962,9 +2025,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		    argType = argType.params.get(0);
 		statement.append(bsvTypeToKami(argType));
 		statement.append(")");
-		System.err.println("callm resultType " + resultType);
+		System.err.println(String.format("callm %s arg %d type %s", methodName, argNumber, argType));
 		if (resultType.name.equals("Function"))
 		    argType = resultType.params.get(0);
+		argNumber++;
             }
         } else {
             logger.fine(String.format("How to call action function {%s}", ctx.fcn.getText()));
