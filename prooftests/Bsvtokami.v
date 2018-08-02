@@ -102,7 +102,7 @@ Notation "'CallM' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ; cont " :=
    (MCall meth%string {| arg := (Struct fields); ret := retT |} args (fun name => cont)))
     (at level 12, right associativity, name at level 0, meth at level 0, a1 at level 99, a2 at level 99) : kami_action_scope.
 
-Notation "'Method2' name ( p1 : d1 ) ( p2 : d2 ) : retT := c" :=
+Notation "'Method' name ( p1 : d1 ) ( p2 : d2 ) : retT := c" :=
   (let d1f := d1 in
    let d1g := d1 in
    let d2f := d2 in
@@ -123,7 +123,7 @@ Notation "'CallM' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ( a3 : a3T ) ; c
     (at level 12, right associativity, name at level 0, meth at level 0,
      a1 at level 99, a2 at level 99, a3 at level 99) : kami_action_scope.
 
-Notation "'Method3' name ( p1 : d1 ) ( p2 : d2 )  ( p3 : d3 ) : retT := c" :=
+Notation "'Method' name ( p1 : d1 ) ( p2 : d2 )  ( p3 : d3 ) : retT := c" :=
   (let d1f := d1 in
    let d1g := d1 in
    let d2f := d2 in
@@ -147,7 +147,7 @@ Notation "'CallM' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ( a3 : a3T )  ( 
     (at level 12, right associativity, name at level 0, meth at level 0,
      a1 at level 99, a2 at level 99, a3 at level 99, a4 at level 99) : kami_action_scope.
 
-Notation "'Method4' name ( p1 : d1 ) ( p2 : d2 )  ( p3 : d3 ) ( p4 : d4 ) : retT := c" :=
+Notation "'Method' name ( p1 : d1 ) ( p2 : d2 )  ( p3 : d3 ) ( p4 : d4 ) : retT := c" :=
   (let d1f := d1 in
    let d1g := d1 in
    let d2f := d2 in
@@ -174,7 +174,7 @@ Notation "'CallM' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ( a3 : a3T ) ( a
     (at level 12, right associativity, name at level 0, meth at level 0,
      a1 at level 99, a2 at level 99, a3 at level 99, a4 at level 99, a5 at level 99) : kami_action_scope.
 
-Notation "'Method5' name ( p1 : d1 ) ( p2 : d2 )  ( p3 : d3 ) ( p4 : d4 ) ( p5 : d5 ) : retT := c" :=
+Notation "'Method' name ( p1 : d1 ) ( p2 : d2 )  ( p3 : d3 ) ( p4 : d4 ) ( p5 : d5 ) : retT := c" :=
   (let d1f := d1 in
    let d1g := d1 in
    let d2f := d2 in

@@ -1115,16 +1115,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	returnPending = "Retv";
 
         String methodName = ctx.name.getText();
-	String methodSuffix = "";
 	String noParams = " ()";
         if (ctx.methodformals() != null) {
 	    int numArgs = ctx.methodformals().methodformal().size();
-	    if (numArgs > 1)
-		methodSuffix = String.format("%d", numArgs);
 	    noParams = "";
 	}
 	
-        statement.append(String.format("Method%s instancePrefix--\"%s\"%s", methodSuffix, methodName, noParams));
+        statement.append(String.format("Method instancePrefix--\"%s\"%s", methodName, noParams));
         if (ctx.methodformals() != null) {
             for (BSVParser.MethodformalContext formal: ctx.methodformals().methodformal()) {
                 BSVType bsvtype = typeVisitor.visit(formal.bsvtype());
