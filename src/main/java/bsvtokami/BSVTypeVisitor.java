@@ -1,6 +1,7 @@
 package bsvtokami;
 
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
+import org.antlr.v4.runtime.ParserRuleContext;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -16,11 +17,13 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
     private StaticAnalysis staticAnalyzer;
     private SymbolTable scope;
     private Stack<SymbolTable> scopeStack = new Stack<>();
+    private HashMap<ParserRuleContext, BSVType> types;
     private static Logger logger = Logger.getGlobal();
     private static boolean callUnify = false;
 
     BSVTypeVisitor(StaticAnalysis staticAnalyzer) {
         this.staticAnalyzer = staticAnalyzer;
+	types = new HashMap<>();
     }
 
     public void pushScope(SymbolTable newScope)
@@ -194,6 +197,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitMethodproto(BSVParser.MethodprotoContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             BSVType returnType =
                 (ctx.bsvtype() != null)
                 ? visit(ctx.bsvtype())
@@ -212,6 +217,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 methodtype = new BSVType("Function", p);
             }
             logger.fine("methodproto " + ctx.name.getText() + " : " + methodtype);
+	    types.put(ctx, methodtype);
             return methodtype;
         }
         /**
@@ -221,10 +227,14 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitMethodprotoformals(BSVParser.MethodprotoformalsContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             List<BSVType> params = new ArrayList<BSVType>();
             for (BSVParser.MethodprotoformalContext param : ctx.methodprotoformal())
                 params.add(visit(param));
-            return new BSVType("MethodProtoFormals", params);
+	    BSVType bsvtype = new BSVType("MethodProtoFormals", params);
+	    types.put(ctx, bsvtype);
+            return bsvtype;
         }
         /**
          * {@inheritDoc}
@@ -233,12 +243,17 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitMethodprotoformal(BSVParser.MethodprotoformalContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             if (ctx.functionproto() != null)
                 return visit(ctx.functionproto());
             else if (ctx.bsvtype() != null)
                 return visit(ctx.bsvtype());
-            else
-                return new BSVType("Void");
+            else {
+		BSVType bsvtype = new BSVType("Void");
+		types.put(ctx, bsvtype);
+		return bsvtype;
+	    }
         }
         /**
          * {@inheritDoc}
@@ -264,12 +279,15 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitTypedeftype(BSVParser.TypedeftypeContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             BSVType bsvtype = new BSVType(ctx.typeide().getText());
             if (ctx.typeformals() != null) {
                 for (BSVParser.TypeformalContext tf: ctx.typeformals().typeformal()) {
                     bsvtype.params.add(visit(tf));
                 }
             }
+	    types.put(ctx, bsvtype);
             return bsvtype;
         }
         /**
@@ -286,7 +304,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitTypeformal(BSVParser.TypeformalContext ctx) {
-            return new BSVType(ctx.typeide().getText(), ctx.numeric != null);
+            BSVType bsvtype = new BSVType(ctx.typeide().getText(), ctx.numeric != null);
+	    types.put(ctx, bsvtype);
+	    return bsvtype;
         }
         /**
          * {@inheritDoc}
@@ -502,6 +522,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitModuleproto(BSVParser.ModuleprotoContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             //FIXME: modulecontext
             BSVType moduleInterface =
                 (ctx.moduleinterface != null)
@@ -522,6 +544,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 moduletype = new BSVType("Function", p);
             }
             logger.fine("moduleproto " + ctx.name.getText() + " : " + moduletype);
+	    types.put(ctx, moduletype);
             return moduletype;
         }
         /**
@@ -566,10 +589,14 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitMethodformals(BSVParser.MethodformalsContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             List<BSVType> params = new ArrayList<BSVType>();
             for (BSVParser.MethodformalContext param : ctx.methodformal())
                 params.add(visit(param));
-            return new BSVType("MethodFormals", params);
+            BSVType bsvtype = new BSVType("MethodFormals", params);
+	    types.put(ctx, bsvtype);
+	    return bsvtype;
         }
         /**
          * {@inheritDoc}
@@ -690,7 +717,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                     if (lvaluetype.name.equals("Vector")) {
                         return lvaluetype.params.get(1);
                     } else {
-                        return new BSVType("Bit", new BSVType("1"));
+			BSVType bsvtype = new BSVType("Bit", new BSVType("1"));
+			types.put(ctx, bsvtype);
+			return bsvtype;
                     }
                 } else if (ctx.msb != null && ctx.lsb != null) {
                     assert !lvaluetype.isVar : lvalue.getText();
@@ -698,8 +727,10 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 }
             } else if (ctx.lowerCaseIdentifier() != null) {
                 SymbolTableEntry entry = scope.lookup(ctx.lowerCaseIdentifier().getText());
-                if (entry == null)
-                    return new BSVType();
+                if (entry == null) {
+                    BSVType bsvtype = new BSVType();
+		    types.put(ctx, bsvtype);
+		}
                 return entry.type;
             }
             assert false : "Unexpected: " + ctx.getText();
@@ -715,7 +746,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             if (ctx.functionproto() != null) {
                 return visit(ctx.functionproto());
             } else if (ctx.typenat() != null) {
-                return new BSVType(ctx.typenat().getText(), true);
+                BSVType bsvtype = new BSVType(ctx.typenat().getText(), true);
+		types.put(ctx, bsvtype);
+		return bsvtype;
             } else {
                 String typeide = ctx.typeide().getText();
                 // is type variable?
@@ -730,6 +763,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                     } else {
                         bsvtype = entry.type;
                     }
+		    types.put(ctx, bsvtype);
                     return bsvtype;
                 } else {
                     List<BSVType> typeparams = new ArrayList<BSVType>();
@@ -737,6 +771,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                         typeparams.add(visit(param));
                     }
                     BSVType bsvtype = new BSVType(ctx.typeide().getText(), typeparams);
+		    types.put(ctx, bsvtype);
 		    return bsvtype;
                 }
             }
@@ -748,6 +783,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitTypeide(BSVParser.TypeideContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             if (ctx.var != null) {
                 String typeide = ctx.var.getText();
                 SymbolTableEntry entry = scope.lookupType(typeide);
@@ -761,11 +798,14 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 		    else
 			bsvtype = entry.type;
                 }
+		types.put(ctx, bsvtype);
                 return bsvtype;
             } else {
                 String typeide = ctx.getText(); //FIXME
 		System.err.println("fixme typeide " + ctx.getText());
-                return new BSVType(typeide);
+		BSVType bsvtype = new BSVType(typeide);
+		types.put(ctx, bsvtype);
+		return bsvtype;
             }
         }
         /**
@@ -775,7 +815,11 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitTypenat(BSVParser.TypenatContext ctx) {
-            return new BSVType(ctx.getText(), true);
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
+            BSVType bsvtype = new BSVType(ctx.getText(), true);
+	    types.put(ctx, bsvtype);
+	    return bsvtype;
         }
         /**
          * {@inheritDoc}
@@ -800,6 +844,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitCaseexpr(BSVParser.CaseexprContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             visit(ctx.expression());
             BSVType returnType = new BSVType();
             try {
@@ -811,6 +857,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             } catch (InferenceError e) {
                 logger.fine(e.toString());
             }
+	    types.put(ctx, returnType);
             return returnType;
         }
         /**
@@ -820,6 +867,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitCondexpr(BSVParser.CondexprContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             BSVType boolType = new BSVType("Bool");
             BSVType resultType = new BSVType();
 	    if (callUnify) {
@@ -831,11 +880,14 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 		    logger.fine(e.toString());
 		}
 	    }
+	    types.put(ctx, resultType);
             return resultType;
         }
 
     @Override public BSVType visitTripleandexpr(BSVParser.TripleandexprContext ctx) { return visitChildren(ctx); }
     @Override public BSVType visitCaseexpritem(BSVParser.CaseexpritemContext ctx) {
+	if (types.containsKey(ctx))
+	    return types.get(ctx);
         int numExpressions = ctx.exprprimary().size();
         if (ctx.pattern() != null)
             visit(ctx.pattern());
@@ -851,6 +903,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             }
         }
         BSVType bodyType = visit(ctx.body);
+	types.put(ctx, bodyType);
         return bodyType;
     }
         /**
@@ -861,6 +914,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          */
         @Override public BSVType visitPatterncond(BSVParser.PatterncondContext ctx) { return visitChildren(ctx); }
         @Override public BSVType visitBinopexpr(BSVParser.BinopexprContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             if (ctx.unopexpr() != null) {
                 return visit(ctx.unopexpr());
             } else {
@@ -882,7 +937,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 if (op.equals("==") || op.equals("!=")
                     || op.equals("<") || op.equals(">")
                     || op.equals("<=") || op.equals(">=")) {
-                    return new BSVType("Bool");
+                    BSVType bsvtype = new BSVType("Bool");
+		    types.put(ctx, bsvtype);
+		    return bsvtype;
                 } else {
                     return lhstype;
                 }
@@ -895,6 +952,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitUnopexpr(BSVParser.UnopexprContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             BSVType bsvtype = visit(ctx.exprprimary());
             if (ctx.op == null) {
                 logger.fine("Unop expr " + ctx.exprprimary().getText() + " : " + bsvtype);
@@ -919,6 +978,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 }
                 return new BSVType("Bit", new BSVType(1));
             }
+	    types.put(ctx, bsvtype);
             return bsvtype;
         }
         /**
@@ -928,6 +988,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitBitconcat(BSVParser.BitconcatContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             int width = 0;
             boolean widthKnown = true;
             for (BSVParser.ExpressionContext expr: ctx.expression()) {
@@ -954,10 +1016,11 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             }
             logger.fine(String.format("bitconcat %s width %d known %s at %s",
                                              ctx.getText(), width, widthKnown, StaticAnalysis.sourceLocation(ctx)));
-            if (widthKnown)
-                return new BSVType("Bit", new BSVType(width));
-            else
-                return new BSVType("Bit", new BSVType(null, true));
+	    BSVType bsvtype = (widthKnown)
+		? new BSVType("Bit", new BSVType(width))
+		: new BSVType("Bit", new BSVType(null, true));
+	    types.put(ctx, bsvtype);
+	    return bsvtype;
         }
         /**
          * {@inheritDoc}
@@ -966,6 +1029,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitVarexpr(BSVParser.VarexprContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             String varName = ctx.anyidentifier().getText();
             if (varName.startsWith("\\"))
                 varName = varName.substring(1);
@@ -979,15 +1044,15 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                     logger.fine(String.format("    instance %s : %s", varName, instance.type));
                 }
             }
+	    BSVType entryType = entry.type;
             if (varName.startsWith("$"))
-                return new BSVType();
+                entryType = new BSVType();
             else {
-		BSVType entryType = entry.type;
 		if (entry.pkgName != null)
-		    return entryType.fresh(new ArrayList<>());
-		else
-		    return entryType;
+		    entryType = entryType.fresh(new ArrayList<>());
 	    }
+	    types.put(ctx, entryType);
+	    return entryType;
         }
         /**
          * {@inheritDoc}
@@ -1015,7 +1080,11 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitStringliteral(BSVParser.StringliteralContext ctx) {
-            return new BSVType("String");
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
+            BSVType bsvtype = new BSVType("String");
+	    types.put(ctx, bsvtype);
+	    return bsvtype;
         }
         /**
          * {@inheritDoc}
@@ -1024,7 +1093,11 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitRulesexpr(BSVParser.RulesexprContext ctx) {
-            return new BSVType("Rule");
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
+            BSVType bsvtype = new BSVType("Rule");
+	    types.put(ctx, bsvtype);
+	    return bsvtype;
         }
         /**
          * {@inheritDoc}
@@ -1033,12 +1106,17 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitIntliteral(BSVParser.IntliteralContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             String literal = ctx.getText();
             IntValue value = new IntValue(literal);
-            if (value.width != 0)
-                return new BSVType("Bit", new BSVType(value.width));
-	    System.err.println("Integer type at " + StaticAnalysis.sourceLocation(ctx));
-            return new BSVType("Bit", new BSVType(null, true));
+	    BSVType bsvtype = (value.width != 0)
+		? new BSVType("Bit", new BSVType(value.width))
+		: new BSVType("Bit", new BSVType(null, true));
+	    if (value.width == 0)
+		System.err.println("Integer type at " + StaticAnalysis.sourceLocation(ctx));
+	    types.put(ctx, bsvtype);
+            return bsvtype;
         }
         /**
          * {@inheritDoc}
@@ -1047,7 +1125,11 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitRealliteral(BSVParser.RealliteralContext ctx) {
-            return new BSVType("Real");
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
+            BSVType bsvtype = new BSVType("Real");
+	    types.put(ctx, bsvtype);
+	    return bsvtype;
         }
         /**
          * {@inheritDoc}
@@ -1070,7 +1152,11 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitUndefinedexpr(BSVParser.UndefinedexprContext ctx) {
-            return new BSVType();
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
+            BSVType bsvtype = new BSVType();
+	    types.put(ctx, bsvtype);
+	    return bsvtype;
         }
         /**
          * {@inheritDoc}
@@ -1093,6 +1179,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitFieldexpr(BSVParser.FieldexprContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             logger.fine("computing type of field " + ctx.getText());
             BSVType basetype = visit(ctx.exprprimary());
             String interfaceName = basetype.name;
@@ -1111,7 +1199,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 }
             }
             logger.fine(String.format("Failed to find type of %s at %s", ctx.getText(), StaticAnalysis.sourceLocation(ctx)));
-            return new BSVType();
+            BSVType bsvtype = new BSVType();
+	    types.put(ctx, bsvtype);
+	    return bsvtype;
         }
         /**
          * {@inheritDoc}
@@ -1154,6 +1244,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitCallexpr(BSVParser.CallexprContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             logger.fine("call " + ctx.fcn.getText());
             BSVType fcntype = visit(ctx.fcn);
             assert fcntype != null : String.format("Null type for %s at %s", ctx.fcn.getText(), StaticAnalysis.sourceLocation(ctx));
@@ -1173,7 +1265,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 }
                 fcntype = resulttype;
             }
-            return fcntype.prune();
+	    BSVType bsvtype = fcntype.prune();
+	    types.put(ctx, bsvtype);
+	    return bsvtype;
         }
         /**
          * {@inheritDoc}
@@ -1182,8 +1276,12 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitValueofexpr(BSVParser.ValueofexprContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             BSVType bsvtype = visit(ctx.bsvtype());
-            return new BSVType("Integer");
+	    bsvtype = new BSVType("Integer");
+	    types.put(ctx, bsvtype);
+	    return bsvtype;
         }
         /**
          * {@inheritDoc}
@@ -1208,6 +1306,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitArraysub(BSVParser.ArraysubContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             BSVType arraytype = visit(ctx.exprprimary());
             assert arraytype != null;
             assert !arraytype.isVar : String.format("Array type is variable at %s",
@@ -1215,9 +1315,13 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             if (arraytype.name.equals("Vector"))
                 return arraytype.params.get(1);
             else {
-                if (ctx.expression().size() == 1)
-                    return new BSVType("Bit", new BSVType("1"));
-                    assert scope != null;
+                if (ctx.expression().size() == 1) {
+                    BSVType bsvtype = new BSVType("Bit", new BSVType("1"));
+		    types.put(ctx, bsvtype);
+		    return bsvtype;
+		}
+		    
+		assert scope != null;
                 // Evaluator eval = new Evaluator(staticAnalyzer, this);
                 // try {
                 //     IntValue msbValue = (IntValue)eval.evaluate(ctx.expression(0), scope);
@@ -1226,7 +1330,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 // } catch (Exception e) {
                 //     logger.fine("Failed to evaluate msb or lsb " + e);
                 // }
-                return new BSVType("Bit", new BSVType());
+                BSVType bsvtype = new BSVType("Bit", new BSVType());
+		types.put(ctx, bsvtype);
+		return bsvtype;
             }
         }
         /**
@@ -1420,8 +1526,12 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitPattern(BSVParser.PatternContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             if (ctx.var != null) {
-                return new BSVType();
+                BSVType bsvtype = new BSVType();
+		types.put(ctx, bsvtype);
+		return bsvtype;
             } else {
                 return visitChildren(ctx);
             }
