@@ -695,6 +695,20 @@ public class BSVToKami extends BSVBaseVisitor<String>
 						       lsbWidth,
 						       visit(args.get(0)),
 						       exprWidth));
+		    } else if (functionName.equals("arithmeticShift")) {
+			String leftValue = visit(args.get(0));
+			String rightValue = visit(args.get(1));
+			BSVType leftType = typeVisitor.visit(args.get(0));
+			BSVType rightType = typeVisitor.visit(args.get(1));
+			String leftWidth = bsvTypeSize(leftType, args.get(0));
+			String rightWidth = bsvTypeSize(rightType, args.get(1));
+			String kamiOp = "Sra";
+			statement.append(String.format("LET %1$s : %2$s <- (BinBit (%7$s %3$s %4$s) %5$s %6$s)",
+						       varName,
+						       bsvTypeToKami(varType, 1),
+						       leftWidth, rightWidth,
+						       leftValue, rightValue,
+						       kamiOp));
 		    } else if (functionName.equals("signExtend") || functionName.equals("zeroExtend") || functionName.equals("extend")) {
 			BSVType arg0Type = typeVisitor.visit(args.get(0));
 			if (functionName.equals("extend"))
@@ -2226,7 +2240,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 				 bsvTypeSize(bsvtype.params.get(0), ctx),
 				 bsvTypeSize(bsvtype.params.get(1), ctx));
 	} else if (bsvtype.name.equals("TLog")) {
-	    return String.format("log2 %s",
+	    return String.format("(log2 %s)",
 				 bsvTypeSize(bsvtype.params.get(0), ctx));
 	} else if (bsvtype.name.equals("Bit") || bsvtype.name.equals("Int") || bsvtype.name.equals("UInt")) {
 	    return bsvTypeSize(bsvtype.params.get(0), ctx);
