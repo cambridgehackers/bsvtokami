@@ -28,12 +28,13 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 
     public void pushScope(SymbolTable newScope)
     {
+	assert newScope != null : "BSVTypeVisitor.pushScope requires non-null scope";
         scopeStack.push(scope);
         scope = newScope;
-        //logger.fine(String.format("BSVTypeVisitor.pushScope()  %d {", scopeStack.size()));
+        logger.fine(String.format("BSVTypeVisitor.pushScope()  %s {", scope.name));
     }
     public void popScope() {
-        //logger.fine(String.format("} BSVTypeVisitor.popScope() %d", scopeStack.size()));
+        logger.fine(String.format("} BSVTypeVisitor.popScope() %s", scope.name));
         scope = scopeStack.pop();
 	assert scopeStack.size() > 0; // nobody should pop the global scope
     }

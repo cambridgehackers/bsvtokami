@@ -1946,9 +1946,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    typeVisitor.pushScope(scope);
 
 	    Evaluator evaluator = new Evaluator(scopes, typeVisitor);
-	    typeVisitor.pushScope(scope);
+	    assert scope != null;
 	    Value msb = evaluator.evaluate(ctx.expression(0), scope);
-	    typeVisitor.pushScope(scope);
 	    Value lsb = evaluator.evaluate(ctx.expression(1), scope);
 	    BSVType exprType = typeVisitor.visit(ctx.array);
 	    String exprWidth = bsvTypeSize(exprType, ctx.array);

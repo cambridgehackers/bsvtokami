@@ -74,6 +74,8 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
     }
 
     Value evaluate(ParserRuleContext ctx, SymbolTable newScope) {
+	assert newScope != null : "Evaluator.evaluate requires non-null scope";
+	System.err.println("evaluate: scope " + newScope.name);
         pushScope(newScope);
         Value v = visit(ctx);
         popScope();
@@ -154,14 +156,15 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
         pushScope(newScope);
     }
     private void pushScope(SymbolTable newScope) {
-        logger.fine("Evaluator.pushScope {");
-        scopeStack.push(scope);
-        typeVisitor.pushScope(scope);
+	assert newScope != null : "Evaluator.pushScope requires non-null scope";
+        logger.fine("Evaluator.pushScope " + newScope.name + " {");
+        scopeStack.push(newScope);
+        typeVisitor.pushScope(newScope);
         scope = newScope;
     }
     private void popScope() {
-        logger.fine("Evaluator.popScope }");
         typeVisitor.popScope();
+        logger.fine("Evaluator.popScope " + scope.name + "}");
         scope = scopeStack.pop();
     }
 
