@@ -653,18 +653,16 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		    if (call != null)
 			functionName = call.fcn.getText();
 
-		    System.err.println(String.format("var binding functionName=%s at %s",
+		    System.err.println(String.format("var binding functionName=%s %s at %s",
 						     functionName,
+						     (actionContext ? "action context" : "other context"),
 						     StaticAnalysis.sourceLocation(ctx)));
 
 		    List<BSVParser.ExpressionContext> args = call.expression();
 
 		    if (functionName.equals("fromInteger")) {
-			//String lsbWidth = bsvTypeSize(varType, varinit.var);
-			//String exprWidth = bsvTypeSize(arg0Type, args.get(0));
-			//String msbWidth = String.format("(%s - %s)", exprWidth, lsbWidth);
 			if (actionContext) {
-			statement.append(String.format("LET %1$s : %2$s <- $%3$s",
+			    statement.append(String.format("LET %1$s : %2$s <- $%3$s",
 						       varName,
 						       bsvTypeToKami(t, 1),
 						       visit(args.get(0))));
