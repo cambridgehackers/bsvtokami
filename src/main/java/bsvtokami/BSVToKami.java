@@ -45,6 +45,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     private final File ofile;
     private PrintStream printstream;
     private final StaticAnalysis scopes;
+    private final BSVTypeVisitor typeVisitor;
     private SymbolTable scope;
     private String pkgName;
     private Package pkg;
@@ -62,6 +63,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     BSVToKami(String pkgName, File ofile, StaticAnalysis scopes) {
         this.scopes = scopes;
+	this.typeVisitor = new BSVTypeVisitor(scopes);
         this.pkgName = pkgName;
         this.ofile = ofile;
         pkg = new Package(pkgName);
@@ -104,7 +106,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         printstream.println();
 
         scope = scopes.pushScope(ctx);
-
+	typeVisitor.pushScope(scope);
         if (ctx.packagedecl() != null) {
             if (!pkgName.equals(ctx.packagedecl().pkgname.getText())) {
                 logger.fine("Expected " + pkgName + " found " + ctx.packagedecl().pkgname.getText());
@@ -130,9 +132,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
     @Override public String visitInterfacedecl(BSVParser.InterfacedeclContext ctx) {
 	// modules are represented by a string: the name of the instance
 	String interfaceName = ctx.typedeftype().typeide().getText();
-	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
+
 	typeVisitor.pushScope(scope);
 	BSVType interfaceType = typeVisitor.visit(ctx.typedeftype());
+	typeVisitor.popScope();
 	printstream.println(String.format("(* * interface %s *)", interfaceType));
 
 	TreeMap<String,BSVType> freeTypeVariables = interfaceType.getFreeVariables();
@@ -428,12 +431,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
         instances = new ArrayList<>();
         scope = scopes.pushScope(ctx);
+	typeVisitor.pushScope(scope);
 
         BSVParser.ModuleprotoContext moduleproto = ctx.moduleproto();
         String moduleName = moduleproto.name.getText();
 	String interfaceName = (moduleName.startsWith("mk") ? moduleName.substring(2) : moduleName);
-	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
-	typeVisitor.pushScope(scope);
 	BSVType moduleType = typeVisitor.visit(ctx.moduleproto());
 	TreeMap<String,BSVType> freeTypeVariables = moduleType.getFreeVariables();
 	logger.fine(String.format("module %s type %s free vars %d",
@@ -610,6 +612,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	printstream.println("");
         printstream.println("Definition " + moduleName + " := module'" + moduleName + "." + moduleName + ".");
 	printstream.println("");
+	typeVisitor.popScope();
         scope = scopes.popScope();
         moduleDef = null;
         logger.fine("endmodule : " + moduleName);
@@ -630,7 +633,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    logger.fine("Visiting var binding but not collecting statements at " + StaticAnalysis.sourceLocation(ctx));
 	    return "";
 	}
-	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
+	System.err.println("visitVarBinding pushScope " + scope.name);
 	typeVisitor.pushScope(scope);
 	
 	BSVType t = typeVisitor.visit(ctx.t);
@@ -743,8 +746,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    if (actionContext)
 		statements.add(statement.toString());
         }
+	typeVisitor.popScope();
 	return null;
     }
+
     @Override public String visitLetBinding(BSVParser.LetBindingContext ctx) {
         BSVParser.ExpressionContext rhs = ctx.rhs;
         BSVParser.CallexprContext call = getCall(rhs);
@@ -767,7 +772,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	return null;
     }
     @Override public String visitActionBinding(BSVParser.ActionBindingContext ctx) {
-	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
 	typeVisitor.pushScope(scope);
 
         String typeName = ctx.t.getText();
@@ -898,6 +902,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             statement.append(")");
         }
 	statements.add(statement.toString());
+	typeVisitor.popScope();
 	return null;
     }
 
@@ -973,8 +978,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
         letBindings = new LetBindings();
         statements = new ArrayList<>();
         scope = scopes.pushScope(ctx);
-	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
-	typeVisitor.pushScope(scope);
 	returnPending = "Retv";
 
         for (BSVParser.AttributeinstanceContext attrinstance: ctx.attributeinstance()) {
@@ -1122,7 +1125,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	//LetBindings parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
         scope = scopes.pushScope(ctx);
-	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
 	typeVisitor.pushScope(scope);
 
 	StringBuilder statement = new StringBuilder();
@@ -1192,12 +1194,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	//letBindings = parentLetBindings;
 	statements  = parentStatements;
 	statements.add(statement.toString());
+	typeVisitor.popScope();
         scope = scopes.popScope();
         return null;
     }
 
     @Override public String visitRegwrite(BSVParser.RegwriteContext regwrite) {
-	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
 	typeVisitor.pushScope(scope);
 
 	StringBuilder statement = new StringBuilder();
@@ -1229,6 +1231,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	    statements.add(statement.toString());
 	}
+	typeVisitor.popScope();
         return null;
     }
 
@@ -1384,7 +1387,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	letBindings = new LetBindings();
 	statements = new ArrayList<>();
 
-	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
 	typeVisitor.pushScope(scope);
 	BSVType exprType = typeVisitor.visit(ctx.expression());
 
@@ -1453,6 +1455,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    statement.append(newline);
 	}
 
+	typeVisitor.popScope();
 	assert letBindings.size() == 0;
 	assert statements.size() == 0;
 	letBindings = parentLetBindings;
@@ -1466,7 +1469,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	letBindings = new LetBindings();
 	statements = new ArrayList<>();
 
-	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
 	typeVisitor.pushScope(scope);
 
         int branchnum = 0;
@@ -1583,6 +1585,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
 	returnPending = "Ret #retval";
 
+	typeVisitor.popScope();
 	letBindings = parentLetBindings;
 	statements  = parentStatements;
         statements.add(statement.toString());
@@ -1598,6 +1601,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	LetBindings parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
         scope = scopes.pushScope(ctx);
+	typeVisitor.popScope();
 
 	logger.fine(String.format("For stmt at %s", StaticAnalysis.sourceLocation(ctx)));
 
@@ -1658,6 +1662,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	letBindings = parentLetBindings;
 	statements  = parentStatements;
+	typeVisitor.popScope();
         scope = scopes.popScope();
 
 	statements.add(statement.toString());
@@ -1705,7 +1710,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	if (expr.unopexpr() != null)
 	    return (visit(expr.unopexpr()));
 
-	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
 	typeVisitor.pushScope(scope);
 
 	assert expr.op != null;
@@ -1754,6 +1758,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	expression.append(rightValue);
 	expression.append(")");
 
+	typeVisitor.popScope();
         return expression.toString();
     }
     @Override public String visitUnopexpr(BSVParser.UnopexprContext ctx) {
@@ -1766,7 +1771,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitBitconcat(BSVParser.BitconcatContext ctx) {
-	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
 	typeVisitor.pushScope(scope);
 	if (ctx.expression().size() == 1)
 	    return visit(ctx.expression(0));
@@ -1790,6 +1794,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 				     visit(rightarg));
 	    leftargSize = String.join(" + ", argSizes);
 	}
+	typeVisitor.popScope();
 	return String.format("castBits _ (%1$s) (%1$s) _ %2$s",
 			     leftargSize, leftexpr);
     }
@@ -1930,10 +1935,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     @Override public String visitFieldexpr(BSVParser.FieldexprContext ctx) {
 	System.err.println(String.format("Visit field expr %s at %s", ctx.getText(), StaticAnalysis.sourceLocation(ctx)));
-	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
 	typeVisitor.pushScope(scope);
 
 	BSVType exprType = typeVisitor.visit(ctx.exprprimary());
+	typeVisitor.popScope();
 	return String.format("(%s ! %sFields @. \"%s\")",
 			     visit(ctx.exprprimary()),
 			     exprType.name,
@@ -1942,7 +1947,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     @Override public String visitArraysub(BSVParser.ArraysubContext ctx) {
         if (ctx.expression(1) != null) {
-	    BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
 	    typeVisitor.pushScope(scope);
 
 	    Evaluator evaluator = new Evaluator(scopes, typeVisitor);
@@ -1956,6 +1960,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    IntValue ilsb = (IntValue)lsb;
 	    //IntValue msb = new IntValue(ctx.expression(0).getText());
 	    //IntValue lsb = new IntValue(ctx.expression(1).getText());
+	    typeVisitor.popScope();
 	    return String.format("(%s$[%d:%d]@%s)",
 				 visit(ctx.array),
 				 imsb.value, ilsb.value, exprWidth);
@@ -2049,10 +2054,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitValueofexpr(BSVParser.ValueofexprContext ctx) {
-	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
 	typeVisitor.pushScope(scope);
 
 	BSVType bsvtype = typeVisitor.visit(ctx.bsvtype());
+	typeVisitor.popScope();
 	return bsvTypeValue(bsvtype, ctx.bsvtype(), 1);
     }
 
@@ -2208,7 +2213,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     String bsvTypeSize(BSVType bsvtype, ParserRuleContext ctx) {
-	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
 	typeVisitor.pushScope(scope);
 	BSVType dereftype = typeVisitor.dereferenceTypedef(bsvtype);
         logger.fine(String.format("bsvtypesize %s dereftype %s at %s", bsvtype, dereftype, StaticAnalysis.sourceLocation(ctx)));
@@ -2216,6 +2220,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    dereftype = dereftype.instantiate(dereftype.params, bsvtype.params);
 	//System.err.println(String.format("bsvTypeSize %s deref %s", bsvtype, dereftype));
 	bsvtype = dereftype;
+	String result;
 	if (bsvtype.name.equals("Reg") || bsvtype.name.equals("Wire")) {
 	    assert bsvtype.params != null;
 	    assert bsvtype.params.size() == 1;
@@ -2225,31 +2230,33 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		dereftype = dereftype.instantiate(dereftype.params, elementType.params);
 	    }
 	    //System.err.println(String.format("bsvtype %s dereftype %s at %s", bsvtype.params.get(0), dereftype, StaticAnalysis.sourceLocation(ctx)));
-	    return bsvTypeSize(dereftype, ctx);
+	    result = bsvTypeSize(dereftype, ctx);
 	} else if (bsvtype.name.equals("TAdd")) {
-	    return String.format("(%s + %s)",
-				 bsvTypeSize(bsvtype.params.get(0), ctx),
-				 bsvTypeSize(bsvtype.params.get(1), ctx));
+	    result = String.format("(%s + %s)",
+				   bsvTypeSize(bsvtype.params.get(0), ctx),
+				   bsvTypeSize(bsvtype.params.get(1), ctx));
 	} else if (bsvtype.name.equals("TSub")) {
-	    return String.format("(%s - %s)",
-				 bsvTypeSize(bsvtype.params.get(0), ctx),
-				 bsvTypeSize(bsvtype.params.get(1), ctx));
+	    result = String.format("(%s - %s)",
+				   bsvTypeSize(bsvtype.params.get(0), ctx),
+				   bsvTypeSize(bsvtype.params.get(1), ctx));
 	} else if (bsvtype.name.equals("TDiv")) {
-	    return String.format("(%s / %s)",
-				 bsvTypeSize(bsvtype.params.get(0), ctx),
-				 bsvTypeSize(bsvtype.params.get(1), ctx));
+	    result = String.format("(%s / %s)",
+				   bsvTypeSize(bsvtype.params.get(0), ctx),
+				   bsvTypeSize(bsvtype.params.get(1), ctx));
 	} else if (bsvtype.name.equals("TLog")) {
-	    return String.format("(log2 %s)",
-				 bsvTypeSize(bsvtype.params.get(0), ctx));
+	    result = String.format("(log2 %s)",
+				   bsvTypeSize(bsvtype.params.get(0), ctx));
 	} else if (bsvtype.name.equals("Bit") || bsvtype.name.equals("Int") || bsvtype.name.equals("UInt")) {
-	    return bsvTypeSize(bsvtype.params.get(0), ctx);
+	    result = bsvTypeSize(bsvtype.params.get(0), ctx);
+	} else {
+	    assert bsvtype.numeric : "Expecting numeric type, got " + bsvtype + " at " + StaticAnalysis.sourceLocation(ctx);
+	    result = bsvtype.toString();
 	}
-	assert bsvtype.numeric : "Expecting numeric type, got " + bsvtype + " at " + StaticAnalysis.sourceLocation(ctx);
-	return bsvtype.toString();
+	typeVisitor.popScope();
+	return result;
     }
 
     String bsvTypeValue(BSVType bsvtype, ParserRuleContext ctx, int level) {
-	BSVTypeVisitor typeVisitor = new BSVTypeVisitor(scopes);
 	typeVisitor.pushScope(scope);
 	BSVType dereftype = typeVisitor.dereferenceTypedef(bsvtype);
         logger.fine(String.format("bsvtypevalue %s dereftype %s at %s", bsvtype, dereftype, StaticAnalysis.sourceLocation(ctx)));
@@ -2286,6 +2293,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
 	if (level > 0)
 	    value = String.format("(%s)", value);
+	typeVisitor.popScope();
 	return value;
     }
 
