@@ -990,9 +990,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         BSVParser.FunctionprotoContext functionproto = ctx.functionproto();
 	String functionName = functionproto.name.getText();
-	System.err.println(String.format("Translating function def %s scope name %s looking up inst: %s",
-					 functionName, scope.name,
-					 (scope.lookup("inst") != null ? "found it" : "huh")));
+	BSVType functionType = typeVisitor.visit(functionproto);
+	TreeMap<String,BSVType> freeTypeVariables = functionType.getFreeVariables();
+	System.err.println(String.format("Translating function def %s type %s free type vars (%s)",
+					 functionName, functionType,
+					 String.join(" ", freeTypeVariables.keySet())));
 
 	printstream.println(String.format("(* interface for module wrapper for %s *)", functionName));
 	printstream.println(String.format("Record Interface'%s := {", functionName));
@@ -1002,6 +1004,20 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	printstream.println(String.format(""));
 	printstream.println(String.format("Module module'%s.", functionName));
 	printstream.println(String.format("    Section Section'%s.", functionName));
+
+        for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
+	    BSVType freeType = entry.getValue();
+	    boolean isNumeric = freeType.numeric;
+	    // FIXME: heuristic
+	    if (freeType.name.endsWith("sz") || freeType.name.endsWith("Sz") || freeType.name.equals("xlen"))
+		isNumeric = true;
+	    logger.fine("Function def: Free type variable " + freeType + (isNumeric ? " numeric" : " interface type"));
+
+	    printstream.println(String.format("    Variable %s : %s.",
+					      entry.getKey(),
+					      (isNumeric ? "nat" : "Kind")));
+	}
+
 	printstream.println(String.format("    Variable instancePrefix: string."));
 
 	boolean wasActionContext = actionContext;
