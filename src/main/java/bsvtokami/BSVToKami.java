@@ -633,7 +633,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    logger.fine("Visiting var binding but not collecting statements at " + StaticAnalysis.sourceLocation(ctx));
 	    return "";
 	}
-	System.err.println("visitVarBinding pushScope " + scope.name);
 	typeVisitor.pushScope(scope);
 	
 	BSVType t = typeVisitor.visit(ctx.t);
@@ -2006,6 +2005,20 @@ public class BSVToKami extends BSVBaseVisitor<String>
         return expression.toString();
     }
 
+    void instantiateParameterTypes(BSVType functionType, List<BSVParser.ExpressionContext> params) {
+	for (BSVParser.ExpressionContext param: params) {
+	    assert functionType.name.equals("Function") : "Expecting a Function type instead of " + functionType;
+	    BSVType paramType = typeVisitor.visit(param);
+	    BSVType argType = functionType.params.get(0);
+	    try {
+		argType.unify(paramType);
+	    } catch (InferenceError e) {
+		    logger.fine(e.toString());
+	    }
+	    functionType = functionType.params.get(1);
+	}
+    }
+
     @Override public String visitCallexpr(BSVParser.CallexprContext ctx) {
         InstanceNameVisitor inv = new InstanceNameVisitor(scopes);
 	inv.pushScope(scope);
@@ -2028,12 +2041,22 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    assert scope != null;
 	    SymbolTableEntry functionEntry = scope.lookup(methodName);
 	    if (functionEntry != null && functionEntry.type.name.equals("Function")) {
-		BSVType functionType = functionEntry.type;
-		//FIXME: copy and instantiate type
+		BSVType functionType = functionEntry.type.fresh();
+		TreeMap<String,BSVType> freeTypeVariables = functionType.getFreeVariables();
+		//FIXME: instantiate type
+		instantiateParameterTypes(functionType, ctx.expression());
 		argType = functionType.params.get(0);
 		resultType = functionType.params.get(1);
 		System.err.println(String.format("Call expr function %s : %s\n", methodName, functionType));
-		methodBindings.add(String.format("instance'%1$s := function'%1$s (instancePrefix--\"%1$s\")", methodName));
+		StringBuilder typeParameters = new StringBuilder();
+		for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
+		    typeParameters.append(" ");
+		    typeParameters.append(bsvTypeToKami(entry.getValue(), 1));
+		}
+
+		methodBindings.add(String.format("instance'%1$s := function'%1$s%2$s (instancePrefix--\"%1$s\")",
+						 methodName,
+						 typeParameters.toString()));
 		methodBindings.add(String.format("%1$s := Interface'%1$s'%1$s instance'%1$s", methodName));
 		System.err.println("Added methodBindings \n" + String.join("\n", methodBindings));
 	    }
