@@ -724,7 +724,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 						       visit(args.get(0))));
 		    } else {
 			System.err.println(String.format("CallM varbinding %s fcn %s", varName, functionName));
-			statement.append(String.format("CallM %s : %s (* varbinding *) <- %s", varName, bsvTypeToKami(t), visit(rhs)));
+			statement.append(String.format("CallM %s : %s (* varbinding *) <- %s", varName, bsvTypeToKami(t), translateCall(call)));
 		    }
                 } else {
 		    if (actionContext) {
@@ -2017,6 +2017,79 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    }
 	    functionType = functionType.params.get(1);
 	}
+    }
+
+    String translateCall(BSVParser.CallexprContext ctx) {
+	assert ctx != null;
+	assert ctx.fcn != null : "Expecting a function call " + ctx.getText() + " at " + StaticAnalysis.sourceLocation(ctx);
+        InstanceNameVisitor inv = new InstanceNameVisitor(scopes);
+	inv.pushScope(scope);
+        String methodName = inv.visit(ctx.fcn);
+	BSVType argType = new BSVType();
+	BSVType resultType = new BSVType();
+	if (inv.methodsUsed.size() > 0) {
+	    System.err.println(String.format("First key %s", inv.methodsUsed.firstKey()));
+	    TreeSet<InstanceEntry> instanceEntries = inv.methodsUsed.get(inv.methodsUsed.firstKey());
+	    InstanceEntry instanceEntry = instanceEntries.first();
+	    System.err.println(String.format("Calling method %s (%s) at %s", methodName, instanceEntry.methodType, StaticAnalysis.sourceLocation(ctx)));
+
+	    BSVType methodType = instanceEntry.methodType;
+	    if (methodType.name.equals("Function")) {
+		argType = methodType.params.get(0);
+		resultType = methodType.params.get(1);
+	    }
+	} else {
+	    assert methodName != null : "No method name at " + StaticAnalysis.sourceLocation(ctx);
+	    assert scope != null;
+	    SymbolTableEntry functionEntry = scope.lookup(methodName);
+	    if (functionEntry != null && functionEntry.type.name.equals("Function")) {
+		BSVType functionType = functionEntry.type.fresh();
+		TreeMap<String,BSVType> freeTypeVariables = functionType.getFreeVariables();
+		//FIXME: instantiate type
+		instantiateParameterTypes(functionType, ctx.expression());
+		argType = functionType.params.get(0);
+		resultType = functionType.params.get(1);
+		System.err.println(String.format("Call expr function %s : %s\n", methodName, functionType));
+		StringBuilder typeParameters = new StringBuilder();
+		for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
+		    typeParameters.append(" ");
+		    typeParameters.append(bsvTypeToKami(entry.getValue(), 1));
+		}
+
+		methodBindings.add(String.format("instance'%1$s := function'%1$s%2$s (instancePrefix--\"%1$s\")",
+						 methodName,
+						 typeParameters.toString()));
+		methodBindings.add(String.format("%1$s := Interface'%1$s'%1$s instance'%1$s", methodName));
+		System.err.println("Added methodBindings \n" + String.join("\n", methodBindings));
+	    }
+	}
+        if (methodName == null)
+            methodName = "FIXME$" + ctx.fcn.getText();
+        assert methodName != null : "No methodName for " + ctx.fcn.getText();
+        methodName = methodName.replace(".", "");
+	StringBuilder statement = new StringBuilder();
+        if (methodName != null) {
+            // "Call" is up where the binding is, hopefully
+	    statement.append(" ");
+            statement.append(methodName);
+	    int argNumber = 0;
+            for (BSVParser.ExpressionContext expr: ctx.expression()) {
+		statement.append(" (");
+                statement.append(visit(expr));
+		statement.append(" : ");
+		if (argType.name.equals("Reg"))
+		    argType = argType.params.get(0);
+		statement.append(bsvTypeToKami(argType));
+		statement.append(")");
+		System.err.println(String.format("callm %s arg %d type %s", methodName, argNumber, argType));
+		if (resultType.name.equals("Function"))
+		    argType = resultType.params.get(0);
+		argNumber++;
+            }
+        } else {
+            logger.fine(String.format("How to call action function {%s}", ctx.fcn.getText()));
+        }
+        return statement.toString();
     }
 
     @Override public String visitCallexpr(BSVParser.CallexprContext ctx) {
