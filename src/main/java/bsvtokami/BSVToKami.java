@@ -63,7 +63,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     BSVToKami(String pkgName, File ofile, StaticAnalysis scopes) {
         this.scopes = scopes;
-	this.typeVisitor = new BSVTypeVisitor(scopes);
+	this.typeVisitor = scopes.typeVisitor;
         this.pkgName = pkgName;
         this.ofile = ofile;
         pkg = new Package(pkgName);

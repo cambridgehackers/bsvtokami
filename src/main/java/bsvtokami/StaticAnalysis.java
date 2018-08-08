@@ -15,7 +15,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
     private HashMap<String, SymbolTable> packages;
     private Stack<SymbolTable> scopeStack = new Stack<>();
     private Stack<String> sourceLocationStack = new Stack<>();
-    private BSVTypeVisitor typeVisitor;
+    final BSVTypeVisitor typeVisitor;
     private boolean declOnly;
     private static Logger logger = Logger.getGlobal();
     private static boolean callUnify = false;
@@ -655,6 +655,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
             } else {
                 symbolTable.bind(varinit.var.getText(), new SymbolTableEntry(varName, bsvtype));
             }
+	    typeVisitor.visit(varinit);
         }
         return null;
     }
@@ -1008,7 +1009,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
                 p.add(functiontype);
                 functiontype = new BSVType("Function", p);
             }
-            logger.fine("functionproto " + ctx.name.getText() + " : " + functiontype);
+            System.err.println("functionproto " + ctx.name.getText() + " : " + functiontype);
             return functiontype;
     }
 
