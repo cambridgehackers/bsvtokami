@@ -9,4 +9,5 @@ import java.util.logging.Logger;
 
 class CallVisitor extends BSVBaseVisitor<BSVParser.CallexprContext> {
     @Override public BSVParser.CallexprContext visitCallexpr(BSVParser.CallexprContext ctx) { return ctx; }
+    @Override public BSVParser.CallexprContext visitParenexpr(BSVParser.ParenexprContext ctx) { return visit(ctx.expression()); }
 }
