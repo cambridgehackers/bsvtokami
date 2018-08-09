@@ -2106,9 +2106,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		statement.append(bsvTypeToKami(argType));
 		statement.append(")");
 		System.err.println(String.format("callm %s arg %d type %s", methodName, argNumber, argType));
-		if (resultType.name.equals("Function"))
-		    argType = resultType.params.get(0);
 		argNumber++;
+		if (argNumber < ctx.expression().size()) {
+		    assert (resultType.name.equals("Function"));
+		    argType = resultType.params.get(0);
+		    resultType = resultType.params.get(1);
+		}
             }
         } else {
             logger.fine(String.format("How to call action function {%s}", ctx.fcn.getText()));
