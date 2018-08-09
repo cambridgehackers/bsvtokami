@@ -1109,7 +1109,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 BSVType bsvtype = StaticAnalysis.getBsvType(formal);
                 String formalName = StaticAnalysis.getFormalName(formal);
 
-                printstream.print(String.format(" (%s: %s)", formalName, bsvTypeToKami(bsvtype)));
+                printstream.print(String.format(" (%s: %s)", formalName, bsvTypeToKami(bsvtype, 1)));
             }
         }
         String returntype = (functionproto.bsvtype() != null) ? bsvTypeToKami(StaticAnalysis.getBsvType(functionproto.bsvtype())) : "";
@@ -2059,15 +2059,21 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		resultType = functionType.params.get(1);
 		System.err.println(String.format("Call expr function %s : %s\n", methodName, functionType));
 		StringBuilder typeParameters = new StringBuilder();
+		StringBuilder suffixBuilder = new StringBuilder();
 		for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
 		    typeParameters.append(" ");
 		    typeParameters.append(bsvTypeToKami(entry.getValue(), 1));
+		    suffixBuilder.append("_");
+		    suffixBuilder.append(bsvTypeToIdentifier(entry.getValue()));
 		}
 
-		methodBindings.add(String.format("instance'%1$s := function'%1$s%2$s (instancePrefix--\"%1$s\")",
+		String nameSuffix = suffixBuilder.toString();
+		methodBindings.add(String.format("instance'%1$s%2$s := function'%1$s%3$s (instancePrefix--\"%1$s%2$s\")",
 						 methodName,
+						 nameSuffix,
 						 typeParameters.toString()));
-		methodBindings.add(String.format("%1$s := Interface'%1$s'%1$s instance'%1$s", methodName));
+		methodBindings.add(String.format("%1$s%2$s := Interface'%1$s'%1$s instance'%1$s%2$s", methodName, nameSuffix));
+		methodName = methodName + nameSuffix;
 		System.err.println("Added methodBindings \n" + String.join("\n", methodBindings));
 	    }
 	}
@@ -2272,6 +2278,22 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	if (level > 0)
 	    kamitype = String.format("(%s)", kamitype);
         return kamitype;
+    }
+
+    public String bsvTypeToIdentifier(BSVType t) {
+        if (t == null)
+            return "<nulltype>";
+        t = t.prune();
+
+	String identifier = t.name;
+	ArrayList<String> convertedParams = new ArrayList<>();
+	for (BSVType p: t.params) {
+	    convertedParams.add(bsvTypeToIdentifier(p));
+	}
+	if (convertedParams.size() > 0) {
+	    identifier = String.format("%s_%s_", t.name, String.join("_", convertedParams));
+	}
+        return identifier;
     }
 
     String bsvTypeSize(BSVType bsvtype, ParserRuleContext ctx) {
