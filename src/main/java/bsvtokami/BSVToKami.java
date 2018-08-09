@@ -1971,20 +1971,19 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitArraysub(BSVParser.ArraysubContext ctx) {
-        if (ctx.expression(1) != null) {
+	boolean hasSecondArg = (ctx.expression(1) != null);
+        if (true || hasSecondArg) {
 	    typeVisitor.pushScope(scope);
 
 	    Evaluator evaluator = new Evaluator(scopes, typeVisitor);
 	    assert scope != null;
 	    Value msb = evaluator.evaluate(ctx.expression(0), scope);
-	    Value lsb = evaluator.evaluate(ctx.expression(1), scope);
+	    Value lsb = (hasSecondArg) ? evaluator.evaluate(ctx.expression(1), scope) : msb;
 	    BSVType exprType = typeVisitor.visit(ctx.array);
 	    String exprWidth = bsvTypeSize(exprType, ctx.array);
 
 	    IntValue imsb = (IntValue)msb;
 	    IntValue ilsb = (IntValue)lsb;
-	    //IntValue msb = new IntValue(ctx.expression(0).getText());
-	    //IntValue lsb = new IntValue(ctx.expression(1).getText());
 	    typeVisitor.popScope();
 	    return String.format("(%s$[%d:%d]@%s)",
 				 visit(ctx.array),
