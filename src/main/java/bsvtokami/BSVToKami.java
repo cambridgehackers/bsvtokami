@@ -2279,7 +2279,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	} else if (t.name.equals("TDiv")) {
 	    kamitype = String.join(" / ", convertedParams);
 	} else if (t.name.equals("TLog")) {
-	    kamitype = String.format("log2 %s", convertedParams.get(0));
+	    kamitype = String.format("Nat.log2 %s", convertedParams.get(0));
 	} else if (t.name.equals("TExp")) {
 	    kamitype = String.format("exp2 %s", convertedParams.get(0));
 	} else if (convertedParams.size() > 0) {
@@ -2341,7 +2341,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 				   bsvTypeSize(bsvtype.params.get(0), ctx),
 				   bsvTypeSize(bsvtype.params.get(1), ctx));
 	} else if (bsvtype.name.equals("TLog")) {
-	    result = String.format("(log2 %s)",
+	    result = String.format("(Nat.log2 %s)",
 				   bsvTypeSize(bsvtype.params.get(0), ctx));
 	} else if (bsvtype.name.equals("Bit") || bsvtype.name.equals("Int") || bsvtype.name.equals("UInt")) {
 	    result = bsvTypeSize(bsvtype.params.get(0), ctx);
@@ -2376,7 +2376,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 				  bsvTypeValue(bsvtype.params.get(0), ctx, 1),
 				  bsvTypeValue(bsvtype.params.get(1), ctx, 1));
 	} else if (bsvtype.name.equals("TLog")) {
-	    value = String.format("log2 %s",
+	    value = String.format("Nat.log2 %s",
 				  bsvTypeValue(bsvtype.params.get(0), ctx, 1));
 	} else if (bsvtype.name.equals("TExp")) {
 	    value = String.format("exp2 %s",
