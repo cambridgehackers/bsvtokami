@@ -1470,7 +1470,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	typeVisitor.popScope();
 	assert letBindings.size() == 0;
-	assert statements.size() == 0;
+	assert statements.size() == 0
+	    : "No statements or calls allowed in case expressions at " + StaticAnalysis.sourceLocation(ctx);
 	letBindings = parentLetBindings;
 	statements  = parentStatements;
         return statement.toString();
@@ -2006,8 +2007,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     void instantiateParameterTypes(BSVType functionType, List<BSVParser.ExpressionContext> params) {
+	functionType = functionType.prune();
 	for (BSVParser.ExpressionContext param: params) {
-	    assert functionType.name.equals("Function") : "Expecting a Function type instead of " + functionType;
+	    assert functionType.name.equals("Function")
+		: "Expecting a Function type instead of (" + functionType.name + ") "
+		+ functionType + " at " + StaticAnalysis.sourceLocation(param);
 	    BSVType paramType = typeVisitor.visit(param);
 	    BSVType argType = functionType.params.get(0);
 	    try {
@@ -2015,7 +2019,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    } catch (InferenceError e) {
 		    logger.fine(e.toString());
 	    }
-	    functionType = functionType.params.get(1);
+	    functionType = functionType.params.get(1).prune();
 	}
     }
 
@@ -2026,7 +2030,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	inv.pushScope(scope);
         String methodName = inv.visit(ctx.fcn);
 	BSVType argType = new BSVType();
-	BSVType resultType = new BSVType();
+	BSVType resultType = typeVisitor.visit(ctx);
 	if (inv.methodsUsed.size() > 0) {
 	    System.err.println(String.format("First key %s", inv.methodsUsed.firstKey()));
 	    TreeSet<InstanceEntry> instanceEntries = inv.methodsUsed.get(inv.methodsUsed.firstKey());
@@ -2042,8 +2046,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    assert methodName != null : "No method name at " + StaticAnalysis.sourceLocation(ctx);
 	    assert scope != null;
 	    SymbolTableEntry functionEntry = scope.lookup(methodName);
+	    BSVType functionType = typeVisitor.visit(ctx.fcn);
+	    //functionEntry.type.fresh();
+	    System.err.println(String.format("Translating call to %s with type %s (result type %s)", methodName, functionType, resultType.prune()));
+
 	    if (functionEntry != null && functionEntry.type.name.equals("Function")) {
-		BSVType functionType = functionEntry.type.fresh();
+		functionType = functionEntry.type.fresh();
 		TreeMap<String,BSVType> freeTypeVariables = functionType.getFreeVariables();
 		//FIXME: instantiate type
 		instantiateParameterTypes(functionType, ctx.expression());
@@ -2092,75 +2100,19 @@ public class BSVToKami extends BSVBaseVisitor<String>
         return statement.toString();
     }
 
+    static int callCount = 0;
     @Override public String visitCallexpr(BSVParser.CallexprContext ctx) {
-        InstanceNameVisitor inv = new InstanceNameVisitor(scopes);
-	inv.pushScope(scope);
-        String methodName = inv.visit(ctx.fcn);
-	BSVType argType = new BSVType();
-	BSVType resultType = new BSVType();
-	if (inv.methodsUsed.size() > 0) {
-	    System.err.println(String.format("First key %s", inv.methodsUsed.firstKey()));
-	    TreeSet<InstanceEntry> instanceEntries = inv.methodsUsed.get(inv.methodsUsed.firstKey());
-	    InstanceEntry instanceEntry = instanceEntries.first();
-	    System.err.println(String.format("Calling method %s (%s) at %s", methodName, instanceEntry.methodType, StaticAnalysis.sourceLocation(ctx)));
+	typeVisitor.pushScope(scope);
+	BSVType resultType = typeVisitor.visit(ctx);
+	typeVisitor.popScope();
+	String varName = String.format("call%d", callCount);
+	callCount++;
 
-	    BSVType methodType = instanceEntry.methodType;
-	    if (methodType.name.equals("Function")) {
-		argType = methodType.params.get(0);
-		resultType = methodType.params.get(1);
-	    }
-	} else {
-	    assert methodName != null : "No method name at " + StaticAnalysis.sourceLocation(ctx);
-	    assert scope != null;
-	    SymbolTableEntry functionEntry = scope.lookup(methodName);
-	    if (functionEntry != null && functionEntry.type.name.equals("Function")) {
-		BSVType functionType = functionEntry.type.fresh();
-		TreeMap<String,BSVType> freeTypeVariables = functionType.getFreeVariables();
-		//FIXME: instantiate type
-		instantiateParameterTypes(functionType, ctx.expression());
-		argType = functionType.params.get(0);
-		resultType = functionType.params.get(1);
-		System.err.println(String.format("Call expr function %s : %s\n", methodName, functionType));
-		StringBuilder typeParameters = new StringBuilder();
-		for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
-		    typeParameters.append(" ");
-		    typeParameters.append(bsvTypeToKami(entry.getValue(), 1));
-		}
-
-		methodBindings.add(String.format("instance'%1$s := function'%1$s%2$s (instancePrefix--\"%1$s\")",
-						 methodName,
-						 typeParameters.toString()));
-		methodBindings.add(String.format("%1$s := Interface'%1$s'%1$s instance'%1$s", methodName));
-		System.err.println("Added methodBindings \n" + String.join("\n", methodBindings));
-	    }
-	}
-        if (methodName == null)
-            methodName = "FIXME$" + ctx.fcn.getText();
-        assert methodName != null : "No methodName for " + ctx.fcn.getText();
-        methodName = methodName.replace(".", "");
-	StringBuilder statement = new StringBuilder();
-        if (methodName != null) {
-            // "Call" is up where the binding is, hopefully
-	    statement.append(" ");
-            statement.append(methodName);
-	    int argNumber = 0;
-            for (BSVParser.ExpressionContext expr: ctx.expression()) {
-		statement.append(" (");
-                statement.append(visit(expr));
-		statement.append(" : ");
-		if (argType.name.equals("Reg"))
-		    argType = argType.params.get(0);
-		statement.append(bsvTypeToKami(argType));
-		statement.append(")");
-		System.err.println(String.format("callm %s arg %d type %s", methodName, argNumber, argType));
-		if (resultType.name.equals("Function"))
-		    argType = resultType.params.get(0);
-		argNumber++;
-            }
-        } else {
-            logger.fine(String.format("How to call action function {%s}", ctx.fcn.getText()));
-        }
-        return statement.toString();
+	statements.add(String.format("LET %s : %s <- %s",
+				     varName,
+				     resultType,
+				     translateCall(ctx)));
+        return varName;
     }
 
     @Override public String visitValueofexpr(BSVParser.ValueofexprContext ctx) {
@@ -2368,6 +2320,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     String bsvTypeValue(BSVType bsvtype, ParserRuleContext ctx, int level) {
 	typeVisitor.pushScope(scope);
+	bsvtype = bsvtype.prune();
 	BSVType dereftype = typeVisitor.dereferenceTypedef(bsvtype);
         logger.fine(String.format("bsvtypevalue %s dereftype %s at %s", bsvtype, dereftype, StaticAnalysis.sourceLocation(ctx)));
 	if (bsvtype.params.size() > 0)
