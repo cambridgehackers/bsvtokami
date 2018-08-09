@@ -1778,9 +1778,20 @@ public class BSVToKami extends BSVBaseVisitor<String>
     @Override public String visitUnopexpr(BSVParser.UnopexprContext ctx) {
 	StringBuilder expression = new StringBuilder();
         if (ctx.op != null) {
-            expression.append(ctx.op.getText());
+	    String op = ctx.op.getText();
+	    expression.append("(");
+	    if (op.equals("~")) {
+		typeVisitor.pushScope(scope);
+		BSVType exprType = typeVisitor.visit(ctx.exprprimary());
+		String exprSize = bsvTypeSize(exprType, ctx.exprprimary());
+		typeVisitor.popScope();
+		op = String.format("UniBit (Neg %1$s) ", exprSize);
+	    }
+            expression.append(op);
         }
 	expression.append(visit(ctx.exprprimary()));
+	if (ctx.op != null)
+	    expression.append(")");
 	return expression.toString();
     }
 
