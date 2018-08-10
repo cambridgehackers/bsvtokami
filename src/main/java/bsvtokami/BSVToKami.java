@@ -820,6 +820,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 					       visit(arg),
 					       bsvTypeToKami(argType)));
 	    }
+	    if (call.expression().size() == 0) {
+		statement.append(" ()");
+	    }
 
         } else if (!actionContext) {
             BSVParser.CallexprContext call = getCall(ctx.rhs);
@@ -2113,6 +2116,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		    resultType = resultType.params.get(1);
 		}
             }
+	    // zero argument call still needs ()
+	    if (argNumber == 0)
+		statement.append(" ()");
         } else {
             logger.fine(String.format("How to call action function {%s}", ctx.fcn.getText()));
         }
