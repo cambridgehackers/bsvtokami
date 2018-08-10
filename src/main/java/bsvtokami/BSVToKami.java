@@ -629,10 +629,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitVarBinding(BSVParser.VarBindingContext ctx) {
-	if (statements == null) {
-	    logger.fine("Visiting var binding but not collecting statements at " + StaticAnalysis.sourceLocation(ctx));
-	    return "";
-	}
+	assert statements != null : "Visiting var binding but not collecting statements at " + StaticAnalysis.sourceLocation(ctx);
 	typeVisitor.pushScope(scope);
 	
 	BSVType t = typeVisitor.visit(ctx.t);
