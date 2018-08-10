@@ -1,6 +1,6 @@
 Require Import Kami.
 Require Import Kami.Lib.Struct.
-Require Import Bool Arith String Nat ZArith.
+Require Import Bool Arith String Nat ZArith ZArith.BinInt.
 
 Definition Integer := nat.
 
@@ -198,6 +198,39 @@ Notation "'Method' name ( p1 : d1 ) ( p2 : d2 )  ( p3 : d3 ) ( p4 : d4 ) ( p5 : 
     (at level 0, name at level 0, p1 at level 0, d1 at level 0, p2 at level 0, d2 at level 0, p3 at level 0, d3 at level 0, p4 at level 0, d4 at level 0, p5 at level 0, d5 at level 0).
 
 
+Notation "'CallM' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ( a3 : a3T ) ( a4 : a4T ) ( a5 : a5T ) ( a6 : a6T ) ; cont " :=
+  (let fields := STRUCT { "_1" :: a1T ; "_2" :: a2T; "_3" :: a3T; "_4" :: a4T; "_5" :: a5T; "_6" :: a6T } in
+   let args := (STRUCT { "_1" ::= a1 ; "_2" ::= a2 ; "_3" ::= a3 ; "_4" ::= a4 ; "_5" ::= a5; "_6" ::= a6 })%kami_expr in
+   (MCall meth%string {| arg := (Struct fields); ret := retT |} args (fun name => cont)))
+    (at level 12, right associativity, name at level 0, meth at level 0,
+     a1 at level 99, a2 at level 99, a3 at level 99, a4 at level 99, a5 at level 99, a6 at level 99) : kami_action_scope.
+
+Notation "'Method' name ( p1 : d1 ) ( p2 : d2 )  ( p3 : d3 ) ( p4 : d4 ) ( p5 : d5 ) ( p6 : d6 ) : retT := c" :=
+  (let d1f := d1 in
+   let d1g := d1 in
+   let d2f := d2 in
+   let d2g := d2 in
+   let d3f := d3 in
+   let d3g := d3 in
+   let d4f := d4 in
+   let d4g := d4 in
+   let d5f := d5 in
+   let d5g := d5 in
+   let d6f := d6 in
+   let d6g := d6 in
+   let fields := STRUCT { "_1" :: d1f ; "_2" :: d2f; "_3" :: d3f; "_4" :: d4f; "_5" :: d5f; "_6" :: d6f } in
+  (BKMeth (Build_Attribute name
+                           (existT MethodT {| arg := ( Struct fields ); ret := retT |}
+                                   (fun ty => fun param : ty (Struct fields)  =>
+                                                 (LET p1 : d1g <-  #param!fields @."_1";
+                                                  LET p2 : d2g <-  #param!fields @."_2";
+                                                  LET p3 : d3g <-  #param!fields @."_3";
+                                                  LET p4 : d4g <-  #param!fields @."_4";
+                                                  LET p5 : d5g <-  #param!fields @."_5";
+                                                  LET p6 : d6g <-  #param!fields @."_6";
+                                                  c )%kami_action : ActionT ty retT)))))
+    (at level 0, name at level 0, p1 at level 0, d1 at level 0, p2 at level 0, d2 at level 0, p3 at level 0, d3 at level 0, p4 at level 0, d4 at level 0, p5 at level 0, d5 at level 0, p6 at level 0, d6 at level 0).
+
 Definition MaybeFields (a : Kind) := (STRUCT { "$tag" :: (Bit 1); "Invalid" :: (Bit 1); "Valid" :: a }).
 Definition Maybe (a : Kind) := (Struct (MaybeFields a)).
 
@@ -248,6 +281,7 @@ Module module'mkReg.
 End module'mkReg.
 
 Definition mkReg := module'mkReg.mkReg.
+Definition mkDWire := module'mkReg.mkReg.
 
 Module module'mkReadOnlyReg.
     Section Section'mkReadOnlyReg.
@@ -324,4 +358,94 @@ Record ModuleInstance intT :=
     }.
 
 Definition bitlt (x : nat) (y: nat): bool := (Nat.ltb x y).
+
+(* interface for module wrapper for myTruncate *)
+Record Interface'myTruncate := {
+    Interface'myTruncate'modules: Modules;
+    Interface'myTruncate'myTruncate: string;
+}.
+
+Module module'myTruncate.
+    Section Section'myTruncate.
+    Variable isz : nat.
+    Variable osz : nat.
+    Variable instancePrefix: string.
+    Hypothesis isz_gt_osz : (isz >= osz)%nat.
+    Let msz : nat := isz - osz.
+    Definition Modules'myTruncate: Modules.
+        refine (BKMODULE {
+        Method instancePrefix--"myTruncate" (v: (Bit (msz + osz))): Bit osz := 
+    (
+        LET result : (Bit osz) <- UniBit (Trunc osz ((msz + osz) - osz)) (castBits _ (msz + osz) (osz + ((msz + osz) - osz)) _ #v);
+                Ret #result
+    )
+    }); abstract omega. Qed. (* myTruncate *)
+    Definition myTruncate := Build_Interface'myTruncate Modules'myTruncate (instancePrefix--"myTruncate").
+    End Section'myTruncate.
+End module'myTruncate.
+
+Definition function'myTruncate := module'myTruncate.myTruncate.
+
+(* interface for module wrapper for isValid *)
+Record Interface'isValid := {
+    Interface'isValid'modules: Modules;
+    Interface'isValid'isValid: string;
+}.
+
+Module module'isValid.
+    Section Section'isValid.
+    Variable data_t : Kind.
+    Variable instancePrefix: string.
+    Definition Modules'isValid: Modules.
+        refine (BKMODULE {
+        Method instancePrefix--"isValid" (m: (Maybe data_t)): Bool := 
+    (
+            If (#m!( MaybeFields data_t)@."$tag" == $0) then (
+            LET d <- (#m!(MaybeFields data_t)@."Valid");
+        Ret ($$true)%kami_expr
+
+   ) else (
+
+        Ret ($$false)%kami_expr
+) as retval;
+        Ret #retval
+
+    )
+    }); abstract omega. Qed. (* isValid *)
+    Definition isValid := Build_Interface'isValid Modules'isValid (instancePrefix--"isValid").
+    End Section'isValid.
+End module'isValid.
+
+Definition function'isValid := module'isValid.isValid.
+(* interface for module wrapper for fromMaybe *)
+Record Interface'fromMaybe := {
+    Interface'fromMaybe'modules: Modules;
+    Interface'fromMaybe'fromMaybe: string;
+}.
+
+Module module'fromMaybe.
+    Section Section'fromMaybe.
+    Variable data_t : Kind.
+    Variable instancePrefix: string.
+    Definition Modules'fromMaybe: Modules.
+        refine (BKMODULE {
+        Method instancePrefix--"fromMaybe" (defaultval: data_t) (val: (Maybe data_t)): data_t := 
+    (
+            If (#val!( MaybeFields data_t)@."$tag" == $0) then (
+            LET validval <- (#val!(MaybeFields data_t)@."Valid");
+        Ret #validval
+
+   ) else (
+
+        Ret #defaultval
+) as retval;
+        Ret #retval
+
+    )
+    }); abstract omega. Qed. (* fromMaybe *)
+    Definition fromMaybe := Build_Interface'fromMaybe Modules'fromMaybe (instancePrefix--"fromMaybe").
+    End Section'fromMaybe.
+End module'fromMaybe.
+
+Definition function'fromMaybe := module'fromMaybe.fromMaybe.
 
