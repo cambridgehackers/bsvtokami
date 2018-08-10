@@ -663,6 +663,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    assert varEntry != null : "No var entry for " + varName + " at " + StaticAnalysis.sourceLocation(ctx);
 	    BSVType varType = varEntry.type;
             if (rhs != null) {
+		BSVType rhsType = typeVisitor.visit(rhs);
+		try {
+		    varType.unify(rhsType);
+		} catch (InferenceError e) {
+		    logger.fine(e.toString());
+		    System.err.println(e.toString() + " at " + StaticAnalysis.sourceLocation(ctx));
+		}
                 BSVParser.CallexprContext call = getCall(rhs);
                 if (call != null) {
 		    String functionName = "";
@@ -2074,7 +2081,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         return expression.toString();
     }
 
-    void instantiateParameterTypes(BSVType functionType, List<BSVParser.ExpressionContext> params) {
+    void instantiateParameterTypes(BSVType functionType, List<BSVParser.ExpressionContext> params, BSVType resultType) {
 	functionType = functionType.prune();
 	for (BSVParser.ExpressionContext param: params) {
 	    assert functionType.name.equals("Function")
@@ -2089,6 +2096,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    }
 	    functionType = functionType.params.get(1).prune();
 	}
+	System.err.println(String.format("instantiate result type %s with %s", functionType, resultType));
+	try {
+	    functionType.unify(resultType);
+	} catch (InferenceError e) {
+	    logger.fine(e.toString());
+	}
     }
 
     String translateCall(BSVParser.CallexprContext ctx) {
@@ -2098,7 +2111,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	inv.pushScope(scope);
         String methodName = inv.visit(ctx.fcn);
 	BSVType argType = new BSVType();
-	BSVType resultType = typeVisitor.visit(ctx);
+	BSVType callResultType = typeVisitor.visit(ctx);
+	BSVType resultType = callResultType;
 	if (inv.methodsUsed.size() > 0) {
 	    System.err.println(String.format("First key %s", inv.methodsUsed.firstKey()));
 	    TreeSet<InstanceEntry> instanceEntries = inv.methodsUsed.get(inv.methodsUsed.firstKey());
@@ -2122,10 +2136,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		functionType = functionEntry.type.fresh();
 		TreeMap<String,BSVType> freeTypeVariables = functionType.getFreeVariables();
 		//FIXME: instantiate type
-		instantiateParameterTypes(functionType, ctx.expression());
+		instantiateParameterTypes(functionType, ctx.expression(), callResultType);
 		argType = functionType.params.get(0);
 		resultType = functionType.params.get(1);
-		System.err.println(String.format("Call expr function %s : %s\n", methodName, functionType));
+		System.err.println(String.format("Call expr function %s : %s (%s)\n", methodName, functionType, callResultType));
 		StringBuilder typeParameters = new StringBuilder();
 		StringBuilder suffixBuilder = new StringBuilder();
 		for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
