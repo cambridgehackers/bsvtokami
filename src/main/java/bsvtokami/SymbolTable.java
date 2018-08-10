@@ -7,7 +7,7 @@ import java.util.logging.Logger;
 class SymbolTableEntry implements java.lang.Comparable {
     public final String name;
     public BSVType type;
-    SymbolType symbolType;
+    SymbolType symbolType = SymbolType.Unspecified;
     public SymbolTable mappings; // for interfaces, tagged unions
     public ArrayList<SymbolTableEntry> instances; // for type classes
     public Value value;

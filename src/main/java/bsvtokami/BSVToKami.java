@@ -458,6 +458,18 @@ public class BSVToKami extends BSVBaseVisitor<String>
         pkg.addStatement(moduleDef);
         InstanceNameVisitor inv = new InstanceNameVisitor(scopes);
         inv.visit(ctx);
+	if (inv.methodsUsed.size() > 0) {
+	    System.err.println(String.format("Module %s instances visited %s",
+					     moduleName,
+					     String.join(", ", inv.methodsUsed.keySet())));
+	    for (Map.Entry<String,TreeSet<InstanceEntry>> iterator: inv.methodsUsed.entrySet()) {
+		String instanceName = iterator.getKey();
+		System.err.print(String.format("    %s: ", instanceName));
+		for (InstanceEntry ie: iterator.getValue()) {
+		    System.err.print(String.format(" <%s.%s>", ie.interfaceName, ie.methodName));
+		}
+	    }
+	}
 
         logger.fine("module " + moduleName);
 	printstream.println("Module module'" + moduleName + ".");
@@ -523,40 +535,45 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
         String stmtPrefix = "    ";
         for (BSVParser.ModulestmtContext modulestmt: ctx.modulestmt()) {
-            printstream.print(stmtPrefix);
             visit(modulestmt);
         }
 	if (letBindings.size() > 0) {
+	    printstream.print(stmtPrefix);
+	    printstream.println("(* let bindings *)");
 	    for (String letBinding: letBindings) {
-		printstream.println(String.format("       Let %s.", letBinding));
+		printstream.print(stmtPrefix);
+		printstream.println(String.format("Let %s.", letBinding));
 	    }
 	}
 	if (methodBindings.size() > 0) {
+	    printstream.print(stmtPrefix);
+	    printstream.println("    (* method bindings *)");
 	    for (String methodBinding: methodBindings) {
-		printstream.println(String.format("       Let %s.", methodBinding));
+		printstream.print(stmtPrefix);
+		printstream.println(String.format("Let %s.", methodBinding));
 	    }
 	}
 
-        for (Map.Entry<String,TreeSet<InstanceEntry>> iter: inv.methodsUsed.entrySet()) {
-            String instanceName = iter.getKey();
-            TreeSet<InstanceEntry> methods = iter.getValue();
-            for (InstanceEntry methodEntry: methods) {
-                String method = methodEntry.methodName;
-                BSVType methodType = methodEntry.methodType;
-		if (methodType.name.equals("Function"))  {
-		    assert methodType.params.size() == 2: "Unhandled method " + method + " has type " + methodType + " from interface " + methodEntry.interfaceName;
-		    BSVType argType = methodType.params.get(0);
-		    BSVType returnType = methodType.params.get(1);
+	if (inv.methodsUsed.size() > 0) {
+	    printstream.print(stmtPrefix);
+	    printstream.println("(* instance methods *)");
+	    for (Map.Entry<String,TreeSet<InstanceEntry>> iter: inv.methodsUsed.entrySet()) {
+		String instanceName = iter.getKey();
+		TreeSet<InstanceEntry> methods = iter.getValue();
+		for (InstanceEntry methodEntry: methods) {
+		    String method = methodEntry.methodName;
+		    BSVType methodType = methodEntry.methodType;
+		    System.err.println(String.format("inv %s.%s: %s", instanceName, method, methodType));
+		    BSVType returnType = methodType.name.equals("Function") ? methodType.params.get(1) : methodType;
 		    String methodInterfaceName = methodEntry.interfaceName;
-		    printstream.println(String.format("    Let %1$s%2$s : string := (%3$s'%2$s %1$s).",
+		    printstream.print(stmtPrefix);
+		    printstream.println(String.format("Let %1$s%2$s : string := (%3$s'%2$s %1$s).",
 						      instanceName,
 						      method,
 						      methodInterfaceName));
-		} else {
-		    //printstream.println(String.format("(* FIXME: interface %s subinterface %s *)", methodEntry.interfaceName, method));
 		}
-            }
-        }
+	    }
+	}
 
         printstream.println("    Definition " + moduleName + "Module: Modules"
 			    + (useAbstractOmega ? "." : " :="));
@@ -564,11 +581,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	if (statements.size() > 0) {
 	    String sep = "    ";
 	    for (String statement: statements) {
-		printstream.println(String.format("       %s%s", sep, statement));
+		printstream.print(stmtPrefix);
+		printstream.println(String.format("%s%s", sep, statement));
 		sep = "with ";
 	    }
 	}
-        printstream.print("    })");
+	printstream.print(stmtPrefix);
+        printstream.print("})");
 	if (useAbstractOmega) {
 	    printstream.print("; abstract omega. Qed");
 	}

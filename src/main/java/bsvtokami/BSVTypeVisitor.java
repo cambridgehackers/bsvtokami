@@ -352,7 +352,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             }
 	    logger.fine(String.format("Defining struct %s in scope %s %s",
 				      bsvtype.name, scope.name, scope));
-            scope.bindType(null, bsvtype.name, bsvtype, fieldMappings);
+            scope.bindType(null, bsvtype.name, bsvtype, fieldMappings)
+		.setSymbolType(SymbolType.Struct);
             return bsvtype;
         }
         /**

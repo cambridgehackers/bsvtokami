@@ -19,6 +19,9 @@ class InstanceEntry implements java.lang.Comparable {
 	//FIXME
 	return methodName.compareTo(oentry.methodName);
     }
+    public String toString() {
+	return String.format("<ifc %s method %s>", interfaceName, methodName);
+    }
 }
 
 class InstanceNameVisitor extends BSVBaseVisitor<String> {
@@ -104,6 +107,11 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
 					     entry.type, interfaceType, instanceName, StaticAnalysis.sourceLocation(ctx)));
             SymbolTableEntry interfaceEntry = scope.lookupType(interfaceType.name);
             assert interfaceEntry != null : "No interface entry for " + interfaceType + " at " +  StaticAnalysis.sourceLocation(ctx);
+
+	    if (interfaceEntry.symbolType != SymbolType.Interface) {
+		System.err.println(String.format("    %s is not an interface (%s)", interfaceType.name, interfaceEntry.symbolType));
+		return null;
+	    }
 
 	    assert interfaceEntry.mappings != null: "No interface mappings for " + entry.type.name;
             SymbolTableEntry methodEntry = interfaceEntry.mappings.lookup(fieldName);

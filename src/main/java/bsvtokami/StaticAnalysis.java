@@ -208,9 +208,9 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         for (Map.Entry<String,SymbolTableEntry> mapping: interfaceMappings.typeBindings.entrySet()) {
             logger.fine(String.format("interface tmapping %s  %s : %s", interfaceName, mapping.getKey(), mapping.getValue().type));
         }
-        symbolTable.bindType(packageName, interfaceName, interfaceType, interfaceMappings);
+        symbolTable.bindType(packageName, interfaceName, interfaceType, interfaceMappings)
+	    .setSymbolType(SymbolType.Interface);
 	SymbolTableEntry interfaceEntry = symbolTable.lookupType(interfaceName);
-
         for (Map.Entry<String,SymbolTableEntry> mapping: interfaceMappings.bindings.entrySet()) {
 	    mapping.getValue().parent = interfaceEntry;
         }
@@ -307,7 +307,8 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         String typedefname = ctx.typedeftype().typeide().getText();
         BSVType taggeduniontype = typeVisitor.visit(ctx.typedeftype());
 	SymbolTable mappings = new SymbolTable(null, SymbolTable.ScopeType.TaggedUnion, typedefname);
-        symbolTable.bindType(packageName, typedefname, taggeduniontype, mappings);
+        symbolTable.bindType(packageName, typedefname, taggeduniontype, mappings)
+	    .setSymbolType(SymbolType.TaggedUnion);
         logger.fine(String.format("tagged union %s : %s", typedefname, taggeduniontype));
 	int tagnum = 0;
         for (BSVParser.UnionmemberContext member: ctx.unionmember()) {
@@ -414,7 +415,8 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
             bsvtype = typeVisitor.visit(ctx.bsvtype());
         else
             bsvtype = typeVisitor.visit(ctx.functionproto());
-        symbolTable.bindType(packageName, typedefname, bsvtype);
+        symbolTable.bindType(packageName, typedefname, bsvtype)
+	    .setSymbolType(SymbolType.Typedef);
         return null;
     }
 
@@ -612,8 +614,8 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 	    SymbolTableEntry functionEntry = interfaceMappings.lookup(functionname);
 	    assert functionEntry != null;
 	    symbolTable.bind(packageName, functionname, new SymbolTableEntry(functionname, functionEntry.type));
-	    symbolTable.bindType(packageName, interfaceName, interfaceType, interfaceMappings);
-	    SymbolTableEntry interfaceEntry = symbolTable.lookupType(interfaceName);
+	    symbolTable.bindType(packageName, interfaceName, interfaceType, interfaceMappings)
+		.setSymbolType(SymbolType.Interface);
 	}
         return null;
     }
@@ -918,7 +920,8 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         if (t.isVar) {
             SymbolTableEntry entry = symbolTable.lookupType(t.name);
             if (entry == null) {
-                symbolTable.bindType(t.name, t);
+                symbolTable.bindType(t.name, t)
+		    .setSymbolType(SymbolType.TypeVar);
             }
         } else {
             for (BSVType p : t.params) {

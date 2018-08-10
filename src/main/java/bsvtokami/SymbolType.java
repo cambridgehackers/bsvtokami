@@ -1,5 +1,5 @@
 package bsvtokami;
 
 public enum SymbolType {
-    Module, Method, Function, Type, Enum, Struct, ModuleParam
+    Unspecified, Interface, Module, Method, Function, Typedef, TypeVar, Enum, Struct, TaggedUnion, ModuleParam
 };
