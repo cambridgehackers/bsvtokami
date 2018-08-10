@@ -62,22 +62,30 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
 
     @Override public String visitOperatorexpr(BSVParser.OperatorexprContext ctx) {
         String instanceName = visit(ctx.binopexpr());
-        logger.fine("visitOperatorExpr " + ctx.getRuleIndex() + " " + ctx.getText() + " " + instanceName);
+        logger.fine("visitOperatorExpr " + " " + ctx.getText() + " " + instanceName);
         return instanceName;
     }
     @Override public String visitBinopexpr(BSVParser.BinopexprContext ctx) {
         String instanceName = null;
         if (ctx.unopexpr() != null) {
             instanceName = visit(ctx.unopexpr());
-        }
-        logger.fine("visitBinopexpr " + ctx.getRuleIndex() + " " + ctx.getText() + " " + instanceName);
+        } else {
+	    visit(ctx.left);
+	    visit(ctx.right);
+	}
+        logger.fine("visitBinopexpr " + " " + ctx.getText() + " " + instanceName);
         return instanceName;
     }
     @Override public String visitUnopexpr(BSVParser.UnopexprContext ctx) {
         String instanceName = null;
-        if (ctx.op == null)
-            instanceName = visit(ctx.exprprimary());
-        logger.fine("visitUnopexpr " + ctx.getRuleIndex() + " " + ctx.getText() + " " + instanceName);
+	instanceName = visit(ctx.exprprimary());
+        logger.fine("visitUnopexpr " + " " + ctx.getText() + " " + instanceName);
+        return instanceName;
+    }
+    @Override public String visitParenexpr(BSVParser.ParenexprContext ctx) {
+        String instanceName = null;
+	instanceName = visit(ctx.expression());
+        logger.fine("visitParenexpr " + " " + ctx.getText() + " " + instanceName);
         return instanceName;
     }
     @Override public String visitCallexpr(BSVParser.CallexprContext ctx) {

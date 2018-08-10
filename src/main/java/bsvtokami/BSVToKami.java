@@ -2109,7 +2109,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 						 typeParameters.toString()));
 		methodBindings.add(String.format("%1$s%2$s := Interface'%1$s'%1$s instance'%1$s%2$s", methodName, nameSuffix));
 		methodName = methodName + nameSuffix;
-		System.err.println("Added methodBindings \n" + String.join("\n", methodBindings));
+		//System.err.println("Added methodBindings " + StaticAnalysis.sourceLocation(ctx) + "\n" + String.join("    \n", methodBindings));
 	    }
 	}
         if (methodName == null)
