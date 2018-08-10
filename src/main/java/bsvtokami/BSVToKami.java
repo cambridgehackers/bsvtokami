@@ -95,6 +95,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         printstream.println("Require Import Bool String List Arith.");
         printstream.println("Require Import Omega.");
+        printstream.println("Require Import micromega.Lia.");
         printstream.println("Require Import Kami.");
         printstream.println("Require Import Lib.Indexer.");
         printstream.println("Require Import Bsvtokami.");
