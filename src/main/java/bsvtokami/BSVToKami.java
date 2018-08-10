@@ -1757,6 +1757,16 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	return null;
     }
 
+    @Override public String visitTripleandexpr(BSVParser.TripleandexprContext ctx) {
+        if (ctx.expression().size() == 1)
+            return visit(ctx.expression(0));
+        ArrayList<String> exprs = new ArrayList<>();
+        for (BSVParser.ExpressionContext expr: ctx.expression()) {
+            exprs.add(visit(expr));
+        }
+        return String.join(" && ", exprs);
+    }
+
     @Override public String visitCondexpr(BSVParser.CondexprContext ctx) {
 	return String.format("(IF %s then %s else %s)",
 			     visit(ctx.expression(0)),
