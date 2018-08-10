@@ -926,6 +926,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	StringBuilder statement = new StringBuilder();
         statement.append("Rule instancePrefix--\"" + ruleName + "\" :=\n");
+	statement.append("    (\n");
         for (Map.Entry<String,BSVType> entry: regReadVisitor.regs.entrySet()) {
             String regName = entry.getKey();
 	    if (callRegMethods) {
@@ -958,7 +959,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
 	//
 	if (letBindings.size() > 0) {
-	    statement.append("       (");
+	    statement.append("       ");
 	    for (String ruleLetBinding: letBindings) {
 		statement.append(String.format("       let %s in\n", ruleLetBinding));
 	    }
@@ -969,7 +970,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		statement.append(newline);
 	    }
 	}
-        statement.append("        Retv (* rule " + ruledef.name.getText() + " *)");
+        statement.append("        Retv ) (* rule " + ruledef.name.getText() + " *)");
         scope = scopes.popScope();
         actionContext = outerContext;
 
@@ -1127,8 +1128,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
         String returntype = (functionproto.bsvtype() != null) ? bsvTypeToKami(StaticAnalysis.getBsvType(functionproto.bsvtype())) : "";
         printstream.println(String.format(": %s := ", returntype));
+	printstream.println("    (");
 
 	printstream.println(functionBody.toString());
+	printstream.println("    )");
 
         printstream.println(String.format("    }); abstract omega. Qed. (* %s *)", functionName));
         printstream.println(String.format("    Definition %1$s := Build_Interface'%1$s Modules'%1$s (instancePrefix--\"%1$s\").", functionName));
@@ -1175,6 +1178,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
         String returntype = (ctx.bsvtype() != null) ? bsvTypeToKami(StaticAnalysis.getBsvType(ctx.bsvtype())) : "";
         statement.append(" : " + returntype + " :=");
 	statement.append(newline);
+	statement.append("    (");
+	statement.append(newline);
         RegReadVisitor regReadVisitor = new RegReadVisitor(scope);
         for (BSVParser.StmtContext stmt: ctx.stmt())
             regReadVisitor.visit(stmt);
@@ -1213,6 +1218,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    statement.append(returnPending);
 	    returnPending = null;
 	}
+	statement.append("    )");
 	statement.append(newline);
 
         actionContext = outerContext;
