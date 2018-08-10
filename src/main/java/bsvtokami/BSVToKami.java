@@ -927,10 +927,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
             regReadVisitor.visit(stmt);
         }
 
-        for (BSVParser.StmtContext stmt: ruledef.rulebody().stmt()) {
-            visit(stmt);
-        }
-
 	StringBuilder statement = new StringBuilder();
         statement.append("Rule instancePrefix--\"" + ruleName + "\" :=\n");
         for (Map.Entry<String,BSVType> entry: regReadVisitor.regs.entrySet()) {
@@ -945,8 +941,25 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
 
         if (rulecond != null) {
-            statement.append("        Assert(" + visit(rulecond) + ");\n");
+            String rulecondValue = visit(rulecond);
+            if (statements.size() > 0) {
+                for (String s: statements) {
+                    statement.append("       ");
+                    statement.append(s);
+                    statement.append(";");
+                    statement.append(newline);
+                }
+                statements.clear();
+            }
+	    statement.append(newline);
+            statement.append("        Assert(" + rulecondValue + ");\n");
         }
+
+	// now visit the body statements
+        for (BSVParser.StmtContext stmt: ruledef.rulebody().stmt()) {
+            visit(stmt);
+        }
+	//
 	if (letBindings.size() > 0) {
 	    statement.append("       (");
 	    for (String ruleLetBinding: letBindings) {
