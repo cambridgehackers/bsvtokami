@@ -2133,9 +2133,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	String varName = String.format("call%d", callCount);
 	callCount++;
 
-	statements.add(String.format("LET %s : %s <- %s",
+	statements.add(String.format("CallM %s : %s <- %s",
 				     varName,
-				     resultType,
+				     bsvTypeToKami(resultType),
 				     translateCall(ctx)));
         return varName;
     }
