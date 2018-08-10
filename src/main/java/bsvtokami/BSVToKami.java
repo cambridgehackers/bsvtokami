@@ -1253,7 +1253,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     @Override public String visitStmt(BSVParser.StmtContext ctx) {
 	if (ctx.expression() != null) {
-	    statements.add(visit(ctx.expression()));
+	    BSVParser.CallexprContext call = getCall(ctx.expression());
+	    if (call != null) {
+		// call is performed for side effect, so visit it but ignore the expression it returns
+		String unusedValue = visit(ctx.expression());
+	    } else {
+		statements.add(visit(ctx.expression()));
+	    }
 	} else {
 	    visitChildren(ctx);
 	}
