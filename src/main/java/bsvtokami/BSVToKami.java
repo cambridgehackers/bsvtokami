@@ -1948,6 +1948,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
     @Override public String visitRealliteral(BSVParser.RealliteralContext ctx) {
         return ("$" + ctx.RealLiteral().getText());
     }
+    @Override public String visitUndefinedexpr(BSVParser.UndefinedexprContext ctx) {
+	return "Default";
+    }
     @Override public String visitReturnexpr(BSVParser.ReturnexprContext ctx) {
 	StringBuilder expression = new StringBuilder();
         expression.append("        Ret ");
