@@ -1776,7 +1776,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
 				     params.get(1),
 				     mSizeRelationshipProvisos.get(name),
 				     params.get(0));
+	} else if (name.equals("Pos")) {
+	    return String.format("Hypothesis H%1$s: (%2$s > 0)%%nat.",
+				 name,
+				 params.get(0));
 	}
+	
 	return null;
     }
 
