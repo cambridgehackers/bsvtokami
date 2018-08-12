@@ -52,6 +52,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     private ModuleDef moduleDef;
     private ArrayList<String> instances;
     private boolean actionContext;
+    private boolean useAbstractOmega;
     private boolean stmtEmitted;
     private String returnPending;
     private boolean inModule;
@@ -515,7 +516,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
 
 	boolean hasProvisos = moduleproto.provisos() != null;
-	boolean useAbstractOmega = true || hasProvisos;
+	useAbstractOmega = hasProvisos;
 	if (hasProvisos) {
 	    for (BSVParser.ProvisoContext proviso: moduleproto.provisos().proviso()) {
 		// emit Variable declaration for free variable in proviso
@@ -700,7 +701,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 			String lsbWidth = bsvTypeSize(varType, varinit.var);
 			String exprWidth = bsvTypeSize(arg0Type, args.get(0));
 			String msbWidth = String.format("(%s - %s)", exprWidth, lsbWidth);
-			statement.append(String.format("LET %1$s : %2$s <- UniBit (Trunc %3$s %4$s) (castBits _ %6$s (%3$s + %4$s) _ %5$s)",
+			statement.append(String.format((useAbstractOmega
+						       ? "LET %1$s : %2$s <- UniBit (Trunc %3$s %4$s) (castBits _ %6$s (%3$s + %4$s) _ %5$s)"
+							: "LET %1$s : %2$s <- UniBit (Trunc %3$s %4$s) %5$s"),
 						       varName,
 						       bsvTypeToKami(t, 1),
 						       lsbWidth,
@@ -712,7 +715,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 			String lsbWidth = bsvTypeSize(varType, varinit.var);
 			String exprWidth = bsvTypeSize(arg0Type, args.get(0));
 			String msbWidth = String.format("(%s - %s)", exprWidth, lsbWidth);
-			statement.append(String.format("LET %1$s : %2$s <-  UniBit (TruncLsb %3$s %4$s) (castBits _ %6$s %6$s _ %5$s)",
+			statement.append(String.format((useAbstractOmega
+							? "LET %1$s : %2$s <-  UniBit (TruncLsb %3$s %4$s) (castBits _ %6$s %6$s _ %5$s)"
+							: "LET %1$s : %2$s <-  UniBit (TruncLsb %3$s %4$s) %5$s"),
 						       varName,
 						       bsvTypeToKami(t, 1),
 						       msbWidth,
@@ -740,7 +745,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 			String op = (functionName.equals("signExtend")) ? "SignExtendTrunc" : "ZeroExtendTrunc";
 			String arg0Width = bsvTypeSize(arg0Type, args.get(0));
 			String varWidth = bsvTypeSize(varType, varinit.var);
-			statement.append(String.format("LET %1$s : %2$s <-  UniBit (SignExtendTrunc %3$s %4$s) (castBits _ %3$s %3$s _ %5$s)",
+			statement.append(String.format((useAbstractOmega
+							? "LET %1$s : %2$s <-  UniBit (SignExtendTrunc %3$s %4$s) (castBits _ %3$s %3$s _ %5$s)"
+							: "LET %1$s : %2$s <-  UniBit (SignExtendTrunc %3$s %4$s) %5$s"),
 						       varName,
 						       bsvTypeToKami(varType, 1),
 						       arg0Width,
@@ -1140,8 +1147,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    printstream.println(String.format("       Definition %s.\n", methodBinding));
 	}
 
-	printstream.println(String.format("    Definition Modules'%s: Modules.", functionName));
-	printstream.println(String.format("        refine (BKMODULE {"));
+	boolean hasProvisos = functionproto.provisos() != null;
+	useAbstractOmega = hasProvisos;
+	printstream.println(String.format("    Definition Modules'%s: Modules%s",
+					  functionName,
+					  (useAbstractOmega ? "." : " :=")
+					  ));
+	printstream.println(String.format("        %s (BKMODULE {",
+					  (useAbstractOmega ? "refine" : "")));
 	//FIXME module instantiations go here
 	printstream.print(String.format("        Method instancePrefix--\"%s\"", functionName));
 
@@ -1160,7 +1173,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	printstream.println(functionBody.toString());
 	printstream.println("    )");
 
-        printstream.println(String.format("    }); abstract omega. Qed. (* %s *)", functionName));
+        printstream.println(String.format("    })%s. (* %s *)",
+					  (useAbstractOmega ? "; abstract omega. Qed" : ""),
+					  functionName));
         printstream.println(String.format("    Definition %1$s := Build_Interface'%1$s Modules'%1$s (instancePrefix--\"%1$s\").", functionName));
 	printstream.println(String.format("    End Section'%s.", functionName));
 	printstream.println(String.format("End module'%s.", functionName));
@@ -1882,7 +1897,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    leftargSize = String.join(" + ", argSizes);
 	}
 	typeVisitor.popScope();
-	return String.format("castBits _ (%1$s) (%1$s) _ %2$s",
+	return String.format((useAbstractOmega
+			      ? "castBits _ (%1$s) (%1$s) _ %2$s"
+			      : "%2$s"),
 			     leftargSize, leftexpr);
     }
 
