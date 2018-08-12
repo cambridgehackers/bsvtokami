@@ -498,20 +498,15 @@ public class BSVToKami extends BSVBaseVisitor<String>
         if (moduleproto.methodprotoformals() != null) {
             for (BSVParser.MethodprotoformalContext formal : moduleproto.methodprotoformals().methodprotoformal()) {
 		BSVType bsvType = StaticAnalysis.getBsvType(formal.bsvtype());
-		String typeName = bsvTypeToKami(bsvType);
-		if (bsvType.name.equals("Reg"))
-		    typeName = (callRegMethods) ? "string" : "Reg";
-		if (bsvType.isVar)
-		    typeName = String.format("ConstT %s", typeName);
                 if (formal.name != null) {
-		    String formalName = formal.name.getText();
-		    formalNames.add(formalName);
-		    printstream.println(String.format("    Variable %s: %s.",
-						      formalName,
-						      (isKamiKind(bsvType)
-						       ? String.format("ConstT %s", bsvTypeToKami(bsvType, 1))
-						       : bsvType.name)));
-		}
+                    String formalName = formal.name.getText();
+                    formalNames.add(formalName);
+                    printstream.println(String.format("    Variable %s: %s.",
+                                                      formalName,
+                                                      ((isKamiKind(bsvType) || bsvType.isVar)
+                                                       ? String.format("ConstT %s", bsvTypeToKami(bsvType, 1))
+                                                       : bsvType.name)));
+                }
             }
         }
 
@@ -1053,17 +1048,17 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	printstream.println(String.format("    Section Section'%s.", functionName));
 
         for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
-	    BSVType freeType = entry.getValue();
-	    boolean isNumeric = freeType.numeric;
-	    // FIXME: heuristic
-	    if (freeType.name.endsWith("sz") || freeType.name.endsWith("Sz") || freeType.name.equals("xlen"))
-		isNumeric = true;
-	    logger.fine("Function def: Free type variable " + freeType + (isNumeric ? " numeric" : " interface type"));
+            BSVType freeType = entry.getValue();
+            boolean isNumeric = freeType.numeric;
+            // FIXME: heuristic
+            if (freeType.name.endsWith("sz") || freeType.name.endsWith("Sz") || freeType.name.equals("xlen"))
+                isNumeric = true;
+            logger.fine("Function def: Free type variable " + freeType + (isNumeric ? " numeric" : " interface type"));
 
-	    printstream.println(String.format("    Variable %s : %s.",
-					      entry.getKey(),
-					      (isNumeric ? "nat" : "Kind")));
-	}
+            printstream.println(String.format("    Variable %s : %s.",
+                                              entry.getKey(),
+                                              (isNumeric ? "nat" : "Kind")));
+        }
 
 	printstream.println(String.format("    Variable instancePrefix: string."));
 
@@ -1160,10 +1155,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         if (functionproto.methodprotoformals() != null) {
             for (BSVParser.MethodprotoformalContext formal: functionproto.methodprotoformals().methodprotoformal()) {
-                BSVType bsvtype = StaticAnalysis.getBsvType(formal);
+                BSVType bsvType = StaticAnalysis.getBsvType(formal);
                 String formalName = StaticAnalysis.getFormalName(formal);
-
-                printstream.print(String.format(" (%s: %s)", formalName, bsvTypeToKami(bsvtype, 1)));
+                printstream.print(String.format(" (%s: %s)", formalName, bsvTypeToKami(bsvType, 1)));
             }
         }
         String returntype = (functionproto.bsvtype() != null) ? bsvTypeToKami(StaticAnalysis.getBsvType(functionproto.bsvtype())) : "";
