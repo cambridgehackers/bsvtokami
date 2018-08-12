@@ -2222,7 +2222,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 				     varName,
 				     bsvTypeToKami(resultType),
 				     translateCall(ctx)));
-        return varName;
+        return "#" + varName;
     }
 
     @Override public String visitValueofexpr(BSVParser.ValueofexprContext ctx) {
