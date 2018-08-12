@@ -87,7 +87,7 @@ module mkRegA#(data_t v)(Reg#(data_t));
     method Action _write(data_t v);
     endmethod
 endmodule
-module mkRegU(Reg#(data_t)) provisos (Bits#(data_t));
+module mkRegU(Reg#(data_t)) provisos (Bits#(data_t,datasz));
     method Action _write(data_t v);
     endmethod
 endmodule
@@ -130,6 +130,7 @@ endfunction
 
 (* nogen *)
 function Bool \$guard(Bool cond);
+   return False;
 endfunction
 
 (* nogen *)
@@ -138,11 +139,11 @@ function a when(Bool cond, a expr);
    return expr;
 endfunction
 
-typeclass Bits #(type a, numeric type n);
+typeclass Bits #(type a, numeric type nsz);
 (* nogen *)
-   function Bit#(n) pack(a x);
+   function Bit#(nsz) pack(a x);
 (* nogen *)
-   function a unpack(Bit#(n) x);
+   function a unpack(Bit#(nsz) x);
 endtypeclass
 
 typeclass Eq #(type data_t);
@@ -234,20 +235,20 @@ typeclass Bitwise #(type data_t);
    function Bit#(1) lsb (data_t x);
 endtypeclass
 
-typeclass BitReduction #(type x, numeric type n);
-   function x#(1) reduceAnd (x#(n) d);
-   function x#(1) reduceOr (x#(n) d);
-   function x#(1) reduceXor (x#(n) d);
-   function x#(1) reduceNand (x#(n) d);
-   function x#(1) reduceNor (x#(n) d);
-   function x#(1) reduceXnor (x#(n) d);
+typeclass BitReduction #(type x, numeric type nsz);
+   function x#(1) reduceAnd (x#(nsz) d);
+   function x#(1) reduceOr (x#(nsz) d);
+   function x#(1) reduceXor (x#(nsz) d);
+   function x#(1) reduceNand (x#(nsz) d);
+   function x#(1) reduceNor (x#(nsz) d);
+   function x#(1) reduceXnor (x#(nsz) d);
 endtypeclass
 
-typeclass BitExtend #(numeric type m, numeric type n, type x);  // n > m
-   function x#(n) extend (x#(m) d);
-   function x#(n) zeroExtend (x#(m) d);
-   function x#(n) signExtend (x#(m) d);
-   function x#(m) truncate (x#(n) d);
+typeclass BitExtend #(numeric type msz, numeric type nsz, type x);  // n > m
+   function x#(nsz) extend (x#(msz) d);
+   function x#(nsz) zeroExtend (x#(msz) d);
+   function x#(nsz) signExtend (x#(msz) d);
+   function x#(msz) truncate (x#(nsz) d);
 endtypeclass
 
 (* nogen *)
@@ -294,12 +295,10 @@ typedef union tagged {
    Void Invalid;
    } Maybe#(type a) deriving (Bits,Eq);
 
-(* nogen *)
-function Bool isValid(Maybe#(data_t) m);
-   case (m) matches tagged Valid: return True; default: return False; endcase
+function Bool isValid(Maybe#(data_t) val);
+   case (val) matches tagged Valid: return True; default: return False; endcase
 endfunction
 
-(* nogen *)
 function data_t fromMaybe( data_t defaultval,
                            Maybe#(data_t) val ) ;
    return (case (val) matches
@@ -445,17 +444,17 @@ endmodule
 // B.5.4
 
 (* nogen *)
-function Bit#(1) parity(Bit#(n) v);
+function Bit#(1) parity(Bit#(nsz) v);
 endfunction
 
 (* nogen *)
-function Bit#(n) reverseBits(Bit#(n) x);
+function Bit#(nsz) reverseBits(Bit#(nsz) x);
 endfunction
 
 (* nogen *)
-function Bit#(n) truncateLSB(Bit#(m) x)
-   provisos(Add#(n,k,m));
-   return Bit#(n)'(x >> valueOf(k));
+function Bit#(nsz) truncateLSB(Bit#(msz) x)
+   provisos(Add#(nsz,ksz,msz));
+   return Bit#(nsz)'(x >> valueOf(k));
 endfunction
 
 // 12.8.3
