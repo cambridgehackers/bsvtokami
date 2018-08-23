@@ -25,8 +25,9 @@ module mkBRAMCore1#(Integer memSize,
    provisos(Bits#(addr, addr_sz), Bits#(data, data_sz));
    Reg#(data) d <- mkRegU();
    method Action put(Bool write, addr address, data datain);
-       if (write)
-	  d <= datain;
+       if (write) begin
+	     d <= datain;
+	  end
    endmethod
    method data   read();
       return d;
@@ -42,8 +43,9 @@ module mkBRAMCore1BE#(Integer memSize,
             Mul#(chunk_sz, n, data_sz));
    Reg#(data) d <- mkRegU();
    method Action put(Bit#(n) writeen, addr address, data datain);
-      if (writeen != 0)
+      if (writeen != 0) begin
 	 d <= datain;
+      end
    endmethod
    method data   read();
       return d;
@@ -58,8 +60,9 @@ module mkBRAMCore1Load#(Integer memSize,
    provisos(Bits#(addr, addr_sz), Bits#(data, data_sz) );
    Reg#(data) d <- mkRegU();
    method Action put(Bool write, addr address, data datain);
-       if (write)
+       if (write) begin
 	  d <= datain;
+       end
    endmethod
    method data   read();
       return d;
@@ -76,8 +79,9 @@ module mkBRAMCore1BELoad#(Integer memSize,
             Mul#(chunk_sz, n, data_sz) );
    Reg#(data) d <- mkRegU();
    method Action put(Bit#(n) writeen, addr address, data datain);
-      if (writeen != 0)
+      if (writeen != 0) begin
 	 d <= datain;
+      end
    endmethod
    method data   read();
       return d;
@@ -90,19 +94,21 @@ module mkBRAMCore2#(Integer memSize,
                    (BRAM_DUAL_PORT#(addr, data))
    provisos(Bits#(addr, addr_sz), Bits#(data, data_sz) );
    Reg#(data) d <- mkRegU();
-   interface BRAM_PORT_BE#(addr, data, n) a;
+   interface BRAM_PORT_BE a;
       method Action put(Bool write, addr address, data datain);
-	 if (write)
+	 if (write) begin
 	    d <= datain;
+	 end
       endmethod
       method data   read();
 	 return d;
       endmethod
    endinterface
-   interface BRAM_PORT_BE#(addr, data, n) b;
+   interface BRAM_PORT_BE b;
       method Action put(Bool write, addr address, data datain);
-	 if (write)
+	 if (write) begin
 	    d <= datain;
+	 end
       endmethod
       method data   read();
 	 return d;
@@ -119,19 +125,21 @@ module mkBRAMCore2BE#(Integer memSize,
             Div#(data_sz, n, chunk_sz),
             Mul#(chunk_sz, n, data_sz) );
    Reg#(data) d <- mkRegU();
-   interface BRAM_PORT_BE#(addr, data, n) a;
+   interface BRAM_PORT_BE a;
       method Action put(Bit#(n) writeen, addr address, data datain);
-	 if (writeen != 0)
+	 if (writeen != 0) begin
 	    d <= datain;
+	 end
       endmethod
       method data   read();
 	 return d;
       endmethod
    endinterface
-   interface BRAM_PORT_BE#(addr, data, n) b;
+   interface BRAM_PORT_BE b;
       method Action put(Bit#(n) writeen, addr address, data datain);
-	 if (writeen != 0)
+	 if (writeen != 0) begin
 	    d <= datain;
+	 end
       endmethod
       method data   read();
 	 return d;
@@ -147,19 +155,21 @@ module mkSyncBRAMCore2#(Integer memSize,
                     (BRAM_DUAL_PORT#(addr, data))
    provisos(Bits#(addr, addr_sz),Bits#(data, data_sz));
    Reg#(data) d <- mkRegU();
-   interface BRAM_PORT_BE#(addr, data, n) a;
+   interface BRAM_PORT_BE a;
       method Action put(Bool write, addr address, data datain);
-	 if (write)
+	 if (write) begin
 	    d <= datain;
+	 end
       endmethod
       method data   read();
 	 return d;
       endmethod
    endinterface
-   interface BRAM_PORT_BE#(addr, data, n) b;
+   interface BRAM_PORT_BE b;
       method Action put(Bool write, addr address, data datain);
-	 if (write)
+	 if (write) begin
 	    d <= datain;
+	 end
       endmethod
       method data   read();
 	 return d;
@@ -178,19 +188,21 @@ module mkSyncBRAMCore2BE#(Integer memSize,
             Div#(data_sz, n, chunk_sz),
             Mul#(chunk_sz, n, data_sz) );
    Reg#(data) d <- mkRegU();
-   interface BRAM_PORT_BE#(addr, data, n) a;
+   interface BRAM_PORT_BE a;
       method Action put(Bit#(n) writeen, addr address, data datain);
-	 if (writeen != 0)
+	 if (writeen != 0) begin
 	    d <= datain;
+	 end
       endmethod
       method data   read();
 	 return d;
       endmethod
    endinterface
-   interface BRAM_PORT_BE#(addr, data, n) b;
+   interface BRAM_PORT_BE b;
       method Action put(Bit#(n) writeen, addr address, data datain);
-	 if (writeen != 0)
+	 if (writeen != 0) begin
 	    d <= datain;
+	 end
       endmethod
       method data   read();
 	 return d;
@@ -205,19 +217,21 @@ module mkBRAMCore2Load#(Integer memSize,
                        (BRAM_DUAL_PORT#(addr, data))
    provisos(Bits#(addr, addr_sz),Bits#(data, data_sz));
    Reg#(data) d <- mkRegU();
-   interface BRAM_PORT_BE#(addr, data, n) a;
+   interface BRAM_PORT_BE a;
       method Action put(Bool write, addr address, data datain);
-	 if (write)
+	 if (write) begin
 	    d <= datain;
+	 end
       endmethod
       method data   read();
 	 return d;
       endmethod
    endinterface
-   interface BRAM_PORT_BE#(addr, data, n) b;
+   interface BRAM_PORT_BE b;
       method Action put(Bool write, addr address, data datain);
-	 if (write)
+	 if (write) begin
 	    d <= datain;
+	 end
       endmethod
       method data   read();
 	 return d;
@@ -236,19 +250,21 @@ module mkBRAMCore2BELoad#(Integer memSize,
             Div#(data_sz, n, chunk_sz),
             Mul#(chunk_sz, n, data_sz) );
    Reg#(data) d <- mkRegU();
-   interface BRAM_PORT_BE#(addr, data, n) a;
+   interface BRAM_PORT_BE a;
       method Action put(Bit#(n) writeen, addr address, data datain);
-	 if (writeen != 0)
+	 if (writeen != 0) begin
 	    d <= datain;
+	 end
       endmethod
       method data   read();
 	 return d;
       endmethod
    endinterface
-   interface BRAM_PORT_BE#(addr, data, n) b;
+   interface BRAM_PORT_BE b;
       method Action put(Bit#(n) writeen, addr address, data datain);
-	 if (writeen != 0)
+	 if (writeen != 0) begin
 	    d <= datain;
+	 end
       endmethod
       method data   read();
 	 return d;
@@ -265,19 +281,21 @@ module mkSyncBRAMCore2Load#(Integer memSize,
                         (BRAM_DUAL_PORT#(addr, data))
    provisos(Bits#(addr, addr_sz), Bits#(data, data_sz));
    Reg#(data) d <- mkRegU();
-   interface BRAM_PORT_BE#(addr, data, n) a;
+   interface BRAM_PORT_BE a;
       method Action put(Bool write, addr address, data datain);
-	 if (write)
+	 if (write) begin
 	    d <= datain;
+	 end
       endmethod
       method data   read();
 	 return d;
       endmethod
    endinterface
-   interface BRAM_PORT_BE#(addr, data, n) b;
+   interface BRAM_PORT_BE b;
       method Action put(Bool write, addr address, data datain);
-	 if (write)
+	 if (write) begin
 	    d <= datain;
+	 end
       endmethod
       method data   read();
 	 return d;
@@ -297,19 +315,21 @@ module mkSyncBRAMCore2BELoad#(Integer memSize,
             Div#(data_sz, n, chunk_sz),
             Mul#(chunk_sz, n, data_sz) );
    Reg#(data) d <- mkRegU();
-   interface BRAM_PORT_BE#(addr, data, n) a;
+   interface BRAM_PORT_BE a;
       method Action put(Bit#(n) writeen, addr address, data datain);
-	 if (writeen != 0)
+	 if (writeen != 0) begin
 	    d <= datain;
+	 end
       endmethod
       method data   read();
 	 return d;
       endmethod
    endinterface
-   interface BRAM_PORT_BE#(addr, data, n) b;
+   interface BRAM_PORT_BE b;
       method Action put(Bit#(n) writeen, addr address, data datain);
-	 if (writeen != 0)
+	 if (writeen != 0) begin
 	    d <= datain;
+	 end
       endmethod
       method data   read();
 	 return d;

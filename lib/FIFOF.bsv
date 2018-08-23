@@ -15,7 +15,7 @@ endinterface
 
 module mkFIFOF(FIFOF#(element_type));
    Reg#(element_type) v <- mkRegU();
-   Reg#(Bit#(0)) valid <- mkReg(0);
+   Reg#(Bit#(1)) valid <- mkReg(0);
    method element_type first() if (valid == 1); 
       return v;
    endmethod

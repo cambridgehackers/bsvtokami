@@ -132,6 +132,9 @@ endinterface
 ///
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 module mkBaudGenerator#(Bit#(16) divider)(BaudGenerator);
 
    ////////////////////////////////////////////////////////////////////////////////
@@ -198,6 +201,9 @@ endmodule: mkBaudGenerator
 ///
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 module mkInputFilter#(a initval, a din)(InputFilter#(size, a))
    provisos( Bits#(a, sa)
            , Eq#(a)
@@ -245,6 +251,9 @@ endmodule
 ///
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 module mkEdgeDetector#(a initval, a din)(EdgeDetector#(a))
    provisos( Bits#(a, sa)
            , Eq#(a)
@@ -296,6 +305,9 @@ endfunction
 ///
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 module mkSynchronizer#(a initval)(Synchronizer#(a))
    provisos( Bits#(a, sa)
            , Add#(0, sa, 1)
@@ -328,6 +340,9 @@ endmodule: mkSynchronizer
 ///
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 module mkInputMovingFilter#(a din)(InputMovingFilter#(width, threshold, a))
    provisos( Bits#(a, sa)
            , Eq#(a)
@@ -379,6 +394,9 @@ endmodule
 ///
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 module mkUART( Bit#(4) charsize
              , Parity paritysel
              , StopBits stopbits
@@ -629,8 +647,8 @@ module mkUART( Bit#(4) charsize
 
    rule transmit_send_parity_bit(rXmitState == XS_Parity && tick);
       case(paritysel) matches
-         ODD:        rXmitDataOut <= rXmitParity;
-         EVEN:       rXmitDataOut <= ~rXmitParity;
+         tagged ODD:        rXmitDataOut <= rXmitParity;
+         tagged EVEN:       rXmitDataOut <= ~rXmitParity;
          default:    rXmitDataOut <= 1'b0;
       endcase
 
@@ -688,8 +706,8 @@ module mkUART( Bit#(4) charsize
    /// Interface Connections / Methods
    ////////////////////////////////////////////////////////////////////////////////
    interface RS232 rs232;
-      method sout    = rXmitDataOut;
-      method sin     = rRecvData._write;
+      method Bit#(1) sout(); return rXmitDataOut; endmethod
+      method Action sin(Bit#(1) x);  rRecvData <= x; endmethod
    endinterface
 
    interface Get tx;
