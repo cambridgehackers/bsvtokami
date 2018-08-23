@@ -279,6 +279,7 @@ Module module'mkReg.
     Definition mkReg := Build_Reg mkRegModule%kami (instancePrefix--"_read") (instancePrefix--"_write").
     End Section'mkReg.
 End module'mkReg.
+Hint Unfold module'mkReg.mkReg.
 
 Definition mkReg := module'mkReg.mkReg.
 Definition mkDWire := module'mkReg.mkReg.
