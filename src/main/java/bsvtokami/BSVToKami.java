@@ -304,18 +304,26 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	ArrayList<TagValue> tagsAndValues = new ArrayList<>();
 	long maxValue = 0;
 
-	long tagFrom = 0;
+	long tagValue = 0;
 	for (BSVParser.TypedefenumelementContext elt: ctx.typedefenumelement()) {
             String basetagname = elt.upperCaseIdentifier().getText();
             long tagCount = 1;
             boolean numbered = false;
+            long tagFrom = 0;
+
+            if (elt.tagval != null) {
+		IntValue intValue = new IntValue(elt.tagval.getText());
+                tagValue = intValue.value;
+            }
 
             if (elt.from != null) {
                 numbered = true;
-                tagCount = Long.parseLong(elt.from.getText());
+		IntValue intValue = new IntValue(elt.from.getText());
+                tagCount = intValue.value;
                 if (elt.to != null) {
                     tagFrom = tagCount;
-                    tagCount = Long.parseLong(elt.to.getText()) - tagFrom + 1;
+		    intValue = new IntValue(elt.to.getText());
+                    tagCount = intValue.value - tagFrom + 1;
                 }
             }
 
@@ -333,12 +341,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
                     tagname = String.format("%s%d", basetagname, tagFrom + i);
                 }
                 SymbolTableEntry entry = scope.lookup(tagname);
-                assert entry != null;
+                assert entry != null : String.format("No entry for %s at %s", tagname, StaticAnalysis.sourceLocation(ctx));
                 assert entry.value != null;
-                IntValue tagValue = (IntValue)entry.value;
-                assert tagValue != null;
+                IntValue entryValue = (IntValue)entry.value;
+                assert entryValue != null;
 		maxValue = java.lang.Math.max(maxValue, tagFrom + i);
-		tagsAndValues.add(new TagValue(tagname, tagFrom + i));
+		tagsAndValues.add(new TagValue(tagname, entryValue.value));
             }
 	    tagFrom += tagCount;
         }
@@ -658,10 +666,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
             BSVParser.ExpressionContext rhs = varinit.rhs;
 	    assert varEntry != null : "No var entry for " + varName + " at " + StaticAnalysis.sourceLocation(ctx);
 	    BSVType varType = varEntry.type;
+	    if (varType.name.equals("t"))
+		System.err.println(String.format("looking for tvar %s prune %s",
+						 varType.name, varType.prune()));
             if (rhs != null) {
 		BSVType rhsType = typeVisitor.visit(rhs);
 		try {
-		    varType.unify(rhsType);
+		    rhsType.unify(varType);
 		} catch (InferenceError e) {
 		    logger.fine(e.toString());
 		    System.err.println(e.toString() + " at " + StaticAnalysis.sourceLocation(ctx));
@@ -876,7 +887,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		}
 		t = t.params.get(1);
 	    }
-	    assert t.name.equals("Module");
+	    assert t.name.equals("Module") : String.format("Expected Module but got %s in type %s at %s",
+							   t.name, t, StaticAnalysis.sourceLocation(call));
 	    BSVType lhstype = typeVisitor.visit(ctx.t);
 	    try {
 		t.params.get(0).unify(lhstype);
