@@ -88,7 +88,7 @@ Definition pc_ruleMap (_: RegsT): string -> option string :=
   ("pc0" -- "produce_consume") |-> ("pc0" -- "produce_consume"); ||.
 
 Hint Unfold Foo'modules : ModuleDefs.
-Hint Unfold mkExtCall.
+Hint Unfold mkExtCall : ModuleDefs.
 
 
 Compute ipc.
@@ -109,7 +109,7 @@ Definition ipc1 := Mod
 Check ipc1.
 
 (** Now we are ready to prove the refinement! *)
-Theorem producer_consumer_refinement:
+Theorem producer_consumer_refinement0:
   ipc1 <<== ipc1.
 Proof.
   kinline_left pcImpl.
@@ -123,3 +123,42 @@ Proof.
   apply H0.
   (* We have only one case for this example (for the one rule), and it's easy. *)
 Qed.
+
+Lemma foo_PHOAS:
+ModPhoasWf (fst (inlineF producerConsumerModules)).
+Proof. kequiv. Qed.
+Hint Resolve impl_ModEquiv.
+Hint Unfold mkProduceConsume : ModuleDefs.
+Hint Unfold module'mkProduceConsume.mkProduceConsume : ModuleDefs.
+Hint Unfold module'mkProduceConsume.mkProduceConsumeModule : ModuleDefs.
+Hint Unfold makeBKModule : ModuleDefs.
+Hint Unfold makeBKModule' : ModuleDefs.
+Hint Unfold concatModules : ModuleDefs.
+Hint Unfold Reg'modules : ModuleDefs.
+Hint Unfold mkReg : ModuleDefs.
+Hint Unfold module'mkReg.mkReg : ModuleDefs.
+Hint Unfold module'mkReg.mkRegModule : ModuleDefs.
+Hint Unfold module'mkReg.reg : ModuleDefs.
+Hint Unfold Reg'_write : ModuleDefs.
+Hint Unfold Reg'_read : ModuleDefs.
+Hint Unfold app : ModuleDefs. (* questionable *)
+Hint Unfold getDefsBodies : ModuleDefs.
+
+(** Now we are ready to prove the refinement! *)
+Theorem producer_consumer_refinement1:
+  producerConsumerModules <<== fst (inlineF producerConsumerModules).
+Proof.
+
+  repeat autounfold with ModuleDefs.
+  kinline_left pcImpl.
+  (* Inlining: replace internal function calls in [impl]. *)
+  kdecompose_nodefs pc_regMap pc_ruleMap.
+  (* Decomposition: consider all steps [impl] could take, requiring that each be matched appropriately in [spec]. *)
+
+  kinvert.
+  (* Inversion on the took-a-step hypothesis, to produce one new subgoal per [impl] rule, etc. *)
+  kinv_magic_light.
+  apply H0.
+  (* We have only one case for this example (for the one rule), and it's easy. *)
+Qed.
+
