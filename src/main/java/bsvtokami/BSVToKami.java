@@ -580,8 +580,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    }
 	}
 
-        printstream.println("    Definition " + moduleName + "Module: Modules"
-			    + (useAbstractOmega ? "." : " :="));
+        printstream.println(String.format("    Definition %1$sModule: Modules%2$s",
+					  moduleName,
+					  (useAbstractOmega ? "." : " :=")));
 	printstream.println(String.format("        %s (BKMODULE {", (useAbstractOmega ? "refine " : "")));
 	if (statements.size() > 0) {
 	    String sep = "    ";
@@ -631,10 +632,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	printstream.print(methodNames.toString());
 	printstream.println(".");
 
-        printstream.println("    End " + sectionName + ".");
-        printstream.println("End module'" + moduleName + ".");
+        printstream.println(String.format("    End %1$s.", sectionName));
+        printstream.println(String.format("End module'%1$s.", moduleName));
 	printstream.println("");
-        printstream.println("Definition " + moduleName + " := module'" + moduleName + "." + moduleName + ".");
+	printstream.println(String.format("Definition %1$s := module'%1$s.%1$s.", moduleName));
+	printstream.println(String.format("Hint Unfold %1$s : ModuleDefs.", moduleName));
+	printstream.println(String.format("Hint Unfold module'%1$s.%1$s : ModuleDefs.", moduleName));
+	printstream.println(String.format("Hint Unfold module'%1$s.%1$sModule : ModuleDefs.", moduleName));
 	printstream.println("");
 	typeVisitor.popScope();
         scope = scopes.popScope();
@@ -1187,6 +1191,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	printstream.println(String.format("End module'%s.", functionName));
 	printstream.println("");
         printstream.println(String.format("Definition function'%1$s := module'%1$s.%1$s.", functionName));
+	printstream.println(String.format("Hint Unfold function'%1$s : ModuleDefs.", functionName));
+	printstream.println(String.format("Hint Unfold module'%1$s.%1$s : ModuleDefs.", functionName));
+	printstream.println(String.format("Hint Unfold module'%1$s.%1$sModule : ModuleDefs.", functionName));
 
 	actionContext = wasActionContext;
 	methodBindings = parentMethodBindings;

@@ -89,7 +89,8 @@ Definition pc_ruleMap (_: RegsT): string -> option string :=
 
 Hint Unfold Foo'modules : ModuleDefs.
 Hint Unfold mkExtCall : ModuleDefs.
-
+Hint Unfold ExtCall'modules : ModuleDefs.
+Hint Unfold ExtCall'extCall : ModuleDefs.
 
 Compute ipc.
 
@@ -107,30 +108,21 @@ Definition ipc1 := Mod
                 LET x3 : Bit 32 <- # (x1) + $$ (WO~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~1);
                 Write "reg.data.pc0" : Bit 32 <- # (x3); LET _ : Bit 0 <- $$ (WO); Ret $$ (WO))%kami_action))%struct] nil.
 Check ipc1.
+Hint Unfold ipc1 : ModuleDefs.
 
-(** Now we are ready to prove the refinement! *)
-Theorem producer_consumer_refinement0:
-  ipc1 <<== ipc1.
-Proof.
-  kinline_left pcImpl.
-  (* Inlining: replace internal function calls in [impl]. *)
-  kdecompose_nodefs pc_regMap pc_ruleMap.
-  (* Decomposition: consider all steps [impl] could take, requiring that each be matched appropriately in [spec]. *)
+Lemma ipc1_PHOAS:
+ModPhoasWf ipc1.
+Proof. kequiv. Qed.
 
-  kinvert.
-  (* Inversion on the took-a-step hypothesis, to produce one new subgoal per [impl] rule, etc. *)
-  kinv_magic_light.
-  apply H0.
-  (* We have only one case for this example (for the one rule), and it's easy. *)
-Qed.
+Lemma pc_PHOAS:
+ModPhoasWf producerConsumerModules.
+Proof. kequiv. Qed.
 
-Lemma foo_PHOAS:
+Lemma fpc_inline_PHOAS:
 ModPhoasWf (fst (inlineF producerConsumerModules)).
 Proof. kequiv. Qed.
+
 Hint Resolve impl_ModEquiv.
-Hint Unfold mkProduceConsume : ModuleDefs.
-Hint Unfold module'mkProduceConsume.mkProduceConsume : ModuleDefs.
-Hint Unfold module'mkProduceConsume.mkProduceConsumeModule : ModuleDefs.
 Hint Unfold makeBKModule : ModuleDefs.
 Hint Unfold makeBKModule' : ModuleDefs.
 Hint Unfold concatModules : ModuleDefs.
@@ -151,6 +143,8 @@ Proof.
 
   repeat autounfold with ModuleDefs.
   kinline_left pcImpl.
+
+
   (* Inlining: replace internal function calls in [impl]. *)
   kdecompose_nodefs pc_regMap pc_ruleMap.
   (* Decomposition: consider all steps [impl] could take, requiring that each be matched appropriately in [spec]. *)
