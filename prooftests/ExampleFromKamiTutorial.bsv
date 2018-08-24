@@ -1,7 +1,6 @@
 
 // should be in Prelude.bsv
 interface Foo;
-   method Action foo();
 endinterface
 
 interface Consumer;
@@ -43,6 +42,4 @@ module mkProduceConsume#(ExtCall extpc)(Foo);
       extpc.extCall(data);
       data <= data + 1;
    endrule
-   method Action foo();
-   endmethod
 endmodule
