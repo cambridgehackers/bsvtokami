@@ -151,21 +151,27 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
 	String paramsString = paramsStringBuilder.toString();
 
+	StringBuilder hintBuilder = new StringBuilder();
 	printstream.println(String.format("Record %s := {", interfaceName));
 	printstream.println(String.format("    %s'modules: Modules;", interfaceName));
+	hintBuilder.append(String.format("Hint Unfold %s'modules : ModuleDefs.\n", interfaceName));
 	for (BSVParser.InterfacememberdeclContext decl: ctx.interfacememberdecl()) {
 	    if (decl.methodproto() != null) {
 		printstream.println(String.format("    %s'%s : string;", interfaceName, decl.methodproto().name.getText()));
+		hintBuilder.append(String.format("Hint Unfold %s'%s : ModuleDefs.\n", interfaceName, decl.methodproto().name.getText()));
 	    } else {
 		BSVType subinterfacetype = StaticAnalysis.getBsvType(decl.subinterfacedecl().bsvtype());
 		String kamiType = bsvTypeToKami(subinterfacetype);
 		assert kamiType != null;
 		printstream.println(String.format("    %s'%s : %s;",
 						  interfaceName, decl.subinterfacedecl().lowerCaseIdentifier().getText(), subinterfacetype.name));
+		hintBuilder.append(String.format("Hint Unfold %s'%s : ModuleDefs.\n",
+						 interfaceName, decl.subinterfacedecl().lowerCaseIdentifier().getText()));
 	    }
 	}
 	printstream.println(String.format("}."));
 	printstream.println("");
+	printstream.println(hintBuilder.toString());
 	// for (BSVParser.InterfacememberdeclContext decl: ctx.interfacememberdecl()) {
 	//     if (decl.methodproto() != null) {
 	// 	BSVParser.MethodprotoformalsContext formals = decl.methodproto().methodprotoformals();
@@ -638,7 +644,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	printstream.println(String.format("Definition %1$s := module'%1$s.%1$s.", moduleName));
 	printstream.println(String.format("Hint Unfold %1$s : ModuleDefs.", moduleName));
 	printstream.println(String.format("Hint Unfold module'%1$s.%1$s : ModuleDefs.", moduleName));
-	printstream.println(String.format("Hint Unfold module'%1$s.%1$sModule : ModuleDefs.", moduleName));
+	if (!useAbstractOmega)
+	    printstream.println(String.format("Hint Unfold module'%1$s.%1$sModule : ModuleDefs.", moduleName));
 	printstream.println("");
 	typeVisitor.popScope();
         scope = scopes.popScope();
@@ -1054,11 +1061,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
 					 functionName, functionType,
 					 String.join(" ", freeTypeVariables.keySet())));
 
-	printstream.println(String.format("(* interface for module wrapper for %s *)", functionName));
-	printstream.println(String.format("Record Interface'%s := {", functionName));
-	printstream.println(String.format("    Interface'%s'modules: Modules;", functionName));
-	printstream.println(String.format("    Interface'%s'%s: string;", functionName, functionName));
+	printstream.println(String.format("(* interface for module wrapper for %1$s *)", functionName));
+	printstream.println(String.format("Record Interface'%1$s := {", functionName));
+	printstream.println(String.format("    Interface'%1$s'modules: Modules;", functionName));
+	printstream.println(String.format("    Interface'%1$s'%1$s: string;", functionName));
 	printstream.println(String.format("}."));
+	printstream.println(String.format("Hint Unfold Interface'%1$s'modules : ModuleDefs.", functionName));
+	printstream.println(String.format("Hint Unfold Interface'%1$s'%1$s : ModuleDefs.", functionName));
 	printstream.println(String.format(""));
 	printstream.println(String.format("Module module'%s.", functionName));
 	printstream.println(String.format("    Section Section'%s.", functionName));
@@ -1193,7 +1202,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
         printstream.println(String.format("Definition function'%1$s := module'%1$s.%1$s.", functionName));
 	printstream.println(String.format("Hint Unfold function'%1$s : ModuleDefs.", functionName));
 	printstream.println(String.format("Hint Unfold module'%1$s.%1$s : ModuleDefs.", functionName));
-	printstream.println(String.format("Hint Unfold module'%1$s.%1$sModule : ModuleDefs.", functionName));
+	if (!useAbstractOmega)
+	    printstream.println(String.format("Hint Unfold module'%1$s.Modules'%1$s : ModuleDefs.", functionName));
+	printstream.println("");
+	printstream.println("");
 
 	actionContext = wasActionContext;
 	methodBindings = parentMethodBindings;

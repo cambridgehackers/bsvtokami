@@ -43,6 +43,11 @@ Definition makeBKModule (im : InBKModule) :=
   let '(regs, rules, meths, mods) := makeBKModule' im in
   concatModules (Mod regs rules meths) mods.
 
+Hint Unfold concatModules : ModuleDefs.
+Hint Unfold makeBKModule' : ModuleDefs.
+Hint Unfold makeBKModule : ModuleDefs.
+Hint Unfold app : ModuleDefs.
+
 (* * BSV to Kami Notation *)
 
 Delimit Scope bk_scope with bk.
@@ -255,6 +260,9 @@ Record Reg := {
     Reg'_read : string;
     Reg'_write : string;
 }.
+Hint Unfold Reg'modules : ModuleDefs.
+Hint Unfold Reg'_read : ModuleDefs.
+Hint Unfold Reg'_write : ModuleDefs.
 
 Module module'mkReg.
     Section Section'mkReg.
@@ -279,10 +287,14 @@ Module module'mkReg.
     Definition mkReg := Build_Reg mkRegModule%kami (instancePrefix--"_read") (instancePrefix--"_write").
     End Section'mkReg.
 End module'mkReg.
-Hint Unfold module'mkReg.mkReg.
 
 Definition mkReg := module'mkReg.mkReg.
 Definition mkDWire := module'mkReg.mkReg.
+
+Hint Unfold mkReg : ModuleDefs.
+Hint Unfold module'mkReg.reg : ModuleDefs.
+Hint Unfold module'mkReg.mkReg : ModuleDefs.
+Hint Unfold module'mkReg.mkRegModule : ModuleDefs.
 
 Module module'mkReadOnlyReg.
     Section Section'mkReadOnlyReg.
@@ -308,6 +320,12 @@ Module module'mkReadOnlyReg.
 End module'mkReadOnlyReg.
 
 Definition mkReadOnlyReg := module'mkReadOnlyReg.mkReadOnlyReg.
+
+Hint Unfold mkReadOnlyReg : ModuleDefs.
+Hint Unfold module'mkReadOnlyReg.reg : ModuleDefs.
+Hint Unfold module'mkReadOnlyReg.mkReadOnlyReg : ModuleDefs.
+Hint Unfold module'mkReadOnlyReg.mkReadOnlyRegModule : ModuleDefs.
+
 
 (* mkRegU *)
 Module module'mkRegU.
@@ -335,6 +353,10 @@ Module module'mkRegU.
 End module'mkRegU.
 
 Definition mkRegU := module'mkRegU.mkRegU.
+Hint Unfold mkRegU : ModuleDefs.
+Hint Unfold module'mkRegU.reg : ModuleDefs.
+Hint Unfold module'mkRegU.mkRegU : ModuleDefs.
+Hint Unfold module'mkRegU.mkRegUModule : ModuleDefs.
 
 (* more stuff *)
 
@@ -392,6 +414,8 @@ Record Interface'isValid := {
     Interface'isValid'modules: Modules;
     Interface'isValid'isValid: string;
 }.
+Hint Unfold Interface'isValid'modules : ModuleDefs.
+Hint Unfold Interface'isValid'isValid : ModuleDefs.
 
 Module module'isValid.
     Section Section'isValid.
@@ -418,18 +442,22 @@ Module module'isValid.
 End module'isValid.
 
 Definition function'isValid := module'isValid.isValid.
+Hint Unfold function'isValid : ModuleDefs.
+Hint Unfold module'isValid.isValid : ModuleDefs.
+
 (* interface for module wrapper for fromMaybe *)
 Record Interface'fromMaybe := {
     Interface'fromMaybe'modules: Modules;
     Interface'fromMaybe'fromMaybe: string;
 }.
+Hint Unfold Interface'fromMaybe'modules : ModuleDefs.
+Hint Unfold Interface'fromMaybe'fromMaybe : ModuleDefs.
 
 Module module'fromMaybe.
     Section Section'fromMaybe.
     Variable data_t : Kind.
     Variable instancePrefix: string.
-    Definition Modules'fromMaybe: Modules.
-        refine (BKMODULE {
+    Definition Modules'fromMaybe: Modules := (BKMODULE {
         Method instancePrefix--"fromMaybe" (defaultval: data_t) (val: (Maybe data_t)): data_t := 
     (
             If (#val!( MaybeFields data_t)@."$tag" == $0) then (
@@ -443,10 +471,13 @@ Module module'fromMaybe.
         Ret #retval
 
     )
-    }); abstract omega. Qed. (* fromMaybe *)
+    }). (* fromMaybe *)
     Definition fromMaybe := Build_Interface'fromMaybe Modules'fromMaybe (instancePrefix--"fromMaybe").
     End Section'fromMaybe.
 End module'fromMaybe.
 
 Definition function'fromMaybe := module'fromMaybe.fromMaybe.
 
+Hint Unfold function'fromMaybe : ModuleDefs.
+Hint Unfold module'fromMaybe.fromMaybe : ModuleDefs.
+Hint Unfold module'fromMaybe.Modules'fromMaybe : ModuleDefs.

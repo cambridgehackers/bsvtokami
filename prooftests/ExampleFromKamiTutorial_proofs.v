@@ -126,13 +126,7 @@ Hint Resolve impl_ModEquiv.
 Hint Unfold makeBKModule : ModuleDefs.
 Hint Unfold makeBKModule' : ModuleDefs.
 Hint Unfold concatModules : ModuleDefs.
-Hint Unfold Reg'modules : ModuleDefs.
-Hint Unfold mkReg : ModuleDefs.
-Hint Unfold module'mkReg.mkReg : ModuleDefs.
-Hint Unfold module'mkReg.mkRegModule : ModuleDefs.
 Hint Unfold module'mkReg.reg : ModuleDefs.
-Hint Unfold Reg'_write : ModuleDefs.
-Hint Unfold Reg'_read : ModuleDefs.
 Hint Unfold app : ModuleDefs. (* questionable *)
 Hint Unfold getDefsBodies : ModuleDefs.
 
