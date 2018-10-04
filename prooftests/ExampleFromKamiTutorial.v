@@ -1,8 +1,6 @@
 Require Import Bool String List Arith.
 Require Import Omega.
-Require Import micromega.Lia.
-Require Import Kami.
-Require Import Lib.Indexer.
+Require Import Kami.All.
 Require Import Bsvtokami.
 
 Require Import FunctionalExtensionality.
@@ -12,32 +10,42 @@ Set Implicit Arguments.
 
 (* * interface Foo *)
 Record Foo := {
-    Foo'modules: Modules;
+    Foo'mod: Mod;
 }.
+
+Hint Unfold Foo'mod : ModuleDefs.
 
 (* * interface Consumer *)
 Record Consumer := {
-    Consumer'modules: Modules;
+    Consumer'mod: Mod;
     Consumer'send : string;
 }.
 
+Hint Unfold Consumer'mod : ModuleDefs.
+Hint Unfold Consumer'send : ModuleDefs.
+
 (* * interface Producer *)
 Record Producer := {
-    Producer'modules: Modules;
+    Producer'mod: Mod;
 }.
+
+Hint Unfold Producer'mod : ModuleDefs.
 
 (* * interface ExtCall *)
 Record ExtCall := {
-    ExtCall'modules: Modules;
+    ExtCall'mod: Mod;
     ExtCall'extCall : string;
 }.
+
+Hint Unfold ExtCall'mod : ModuleDefs.
+Hint Unfold ExtCall'extCall : ModuleDefs.
 
 Module module'mkExtCall.
     Section Section'mkExtCall.
     Variable instancePrefix: string.
-    Definition mkExtCallModule: Modules :=
+    Definition mkExtCallModule: Mod :=
          (BKMODULE {
-        Method instancePrefix--"extCall" (v : (Bit 32)) : Void :=
+        Method (instancePrefix--"extCall") (v : (Bit 32)) : Void :=
     (
         Retv    )
 
@@ -59,11 +67,11 @@ Module module'mkConsumer.
     Variable ext: ExtCall.
     (* instance methods *)
     Let extextCall : string := (ExtCall'extCall ext).
-    Definition mkConsumerModule: Modules :=
+    Definition mkConsumerModule: Mod :=
          (BKMODULE {
-        Method instancePrefix--"send" (v : (Bit 32)) : Void :=
+        Method (instancePrefix--"send") (v : (Bit 32)) : Void :=
     (
-CallM call0 : Void <-  extextCall (#v : Bit 32);
+Call call0 : Void <-  extextCall ((#v) : Bit 32) ;
         Retv    )
 
     }). (* mkConsumer *)
@@ -83,21 +91,21 @@ Module module'mkProducer.
     Variable instancePrefix: string.
     Variable consumer: Consumer.
     (* let bindings *)
-    Let initval : ConstT (Bit 32) := ($$(natToWord 32 0))%kami.
+    Let initval : ConstT (Bit 32) := (ConstBit (natToWord 32 0))%kami.
         (* method bindings *)
-    Let data := mkReg (Bit 32) (instancePrefix--"data") (initval)%bk.
+    Let data := mkReg (instancePrefix--"data") (initval)%bk.
     Let data_read : string := (Reg'_read data).
     Let data_write : string := (Reg'_write data).
     (* instance methods *)
     Let consumersend : string := (Consumer'send consumer).
-    Definition mkProducerModule: Modules :=
+    Definition mkProducerModule: Mod :=
          (BKMODULE {
-        (BKMod (Reg'modules data :: nil))
+        (BKMod (Reg'mod data :: nil))
     with Rule instancePrefix--"produce" :=
     (
-        CallM data_v : Bit 32 (* regRead *) <- data_read();
-       CallM call1 : Void <-  consumersend (#data_v : Bit 32);
-               CallM data_write ( (#data_v + $1) : Bit 32 );
+        Call data_v : Bit 32 (* regRead *) <- data_read() ;
+       Call call1 : Void <-  consumersend ((#data_v) : Bit 32) ;
+               Call data_write ( ((#data_v + $1)) : Bit 32 ) ;
         Retv ) (* rule produce *)
     }). (* mkProducer *)
 
@@ -116,21 +124,21 @@ Module module'mkProduceConsume.
     Variable instancePrefix: string.
     Variable extpc: ExtCall.
     (* let bindings *)
-    Let initval : ConstT (Bit 32) := ($$(natToWord 32 0))%kami.
+    Let initval : ConstT (Bit 32) := (ConstBit (natToWord 32 0))%kami.
         (* method bindings *)
-    Let data := mkReg (Bit 32) (instancePrefix--"data") (initval)%bk.
+    Let data := mkReg (instancePrefix--"data") (initval)%bk.
     Let data_read : string := (Reg'_read data).
     Let data_write : string := (Reg'_write data).
     (* instance methods *)
     Let extpcextCall : string := (ExtCall'extCall extpc).
-    Definition mkProduceConsumeModule: Modules :=
+    Definition mkProduceConsumeModule: Mod :=
          (BKMODULE {
-        (BKMod (Reg'modules data :: nil))
+        (BKMod (Reg'mod data :: nil))
     with Rule instancePrefix--"produce_consume" :=
     (
-        CallM data_v : Bit 32 (* regRead *) <- data_read();
-       CallM call2 : Void <-  extpcextCall (#data_v : Bit 32);
-               CallM data_write ( (#data_v + $1) : Bit 32 );
+        Call data_v : Bit 32 (* regRead *) <- data_read() ;
+       Call call2 : Void <-  extpcextCall ((#data_v) : Bit 32) ;
+               Call data_write ( ((#data_v + $1)) : Bit 32 ) ;
         Retv ) (* rule produce_consume *)
     }). (* mkProduceConsume *)
 

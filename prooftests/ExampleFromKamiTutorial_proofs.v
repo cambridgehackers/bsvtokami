@@ -1,6 +1,5 @@
 Require Import Bool String List Arith.
-Require Import Kami.
-Require Import Lib.Indexer.
+Require Import Kami.All.
 Require Import BK.Bsvtokami.
 Require Import BK.ExampleFromKamiTutorial.
 
@@ -22,117 +21,33 @@ Hint Unfold extcall : ModuleDefs.
 Hint Unfold producer : ModuleDefs.
 Hint Unfold consumer : ModuleDefs.
 
-Definition producerModules := (Producer'modules producer).
+Definition producerModules := (Producer'mod producer).
 Hint Unfold producerModules : ModuleDefs.
-
-Definition producer_consumer_ruleMap (_: RegsT): string -> option string :=
-  ("p0" -- "produce") |-> ("pc0" -- "produce_consume"); ||.
-
-Definition producer_consumer_regMap (r: RegsT): RegsT.
-  (* We are using tactics to build a map from register valuations in [impl] to register valuations in [spec]. *)
-  kgetv ("p0" -- "data")%string datav r (Bit 32) (M.empty _: RegsT).
-  (* First, extract the value of [impl] register ["data"]. *)
-  exact (M.add ("pc0" -- "data")%string (existT _ _ datav) (M.empty _)).
-  (* Then, give the corresponding values of all registers for [spec]. *)
-Defined.
-Hint Unfold producer_consumer_regMap: MethDefs. (* for kdecompose_regMap_init *)
-
-(** The Kami syntax is built by PHOAS, so sometimes we need to prove a PHOAS equivalence for any two variable mappings.  Adding the equivalence lemma to the Coq hint database will allow related features to use it automatically. *)
-Lemma impl_ModEquiv:
-  ModPhoasWf producerModules.
-Proof. kequiv. Qed.
-Hint Resolve impl_ModEquiv.
 
 Definition producerConsumer := mkProduceConsume "pc0" extcall.
 Hint Unfold producerConsumer : ModuleDefs.
-Definition producerConsumerModules := Foo'modules producerConsumer.
+Definition producerConsumerModules := Foo'mod producerConsumer.
 Hint Unfold producerConsumerModules : ModuleDefs.
-
-Lemma pc_ModEquiv:
-  ModPhoasWf producerConsumerModules.
-Proof. kequiv. Qed.
-Hint Resolve pc_ModEquiv.
 
 Check producerModules.
 Compute producerModules.
-Compute getDefsBodies producerModules.
 Check producerConsumerModules.
 Compute producerConsumerModules.
-Compute getDefsBodies producerConsumerModules.
-Compute getCalls producerConsumerModules.
-Compute getRules producerConsumerModules.
-Compute getRegInits producerConsumerModules.
-Definition ipc := fst (inlineF producerConsumerModules).
-Hint Unfold ipc : ModuleDefs.
-Lemma impl_IPC:
-  ModPhoasWf ipc.
-Proof. kequiv. Qed.
-Hint Resolve impl_IPC.
 
-Compute getDefsBodies ipc.
-
-Hint Unfold getDefsBodies : FOODEF.
-
-Definition pc_regMap1 (r: RegsT): RegsT.
-  (* We are using tactics to build a map from register valuations in [impl] to register valuations in [spec]. *)
-  kgetv ("p0" -- "data"--"reg")%string datav r (Bit 32) (M.empty _: RegsT).
-  (* First, extract the value of [impl] register ["data"]. *)
-  exact (M.add ("pc0" -- "data"--"reg")%string (existT _ _ datav) (M.empty _)).
-  (* Then, give the corresponding values of all registers for [spec]. *)
-Defined.
-Definition pc_regMap (r: RegsT): RegsT := r.
-Hint Unfold pc_regMap: MethDefs. (* for kdecompose_regMap_init *)
-Compute pc_regMap.
-
-Definition pc_ruleMap (_: RegsT): string -> option string :=
-  ("pc0" -- "produce_consume") |-> ("pc0" -- "produce_consume"); ||.
-
-Hint Unfold Foo'modules : ModuleDefs.
+Hint Unfold Foo'mod : ModuleDefs.
 Hint Unfold mkExtCall : ModuleDefs.
-Hint Unfold ExtCall'modules : ModuleDefs.
+Hint Unfold ExtCall'mod : ModuleDefs.
 Hint Unfold ExtCall'extCall : ModuleDefs.
 
-Compute ipc.
-
-Definition ipc1 := Mod
-         [("reg.data.pc0"
-           :: RegInitCustom
-                (existT ConstFullT (SyntaxKind (Bit 32))
-                   (SyntaxConst WO~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0)))%struct]
-         [("produce_consume.pc0"
-           :: (fun ty : Kind -> Type =>
-               (LET _ : Bit 0 <- $$ (WO);
-                Read x0 : Bit 32 <- "reg.data.pc0";
-                LET x1 : Bit 32 <- # (x0);
-                CallM _ : Bit 0 <- "extCall.e0" (# (x1) : Bit 32);
-                LET x3 : Bit 32 <- # (x1) + $$ (WO~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~1);
-                Write "reg.data.pc0" : Bit 32 <- # (x3); LET _ : Bit 0 <- $$ (WO); Ret $$ (WO))%kami_action))%struct] nil.
-Check ipc1.
-Hint Unfold ipc1 : ModuleDefs.
-
-Lemma ipc1_PHOAS:
-ModPhoasWf ipc1.
-Proof. kequiv. Qed.
-
-Lemma pc_PHOAS:
-ModPhoasWf producerConsumerModules.
-Proof. kequiv. Qed.
-
-Lemma fpc_inline_PHOAS:
-ModPhoasWf (fst (inlineF producerConsumerModules)).
-Proof. kequiv. Qed.
-
-Hint Resolve impl_ModEquiv.
 Hint Unfold makeBKModule : ModuleDefs.
 Hint Unfold makeBKModule' : ModuleDefs.
 Hint Unfold concatModules : ModuleDefs.
 Hint Unfold module'mkReg.reg : ModuleDefs.
 Hint Unfold app : ModuleDefs. (* questionable *)
-Hint Unfold getDefsBodies : ModuleDefs.
 
 (** Now we are ready to prove the refinement! *)
 Theorem producer_consumer_refinement1:
-  producerConsumerModules <<== fst (inlineF producerConsumerModules).
+  producerConsumerModules <<== producerConsumerModules.
 Proof.
 
   repeat autounfold with ModuleDefs.
