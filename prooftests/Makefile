@@ -18,7 +18,7 @@ COQARGS = -R $(KAMIDIR) Kami -R ../../bbv/theories bbv -R . BK
 	JAVA_OPTS=-ea ../build/install/bsvtokami/bin/bsvtokami -I ../lib -I . -K $(PWD) $(*).bsv
 
 %.vo: %.v
-	#coq_makefile $(COQARGS) -o Makefile.coq *.v
+	coq_makefile $(COQARGS) -o Makefile.coq *.v
 	#make -f Makefile.coq $(*).vo
 	echo coqc $(COQARGS) $<
 	echo done

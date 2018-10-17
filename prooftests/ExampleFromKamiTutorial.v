@@ -68,13 +68,13 @@ Module module'mkConsumer.
     (* instance methods *)
     Let extextCall : string := (ExtCall'extCall ext).
     Definition mkConsumerModule: Mod :=
-         (BKMODULE {
-        Method (instancePrefix--"send") (v : (Bit 32)) : Void :=
-    (
-Call call0 : Void <-  extextCall ((#v) : Bit 32) ;
-        Retv    )
+			       (BKMODULE {
+					  Method (instancePrefix--"send") (v : (Bit 32)) : Void :=
+					  (
+					   Call call0 : Void <-  extextCall ((#v) : Bit 32) ;
+					   Retv    )
 
-    }). (* mkConsumer *)
+					  }). (* mkConsumer *)
 
 (* Module mkConsumer type ExtCall -> Module#(Consumer) return type Consumer *)
     Definition mkConsumer := Build_Consumer mkConsumerModule%kami (instancePrefix--"send").
@@ -99,15 +99,15 @@ Module module'mkProducer.
     (* instance methods *)
     Let consumersend : string := (Consumer'send consumer).
     Definition mkProducerModule: Mod :=
-         (BKMODULE {
-        (BKMod (Reg'mod data :: nil))
-    with Rule instancePrefix--"produce" :=
-    (
-        Call data_v : Bit 32 (* regRead *) <- data_read() ;
-       Call call1 : Void <-  consumersend ((#data_v) : Bit 32) ;
-               Call data_write ( ((#data_v + $1)) : Bit 32 ) ;
-        Retv ) (* rule produce *)
-    }). (* mkProducer *)
+				     (BKMODULE {
+						(BKMod (Reg'mod data :: nil))
+						with Rule instancePrefix--"produce_rule" :=
+						(
+						 Call data_v : Bit 32 (* regRead *) <- data_read() ;
+						 Call call1 : Void <-  consumersend ((#data_v) : Bit 32) ;
+						 Call data_write ( ((#data_v + $1)) : Bit 32 ) ;
+						 Retv ) (* rule produce *)
+						}). (* mkProducer *)
 
 (* Module mkProducer type Consumer -> Module#(Producer) return type Producer *)
     Definition mkProducer := Build_Producer mkProducerModule%kami.
@@ -134,7 +134,7 @@ Module module'mkProduceConsume.
     Definition mkProduceConsumeModule: Mod :=
          (BKMODULE {
         (BKMod (Reg'mod data :: nil))
-    with Rule instancePrefix--"produce_consume" :=
+    with Rule instancePrefix--"produce_rule" :=
     (
         Call data_v : Bit 32 (* regRead *) <- data_read() ;
        Call call2 : Void <-  extpcextCall ((#data_v) : Bit 32) ;

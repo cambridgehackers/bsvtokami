@@ -83,7 +83,7 @@ Notation "'Method' name () : retT := c" :=
 Notation "'Method' name ( param : dom ) : retT := c" :=
   (BKMeth (name%string, existT MethodT ( dom%kami, retT )
                                (fun ty ( param : ty dom%kami ) => c%kami_action : ActionT ty retT)))
-    (at level 12, name at level 9, param ident) : bk_scope.
+    (at level 12, name at level 9, param at level 99) : bk_scope.
 Notation "'Method1' name ( param : dom ) : retT := c" :=
   (BKMeth (name%string, existT MethodT ( dom%kami, retT )
                                (fun ty ( param : ty dom%kami ) => c%kami_action : ActionT ty retT)))
