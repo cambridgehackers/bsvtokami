@@ -25,6 +25,9 @@ interface Decoder#(type instK, numeric type rfsz, numeric type addrsz);
    method Bit#(addrsz) getAddr(instK inst);
 endinterface
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 module mkDecoder(Decoder#(instK, rfsz, addrsz));
 endmodule
 
@@ -32,11 +35,14 @@ interface Executer#(type instK, type dataK);
    method dataK execArith(OpArithK op, dataK val1, dataK val2);
 endinterface
 
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
 module mkExecuter(Executer#(instK, dataK));
 endmodule
 
 typedef struct {
-   Bool isLoad;
+   Bit#(1) isLoad;
    Bit#(addrsz) addr;
    dataK data;
    } MemRq#(numeric type addrsz, type dataK) deriving (Bits);
@@ -48,7 +54,7 @@ endinterface
 module mkMemory(Memory#(addrsz, dataK)) provisos (Bits#(dataK, datasz));
    RegFile#(Bit#(addrsz), dataK) mem <- mkRegFileFull();
    method ActionValue#(dataK) doMem(MemRq#(addrsz, dataK) req);
-      if (req.isLoad) begin
+      if (req.isLoad == 1'b1) begin
 	 let ldval = mem.sub(req.addr);
 	 return ldval;
 	 end
@@ -98,7 +104,7 @@ module procSpec#(ProcInit#(addrsz, pgmsz, instK, rfsz, dataK) procInit, ToHost#(
       instK inst = pgm[pc];
       Bit#(addrsz) addr = dec.getAddr(inst);
       Bit#(rfsz) dst = dec.getDst(inst);
-      dataK val <- mem.doMem(MemRq { isLoad: True, addr: addr, data: defaultValue });
+      dataK val <- mem.doMem(MemRq { isLoad: 1'b1, addr: addr, data: defaultValue });
       rf.upd(dst, val);
       pc <= pc + 1;
    endrule
@@ -108,7 +114,7 @@ module procSpec#(ProcInit#(addrsz, pgmsz, instK, rfsz, dataK) procInit, ToHost#(
       Bit#(addrsz) addr = dec.getAddr(inst);
       Bit#(rfsz) src = dec.getSrc1(inst);
       dataK val = rf.sub(src);
-      dataK unused <- mem.doMem(MemRq { isLoad: False, addr: addr, data: val });
+      dataK unused <- mem.doMem(MemRq { isLoad: 1'b0, addr: addr, data: val });
       pc <= pc + 1;
    endrule
 
