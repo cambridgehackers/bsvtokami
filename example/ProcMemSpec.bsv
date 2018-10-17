@@ -69,19 +69,20 @@ typedef struct {
    Vector#(pgmsz, instK) pgmInit;
    } ProcInit#(numeric type addrsz, numeric type pgmsz, type instK, numeric type rfsz, type dataK) deriving (Bits);
 
-module procSpec#(ProcInit#(addrsz, pgmsz, instK, rfsz, dataK) procInit, ToHost#(dataK) tohost)(Empty) provisos (Bits#(instK, instsz), Bits#(dataK, datasz));
+module procSpec#(ProcInit#(addrsz, pgmsz, instK, rfsz, dataK) procInit, ToHost#(dataK) tohost)(Empty)
+   provisos (Bits#(instK, instsz), Bits#(dataK, datasz), DefaultValue#(dataK));
    Reg#(Bit#(addrsz)) pc <- mkReg(procInit.pcInit);
    RegFile#(Bit#(rfsz), dataK) rf <- mkRegFileFull();
    Memory#(addrsz, dataK) mem <- mkMemory();
-   RegFile#(Bit#(addrsz), instK) pgm <- mkRegFile(0, fromInteger(valueOf(pgmsz)));
+   Reg#(Vector#(pgmsz, instK)) pgm <- mkReg(procInit.pgmInit);
 
    Decoder#(instK, rfsz, addrsz) dec <- mkDecoder();
    Executer#(instK, dataK) exec <- mkExecuter();
 
-   instK inst = pgm.sub(pc);
+   instK inst = pgm[pc];
 
    rule doArith if (dec.getOp(inst) == opArith);
-      instK inst = pgm.sub(pc);
+      instK inst = pgm[pc];
       OpK op = dec.getOp(inst);
       Bit#(rfsz) src1 = dec.getSrc1(inst);
       Bit#(rfsz) src2 = dec.getSrc2(inst);
@@ -94,7 +95,7 @@ module procSpec#(ProcInit#(addrsz, pgmsz, instK, rfsz, dataK) procInit, ToHost#(
    endrule
 
    rule doLoad if (dec.getOp(inst) == opLd);
-      instK inst = pgm.sub(pc);
+      instK inst = pgm[pc];
       Bit#(addrsz) addr = dec.getAddr(inst);
       Bit#(rfsz) dst = dec.getDst(inst);
       dataK val <- mem.doMem(MemRq { isLoad: True, addr: addr, data: defaultValue });
@@ -103,16 +104,16 @@ module procSpec#(ProcInit#(addrsz, pgmsz, instK, rfsz, dataK) procInit, ToHost#(
    endrule
 
    rule doStore if (dec.getOp(inst) == opSt);
-      instK inst = pgm.sub(pc);
+      instK inst = pgm[pc];
       Bit#(addrsz) addr = dec.getAddr(inst);
       Bit#(rfsz) src = dec.getSrc1(inst);
       dataK val = rf.sub(src);
-      mem.doMem(MemRq { isLoad: False, addr: addr, data: val });
+      dataK unused <- mem.doMem(MemRq { isLoad: False, addr: addr, data: val });
       pc <= pc + 1;
    endrule
 
    rule doHost if (dec.getOp(inst) == opTh);
-      instK inst = pgm.sub(pc);
+      instK inst = pgm[pc];
       Bit#(rfsz) src1 = dec.getSrc1(inst);
       dataK val1 = rf.sub(src1);
       
