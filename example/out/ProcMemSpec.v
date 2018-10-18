@@ -172,7 +172,7 @@ Module module'procSpec.
     with Rule instancePrefix--"doArith" :=
     (
         CallM pc_v : Bit pgmsz (* regRead *) <- pc_read();
-        CallM oinst : Bit instsz <- pgmsub( #pc_v : Bit pgmsz );
+        CallM inst : Bit instsz <- pgmsub( #pc_v : Bit pgmsz );
         CallM op : Bit 2 <- decgetOp( #inst : Bit instsz );
         Assert((#op == $$opArith));
        CallM inst : Bit instsz (* varbinding *) <-  pgmsub (#pc_v : Bit pgmsz);
@@ -187,45 +187,42 @@ Module module'procSpec.
                CallM pc_write ( (#pc_v + $1) : Bit pgmsz );
         Retv ) (* rule doArith *)
     with Rule instancePrefix--"doLoad" :=
-    (
+      (
         CallM pc_v : Bit pgmsz (* regRead *) <- pc_read();
-        CallM oinst : Bit instsz <- pgmsub( #pc_v : Bit pgmsz );
-        CallM op : Bit 2 <- decgetOp( #inst : Bit instsz );
+          CallM inst : Bit instsz <- pgmsub( #pc_v : Bit pgmsz );
+          CallM op : Bit 2 <- decgetOp( #inst : Bit instsz );
 
-        Assert((#op == $$opLd));
-       CallM inst : Bit instsz (* varbinding *) <-  pgmsub (#pc_v : Bit pgmsz);
-       CallM addr : Bit datasz (* varbinding *) <-  decgetAddr (#inst : Bit instsz);
-       CallM dst : Bit datasz (* varbinding *) <-  decgetDst (#inst : Bit instsz);
-               CallM val : Bit instsz (* actionBinding *) <- memdoMem (STRUCT { "addr" ::= (#addr); "data" ::= Default; "isLoad" ::= ($$(natToWord 1 1))  }%kami_expr : MemRq datasz instsz);
-       CallM call0 : Void <-  rfupd (#dst : Bit datasz) (#val : Bit instsz);
-               CallM pc_write ( (#pc_v + $1) : Bit datasz );
-        Retv ) (* rule doLoad *)
+          Assert((#op == $$opLd));
+          CallM addr : Bit datasz (* varbinding *) <-  decgetAddr (#inst : Bit instsz);
+          CallM dst : Bit datasz (* varbinding *) <-  decgetDst (#inst : Bit instsz);
+          CallM val : Bit instsz (* actionBinding *) <- memdoMem (STRUCT { "addr" ::= (#addr); "data" ::= $0; "isLoad" ::= ($$(natToWord 1 1))  }%kami_expr : MemRq datasz instsz);
+          CallM call0 : Void <-  rfupd (#dst : Bit datasz) (#val : Bit instsz);
+          CallM pc_write ( (#pc_v + $1) : Bit pgmsz );
+          Retv ) (* rule doLoad *)
     with Rule instancePrefix--"doStore" :=
     (
         CallM pc_v : Bit pgmsz (* regRead *) <- pc_read();
-        CallM oinst : Bit instsz <- pgmsub( #pc_v : Bit pgmsz );
+        CallM inst : Bit instsz <- pgmsub( #pc_v : Bit pgmsz );
         CallM op : Bit 2 <- decgetOp( #inst : Bit instsz );
 
         Assert((#op == $$opSt));
-       CallM inst : Bit instsz (* varbinding *) <-  pgmsub (#pc_v : Bit pgmsz);
        CallM addr : Bit datasz (* varbinding *) <-  decgetAddr (#inst : Bit instsz);
        CallM src : Bit datasz (* varbinding *) <-  decgetSrc1 (#inst : Bit instsz);
        CallM val : Bit instsz (* varbinding *) <-  rfsub (#src : Bit datasz);
                CallM unused : Bit instsz (* actionBinding *) <- memdoMem (STRUCT { "addr" ::= (#addr); "data" ::= (#val); "isLoad" ::= ($$(natToWord 1 0))  }%kami_expr : MemRq datasz instsz);
-               CallM pc_write ( (#pc_v + $1) : Bit datasz );
+               CallM pc_write ( (#pc_v + $1) : Bit pgmsz );
         Retv ) (* rule doStore *)
     with Rule instancePrefix--"doHost" :=
     (
         CallM pc_v : Bit pgmsz (* regRead *) <- pc_read();
-        CallM oinst : Bit instsz <- pgmsub( #pc_v : Bit pgmsz );
+        CallM inst : Bit instsz <- pgmsub( #pc_v : Bit pgmsz );
         CallM op : Bit 2 <- decgetOp( #inst : Bit instsz );
 
         Assert((#op == $$opTh));
-       CallM inst : Bit instsz (* varbinding *) <-  pgmsub (#pc_v : Bit pgmsz);
        CallM src1 : Bit datasz (* varbinding *) <-  decgetSrc1 (#inst : Bit instsz);
        CallM val1 : Bit instsz (* varbinding *) <-  rfsub (#src1 : Bit datasz);
                CallM unused : Void (* actionBinding *) <- tohosttoHost (#val1 : Bit instsz);
-               CallM pc_write ( (#pc_v + $1) : Bit datasz );
+               CallM pc_write ( (#pc_v + $1) : Bit pgmsz );
         Retv ) (* rule doHost *)
     }). (* procSpec *)
 
