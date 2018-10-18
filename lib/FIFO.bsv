@@ -17,13 +17,13 @@ module mkFIFO(FIFO#(element_type)) provisos (Bits#(element_type, esz));
    endmethod
    method Action enq(element_type new_v) if (valid == 0);
       v <= new_v;
-      valid <= 1;
+      valid <= 1'b1;
    endmethod
    method Action deq() if (valid == 1);
-      valid <= 0;
+      valid <= 1'b0;
    endmethod
    method Action clear();
-      valid <= 0;
+      valid <= 1'b0;
    endmethod
 endmodule
 module mkLFIFO(FIFO#(element_type)) provisos (Bits#(element_type, esz));
@@ -36,13 +36,13 @@ module mkLFIFO(FIFO#(element_type)) provisos (Bits#(element_type, esz));
    endmethod
    method Action enq(element_type new_v) if (valid == 0);
       v <= new_v;
-      valid <= 1;
+      valid <= 1'b1;
    endmethod
    method Action deq() if (valid == 1);
-      valid <= 0;
+      valid <= 1'b0;
    endmethod
    method Action clear();
-      valid <= 0;
+      valid <= 1'b0;
    endmethod
 endmodule
 module mkFIFO1(FIFO#(element_type));
@@ -54,13 +54,13 @@ module mkFIFO1(FIFO#(element_type));
    endmethod
    method Action enq(element_type new_v) if (valid == 0);
       v <= new_v;
-      valid <= 1;
+      valid <= 1'b1;
    endmethod
    method Action deq() if (valid == 1);
-      valid <= 0;
+      valid <= 1'b0;
    endmethod
    method Action clear();
-      valid <= 0;
+      valid <= 1'b0;
    endmethod
 endmodule
 
@@ -73,13 +73,13 @@ module mkSizedFIFO#(Integer n)(FIFO#(element_type));
    endmethod
    method Action enq(element_type new_v) if (valid == 0);
       v <= new_v;
-      valid <= 1;
+      valid <= 1'b1;
    endmethod
    method Action deq() if (valid == 1);
-      valid <= 0;
+      valid <= 1'b0;
    endmethod
    method Action clear();
-      valid <= 0;
+      valid <= 1'b0;
    endmethod
 endmodule
 
