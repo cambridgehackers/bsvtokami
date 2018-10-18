@@ -2084,7 +2084,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     @Override public String visitArraysub(BSVParser.ArraysubContext ctx) {
 	boolean hasSecondArg = (ctx.expression(1) != null);
-        if (true || hasSecondArg) {
+        if (hasSecondArg) {
 	    typeVisitor.pushScope(scope);
 
 	    Evaluator evaluator = new Evaluator(scopes, typeVisitor);
