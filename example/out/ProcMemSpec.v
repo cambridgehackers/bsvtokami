@@ -37,6 +37,7 @@ Definition OpArithK := Bit 2.
 Record Decoder := {
     Decoder'modules: Modules;
     Decoder'getOp : string;
+    Decoder'getArithOp : string;
     Decoder'getSrc1 : string;
     Decoder'getSrc2 : string;
     Decoder'getDst : string;

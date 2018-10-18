@@ -21,7 +21,7 @@ typedef struct {
    } D2E#(numeric type addrsz, numeric type pgmsz, numeric type rfsz) deriving (Bits);
 
 module mkPipelinedDecoder#(Bit#(pgmsz) pcInit,
-			   Vector#(numinstrs, Bit#(instsz)) pgmInit,
+			   Vector#(TExp#(pgmsz), Bit#(instsz)) pgmInit,
 			   Decoder#(instsz, rfsz, addrsz) dec,
 			   FIFO#(D2E#(addrsz, pgmsz, rfsz)) d2e)(Empty);
    Reg#(Bit#(pgmsz)) pc <- mkReg(pcInit);
@@ -36,7 +36,7 @@ module mkPipelinedDecoder#(Bit#(pgmsz) pcInit,
       Bit#(addrsz) addr = dec.getAddr(inst);
 
       D2E#(addrsz, pgmsz, rfsz) decoded = D2E {
-	 op: op, arithOp: arithOp, src1: src1, src2: src2, addr: addr, pc: pc
+	 op: op, arithOp: arithOp, src1: src1, src2: src2, dst: dst, addr: addr, pc: pc
 	 };
       d2e.enq(decoded);
       pc <= pc + 1;
