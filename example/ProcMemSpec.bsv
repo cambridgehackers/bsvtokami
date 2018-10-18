@@ -19,6 +19,7 @@ typedef Bit#(2) OpArithK;
 
 interface Decoder#(numeric type instsz, numeric type rfsz, numeric type addrsz);
    method OpK getOp(Bit#(instsz) inst);
+   method OpArithK getArithOp(Bit#(instsz) inst);
    method Bit#(rfsz) getSrc1(Bit#(instsz) inst);
    method Bit#(rfsz) getSrc2(Bit#(instsz) inst);
    method Bit#(rfsz) getDst(Bit#(instsz) inst);
@@ -62,7 +63,7 @@ module mkMemory(Memory#(addrsz, datasz));
       else begin
 	 Bit#(addrsz) addr = req.addr;
 	 Bit#(datasz) newval = req.data;
-	 Void unused <- mem.upd(addr, newval);
+	 void unused <- mem.upd(addr, newval);
 	 Bit#(datasz) placeholder = mem.sub(addr);
 	 return placeholder;
       end
@@ -79,15 +80,15 @@ typedef struct {
    Vector#(pgmsz, Bit#(instsz)) pgmInit;
    } ProcInit#(numeric type addrsz, numeric type pgmsz, numeric type instsz, numeric type rfsz, numeric type datasz) deriving (Bits);
 
-module procSpec#(ProcInit#(addrsz, pgmsz, instsz, rfsz, datasz) procInit, ToHost#(datasz) tohost)(Empty)
+module procSpec#(ProcInit#(addrsz, pgmsz, instsz, rfsz, datasz) procInit,
+		 Decoder#(instsz, rfsz, addrsz) dec,
+		 Executer#(instsz, datasz) exec,
+		 ToHost#(datasz) tohost)(Empty)
    provisos (Bits#(Bit#(instsz), instsz), Bits#(Bit#(datasz), datasz), DefaultValue#(Bit#(datasz)));
    Reg#(Bit#(pgmsz)) pc <- mkReg(procInit.pcInit);
    RegFile#(Bit#(rfsz), Bit#(datasz)) rf <- mkRegFileFull();
    Memory#(addrsz, datasz) mem <- mkMemory();
    RegFile#(Bit#(pgmsz), Bit#(instsz)) pgm <- mkRegFileFull(); //(procInit.pgmInit);
-
-   Decoder#(instsz, rfsz, addrsz) dec <- mkDecoder();
-   Executer#(instsz, datasz) exec <- mkExecuter();
 
    Bit#(instsz) inst = pgm.sub(pc);
 
@@ -101,7 +102,7 @@ module procSpec#(ProcInit#(addrsz, pgmsz, instsz, rfsz, datasz) procInit, ToHost
       Bit#(datasz) val1 = rf.sub(src1);
       Bit#(datasz) val2 = rf.sub(src2);
       Bit#(datasz) dval = exec.execArith(op, val1, val2);
-      Void unused <- rf.upd(dst, dval);
+      void unused <- rf.upd(dst, dval);
       pc <= pc + 1;
    endrule
 
@@ -128,7 +129,7 @@ module procSpec#(ProcInit#(addrsz, pgmsz, instsz, rfsz, datasz) procInit, ToHost
       Bit#(rfsz) src1 = dec.getSrc1(inst);
       Bit#(datasz) val1 = rf.sub(src1);
       
-      Void unused <- tohost.toHost(val1);
+      void unused <- tohost.toHost(val1);
       pc <= pc + 1;
    endrule
 
