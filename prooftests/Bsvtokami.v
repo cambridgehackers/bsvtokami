@@ -358,6 +358,40 @@ Hint Unfold module'mkRegU.reg : ModuleDefs.
 Hint Unfold module'mkRegU.mkRegU : ModuleDefs.
 Hint Unfold module'mkRegU.mkRegUModule : ModuleDefs.
 
+(* * interface RegFile#(index_t, data_t) *)
+Record RegFile := {
+    RegFile'modules: Modules;
+    RegFile'upd : string;
+    RegFile'sub : string;
+}.
+
+Module module'mkRegFileFull.
+    Section Section'mkRegFileFull.
+    Variable data_t : Kind.
+    Variable index_t : Kind.
+    Variable instancePrefix: string.
+    Definition rf : string := instancePrefix--"rf".
+    Definition mkRegFileFullModule: Modules := (BKMODULE {
+           Register rf : data_t <- Default
+           with Method instancePrefix--"sub" (idx : index_t) : data_t :=
+             (Read regs : data_t <- rf;
+                Ret #regs)
+             with Method instancePrefix--"upd" (idx : index_t) (v : data_t) : Void :=
+               (Read regs : data_t <- rf;
+                  Write rf : data_t <- #v;
+               Retv)
+    }). (* mkRegFileFull *)
+
+(* Module mkRegFileFull type Module#(RegFile#(index_t, data_t)) return type RegFile#(index_t, data_t) *)
+    Definition mkRegFileFull := Build_RegFile mkRegFileFullModule%kami (instancePrefix--"sub") (instancePrefix--"upd").
+    End Section'mkRegFileFull.
+End module'mkRegFileFull.
+
+Definition mkRegFileFull := module'mkRegFileFull.mkRegFileFull.
+Hint Unfold mkRegFileFull : ModuleDefs.
+Hint Unfold module'mkRegFileFull.mkRegFileFull : ModuleDefs.
+
+
 (* more stuff *)
 
 Fixpoint toBinaryP (p: positive) : string :=
