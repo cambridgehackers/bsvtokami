@@ -91,7 +91,7 @@ Module module'mkMemory.
     Section Section'mkMemory.
     Variable instancePrefix: string.
         (* method bindings *)
-    (* method binding *) Let mem := mkRegFileFull (Bit AddrSz) (Bit DataSz) (instancePrefix--"mem").
+    Let mem := mkRegFileFull (Bit AddrSz) (Bit DataSz) (instancePrefix--"mem").
     (* instance methods *)
     Let memsub : string := (RegFile'sub mem).
     Let memupd : string := (RegFile'upd mem).
@@ -116,6 +116,13 @@ Module module'mkMemory.
         Ret #retval    )
 
     }). (* mkMemory *)
+
+
+    Lemma mkMemory_PhoasWf: ModPhoasWf mkMemoryModule.
+    Proof. kequiv. Qed.
+    Lemma mkMemory_RegsWf: ModRegsWf mkMemoryModule.
+    Proof. kvr. Qed.
+    Hint Resolve mkMemory_PhoasWf mkMemory_RegsWf.
 
 (* Module mkMemory type Module#(Memory) return type Memory *)
     Definition mkMemory := Build_Memory mkMemoryModule%kami (instancePrefix--"doMem").
@@ -144,11 +151,11 @@ Module module'procSpec.
     Variable exec: Executer.
     Variable tohost: ToHost.
         (* method bindings *)
-    (* method binding *) Let pc := mkReg (Bit PgmSz) (instancePrefix--"pc") ($0)%bk.
-    (* method binding *) Let rf := mkRegFileFull (Bit RegFileSz) (Bit DataSz) (instancePrefix--"rf").
-    (* method binding *) Let mem := mkMemory (instancePrefix--"mem").
-    (* method binding *) Let pc_read : string := (Reg'_read pc).
-    (* method binding *) Let pc_write : string := (Reg'_write pc).
+    Let pc := mkReg (Bit PgmSz) (instancePrefix--"pc") ($0)%bk.
+    Let rf := mkRegFileFull (Bit RegFileSz) (Bit DataSz) (instancePrefix--"rf").
+    Let mem := mkMemory (instancePrefix--"mem").
+    Let pc_read : string := (Reg'_read pc).
+    Let pc_write : string := (Reg'_write pc).
     (* instance methods *)
     Let decgetAddr : string := (Decoder'getAddr dec).
     Let decgetDst : string := (Decoder'getDst dec).
@@ -223,6 +230,13 @@ Module module'procSpec.
                CallM pc_write ( (#pc_v + $1) : Bit PgmSz );
         Retv ) (* rule doHost *)
     }). (* procSpec *)
+
+
+    Lemma procSpec_PhoasWf: ModPhoasWf procSpecModule.
+    Proof. kequiv. Qed.
+    Lemma procSpec_RegsWf: ModRegsWf procSpecModule.
+    Proof. kvr. Qed.
+    Hint Resolve procSpec_PhoasWf procSpec_RegsWf.
 
 (* Module procSpec type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> ToHost -> Module#(Empty) return type Decoder *)
     Definition procSpec := Build_Empty procSpecModule%kami.

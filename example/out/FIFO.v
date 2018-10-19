@@ -33,11 +33,11 @@ Module module'mkFIFO.
     (* let bindings *)
     Let initialValid : ConstT (Bit 1) := ($0)%kami.
         (* method bindings *)
-    (* method binding *) Let v := mkRegU (element_type) (instancePrefix--"v").
-    (* method binding *) Let valid := mkReg (Bit 1) (instancePrefix--"valid") (initialValid)%bk.
-    (* method binding *) Let v_read : string := (Reg'_read v).
-    (* method binding *) Let v_write : string := (Reg'_write v).
-    (* method binding *) Let valid_write : string := (Reg'_write valid).
+    Let v := mkRegU (element_type) (instancePrefix--"v").
+    Let valid := mkReg (Bit 1) (instancePrefix--"valid") (initialValid)%bk.
+    Let v_read : string := (Reg'_read v).
+    Let v_write : string := (Reg'_write v).
+    Let valid_write : string := (Reg'_write valid).
     Definition mkFIFOModule: Modules := (BKMODULE {
         (BKMod (Reg'modules v :: nil))
     with (BKMod (Reg'modules valid :: nil))
@@ -65,6 +65,12 @@ CallM v_v : element_type (* methoddef regread *) <- v_read();
 
     }). (* mkFIFO *)
 
+    Lemma mkFIFO_PhoasWf: ModPhoasWf mkFIFOModule.
+    Proof. kequiv. Qed.
+    Lemma mkFIFO_RegsWf: ModRegsWf mkFIFOModule.
+    Proof. kvr. Qed.
+    Hint Resolve mkFIFO_PhoasWf mkFIFO_RegsWf.
+
 (* Module mkFIFO type Module#(FIFO#(element_type)) return type FIFO#(element_type) *)
     Definition mkFIFO := Build_FIFO mkFIFOModule%kami (instancePrefix--"clear") (instancePrefix--"deq") (instancePrefix--"enq") (instancePrefix--"first").
     End Section'mkFIFO.
@@ -73,7 +79,6 @@ End module'mkFIFO.
 Definition mkFIFO := module'mkFIFO.mkFIFO.
 Hint Unfold mkFIFO : ModuleDefs.
 Hint Unfold module'mkFIFO.mkFIFO : ModuleDefs.
-Hint Unfold module'mkFIFO.mkFIFOModule : ModuleDefs.
 
 Module module'mkLFIFO.
     Section Section'mkLFIFO.
@@ -83,11 +88,11 @@ Module module'mkLFIFO.
     (* let bindings *)
     Let initialValid : ConstT (Bit 1) := ($0)%kami.
         (* method bindings *)
-    (* method binding *) Let v := mkRegU (element_type) (instancePrefix--"v").
-    (* method binding *) Let valid := mkReg (Bit 1) (instancePrefix--"valid") (initialValid)%bk.
-    (* method binding *) Let v_read : string := (Reg'_read v).
-    (* method binding *) Let v_write : string := (Reg'_write v).
-    (* method binding *) Let valid_write : string := (Reg'_write valid).
+    Let v := mkRegU (element_type) (instancePrefix--"v").
+    Let valid := mkReg (Bit 1) (instancePrefix--"valid") (initialValid)%bk.
+    Let v_read : string := (Reg'_read v).
+    Let v_write : string := (Reg'_write v).
+    Let valid_write : string := (Reg'_write valid).
     Definition mkLFIFOModule: Modules.
         refine  (BKMODULE {
         (BKMod (Reg'modules v :: nil))
@@ -116,6 +121,13 @@ CallM v_v : element_type (* methoddef regread *) <- v_read();
 
     }); abstract omega. Qed. (* mkLFIFO *)
 
+(* uncomment if abstract ometa not needed --
+    Lemma mkLFIFO_PhoasWf: ModPhoasWf mkLFIFOModule.
+    Proof. kequiv. Qed.
+    Lemma mkLFIFO_RegsWf: ModRegsWf mkLFIFOModule.
+    Proof. kvr. Qed.
+    Hint Resolve mkLFIFO_PhoasWf mkLFIFO_RegsWf.
+-- uncomment if abstract ometa not needed *)
 (* Module mkLFIFO type Module#(FIFO#(element_type)) return type FIFO#(element_type) *)
     Definition mkLFIFO := Build_FIFO mkLFIFOModule%kami (instancePrefix--"clear") (instancePrefix--"deq") (instancePrefix--"enq") (instancePrefix--"first").
     End Section'mkLFIFO.
@@ -132,11 +144,11 @@ Module module'mkFIFO1.
     (* let bindings *)
     Let initialValid : ConstT (Bit 1) := ($0)%kami.
         (* method bindings *)
-    (* method binding *) Let v := mkRegU (element_type) (instancePrefix--"v").
-    (* method binding *) Let valid := mkReg (Bit 1) (instancePrefix--"valid") (initialValid)%bk.
-    (* method binding *) Let v_read : string := (Reg'_read v).
-    (* method binding *) Let v_write : string := (Reg'_write v).
-    (* method binding *) Let valid_write : string := (Reg'_write valid).
+    Let v := mkRegU (element_type) (instancePrefix--"v").
+    Let valid := mkReg (Bit 1) (instancePrefix--"valid") (initialValid)%bk.
+    Let v_read : string := (Reg'_read v).
+    Let v_write : string := (Reg'_write v).
+    Let valid_write : string := (Reg'_write valid).
     Definition mkFIFO1Module: Modules :=
          (BKMODULE {
         (BKMod (Reg'modules v :: nil))
@@ -164,6 +176,13 @@ CallM v_v : element_type (* methoddef regread *) <- v_read();
 
     }). (* mkFIFO1 *)
 
+
+    Lemma mkFIFO1_PhoasWf: ModPhoasWf mkFIFO1Module.
+    Proof. kequiv. Qed.
+    Lemma mkFIFO1_RegsWf: ModRegsWf mkFIFO1Module.
+    Proof. kvr. Qed.
+    Hint Resolve mkFIFO1_PhoasWf mkFIFO1_RegsWf.
+
 (* Module mkFIFO1 type Module#(FIFO#(element_type)) return type FIFO#(element_type) *)
     Definition mkFIFO1 := Build_FIFO mkFIFO1Module%kami (instancePrefix--"clear") (instancePrefix--"deq") (instancePrefix--"enq") (instancePrefix--"first").
     End Section'mkFIFO1.
@@ -182,11 +201,11 @@ Module module'mkSizedFIFO.
     (* let bindings *)
     Let initialValid : ConstT (Bit 1) := ($0)%kami.
         (* method bindings *)
-    (* method binding *) Let v := mkRegU (element_type) (instancePrefix--"v").
-    (* method binding *) Let valid := mkReg (Bit 1) (instancePrefix--"valid") (initialValid)%bk.
-    (* method binding *) Let v_read : string := (Reg'_read v).
-    (* method binding *) Let v_write : string := (Reg'_write v).
-    (* method binding *) Let valid_write : string := (Reg'_write valid).
+    Let v := mkRegU (element_type) (instancePrefix--"v").
+    Let valid := mkReg (Bit 1) (instancePrefix--"valid") (initialValid)%bk.
+    Let v_read : string := (Reg'_read v).
+    Let v_write : string := (Reg'_write v).
+    Let valid_write : string := (Reg'_write valid).
     Definition mkSizedFIFOModule: Modules :=
          (BKMODULE {
         (BKMod (Reg'modules v :: nil))
@@ -213,6 +232,13 @@ CallM v_v : element_type (* methoddef regread *) <- v_read();
         Retv    )
 
     }). (* mkSizedFIFO *)
+
+
+    Lemma mkSizedFIFO_PhoasWf: ModPhoasWf mkSizedFIFOModule.
+    Proof. kequiv. Qed.
+    Lemma mkSizedFIFO_RegsWf: ModRegsWf mkSizedFIFOModule.
+    Proof. kvr. Qed.
+    Hint Resolve mkSizedFIFO_PhoasWf mkSizedFIFO_RegsWf.
 
 (* Module mkSizedFIFO type Integer -> Module#(FIFO#(element_type)) return type FIFO#(element_type) *)
     Definition mkSizedFIFO := Build_FIFO mkSizedFIFOModule%kami (instancePrefix--"clear") (instancePrefix--"deq") (instancePrefix--"enq") (instancePrefix--"first").

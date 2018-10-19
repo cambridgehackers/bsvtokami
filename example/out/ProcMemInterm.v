@@ -24,12 +24,12 @@ Module module'mkProcInterm.
     Variable mem: Memory.
     Variable toHost: ToHost.
         (* method bindings *)
-    (* method binding *) Let pc := mkReg (Bit PgmSz) (instancePrefix--"pc") ($0)%bk.
-    (* method binding *) Let rf := mkProcRegs (instancePrefix--"rf").
-    (* method binding *) Let sb := mkScoreboard (instancePrefix--"sb").
-    (* method binding *) Let e2wFifo := mkFIFO E2W (instancePrefix--"e2wFifo").
-    (* method binding *) Let decexec := mkDecExec (instancePrefix--"decexec") (pgm)%bk (dec)%bk (exec)%bk (sb)%bk (e2wFifo)%bk (rf)%bk (mem)%bk (toHost)%bk.
-    (* method binding *) Let writeback := mkPipelinedWriteback (instancePrefix--"writeback") (e2wFifo)%bk (sb)%bk (rf)%bk.
+    Let pc := mkReg (instancePrefix--"pc") ($0)%bk.
+    Let rf := mkProcRegs (instancePrefix--"rf").
+    Let sb := mkScoreboard (instancePrefix--"sb").
+    Let e2wFifo := mkFIFO (instancePrefix--"e2wFifo").
+    Let decexec := mkDecExec (instancePrefix--"decexec") (pgm)%bk (dec)%bk (exec)%bk (sb)%bk (e2wFifo)%bk (rf)%bk (mem)%bk (toHost)%bk.
+    Let writeback := mkPipelinedWriteback (instancePrefix--"writeback") (e2wFifo)%bk (sb)%bk (rf)%bk.
     Definition mkProcIntermModule: Modules :=
          (BKMODULE {
         (BKMod (Reg'modules pc :: nil))
@@ -39,6 +39,13 @@ Module module'mkProcInterm.
     with (BKMod (Empty'modules decexec :: nil))
     with (BKMod (Empty'modules writeback :: nil))
     }). (* mkProcInterm *)
+
+
+    Lemma mkProcInterm_PhoasWf: ModPhoasWf mkProcIntermModule.
+    Proof. kequiv. Qed.
+    Lemma mkProcInterm_RegsWf: ModRegsWf mkProcIntermModule.
+    Proof. kvr. Qed.
+    Hint Resolve mkProcInterm_PhoasWf mkProcInterm_RegsWf.
 
 (* Module mkProcInterm type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> Memory -> ToHost -> Module#(Empty) return type Decoder *)
     Definition mkProcInterm := Build_Empty mkProcIntermModule%kami.

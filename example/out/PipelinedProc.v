@@ -31,7 +31,7 @@ Module module'mkProcRegs.
     Section Section'mkProcRegs.
     Variable instancePrefix: string.
         (* method bindings *)
-    (* method binding *) Let rf := mkRegFileFull (Bit RegFileSz) (Bit DataSz) (instancePrefix--"rf").
+    Let rf := mkRegFileFull (Bit RegFileSz) (Bit DataSz) (instancePrefix--"rf").
     (* instance methods *)
     Let rfsub : string := (RegFile'sub rf).
     Let rfupd : string := (RegFile'upd rf).
@@ -54,6 +54,13 @@ CallM val : Bit DataSz (* varbinding *) <-  rfsub (#r2 : Bit RegFileSz);
         Retv    )
 
     }). (* mkProcRegs *)
+
+
+    Lemma mkProcRegs_PhoasWf: ModPhoasWf mkProcRegsModule.
+    Proof. kequiv. Qed.
+    Lemma mkProcRegs_RegsWf: ModRegsWf mkProcRegsModule.
+    Proof. kvr. Qed.
+    Hint Resolve mkProcRegs_PhoasWf mkProcRegs_RegsWf.
 
 (* Module mkProcRegs type Module#(ProcRegs) return type ProcRegs *)
     Definition mkProcRegs := Build_ProcRegs mkProcRegsModule%kami (instancePrefix--"read1") (instancePrefix--"read2") (instancePrefix--"write").
@@ -82,9 +89,9 @@ Module module'mkPipelinedDecoder.
     Variable dec: Decoder.
     Variable d2eFifo: FIFO.
         (* method bindings *)
-    (* method binding *) Let pc := mkReg (Bit PgmSz) (instancePrefix--"pc") ($0)%bk.
-    (* method binding *) Let pc_read : string := (Reg'_read pc).
-    (* method binding *) Let pc_write : string := (Reg'_write pc).
+    Let pc := mkReg (Bit PgmSz) (instancePrefix--"pc") ($0)%bk.
+    Let pc_read : string := (Reg'_read pc).
+    Let pc_write : string := (Reg'_write pc).
     (* instance methods *)
     Let d2eFifoenq : string := (FIFO'enq d2eFifo).
     Let decgetAddr : string := (Decoder'getAddr dec).
@@ -112,6 +119,13 @@ Module module'mkPipelinedDecoder.
                CallM pc_write ( (#pc_v + $1) : Bit PgmSz );
         Retv ) (* rule decode *)
     }). (* mkPipelinedDecoder *)
+
+
+    Lemma mkPipelinedDecoder_PhoasWf: ModPhoasWf mkPipelinedDecoderModule.
+    Proof. kequiv. Qed.
+    Lemma mkPipelinedDecoder_RegsWf: ModRegsWf mkPipelinedDecoderModule.
+    Proof. kvr. Qed.
+    Hint Resolve mkPipelinedDecoder_PhoasWf mkPipelinedDecoder_RegsWf.
 
 (* Module mkPipelinedDecoder type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> FIFO#(D2E) -> Module#(Empty) return type Decoder *)
     Definition mkPipelinedDecoder := Build_Empty mkPipelinedDecoderModule%kami.
@@ -142,7 +156,7 @@ Module module'mkScoreboard.
     Section Section'mkScoreboard.
     Variable instancePrefix: string.
         (* method bindings *)
-    (* method binding *) Let sbFlags := mkRegFileFull (Bit RegFileSz) Bool (instancePrefix--"sbFlags").
+    Let sbFlags := mkRegFileFull (Bit RegFileSz) (Bit DataSz) (instancePrefix--"sbFlags").
     (* instance methods *)
     Let sbFlagssub : string := (RegFile'sub sbFlags).
     Let sbFlagsupd : string := (RegFile'upd sbFlags).
@@ -170,6 +184,13 @@ CallM flag : Bool (* varbinding *) <-  sbFlagssub (#sidx : Bit RegFileSz);
         Retv    )
 
     }). (* mkScoreboard *)
+
+
+    Lemma mkScoreboard_PhoasWf: ModPhoasWf mkScoreboardModule.
+    Proof. kequiv. Qed.
+    Lemma mkScoreboard_RegsWf: ModRegsWf mkScoreboardModule.
+    Proof. kvr. Qed.
+    Hint Resolve mkScoreboard_PhoasWf mkScoreboard_RegsWf.
 
 (* Module mkScoreboard type Module#(Scoreboard) return type Scoreboard *)
     Definition mkScoreboard := Build_Scoreboard mkScoreboardModule%kami (instancePrefix--"insert") (instancePrefix--"remove") (instancePrefix--"search1") (instancePrefix--"search2").
@@ -274,6 +295,13 @@ Module module'mkPipelinedExecuter.
         Retv ) (* rule executeToHost *)
     }). (* mkPipelinedExecuter *)
 
+
+    Lemma mkPipelinedExecuter_PhoasWf: ModPhoasWf mkPipelinedExecuterModule.
+    Proof. kequiv. Qed.
+    Lemma mkPipelinedExecuter_RegsWf: ModRegsWf mkPipelinedExecuterModule.
+    Proof. kvr. Qed.
+    Hint Resolve mkPipelinedExecuter_PhoasWf mkPipelinedExecuter_RegsWf.
+
 (* Module mkPipelinedExecuter type FIFO#(D2E) -> FIFO#(E2W) -> Scoreboard -> Executer -> ProcRegs -> Memory -> ToHost -> Module#(Empty) return type FIFO#(E2W) *)
     Definition mkPipelinedExecuter := Build_Empty mkPipelinedExecuterModule%kami.
     End Section'mkPipelinedExecuter.
@@ -308,6 +336,13 @@ Module module'mkPipelinedWriteback.
         Retv ) (* rule writeback *)
     }). (* mkPipelinedWriteback *)
 
+
+    Lemma mkPipelinedWriteback_PhoasWf: ModPhoasWf mkPipelinedWritebackModule.
+    Proof. kequiv. Qed.
+    Lemma mkPipelinedWriteback_RegsWf: ModRegsWf mkPipelinedWritebackModule.
+    Proof. kvr. Qed.
+    Hint Resolve mkPipelinedWriteback_PhoasWf mkPipelinedWriteback_RegsWf.
+
 (* Module mkPipelinedWriteback type FIFO#(E2W) -> Scoreboard -> ProcRegs -> Module#(Empty) return type Scoreboard *)
     Definition mkPipelinedWriteback := Build_Empty mkPipelinedWritebackModule%kami.
     End Section'mkPipelinedWriteback.
@@ -326,14 +361,14 @@ Module module'mkProcImpl.
     Variable exec: Executer.
     Variable toHost: ToHost.
         (* method bindings *)
-    (* method binding *) Let d2eFifo := mkFIFO D2E (instancePrefix--"d2eFifo").
-    (* method binding *) Let e2wFifo := mkFIFO E2W (instancePrefix--"e2wFifo").
-    (* method binding *) Let mem := mkMemory (instancePrefix--"mem").
-    (* method binding *) Let rf := mkProcRegs (instancePrefix--"rf").
-    (* method binding *) Let sb := mkScoreboard (instancePrefix--"sb").
-    (* method binding *) Let decoder := mkPipelinedDecoder (instancePrefix--"decoder") (pgm)%bk (dec)%bk (d2eFifo)%bk.
-    (* method binding *) Let executer := mkPipelinedExecuter (instancePrefix--"executer") (d2eFifo)%bk (e2wFifo)%bk (sb)%bk (exec)%bk (rf)%bk (mem)%bk (toHost)%bk.
-    (* method binding *) Let writeback := mkPipelinedWriteback (instancePrefix--"writeback") (e2wFifo)%bk (sb)%bk (rf)%bk.
+    Let d2eFifo := mkFIFO D2E (instancePrefix--"d2eFifo").
+    Let e2wFifo := mkFIFO E2W (instancePrefix--"e2wFifo").
+    Let mem := mkMemory (instancePrefix--"mem").
+    Let rf := mkProcRegs (instancePrefix--"rf").
+    Let sb := mkScoreboard (instancePrefix--"sb").
+    Let decoder := mkPipelinedDecoder (instancePrefix--"decoder") (pgm)%bk (dec)%bk (d2eFifo)%bk.
+    Let executer := mkPipelinedExecuter (instancePrefix--"executer") (d2eFifo)%bk (e2wFifo)%bk (sb)%bk (exec)%bk (rf)%bk (mem)%bk (toHost)%bk.
+    Let writeback := mkPipelinedWriteback (instancePrefix--"writeback") (e2wFifo)%bk (sb)%bk (rf)%bk.
     Definition mkProcImplModule: Modules :=
          (BKMODULE {
         (BKMod (FIFO'modules d2eFifo :: nil))
@@ -345,6 +380,13 @@ Module module'mkProcImpl.
     with (BKMod (Empty'modules executer :: nil))
     with (BKMod (Empty'modules writeback :: nil))
     }). (* mkProcImpl *)
+
+
+    Lemma mkProcImpl_PhoasWf: ModPhoasWf mkProcImplModule.
+    Proof. kequiv. Qed.
+    Lemma mkProcImpl_RegsWf: ModRegsWf mkProcImplModule.
+    Proof. kvr. Qed.
+    Hint Resolve mkProcImpl_PhoasWf mkProcImpl_RegsWf.
 
 (* Module mkProcImpl type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> ToHost -> Module#(Empty) return type Decoder *)
     Definition mkProcImpl := Build_Empty mkProcImplModule%kami.

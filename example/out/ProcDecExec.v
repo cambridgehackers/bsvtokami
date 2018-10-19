@@ -26,9 +26,9 @@ Module module'mkDecExec.
     Variable mem: Memory.
     Variable toHost: ToHost.
         (* method bindings *)
-    (* method binding *) Let pc := mkReg (Bit PgmSz) (instancePrefix--"pc") ($0)%bk.
-    (* method binding *) Let pc_read : string := (Reg'_read pc).
-    (* method binding *) Let pc_write : string := (Reg'_write pc).
+    Let pc := mkReg (Bit PgmSz) (instancePrefix--"pc") ($0)%bk.
+    Let pc_read : string := (Reg'_read pc).
+    Let pc_write : string := (Reg'_write pc).
     (* instance methods *)
     Let decgetAddr : string := (Decoder'getAddr dec).
     Let decgetArithOp : string := (Decoder'getArithOp dec).
@@ -130,6 +130,13 @@ Module module'mkDecExec.
         Retv ) (* rule decexecToHost *)
     }). (* mkDecExec *)
 
+
+    Lemma mkDecExec_PhoasWf: ModPhoasWf mkDecExecModule.
+    Proof. kequiv. Qed.
+    Lemma mkDecExec_RegsWf: ModRegsWf mkDecExecModule.
+    Proof. kvr. Qed.
+    Hint Resolve mkDecExec_PhoasWf mkDecExec_RegsWf.
+
 (* Module mkDecExec type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> Scoreboard -> FIFO#(E2W) -> ProcRegs -> Memory -> ToHost -> Module#(Empty) return type Decoder *)
     Definition mkDecExec := Build_Empty mkDecExecModule%kami.
     End Section'mkDecExec.
@@ -148,13 +155,13 @@ Module module'mkDecExecSep.
     Variable exec: Executer.
     Variable toHost: ToHost.
         (* method bindings *)
-    (* method binding *) Let d2eFifo := mkFIFO D2E (instancePrefix--"d2eFifo").
-    (* method binding *) Let e2wFifo := mkFIFO E2W (instancePrefix--"e2wFifo").
-    (* method binding *) Let mem := mkMemory (instancePrefix--"mem").
-    (* method binding *) Let rf := mkProcRegs (instancePrefix--"rf").
-    (* method binding *) Let sb := mkScoreboard (instancePrefix--"sb").
-    (* method binding *) Let decoder := mkPipelinedDecoder (instancePrefix--"decoder") (pgm)%bk (dec)%bk (d2eFifo)%bk.
-    (* method binding *) Let executer := mkPipelinedExecuter (instancePrefix--"executer") (d2eFifo)%bk (e2wFifo)%bk (sb)%bk (exec)%bk (rf)%bk (mem)%bk (toHost)%bk.
+    Let d2eFifo := mkFIFO D2E (instancePrefix--"d2eFifo").
+    Let e2wFifo := mkFIFO E2W (instancePrefix--"e2wFifo").
+    Let mem := mkMemory (instancePrefix--"mem").
+    Let rf := mkProcRegs (instancePrefix--"rf").
+    Let sb := mkScoreboard (instancePrefix--"sb").
+    Let decoder := mkPipelinedDecoder (instancePrefix--"decoder") (pgm)%bk (dec)%bk (d2eFifo)%bk.
+    Let executer := mkPipelinedExecuter (instancePrefix--"executer") (d2eFifo)%bk (e2wFifo)%bk (sb)%bk (exec)%bk (rf)%bk (mem)%bk (toHost)%bk.
     Definition mkDecExecSepModule: Modules :=
          (BKMODULE {
         (BKMod (FIFO'modules d2eFifo :: nil))
@@ -165,6 +172,13 @@ Module module'mkDecExecSep.
     with (BKMod (Empty'modules decoder :: nil))
     with (BKMod (Empty'modules executer :: nil))
     }). (* mkDecExecSep *)
+
+
+    Lemma mkDecExecSep_PhoasWf: ModPhoasWf mkDecExecSepModule.
+    Proof. kequiv. Qed.
+    Lemma mkDecExecSep_RegsWf: ModRegsWf mkDecExecSepModule.
+    Proof. kvr. Qed.
+    Hint Resolve mkDecExecSep_PhoasWf mkDecExecSep_RegsWf.
 
 (* Module mkDecExecSep type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> ToHost -> Module#(Empty) return type Decoder *)
     Definition mkDecExecSep := Build_Empty mkDecExecSepModule%kami.
