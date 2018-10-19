@@ -624,6 +624,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    ? moduleType.params.get(0)
 	    : moduleType.params.get(1).params.get(0);
 
+	printstream.println((useAbstractOmega ? "(* uncomment if abstract ometa not needed --" : ""));
+	printstream.println(String.format("    Lemma %1$s_PhoasWf: ModPhoasWf %1$sModule.", moduleName));
+	printstream.println(String.format("    Proof. kequiv. Qed."));
+	printstream.println(String.format("    Lemma %1$s_RegsWf: ModRegsWf %1$sModule.", moduleName));
+	printstream.println(String.format("    Proof. kvr. Qed."));
+	printstream.println(String.format("    Hint Resolve %1$s_PhoasWf %1$s_RegsWf.", moduleName));
+	printstream.println((useAbstractOmega ? "-- uncomment if abstract ometa not needed *)" : ""));
+
 	printstream.println(String.format("(* Module %s type %s return type %s *)",
 					  moduleName, moduleType, moduleReturnType));
         printstream.print(String.format("    Definition %1$s := Build_%2$s ", moduleName, interfaceName));
@@ -833,7 +841,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	StringBuilder statement = new StringBuilder();
 
-        if (!callRegMethods && typeName.startsWith("Reg")) {
+        if (!callRegMethods && typeName.equals("Reg")) {
             BSVType paramtype = bsvtype.params.get(0);
 	    methodBindings.add(String.format("%s : string := instancePrefix--\"%s\"", varName, varName));
             statement.append("Register " + varName + " : " + bsvTypeToKami(paramtype)
