@@ -41,7 +41,7 @@ module mkPipelinedDecoder#(Bit#(PgmSz) pcInit,
       D2E decoded = D2E {
 	 op: op, arithOp: arithOp, src1: src1, src2: src2, dst: dst, addr: addr, pc: pc
 	 };
-      d2e.enq(decoded);
+      void enq <- d2e.enq(decoded);
       pc <= pc + 1;
    endrule
 endmodule
@@ -102,5 +102,18 @@ module mkExecuter#(FIFO#(D2E) d2eFifo,
       void upd <- sb.insert(dst);
       E2W e2w = E2W { idx: dst, val: execVal };
       void enq <- e2wFifo.enq(e2w);
+   endrule
+endmodule
+
+module mkWriteBack#(FIFO#(E2W) e2wFifo,
+		    Scoreboard sb,
+		    ProcRegs rf)(Empty);
+   rule writeback;
+      E2W e2w = e2wFifo.first();
+      void deq <- e2wFifo.deq();
+      Bit#(RegFileSz) idx = e2w.idx;
+      Bit#(DataSz) val = e2w.val;
+      void written <- rf.write(idx, val); 
+      void removed <- sb.remove(idx);
    endrule
 endmodule

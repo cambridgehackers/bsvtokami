@@ -206,3 +206,37 @@ Hint Unfold mkExecuter : ModuleDefs.
 Hint Unfold module'mkExecuter.mkExecuter : ModuleDefs.
 Hint Unfold module'mkExecuter.mkExecuterModule : ModuleDefs.
 
+Module module'mkWriteBack.
+    Section Section'mkWriteBack.
+    Variable instancePrefix: string.
+    Variable e2wFifo: FIFO.
+    Variable sb: Scoreboard.
+    Variable rf: ProcRegs.
+    (* instance methods *)
+    Let e2wFifodeq : string := (FIFO'deq e2wFifo).
+    Let e2wFifofirst : string := (FIFO'first e2wFifo).
+    Let rfwrite : string := (ProcRegs'write rf).
+    Let sbremove : string := (Scoreboard'remove sb).
+    Definition mkWriteBackModule: Modules :=
+         (BKMODULE {
+        Rule instancePrefix--"writeback" :=
+    (
+       CallM e2w : E2W (* varbinding *) <-  e2wFifofirst ();
+               CallM deq : Void (* actionBinding *) <- e2wFifodeq ();
+               LET idx : Bit RegFileSz <- (#e2w ! E2WFields @. "idx");
+               LET val : Bit DataSz <- (#e2w ! E2WFields @. "val");
+               CallM written : Void (* actionBinding *) <- rfwrite (#idx : Bit RegFileSz) (#val : Bit DataSz);
+               CallM removed : Void (* actionBinding *) <- sbremove (#idx : Bit RegFileSz);
+        Retv ) (* rule writeback *)
+    }). (* mkWriteBack *)
+
+(* Module mkWriteBack type FIFO#(E2W) -> Scoreboard -> ProcRegs -> Module#(Empty) return type Scoreboard *)
+    Definition mkWriteBack := Build_Empty mkWriteBackModule%kami.
+    End Section'mkWriteBack.
+End module'mkWriteBack.
+
+Definition mkWriteBack := module'mkWriteBack.mkWriteBack.
+Hint Unfold mkWriteBack : ModuleDefs.
+Hint Unfold module'mkWriteBack.mkWriteBack : ModuleDefs.
+Hint Unfold module'mkWriteBack.mkWriteBackModule : ModuleDefs.
+
