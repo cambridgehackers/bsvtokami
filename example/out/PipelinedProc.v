@@ -224,7 +224,7 @@ Module module'mkPipelinedExecuter.
        Call call5 : Bool <-  sbsearch1 (((#d2e @% "src1")) : Bit RegFileSz) ;
        Call call6 : Bool <-  sbsearch2 (((#d2e @% "src2")) : Bit RegFileSz) ;
 
-        Assert (((((#d2e @% "op") == #opArith) && (!#call5)) && (!#call6))) ;
+        Assert (((((#d2e @% "op") == $$opArith) && (!#call5)) && (!#call6))) ;
                Call deq : Void (* actionBinding *) <- d2eFifodeq () ;
                LET src1 : Bit RegFileSz <- (#d2e @% "src1") ;
                LET src2 : Bit RegFileSz <- (#d2e @% "src2") ;
@@ -313,7 +313,7 @@ Module module'mkPipelinedWriteback.
                Call deq : Void (* actionBinding *) <- e2wFifodeq () ;
                LET idx : Bit RegFileSz <- (#e2w @% "idx") ;
                LET val : Bit DataSz <- (#e2w @% "val") ;
-               Call written : Void (* actionBinding *) <- rfwrite ((#idx) : Bit RegFileSz) ((#val) : Bit DataSz) ;
+               BKCall written : Void (* actionBinding *) <- rfwrite ((#idx) : Bit RegFileSz) ((#val) : Bit DataSz) ;
                Call removed : Void (* actionBinding *) <- sbremove ((#idx) : Bit RegFileSz) ;
         Retv ) (* rule writeback *)
     }). (* mkPipelinedWriteback *)
@@ -336,8 +336,8 @@ Module module'mkProcImpl.
     Variable exec: Executer.
     Variable toHost: ToHost.
         (* method bindings *)
-    Let d2eFifo := mkFIFO (instancePrefix--"d2eFifo").
-    Let e2wFifo := mkFIFO (instancePrefix--"e2wFifo").
+    Let d2eFifo := mkFIFO D2E (instancePrefix--"d2eFifo").
+    Let e2wFifo := mkFIFO E2W (instancePrefix--"e2wFifo").
     Let mem := mkMemory (instancePrefix--"mem").
     Let rf := mkProcRegs (instancePrefix--"rf").
     Let sb := mkScoreboard (instancePrefix--"sb").

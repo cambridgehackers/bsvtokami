@@ -172,7 +172,7 @@ Module module'procSpec.
     (
         Call pc_v : Bit PgmSz (* regRead *) <- pc_read() ;
        Call inst : Bit InstrSz (* varbinding *) <-  pgmsub ((#pc_v) : Bit PgmSz) ;
-       BKCall call0 : Bool <-  decisOp ((#inst) : Bit InstrSz) (($$opArith) : OpK) ;
+       BKCall call0 : Bool <-  decisOp ((#inst) : Bit InstrSz) ($$ opArith : Bit 2) ;
 
         Assert (#call0 ) ;
        Call op : OpK (* varbinding *) <-  decgetOp ((#inst) : Bit InstrSz) ;

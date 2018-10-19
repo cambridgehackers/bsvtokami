@@ -24,7 +24,7 @@ Module module'mkDecExec.
     Variable mem: Memory.
     Variable toHost: ToHost.
         (* method bindings *)
-    Let pc := mkReg (instancePrefix--"pc") ($0)%bk.
+    Let pc := mkReg (instancePrefix--"pc") (natToWord PgmSz 0)%bk.
     Let pc_read : string := (Reg'_read pc).
     Let pc_write : string := (Reg'_write pc).
     (* instance methods *)
@@ -53,7 +53,7 @@ Module module'mkDecExec.
     (
         Call pc_v : Bit PgmSz (* regRead *) <- pc_read() ;
        Call call12 : Bit InstrSz <-  pgmsub ((#pc_v) : Bit PgmSz) ;
-       Call call11 : tvar557 <-  decisOp ((#call12) : Bit InstrSz) (($$opArith) : OpK) ;
+       BKCall call11 : Bool <-  decisOp ((#call12) : Bit InstrSz) (($$opArith) : OpK) ;
        Call call15 : Bit InstrSz <-  pgmsub ((#pc_v) : Bit PgmSz) ;
        Call call14 : Bit RegFileSz <-  decgetSrc1 ((#call15) : Bit InstrSz) ;
        Call call13 : Bool <-  sbsearch1 ((#call14) : Bit RegFileSz) ;
@@ -61,7 +61,7 @@ Module module'mkDecExec.
        Call call17 : Bit RegFileSz <-  decgetSrc2 ((#call18) : Bit InstrSz) ;
        Call call16 : Bool <-  sbsearch2 ((#call17) : Bit RegFileSz) ;
 
-        Assert(((#call11 && (!#call13)) && (!#call16)));
+        Assert(((#call11 && (!#call13)) && (!#call16))) ;
        Call inst : Bit InstrSz (* varbinding *) <-  pgmsub ((#pc_v) : Bit PgmSz) ;
        Call src1 : Bit RegFileSz (* varbinding *) <-  decgetSrc1 ((#inst) : Bit InstrSz) ;
        Call src2 : Bit RegFileSz (* varbinding *) <-  decgetSrc2 ((#inst) : Bit InstrSz) ;
@@ -69,7 +69,7 @@ Module module'mkDecExec.
        Call arithOp : OpArithK (* varbinding *) <-  decgetArithOp ((#inst) : Bit InstrSz) ;
        Call val1 : Bit DataSz (* varbinding *) <-  rfread1 ((#src1) : Bit RegFileSz) ;
        Call val2 : Bit DataSz (* varbinding *) <-  rfread2 ((#src2) : Bit RegFileSz) ;
-       Call execVal : Bit DataSz (* varbinding *) <-  execexecArith ((#arithOp) : OpArithK) ((#val1) : Bit DataSz) ((#val2) : Bit DataSz) ;
+       BKCall execVal : Bit DataSz (* varbinding *) <-  execexecArith ((#arithOp) : OpArithK) ((#val1) : Bit DataSz) ((#val2) : Bit DataSz) ;
                Call inserted : Void (* actionBinding *) <- sbinsert ((#dst) : Bit RegFileSz) ;
                LET e2w : E2W <- STRUCT { "idx" ::= (#dst) ; "val" ::= (#execVal)  }%kami_expr ;
                Call enq : Void (* actionBinding *) <- e2wFifoenq ((#e2w) : E2W) ;
@@ -79,12 +79,12 @@ Module module'mkDecExec.
     (
         Call pc_v : Bit PgmSz (* regRead *) <- pc_read() ;
        Call call20 : Bit InstrSz <-  pgmsub ((#pc_v) : Bit PgmSz) ;
-       Call call19 : tvar591 <-  decisOp ((#call20) : Bit InstrSz) (($$opLd) : OpK) ;
+       BKCall call19 : Bool <-  decisOp ((#call20) : Bit InstrSz) (($$opLd) : OpK) ;
        Call call23 : Bit InstrSz <-  pgmsub ((#pc_v) : Bit PgmSz) ;
        Call call22 : Bit RegFileSz <-  decgetDst ((#call23) : Bit InstrSz) ;
        Call call21 : Bool <-  sbsearch1 ((#call22) : Bit RegFileSz) ;
 
-        Assert((#call19 && (!#call21)));
+        Assert((#call19 && (!#call21))) ;
        Call inst : Bit InstrSz (* varbinding *) <-  pgmsub ((#pc_v) : Bit PgmSz) ;
        Call src1 : Bit RegFileSz (* varbinding *) <-  decgetSrc1 ((#inst) : Bit InstrSz) ;
        Call dst : Bit RegFileSz (* varbinding *) <-  decgetDst ((#inst) : Bit InstrSz) ;
@@ -101,9 +101,9 @@ Module module'mkDecExec.
     (
         Call pc_v : Bit PgmSz (* regRead *) <- pc_read() ;
        Call call25 : Bit InstrSz <-  pgmsub ((#pc_v) : Bit PgmSz) ;
-       Call call24 : tvar613 <-  decisOp ((#call25) : Bit InstrSz) (($$opSt) : OpK) ;
+       BKCall call24 : Bool <-  decisOp ((#call25) : Bit InstrSz) (($$opSt) : OpK) ;
 
-        Assert(#call24);
+        Assert(#call24) ;
        Call inst : Bit InstrSz (* varbinding *) <-  pgmsub ((#pc_v) : Bit PgmSz) ;
        Call src1 : Bit RegFileSz (* varbinding *) <-  decgetSrc1 ((#inst) : Bit InstrSz) ;
        Call addr : Bit AddrSz (* varbinding *) <-  decgetAddr ((#inst) : Bit InstrSz) ;
@@ -116,12 +116,12 @@ Module module'mkDecExec.
     (
         Call pc_v : Bit PgmSz (* regRead *) <- pc_read() ;
        Call call27 : Bit InstrSz <-  pgmsub ((#pc_v) : Bit PgmSz) ;
-       Call call26 : tvar625 <-  decisOp ((#call27) : Bit InstrSz) (($$opTh) : OpK) ;
+       BKCall call26 : Bool <-  decisOp ((#call27) : Bit InstrSz) (($$opTh) : OpK) ;
        Call call30 : Bit InstrSz <-  pgmsub ((#pc_v) : Bit PgmSz) ;
        Call call29 : Bit RegFileSz <-  decgetSrc1 ((#call30) : Bit InstrSz) ;
        Call call28 : Bool <-  sbsearch1 ((#call29) : Bit RegFileSz) ;
 
-        Assert((#call26 && (!#call28)));
+        Assert((#call26 && (!#call28))) ;
        Call inst : Bit InstrSz (* varbinding *) <-  pgmsub ((#pc_v) : Bit PgmSz) ;
        Call src1 : Bit RegFileSz (* varbinding *) <-  decgetSrc1 ((#inst) : Bit InstrSz) ;
        Call val1 : Bit DataSz (* varbinding *) <-  rfread1 ((#src1) : Bit RegFileSz) ;
@@ -148,8 +148,8 @@ Module module'mkDecExecSep.
     Variable exec: Executer.
     Variable toHost: ToHost.
         (* method bindings *)
-    Let d2eFifo := mkFIFO (instancePrefix--"d2eFifo").
-    Let e2wFifo := mkFIFO (instancePrefix--"e2wFifo").
+    Let d2eFifo := mkFIFO D2E (instancePrefix--"d2eFifo").
+    Let e2wFifo := mkFIFO E2W (instancePrefix--"e2wFifo").
     Let mem := mkMemory (instancePrefix--"mem").
     Let rf := mkProcRegs (instancePrefix--"rf").
     Let sb := mkScoreboard (instancePrefix--"sb").
