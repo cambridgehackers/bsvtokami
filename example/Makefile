@@ -2,7 +2,7 @@
 BKDIR?=..
 KAMIDIR?=$(realpath ../../kami/Kami)
 
-BSV_FILES = ProcMemSpec.bsv PipelinedProc.bsv
+BSV_FILES = ProcMemSpec.bsv PipelinedProc.bsv ProcDecExec.bsv
 BO_FILES = $(patsubst %.bsv,%.bo, $(BSV_FILES))
 V_FILES = $(addprefix out/, $(patsubst %.bsv,%.v, $(BSV_FILES)))
 

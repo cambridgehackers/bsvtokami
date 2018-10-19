@@ -110,7 +110,7 @@ module mkPipelinedExecuter#(FIFO#(D2E) d2eFifo,
       Bit#(RegFileSz) dst = d2e.dst;
       OpArithK arithOp = d2e.arithOp;
       Bit#(DataSz) val1 = rf.read1(src1);
-      Bit#(DataSz) val2 = rf.read1(src2);
+      Bit#(DataSz) val2 = rf.read2(src2);
       Bit#(DataSz) execVal = exec.execArith(arithOp, val1, val2);
       void upd <- sb.insert(dst);
       E2W e2w = E2W { idx: dst, val: execVal };
