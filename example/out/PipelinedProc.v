@@ -14,18 +14,18 @@ Require Import DefaultValue.
 Require Import FIFO.
 Require Import ProcMemSpec.
 Require Import RegFile.
-(* * interface ProcRegFile *)
-Record ProcRegFile := {
-    ProcRegFile'modules: Modules;
-    ProcRegFile'read1 : string;
-    ProcRegFile'read2 : string;
-    ProcRegFile'write : string;
+(* * interface ProcRegs *)
+Record ProcRegs := {
+    ProcRegs'modules: Modules;
+    ProcRegs'read1 : string;
+    ProcRegs'read2 : string;
+    ProcRegs'write : string;
 }.
 
-Hint Unfold ProcRegFile'modules : ModuleDefs.
-Hint Unfold ProcRegFile'read1 : ModuleDefs.
-Hint Unfold ProcRegFile'read2 : ModuleDefs.
-Hint Unfold ProcRegFile'write : ModuleDefs.
+Hint Unfold ProcRegs'modules : ModuleDefs.
+Hint Unfold ProcRegs'read1 : ModuleDefs.
+Hint Unfold ProcRegs'read2 : ModuleDefs.
+Hint Unfold ProcRegs'write : ModuleDefs.
 
 Definition D2EFields := (STRUCT {
     "addr" :: Bit AddrSz;
@@ -112,7 +112,7 @@ Module module'mkScoreboard.
     Section Section'mkScoreboard.
     Variable instancePrefix: string.
         (* method bindings *)
-    (* method binding *) Let sbFlags := mkRegFileFull (Bit RegFileSz) Bool (instancePrefix--"sbFlags").
+    (* method binding *) Let sbFlags := mkRegFileFull (Bit RegFileSz) (Bit DataSz) (instancePrefix--"sbFlags").
     (* instance methods *)
     Let sbFlagssub : string := (RegFile'sub sbFlags).
     Let sbFlagsupd : string := (RegFile'upd sbFlags).
@@ -131,12 +131,12 @@ CallM flag : Bool (* varbinding *) <-  sbFlagssub (#sidx : Bit RegFileSz);
 
     with Method instancePrefix--"insert" (nidx : (Bit RegFileSz)) : Void :=
     (
-      CallM call6 : Void <-  sbFlagsupd (#nidx : Bit RegFileSz) (($$true)%kami_expr : Bool);
+        CallM unused : Void (* actionBinding *) <- sbFlagsupd (#nidx : Bit RegFileSz) (($$true)%kami_expr : Bool);
         Retv    )
 
     with Method instancePrefix--"remove" (nidx : (Bit RegFileSz)) : Void :=
     (
-      CallM call7 : Void <-  sbFlagsupd (#nidx : Bit RegFileSz) (($$false)%kami_expr : Bool);
+        CallM unused : Void (* actionBinding *) <- sbFlagsupd (#nidx : Bit RegFileSz) (($$false)%kami_expr : Bool);
         Retv    )
 
     }). (* mkScoreboard *)
@@ -150,4 +150,59 @@ Definition mkScoreboard := module'mkScoreboard.mkScoreboard.
 Hint Unfold mkScoreboard : ModuleDefs.
 Hint Unfold module'mkScoreboard.mkScoreboard : ModuleDefs.
 Hint Unfold module'mkScoreboard.mkScoreboardModule : ModuleDefs.
+
+Definition E2WFields := (STRUCT {
+    "idx" :: Bit RegFileSz;
+    "val" :: Bit DataSz}).
+Definition E2W  := Struct (E2WFields).
+
+Module module'mkExecuter.
+    Section Section'mkExecuter.
+    Variable instancePrefix: string.
+    Variable d2eFifo: FIFO.
+    Variable e2wFifo: FIFO.
+    Variable sb: Scoreboard.
+    Variable exec: Executer.
+    Variable rf: ProcRegs.
+    (* instance methods *)
+    Let d2eFifodeq : string := (FIFO'deq d2eFifo).
+    Let d2eFifofirst : string := (FIFO'first d2eFifo).
+    Let e2wFifoenq : string := (FIFO'enq e2wFifo).
+    Let execexecArith : string := (Executer'execArith exec).
+    Let rfread1 : string := (ProcRegs'read1 rf).
+    Let sbinsert : string := (Scoreboard'insert sb).
+    Let sbsearch1 : string := (Scoreboard'search1 sb).
+    Let sbsearch2 : string := (Scoreboard'search2 sb).
+    Definition mkExecuterModule: Modules :=
+         (BKMODULE {
+        Rule instancePrefix--"executeArith" :=
+    (
+       CallM d2e : D2E (* varbinding *) <-  d2eFifofirst ();
+       CallM call6 : Bool <-  sbsearch1 ((#d2e ! D2EFields @. "src1") : Bit RegFileSz);
+       CallM call7 : Bool <-  sbsearch2 ((#d2e ! D2EFields @. "src2") : Bit RegFileSz);
+
+        Assert(((((#d2e ! D2EFields @. "op") == $$opArith) && #call6) && #call7));
+               CallM deq : Void (* actionBinding *) <- d2eFifodeq ();
+               LET src1 : Bit RegFileSz <- (#d2e ! D2EFields @. "src1");
+               LET src2 : Bit RegFileSz <- (#d2e ! D2EFields @. "src2");
+               LET dst : Bit RegFileSz <- (#d2e ! D2EFields @. "dst");
+               LET arithOp : OpArithK <- (#d2e ! D2EFields @. "arithOp");
+       CallM val1 : Bit DataSz (* varbinding *) <-  rfread1 (#src1 : Bit RegFileSz);
+       CallM val2 : Bit DataSz (* varbinding *) <-  rfread1 (#src2 : Bit RegFileSz);
+       CallM execVal : Bit DataSz (* varbinding *) <-  execexecArith (#arithOp : OpArithK) (#val1 : Bit DataSz) (#val2 : Bit DataSz);
+               CallM upd : Void (* actionBinding *) <- sbinsert (#dst : Bit RegFileSz);
+               LET e2w : E2W <- STRUCT { "idx" ::= (#dst); "val" ::= (#execVal)  }%kami_expr;
+               CallM enq : Void (* actionBinding *) <- e2wFifoenq (#e2w : E2W);
+        Retv ) (* rule executeArith *)
+    }). (* mkExecuter *)
+
+(* Module mkExecuter type FIFO#(D2E) -> FIFO#(E2W) -> Scoreboard -> Executer -> ProcRegs -> Module#(Empty) return type FIFO#(E2W) *)
+    Definition mkExecuter := Build_Empty mkExecuterModule%kami.
+    End Section'mkExecuter.
+End module'mkExecuter.
+
+Definition mkExecuter := module'mkExecuter.mkExecuter.
+Hint Unfold mkExecuter : ModuleDefs.
+Hint Unfold module'mkExecuter.mkExecuter : ModuleDefs.
+Hint Unfold module'mkExecuter.mkExecuterModule : ModuleDefs.
 

@@ -41,26 +41,12 @@ typedef struct {
    Bit#(DataSz) data;
    } MemRq deriving (Bits);
 
-// work around bsvtokami type inference deficiencies
-interface ProcRegFile;
-   method Bit#(DataSz) sub(Bit#(AddrSz) idx);
-   method Action upd(Bit#(AddrSz) idx, Bit#(DataSz) v);
-endinterface
-
-module mkProcRegFile(ProcRegFile);
-   method Bit#(DataSz) sub(Bit#(AddrSz) idx);
-      return 0;
-   endmethod
-   method Action upd(Bit#(AddrSz) idx, Bit#(DataSz) v);
-   endmethod
-endmodule
-
 interface Memory;
    method ActionValue#(Bit#(DataSz)) doMem(MemRq req);
 endinterface
 
 module mkMemory(Memory);
-   ProcRegFile mem <- mkProcRegFile();
+   RegFile#(Bit#(AddrSz),Bit#(DataSz)) mem <- mkRegFileFull();
    method ActionValue#(Bit#(DataSz)) doMem(MemRq req);
       if (req.isLoad == 1'b1) begin
 	 Bit#(AddrSz) addr = req.addr;

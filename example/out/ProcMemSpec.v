@@ -78,42 +78,6 @@ Definition MemRqFields := (STRUCT {
     "isLoad" :: Bit 1}).
 Definition MemRq  := Struct (MemRqFields).
 
-(* * interface ProcRegFile *)
-Record ProcRegFile := {
-    ProcRegFile'modules: Modules;
-    ProcRegFile'sub : string;
-    ProcRegFile'upd : string;
-}.
-
-Hint Unfold ProcRegFile'modules : ModuleDefs.
-Hint Unfold ProcRegFile'sub : ModuleDefs.
-Hint Unfold ProcRegFile'upd : ModuleDefs.
-
-Module module'mkProcRegFile.
-    Section Section'mkProcRegFile.
-    Variable instancePrefix: string.
-    Definition mkProcRegFileModule: Modules :=
-         (BKMODULE {
-        Method instancePrefix--"sub" (idx : (Bit AddrSz)) : Bit DataSz :=
-    (
-        Ret $0    )
-
-    with Method instancePrefix--"upd" (idx : (Bit AddrSz)) (v : (Bit DataSz)) : Void :=
-    (
-        Retv    )
-
-    }). (* mkProcRegFile *)
-
-(* Module mkProcRegFile type Module#(ProcRegFile) return type ProcRegFile *)
-    Definition mkProcRegFile := Build_ProcRegFile mkProcRegFileModule%kami (instancePrefix--"sub") (instancePrefix--"upd").
-    End Section'mkProcRegFile.
-End module'mkProcRegFile.
-
-Definition mkProcRegFile := module'mkProcRegFile.mkProcRegFile.
-Hint Unfold mkProcRegFile : ModuleDefs.
-Hint Unfold module'mkProcRegFile.mkProcRegFile : ModuleDefs.
-Hint Unfold module'mkProcRegFile.mkProcRegFileModule : ModuleDefs.
-
 (* * interface Memory *)
 Record Memory := {
     Memory'modules: Modules;
@@ -127,13 +91,13 @@ Module module'mkMemory.
     Section Section'mkMemory.
     Variable instancePrefix: string.
         (* method bindings *)
-    (* method binding *) Let mem := mkProcRegFile (instancePrefix--"mem").
+    (* method binding *) Let mem := mkRegFileFull (Bit AddrSz) (Bit DataSz) (instancePrefix--"mem").
     (* instance methods *)
-    Let memsub : string := (ProcRegFile'sub mem).
-    Let memupd : string := (ProcRegFile'upd mem).
+    Let memsub : string := (RegFile'sub mem).
+    Let memupd : string := (RegFile'upd mem).
     Definition mkMemoryModule: Modules :=
          (BKMODULE {
-        (BKMod (ProcRegFile'modules mem :: nil))
+        (BKMod (RegFile'modules mem :: nil))
     with Method instancePrefix--"doMem" (req : MemRq) : (Bit DataSz) :=
     (
         If ((#req ! MemRqFields @. "isLoad") == $$(natToWord 1 1)) then (
