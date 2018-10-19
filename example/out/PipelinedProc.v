@@ -203,6 +203,7 @@ Module module'mkPipelinedExecuter.
     Let execexecArith : string := (Executer'execArith exec).
     Let memdoMem : string := (Memory'doMem mem).
     Let rfread1 : string := (ProcRegs'read1 rf).
+    Let rfread2 : string := (ProcRegs'read2 rf).
     Let sbinsert : string := (Scoreboard'insert sb).
     Let sbsearch1 : string := (Scoreboard'search1 sb).
     Let sbsearch2 : string := (Scoreboard'search2 sb).
@@ -222,7 +223,7 @@ Module module'mkPipelinedExecuter.
                LET dst : Bit RegFileSz <- (#d2e ! D2EFields @. "dst");
                LET arithOp : OpArithK <- (#d2e ! D2EFields @. "arithOp");
        CallM val1 : Bit DataSz (* varbinding *) <-  rfread1 (#src1 : Bit RegFileSz);
-       CallM val2 : Bit DataSz (* varbinding *) <-  rfread1 (#src2 : Bit RegFileSz);
+       CallM val2 : Bit DataSz (* varbinding *) <-  rfread2 (#src2 : Bit RegFileSz);
        CallM execVal : Bit DataSz (* varbinding *) <-  execexecArith (#arithOp : OpArithK) (#val1 : Bit DataSz) (#val2 : Bit DataSz);
                CallM upd : Void (* actionBinding *) <- sbinsert (#dst : Bit RegFileSz);
                LET e2w : E2W <- STRUCT { "idx" ::= (#dst); "val" ::= (#execVal)  }%kami_expr;

@@ -12,7 +12,7 @@ module mkDecExec#(RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm,
 		  ProcRegs rf,
 		  Memory mem,
 		  ToHost toHost)(Empty);
-      Reg#(Bit#(PgmSz)) pc <- mkReg(0);
+   Reg#(Bit#(PgmSz)) pc <- mkReg(0);
 
    rule decexecArith if (dec.isOp(pgm.sub(pc), opArith)
 			&& !sb.search1(dec.getSrc1(pgm.sub(pc)))
