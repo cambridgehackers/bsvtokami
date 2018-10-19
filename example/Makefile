@@ -19,10 +19,11 @@ out/_CoqProject: _CoqProject out
 	@cp -fv _CoqProject out
 
 %.bo: %.bsv
-	bsc $(*).bsv
+	@mkdir -p obj
+	bsc -info-dir obj $(*).bsv
 
-out/PipelinedProc.v: PipelinedProc.bo
+out/%.v: %.bo
 	JAVA_OPTS=-ea $(BKDIR)/build/install/bsvtokami/bin/bsvtokami \
 		-I . \
 		-I $(BKDIR)/lib \
-		-K out PipelinedProc.bsv
+		-K out $(*).bsv

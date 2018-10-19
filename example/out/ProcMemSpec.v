@@ -12,7 +12,6 @@ Set Implicit Arguments.
 
 Require Import DefaultValue.
 Require Import RegFile.
-
 Definition DataSz := 32.
 
 Definition AddrSz := 32.
@@ -46,6 +45,7 @@ Definition OpArithK := Bit 2.
 (* * interface Decoder *)
 Record Decoder := {
     Decoder'modules: Modules;
+    Decoder'isOp : string;
     Decoder'getOp : string;
     Decoder'getArithOp : string;
     Decoder'getSrc1 : string;
@@ -55,6 +55,7 @@ Record Decoder := {
 }.
 
 Hint Unfold Decoder'modules : ModuleDefs.
+Hint Unfold Decoder'isOp : ModuleDefs.
 Hint Unfold Decoder'getOp : ModuleDefs.
 Hint Unfold Decoder'getArithOp : ModuleDefs.
 Hint Unfold Decoder'getSrc1 : ModuleDefs.
@@ -171,24 +172,17 @@ Record ToHost := {
 Hint Unfold ToHost'modules : ModuleDefs.
 Hint Unfold ToHost'toHost : ModuleDefs.
 
-Definition ProcInitFields := (STRUCT {
-    "pcInit" :: Bit PgmSz;
-    "pgmInit" :: Vector (Bit InstrSz) PgmSz;
-    "rfInit" :: Vector (Bit DataSz) RegFileSz}).
-Definition ProcInit  := Struct (ProcInitFields).
-
 Module module'procSpec.
     Section Section'procSpec.
     Variable instancePrefix: string.
-    Variable procInit: ConstT ProcInit.
+    Variable pgm: RegFile.
     Variable dec: Decoder.
     Variable exec: Executer.
     Variable tohost: ToHost.
         (* method bindings *)
-    (* method binding *) Let pc := mkReg (Bit PgmSz) (instancePrefix--"pc") ($$(natToWord PgmSz 0))%kami.
+    (* method binding *) Let pc := mkReg (Bit PgmSz) (instancePrefix--"pc") ($0)%bk.
     (* method binding *) Let rf := mkRegFileFull (Bit RegFileSz) (Bit DataSz) (instancePrefix--"rf").
     (* method binding *) Let mem := mkMemory (instancePrefix--"mem").
-    (* method binding *) Let pgm := mkRegFileFull (Bit PgmSz) (Bit InstrSz) (instancePrefix--"pgm").
     (* method binding *) Let pc_read : string := (Reg'_read pc).
     (* method binding *) Let pc_write : string := (Reg'_write pc).
     (* instance methods *)
@@ -197,6 +191,7 @@ Module module'procSpec.
     Let decgetOp : string := (Decoder'getOp dec).
     Let decgetSrc1 : string := (Decoder'getSrc1 dec).
     Let decgetSrc2 : string := (Decoder'getSrc2 dec).
+    Let decisOp : string := (Decoder'isOp dec).
     Let execexecArith : string := (Executer'execArith exec).
     Let memdoMem : string := (Memory'doMem mem).
     Let pgmsub : string := (RegFile'sub pgm).
@@ -208,14 +203,14 @@ Module module'procSpec.
         (BKMod (Reg'modules pc :: nil))
     with (BKMod (RegFile'modules rf :: nil))
     with (BKMod (Memory'modules mem :: nil))
-    with (BKMod (RegFile'modules pgm :: nil))
     with Rule instancePrefix--"doArith" :=
     (
         CallM pc_v : Bit PgmSz (* regRead *) <- pc_read();
        CallM inst : Bit InstrSz (* varbinding *) <-  pgmsub (#pc_v : Bit PgmSz);
-       CallM op : OpK (* varbinding *) <-  decgetOp (#inst : Bit InstrSz);
+       CallM call0 : Bool <-  decisOp (#inst : Bit InstrSz) ($$opArith : OpK);
 
-        Assert((#op == $$opArith));
+        Assert(#call0);
+       CallM op : OpK (* varbinding *) <-  decgetOp (#inst : Bit InstrSz);
        CallM src1 : Bit RegFileSz (* varbinding *) <-  decgetSrc1 (#inst : Bit InstrSz);
        CallM src2 : Bit RegFileSz (* varbinding *) <-  decgetSrc2 (#inst : Bit InstrSz);
        CallM dst : Bit RegFileSz (* varbinding *) <-  decgetDst (#inst : Bit InstrSz);
@@ -229,24 +224,22 @@ Module module'procSpec.
     (
         CallM pc_v : Bit PgmSz (* regRead *) <- pc_read();
        CallM inst : Bit InstrSz (* varbinding *) <-  pgmsub (#pc_v : Bit PgmSz);
-       CallM op : OpK (* varbinding *) <-  decgetOp (#inst : Bit InstrSz);
+       CallM call1 : Bool <-  decisOp (#inst : Bit InstrSz) ($$opLd : OpK);
 
-        Assert((#op == $$opLd));
-       CallM inst : Bit InstrSz (* varbinding *) <-  pgmsub (#pc_v : Bit PgmSz);
+        Assert(#call1);
        CallM addr : Bit AddrSz (* varbinding *) <-  decgetAddr (#inst : Bit InstrSz);
        CallM dst : Bit RegFileSz (* varbinding *) <-  decgetDst (#inst : Bit InstrSz);
                CallM val : Bit DataSz (* actionBinding *) <- memdoMem (STRUCT { "addr" ::= (#addr); "data" ::= ($0); "isLoad" ::= ($$(natToWord 1 1))  }%kami_expr : MemRq);
-       CallM call0 : Void <-  rfupd (#dst : Bit RegFileSz) (#val : Bit DataSz);
+       CallM call2 : Void <-  rfupd (#dst : Bit RegFileSz) (#val : Bit DataSz);
                CallM pc_write ( (#pc_v + $1) : Bit PgmSz );
         Retv ) (* rule doLoad *)
     with Rule instancePrefix--"doStore" :=
     (
         CallM pc_v : Bit PgmSz (* regRead *) <- pc_read();
        CallM inst : Bit InstrSz (* varbinding *) <-  pgmsub (#pc_v : Bit PgmSz);
-       CallM op : OpK (* varbinding *) <-  decgetOp (#inst : Bit InstrSz);
+       CallM call3 : Bool <-  decisOp (#inst : Bit InstrSz) ($$opSt : OpK);
 
-        Assert((#op == $$opSt));
-       CallM inst : Bit InstrSz (* varbinding *) <-  pgmsub (#pc_v : Bit PgmSz);
+        Assert(#call3);
        CallM addr : Bit AddrSz (* varbinding *) <-  decgetAddr (#inst : Bit InstrSz);
        CallM src : Bit RegFileSz (* varbinding *) <-  decgetSrc1 (#inst : Bit InstrSz);
        CallM val : Bit DataSz (* varbinding *) <-  rfsub (#src : Bit RegFileSz);
@@ -257,10 +250,9 @@ Module module'procSpec.
     (
         CallM pc_v : Bit PgmSz (* regRead *) <- pc_read();
        CallM inst : Bit InstrSz (* varbinding *) <-  pgmsub (#pc_v : Bit PgmSz);
-       CallM op : OpK (* varbinding *) <-  decgetOp (#inst : Bit InstrSz);
+       CallM call4 : Bool <-  decisOp (#inst : Bit InstrSz) ($$opTh : OpK);
 
-        Assert((#op == $$opTh));
-       CallM inst : Bit InstrSz (* varbinding *) <-  pgmsub (#pc_v : Bit PgmSz);
+        Assert(#call4);
        CallM src1 : Bit RegFileSz (* varbinding *) <-  decgetSrc1 (#inst : Bit InstrSz);
        CallM val1 : Bit DataSz (* varbinding *) <-  rfsub (#src1 : Bit RegFileSz);
                CallM unused : Void (* actionBinding *) <- tohosttoHost (#val1 : Bit DataSz);
@@ -268,7 +260,7 @@ Module module'procSpec.
         Retv ) (* rule doHost *)
     }). (* procSpec *)
 
-(* Module procSpec type ProcInit -> Decoder -> Executer -> ToHost -> Module#(Empty) return type Decoder *)
+(* Module procSpec type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> ToHost -> Module#(Empty) return type Decoder *)
     Definition procSpec := Build_Empty procSpecModule%kami.
     End Section'procSpec.
 End module'procSpec.

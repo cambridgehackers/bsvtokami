@@ -1,6 +1,5 @@
 import DefaultValue::*;
 import RegFile::*;
-import Vector::*;
 
 typedef 32 DataSz;
 typedef 32 AddrSz;
@@ -23,6 +22,7 @@ Bit#(2) opArithDiv = 2'b11;
 typedef Bit#(2) OpArithK;
 
 interface Decoder;
+   method Bool isOp(Bit#(InstrSz) inst, OpK op);
    method OpK getOp(Bit#(InstrSz) inst);
    method OpArithK getArithOp(Bit#(InstrSz) inst);
    method Bit#(RegFileSz) getSrc1(Bit#(InstrSz) inst);
@@ -81,25 +81,17 @@ interface ToHost;
    method Action toHost(Bit#(DataSz) val);
 endinterface
 
-typedef struct {
-   Bit#(PgmSz) pcInit;
-   Vector#(RegFileSz, Bit#(DataSz)) rfInit;
-   Vector#(PgmSz, Bit#(InstrSz)) pgmInit;
-   } ProcInit deriving (Bits);
-
-module procSpec#(ProcInit procInit,
+module procSpec#(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
 		 Decoder dec,
 		 Executer exec,
 		 ToHost tohost)(Empty);
-   Reg#(Bit#(PgmSz)) pc <- mkReg(procInit.pcInit);
+   Reg#(Bit#(PgmSz)) pc <- mkReg(0);
    RegFile#(Bit#(RegFileSz), Bit#(DataSz)) rf <- mkRegFileFull();
    Memory mem <- mkMemory();
-   RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm <- mkRegFileFull(); //(procInit.pgmInit);
 
    Bit#(InstrSz) inst = pgm.sub(pc);
 
-   OpK op = dec.getOp(inst);
-   rule doArith if (op == opArith);
+   rule doArith if (dec.isOp(inst,opArith));
       Bit#(InstrSz) inst = pgm.sub(pc);
       OpK op = dec.getOp(inst);
       Bit#(RegFileSz) src1 = dec.getSrc1(inst);
@@ -112,16 +104,16 @@ module procSpec#(ProcInit procInit,
       pc <= pc + 1;
    endrule
 
-   rule doLoad if (op == opLd);
+   rule doLoad if (dec.isOp(inst,opLd));
       Bit#(InstrSz) inst = pgm.sub(pc);
       Bit#(AddrSz) addr = dec.getAddr(inst);
       Bit#(RegFileSz) dst = dec.getDst(inst);
-      Bit#(DataSz) val <- mem.doMem(MemRq { isLoad: 1'b1, addr: addr, data: defaultValue });
+      Bit#(DataSz) val <- mem.doMem(MemRq { isLoad: 1'b1, addr: addr, data: 0 });
       rf.upd(dst, val);
       pc <= pc + 1;
    endrule
 
-   rule doStore if (op == opSt);
+   rule doStore if (dec.isOp(inst,opSt));
       Bit#(InstrSz) inst = pgm.sub(pc);
       Bit#(AddrSz) addr = dec.getAddr(inst);
       Bit#(RegFileSz) src = dec.getSrc1(inst);
@@ -130,7 +122,7 @@ module procSpec#(ProcInit procInit,
       pc <= pc + 1;
    endrule
 
-   rule doHost if (op == opTh);
+   rule doHost if (dec.isOp(inst,opTh));
       Bit#(InstrSz) inst = pgm.sub(pc);
       Bit#(RegFileSz) src1 = dec.getSrc1(inst);
       Bit#(DataSz) val1 = rf.sub(src1);

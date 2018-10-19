@@ -2,7 +2,7 @@
 import DefaultValue::*;
 import FIFO::*;
 import ProcMemSpec::*;
-import Vector::*;
+import RegFile::*;
 
 interface ProcRegFile;
    method Bit#(DataSz) read1(Bit#(RegFileSz) r1);
@@ -24,13 +24,13 @@ interface PipelinedDecoder;
 endinterface
 
 module mkPipelinedDecoder#(Bit#(PgmSz) pcInit,
-			   Vector#(TExp#(PgmSz), Bit#(InstrSz)) pgmInit,
+			   RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm,
 			   Decoder dec,
 			   FIFO#(D2E) d2e)(PipelinedDecoder);
-   Reg#(Bit#(PgmSz)) pc <- mkReg(pcInit);
+   Reg#(Bit#(PgmSz)) pc <- mkReg(0);
    
    rule decode;
-      Bit#(InstrSz) inst = pgmInit[pc];
+      Bit#(InstrSz) inst = pgm.sub(pc);
       OpK op = dec.getOp(inst);
       OpArithK arithOp = dec.getArithOp(inst);
       Bit#(RegFileSz) src1 = dec.getSrc1(inst);
@@ -54,28 +54,24 @@ interface Scoreboard;
 endinterface
 
 module mkScoreboard(Scoreboard);
-   Reg#(Vector#(TExp#(RegFileSz), Bool)) sbFlags <- mkReg(defaultValue);
+   RegFile#(Bit#(RegFileSz), Bool) sbFlags <- mkRegFileFull();
    
    method Bool search1(Bit#(RegFileSz) sidx);
-      Bool flag = sbFlags[sidx];
+      Bool flag = sbFlags.sub(sidx);
       return flag;
    endmethod
 
    method Bool search2(Bit#(RegFileSz) sidx);
-      Bool flag = sbFlags[sidx];
+      Bool flag = sbFlags.sub(sidx);
       return flag;
    endmethod
 
    method Action insert(Bit#(RegFileSz) nidx);
-      Vector#(TExp#(RegFileSz), Bool) flags = sbFlags;
-      flags[nidx] = True;
-      sbFlags <= flags;
+      void unused <- sbFlags.upd(nidx, True);
    endmethod
 
    method Action remove(Bit#(RegFileSz) nidx);
-      Vector#(TExp#(RegFileSz), Bool) flags = sbFlags;
-      flags[nidx] = False;
-      sbFlags <= flags;
+      void unused <- sbFlags.upd(nidx, False);
    endmethod
 endmodule
 

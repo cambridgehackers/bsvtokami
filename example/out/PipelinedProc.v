@@ -13,7 +13,7 @@ Set Implicit Arguments.
 Require Import DefaultValue.
 Require Import FIFO.
 Require Import ProcMemSpec.
-
+Require Import RegFile.
 (* * interface ProcRegFile *)
 Record ProcRegFile := {
     ProcRegFile'modules: Modules;
@@ -48,11 +48,11 @@ Module module'mkPipelinedDecoder.
     Section Section'mkPipelinedDecoder.
     Variable instancePrefix: string.
     Variable pcInit: ConstT (Bit PgmSz).
-    Variable pgmInit: ConstT (Vector (Bit InstrSz) PgmSz).
+    Variable pgm: RegFile.
     Variable dec: Decoder.
     Variable d2e: FIFO.
         (* method bindings *)
-    (* method binding *) Let pc := mkReg (Bit PgmSz) (instancePrefix--"pc") (pcInit)%bk.
+    (* method binding *) Let pc := mkReg (Bit PgmSz) (instancePrefix--"pc") ($0)%bk.
     (* method binding *) Let pc_read : string := (Reg'_read pc).
     (* method binding *) Let pc_write : string := (Reg'_write pc).
     (* instance methods *)
@@ -63,13 +63,14 @@ Module module'mkPipelinedDecoder.
     Let decgetOp : string := (Decoder'getOp dec).
     Let decgetSrc1 : string := (Decoder'getSrc1 dec).
     Let decgetSrc2 : string := (Decoder'getSrc2 dec).
+    Let pgmsub : string := (RegFile'sub pgm).
     Definition mkPipelinedDecoderModule: Modules :=
          (BKMODULE {
         (BKMod (Reg'modules pc :: nil))
     with Rule instancePrefix--"decode" :=
     (
         CallM pc_v : Bit PgmSz (* regRead *) <- pc_read();
-               LET inst : Bit InstrSz <- ($$pgmInit@[#pc_v]);
+       CallM inst : Bit InstrSz (* varbinding *) <-  pgmsub (#pc_v : Bit PgmSz);
        CallM op : OpK (* varbinding *) <-  decgetOp (#inst : Bit InstrSz);
        CallM arithOp : OpArithK (* varbinding *) <-  decgetArithOp (#inst : Bit InstrSz);
        CallM src1 : Bit RegFileSz (* varbinding *) <-  decgetSrc1 (#inst : Bit InstrSz);
@@ -77,12 +78,12 @@ Module module'mkPipelinedDecoder.
        CallM dst : Bit RegFileSz (* varbinding *) <-  decgetDst (#inst : Bit InstrSz);
        CallM addr : Bit AddrSz (* varbinding *) <-  decgetAddr (#inst : Bit InstrSz);
                LET decoded : D2E <- STRUCT { "addr" ::= (#addr); "arithOp" ::= (#arithOp); "dst" ::= (#dst); "op" ::= (#op); "pc" ::= (#pc_v); "src1" ::= (#src1); "src2" ::= (#src2)  }%kami_expr;
-       CallM call1 : Void <-  d2eenq (#decoded : D2E);
+       CallM call5 : Void <-  d2eenq (#decoded : D2E);
                CallM pc_write ( (#pc_v + $1) : Bit PgmSz );
         Retv ) (* rule decode *)
     }). (* mkPipelinedDecoder *)
 
-(* Module mkPipelinedDecoder type Bit#(PgmSz) -> Vector#(TExp#(PgmSz), Bit#(InstrSz)) -> Decoder -> FIFO#(D2E) -> Module#(PipelinedDecoder) return type Vector#(TExp#(PgmSz), Bit#(InstrSz)) *)
+(* Module mkPipelinedDecoder type Bit#(PgmSz) -> RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> FIFO#(D2E) -> Module#(PipelinedDecoder) return type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) *)
     Definition mkPipelinedDecoder := Build_PipelinedDecoder mkPipelinedDecoderModule%kami.
     End Section'mkPipelinedDecoder.
 End module'mkPipelinedDecoder.
@@ -111,38 +112,31 @@ Module module'mkScoreboard.
     Section Section'mkScoreboard.
     Variable instancePrefix: string.
         (* method bindings *)
-    (* method binding *) Let sbFlags := mkReg (Bit RegFileSz) (instancePrefix--"sbFlags") ($$(natToWord RegFileSz 0))%bk.
-    (* method binding *) Let sbFlags_read : string := (Reg'_read sbFlags).
-    (* method binding *) Let sbFlags_write : string := (Reg'_write sbFlags).
+    (* method binding *) Let sbFlags := mkRegFileFull (Bit RegFileSz) Bool (instancePrefix--"sbFlags").
+    (* instance methods *)
+    Let sbFlagssub : string := (RegFile'sub sbFlags).
+    Let sbFlagsupd : string := (RegFile'upd sbFlags).
     Definition mkScoreboardModule: Modules :=
          (BKMODULE {
-        (BKMod (Reg'modules sbFlags :: nil))
+        (BKMod (RegFile'modules sbFlags :: nil))
     with Method instancePrefix--"search1" (sidx : (Bit RegFileSz)) : Bool :=
     (
-CallM sbFlags_v : Vector Bool RegFileSz (* methoddef regread *) <- sbFlags_read();
-        LET flag : Bool <- (#sbFlags_v@[#sidx]);
+CallM flag : Bool (* varbinding *) <-  sbFlagssub (#sidx : Bit RegFileSz);
         Ret #flag    )
 
     with Method instancePrefix--"search2" (sidx : (Bit RegFileSz)) : Bool :=
     (
-CallM sbFlags_v : Vector Bool RegFileSz (* methoddef regread *) <- sbFlags_read();
-        LET flag : Bool <- (#sbFlags_v@[#sidx]);
+CallM flag : Bool (* varbinding *) <-  sbFlagssub (#sidx : Bit RegFileSz);
         Ret #flag    )
 
     with Method instancePrefix--"insert" (nidx : (Bit RegFileSz)) : Void :=
     (
-CallM sbFlags_v : Vector Bool RegFileSz (* methoddef regread *) <- sbFlags_read();
-        LET flags : Vector Bool RegFileSz <- #sbFlags_v;
-        LET newflags : Vector Bool RegFileSz <- #flags @[ #nidx <- $$true ];
-        CallM sbFlags_write ( #newflags : Vector Bool RegFileSz );
+      CallM call6 : Void <-  sbFlagsupd (#nidx : Bit RegFileSz) (($$true)%kami_expr : Bool);
         Retv    )
 
     with Method instancePrefix--"remove" (nidx : (Bit RegFileSz)) : Void :=
     (
-CallM sbFlags_v : Vector Bool RegFileSz (* methoddef regread *) <- sbFlags_read();
-        LET flags : Vector Bool RegFileSz <- #sbFlags_v;
-        LET newflags : Vector Bool RegFileSz <- #flags @[ #nidx <- $$false ];
-        CallM sbFlags_write ( #newflags : Vector Bool RegFileSz );
+      CallM call7 : Void <-  sbFlagsupd (#nidx : Bit RegFileSz) (($$false)%kami_expr : Bool);
         Retv    )
 
     }). (* mkScoreboard *)
