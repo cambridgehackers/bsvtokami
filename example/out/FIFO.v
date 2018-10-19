@@ -38,8 +38,7 @@ Module module'mkFIFO.
     (* method binding *) Let v_read : string := (Reg'_read v).
     (* method binding *) Let v_write : string := (Reg'_write v).
     (* method binding *) Let valid_write : string := (Reg'_write valid).
-    Definition mkFIFOModule: Modules.
-        refine  (BKMODULE {
+    Definition mkFIFOModule: Modules := (BKMODULE {
         (BKMod (Reg'modules v :: nil))
     with (BKMod (Reg'modules valid :: nil))
     with Method instancePrefix--"first" () : element_type :=
@@ -64,7 +63,7 @@ CallM v_v : element_type (* methoddef regread *) <- v_read();
         CallM valid_write ( $$(natToWord 1 0) : Bit 1 );
         Retv    )
 
-    }); abstract omega. Qed. (* mkFIFO *)
+    }). (* mkFIFO *)
 
 (* Module mkFIFO type Module#(FIFO#(element_type)) return type FIFO#(element_type) *)
     Definition mkFIFO := Build_FIFO mkFIFOModule%kami (instancePrefix--"clear") (instancePrefix--"deq") (instancePrefix--"enq") (instancePrefix--"first").
@@ -74,6 +73,7 @@ End module'mkFIFO.
 Definition mkFIFO := module'mkFIFO.mkFIFO.
 Hint Unfold mkFIFO : ModuleDefs.
 Hint Unfold module'mkFIFO.mkFIFO : ModuleDefs.
+Hint Unfold module'mkFIFO.mkFIFOModule : ModuleDefs.
 
 Module module'mkLFIFO.
     Section Section'mkLFIFO.
