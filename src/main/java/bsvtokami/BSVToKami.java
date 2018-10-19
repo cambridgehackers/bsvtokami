@@ -1350,21 +1350,29 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitVarassign(BSVParser.VarassignContext ctx) {
-	StringBuilder statement = new StringBuilder();
-        statement.append("        Assign ");
         boolean multi = ctx.lvalue().size() > 1;
-        int count = 0;
-        if (multi) statement.append("{ ");
-        for (BSVParser.LvalueContext lvalue: ctx.lvalue()) {
-            if (multi && count > 0) statement.append(", ");
-            statement.append(lvalue.getText());
-            count++;
-        }
-        if (multi) statement.append(" }");
-	statement.append(" " + ctx.op.getText() + " ");
-        statement.append(visit(ctx.expression()));
+	BSVParser.LvalueContext lvalue0 = ctx.lvalue(0);
+	if (lvalue0.index != null) {
+	    statements.add(String.format("LET %$1s <- #%1$s @[ %2$s <- %3$s ]",
+					 visit(lvalue0.lvalue()),
+					 visit(lvalue0.index),
+					 visit(ctx.expression())));
+	} else {
+	    int count = 0;
+	    StringBuilder statement = new StringBuilder();
+	    statement.append("        Assign ");
+	    if (multi) statement.append("{ ");
+	    for (BSVParser.LvalueContext lvalue: ctx.lvalue()) {
+		if (multi && count > 0) statement.append(", ");
+		statement.append(lvalue.getText());
+		count++;
+	    }
+	    if (multi) statement.append(" }");
+	    statement.append(" " + ctx.op.getText() + " ");
+	    statement.append(visit(ctx.expression()));
 
-	statements.add(statement.toString());
+	    statements.add(statement.toString());
+	}
 	return null;
     }
 
