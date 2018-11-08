@@ -99,7 +99,7 @@ Module module'mkMemory.
         (BKMod (RegFile'mod mem :: nil))
     with Method (instancePrefix--"doMem") (req : MemRq) : (Bit DataSz) :=
     (
-        If ((#req @% "isLoad") == $$ (natToWord 1 1)) then (
+        If ((#req @% "isLoad") ==  $$(natToWord 1 1)) then (
         
         LET addr : Bit AddrSz <- (#req @% "addr") ;
         Call ldval : Bit DataSz (* varbinding *) <-  memsub ((#addr) : Bit AddrSz) ;
@@ -109,15 +109,18 @@ Module module'mkMemory.
         LET addr : Bit AddrSz <- (#req @% "addr") ;
                 LET newval : Bit DataSz <- (#req @% "data") ;
                 BKCall unused : Void (* actionBinding *) <- memupd ((#addr) : Bit AddrSz) ((#newval) : Bit DataSz) ;
-                Call placeholder : Bit DataSz (* varbinding *) <-  memsub ((#addr) : Bit AddrSz) ;
+        Call placeholder : Bit DataSz (* varbinding *) <-  memsub ((#addr) : Bit AddrSz) ;
                 Ret #placeholder) as retval
  ;
         Ret #retval    )
 
     }). (* mkMemory *)
 
+
 (* Module mkMemory type Module#(Memory) return type Memory *)
-    Definition mkMemory := Build_Memory mkMemoryModule%kami (instancePrefix--"doMem").
+    Definition mkMemory := Build_Memory mkMemoryModule (instancePrefix--"doMem").
+    Hint Unfold mkMemoryModule : ModuleDefs.
+
     End Section'mkMemory.
 End module'mkMemory.
 
@@ -172,9 +175,9 @@ Module module'procSpec.
     (
         Call pc_v : Bit PgmSz (* regRead *) <- pc_read() ;
        Call inst : Bit InstrSz (* varbinding *) <-  pgmsub ((#pc_v) : Bit PgmSz) ;
-       BKCall call0 : Bool <-  decisOp ((#inst) : Bit InstrSz) ($$ opArith : Bit 2) ;
+       BKCall call0 : Bool <-  decisOp ((#inst) : Bit InstrSz) (($$opArith) : OpK) ;
 
-        Assert (#call0 ) ;
+        Assert(#call0) ;
        Call op : OpK (* varbinding *) <-  decgetOp ((#inst) : Bit InstrSz) ;
        Call src1 : Bit RegFileSz (* varbinding *) <-  decgetSrc1 ((#inst) : Bit InstrSz) ;
        Call src2 : Bit RegFileSz (* varbinding *) <-  decgetSrc2 ((#inst) : Bit InstrSz) ;
@@ -194,7 +197,7 @@ Module module'procSpec.
         Assert(#call1) ;
        Call addr : Bit AddrSz (* varbinding *) <-  decgetAddr ((#inst) : Bit InstrSz) ;
        Call dst : Bit RegFileSz (* varbinding *) <-  decgetDst ((#inst) : Bit InstrSz) ;
-               Call val : Bit DataSz (* actionBinding *) <- memdoMem ((STRUCT { "addr" ::= (#addr) ; "data" ::= ($0) ; "isLoad" ::= ($$ (natToWord 1 1))  }%kami_expr) : MemRq) ;
+               Call val : Bit DataSz (* actionBinding *) <- memdoMem ((STRUCT { "addr" ::= (#addr) ; "data" ::= ($0) ; "isLoad" ::= ( $$(natToWord 1 1))  }%kami_expr) : MemRq) ;
        BKCall call2 : Void <-  rfupd ((#dst) : Bit RegFileSz) ((#val) : Bit DataSz) ;
                Call pc_write ( ((#pc_v + $1)) : Bit PgmSz ) ;
         Retv ) (* rule doLoad *)
@@ -208,7 +211,7 @@ Module module'procSpec.
        Call addr : Bit AddrSz (* varbinding *) <-  decgetAddr ((#inst) : Bit InstrSz) ;
        Call src : Bit RegFileSz (* varbinding *) <-  decgetSrc1 ((#inst) : Bit InstrSz) ;
        Call val : Bit DataSz (* varbinding *) <-  rfsub ((#src) : Bit RegFileSz) ;
-               Call unused : Bit DataSz (* actionBinding *) <- memdoMem ((STRUCT { "addr" ::= (#addr) ; "data" ::= (#val) ; "isLoad" ::= ($$ (natToWord 1 0))  }%kami_expr) : MemRq) ;
+               Call unused : Bit DataSz (* actionBinding *) <- memdoMem ((STRUCT { "addr" ::= (#addr) ; "data" ::= (#val) ; "isLoad" ::= ( $$(natToWord 1 0))  }%kami_expr) : MemRq) ;
                Call pc_write ( ((#pc_v + $1)) : Bit PgmSz ) ;
         Retv ) (* rule doStore *)
     with Rule instancePrefix--"doHost" :=
@@ -225,8 +228,12 @@ Module module'procSpec.
         Retv ) (* rule doHost *)
     }). (* procSpec *)
 
+
+
 (* Module procSpec type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> ToHost -> Module#(Empty) return type Decoder *)
-    Definition procSpec := Build_Empty procSpecModule%kami.
+    Definition procSpec := Build_Empty procSpecModule.
+    Hint Unfold procSpecModule : ModuleDefs.
+    Hint Unfold procSpec : ModuleDefs.
     End Section'procSpec.
 End module'procSpec.
 

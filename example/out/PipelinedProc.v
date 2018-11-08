@@ -59,8 +59,11 @@ Call val : Bit DataSz (* varbinding *) <-  rfsub ((#r2) : Bit RegFileSz) ;
 
     }). (* mkProcRegs *)
 
+
+
 (* Module mkProcRegs type Module#(ProcRegs) return type ProcRegs *)
-    Definition mkProcRegs := Build_ProcRegs mkProcRegsModule%kami (instancePrefix--"read1") (instancePrefix--"read2") (instancePrefix--"write").
+    Definition mkProcRegs := Build_ProcRegs mkProcRegsModule (instancePrefix--"read1") (instancePrefix--"read2") (instancePrefix--"write").
+    Hint Unfold mkProcRegs : ModuleDefs.
     End Section'mkProcRegs.
 End module'mkProcRegs.
 
@@ -118,8 +121,12 @@ Module module'mkPipelinedDecoder.
         Retv ) (* rule decode *)
     }). (* mkPipelinedDecoder *)
 
+
+
 (* Module mkPipelinedDecoder type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> FIFO#(D2E) -> Module#(Empty) return type Decoder *)
-    Definition mkPipelinedDecoder := Build_Empty mkPipelinedDecoderModule%kami.
+    Definition mkPipelinedDecoder := Build_Empty mkPipelinedDecoderModule.
+    Hint Unfold mkPipelinedDecoderModule : ModuleDefs.
+    Definition wellformed_mkPipelinedDecoder : ModWf := @Build_ModWf mkPipelinedDecoderModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf).
     End Section'mkPipelinedDecoder.
 End module'mkPipelinedDecoder.
 
@@ -178,8 +185,12 @@ Call flag : Bool (* varbinding *) <-  sbFlagssub ((#sidx) : Bit RegFileSz) ;
 
     }). (* mkScoreboard *)
 
+
 (* Module mkScoreboard type Module#(Scoreboard) return type Scoreboard *)
-    Definition mkScoreboard := Build_Scoreboard mkScoreboardModule%kami (instancePrefix--"insert") (instancePrefix--"remove") (instancePrefix--"search1") (instancePrefix--"search2").
+    Definition mkScoreboard := Build_Scoreboard mkScoreboardModule (instancePrefix--"insert") (instancePrefix--"remove") (instancePrefix--"search1") (instancePrefix--"search2").
+
+    Hint Unfold mkScoreboardModule : ModuleDefs.
+
     End Section'mkScoreboard.
 End module'mkScoreboard.
 
@@ -224,7 +235,7 @@ Module module'mkPipelinedExecuter.
        Call call5 : Bool <-  sbsearch1 (((#d2e @% "src1")) : Bit RegFileSz) ;
        Call call6 : Bool <-  sbsearch2 (((#d2e @% "src2")) : Bit RegFileSz) ;
 
-        Assert (((((#d2e @% "op") == $$opArith) && (!#call5)) && (!#call6))) ;
+        Assert(((((#d2e @% "op") == $$opArith) && (!#call5)) && (!#call6))) ;
                Call deq : Void (* actionBinding *) <- d2eFifodeq () ;
                LET src1 : Bit RegFileSz <- (#d2e @% "src1") ;
                LET src2 : Bit RegFileSz <- (#d2e @% "src2") ;
@@ -282,8 +293,12 @@ Module module'mkPipelinedExecuter.
         Retv ) (* rule executeToHost *)
     }). (* mkPipelinedExecuter *)
 
+
+
 (* Module mkPipelinedExecuter type FIFO#(D2E) -> FIFO#(E2W) -> Scoreboard -> Executer -> ProcRegs -> Memory -> ToHost -> Module#(Empty) return type FIFO#(E2W) *)
-    Definition mkPipelinedExecuter := Build_Empty mkPipelinedExecuterModule%kami.
+    Definition mkPipelinedExecuter := Build_Empty mkPipelinedExecuterModule.
+    Hint Unfold mkPipelinedExecuter : ModuleDefs.
+
     End Section'mkPipelinedExecuter.
 End module'mkPipelinedExecuter.
 
@@ -318,8 +333,11 @@ Module module'mkPipelinedWriteback.
         Retv ) (* rule writeback *)
     }). (* mkPipelinedWriteback *)
 
+
+    Hint Unfold mkPipelinedWritebackModule : ModuleDefs.
+
 (* Module mkPipelinedWriteback type FIFO#(E2W) -> Scoreboard -> ProcRegs -> Module#(Empty) return type Scoreboard *)
-    Definition mkPipelinedWriteback := Build_Empty mkPipelinedWritebackModule%kami.
+    Definition mkPipelinedWriteback := Build_Empty mkPipelinedWritebackModule.
     End Section'mkPipelinedWriteback.
 End module'mkPipelinedWriteback.
 
@@ -358,8 +376,11 @@ Module module'mkProcImpl.
     with (BKMod (Empty'mod writeback :: nil))
     }). (* mkProcImpl *)
 
+
+    Hint Unfold mkProcImplModule : ModuleDefs.
+
 (* Module mkProcImpl type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> ToHost -> Module#(Empty) return type Decoder *)
-    Definition mkProcImpl := Build_Empty mkProcImplModule%kami.
+    Definition mkProcImpl := Build_Empty mkProcImplModule.
     End Section'mkProcImpl.
 End module'mkProcImpl.
 
