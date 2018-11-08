@@ -607,6 +607,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    printstream.print("; abstract omega. Qed");
 	}
 	printstream.println(". (* " + ctx.moduleproto().name.getText() + " *)" + "\n");
+        printstream.print(String.format("    Hint Unfold %1$sModule : ModuleDefs.", moduleName));
+
 
         if (instances.size() > 0)
             printstream.println(String.format("    Definition %sInstances := (%s)%%kami.",
@@ -629,17 +631,25 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	printstream.println(String.format("(* Module %s type %s return type %s *)",
 					  moduleName, moduleType, moduleReturnType));
-        printstream.print(String.format("    Definition %1$s := Build_%2$s ", moduleName, interfaceName));
 
+        printstream.print(String.format("    Definition %1$s := Build_%2$s ", moduleName, interfaceName));
         if (instances.size() > 0)
             printstream.print(String.format("(%1$sInstances ++ ",
                                             moduleName));
 
-        printstream.print(String.format("%1$sModule%%kami", moduleName));
+        printstream.print(String.format("%1$sModule", moduleName));
         if (instances.size() > 0)
 	    printstream.print(")");
 	printstream.print(methodNames.toString());
 	printstream.println(".");
+        printstream.print(String.format("    Hint Unfold %1$s : ModuleDefs.", moduleName));
+
+	printstream.println("");
+	printstream.println(String.format("    Hint Unfold %1$sModule : ModuleDefs.", moduleName));
+	printstream.println(String.format("    (* Definition wellformed_%1$s : ModWf := @Build_ModWf %1$sModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)",
+					  moduleName));
+	printstream.println("");
+
 
         printstream.println(String.format("    End %1$s.", sectionName));
         printstream.println(String.format("End module'%1$s.", moduleName));
