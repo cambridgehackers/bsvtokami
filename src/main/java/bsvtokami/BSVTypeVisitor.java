@@ -1279,7 +1279,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         @Override public BSVType visitCallexpr(BSVParser.CallexprContext ctx) {
 	    if (types.containsKey(ctx))
 		return types.get(ctx);
-            BSVType fcntype = visit(ctx.fcn);
+            BSVType fcntype = visit(ctx.fcn).fresh(new ArrayList<>());
             System.err.println("call " + ctx.fcn.getText() + " type " + fcntype + " at " + StaticAnalysis.sourceLocation(ctx));
             assert fcntype != null : String.format("Null type for %s at %s", ctx.fcn.getText(), StaticAnalysis.sourceLocation(ctx));
             BSVType resulttype = new BSVType();
