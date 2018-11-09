@@ -40,7 +40,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     private static Logger logger = Logger.getGlobal();
     public static String newline = System.getProperty("line.separator");
 
-    private static boolean callRegMethods = true;
+    private static boolean callRegMethods = false;
 
     private final File ofile;
     private PrintStream printstream;
@@ -832,12 +832,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
     @Override public String visitActionBinding(BSVParser.ActionBindingContext ctx) {
 	typeVisitor.pushScope(scope);
 
-        String typeName = ctx.t.getText();
         String varName = ctx.var.getText();
         BSVParser.ExpressionContext rhs = ctx.rhs;
         SymbolTableEntry entry = scope.lookup(varName);
         assert entry != null: "Null var name in " + ctx.getText();
         BSVType bsvtype = entry.type;
+        String typeName = bsvtype.name;
         InstanceNameVisitor inv = new InstanceNameVisitor(scopes);
 	inv.pushScope(scope);
         String calleeInstanceName = inv.visit(ctx.rhs);
@@ -846,7 +846,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	StringBuilder statement = new StringBuilder();
 
-        if (!callRegMethods && typeName.startsWith("Reg")) {
+        if (!callRegMethods && typeName.equals("Reg")) {
             BSVType paramtype = bsvtype.params.get(0);
 	    methodBindings.add(String.format("%s : string := instancePrefix--\"%s\"", varName, varName));
             statement.append("Register " + varName + " : " + bsvTypeToKami(paramtype)
@@ -891,8 +891,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    String fcnName = call.fcn.getText();
 	    SymbolTableEntry fcnEntry = scope.lookup(fcnName);
 	    BSVType moduleType = fcnEntry.type.fresh();
-	    TreeMap<String,BSVType> moduleFreeTypeVars = moduleType.getFreeVariables();
 	    BSVType interfaceType = getModuleType(moduleType);
+	    try {
+		interfaceType.unify(bsvtype);
+	    } catch (InferenceError e) {
+		logger.fine(e.toString());
+	    }
 	    System.err.println(String.format("fcnName %s moduleType %s interfaceType %s",
 					     fcnName, moduleType, interfaceType));
 	    String interfaceName = interfaceType.name;
@@ -905,7 +909,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		System.err.println(String.format("    arg %s type %s", arg.getText(), argType));
 		assert t.name.equals("Function");
 		try {
-		    argType.unify(t.params.get(0));
+		    t.params.get(0).unify(argType);
 		} catch (InferenceError e) {
 		    logger.fine(e.toString());
 		}
@@ -913,14 +917,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    }
 	    assert t.name.equals("Module") : String.format("Expected Module but got %s in type %s at %s",
 							   t.name, t, StaticAnalysis.sourceLocation(call));
-	    BSVType lhstype = typeVisitor.visit(ctx.t);
-	    try {
-		t.params.get(0).unify(lhstype);
-	    } catch (InferenceError e) {
-		logger.fine(e.toString());
-	    }
-	    System.err.println(String.format("lhstype %s %s",
-					     ctx.var.getText(), lhstype));
+	    List<BSVType> moduleFreeTypeVars = interfaceType.getInstanceVariables();
 
 	    for (BSVParser.ExpressionContext arg: call.expression()) {
 		params.append(" ");
@@ -929,20 +926,19 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	    boolean wasActionContext = actionContext;
 	    actionContext = true;
-	    for (BSVType ft: moduleFreeTypeVars.values()) {
+	    for (BSVType ft: moduleFreeTypeVars) {
 		typeParameters.append(" (");
 		typeParameters.append(bsvTypeToKami(ft));
 		typeParameters.append(")");
 	    }
 	    actionContext = wasActionContext;
 
-	    System.err.println(String.format("Module instantiation fcn %s type %s interface %s free %s at %s",
+	    System.err.println(String.format("Module instantiation fcn %s type %s interface %s at %s",
 					     fcnName, fcnEntry.type, interfaceType,
-					     String.join(", ", moduleFreeTypeVars.keySet()),
 					     StaticAnalysis.sourceLocation(ctx.rhs)));
-	    if (moduleFreeTypeVars.size() != 0)
+	    if (moduleFreeTypeVars.size() != 0 || true)
 		System.err.println("   freeTypeVars: " + typeParameters.toString());
-            methodBindings.add(String.format("%s := %s%s (instancePrefix--\"%s\")%s",
+            methodBindings.add(String.format("(* action binding *) %s := %s%s (instancePrefix--\"%s\")%s",
 					     varName, fcnName, typeParameters.toString(), varName,
 					     params.toString()));
             statement.append(String.format("(BKMod (%s'mod %s :: nil))", interfaceName, varName));
@@ -2260,7 +2256,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	StringBuilder statement = new StringBuilder();
         if (methodName != null) {
             // "Call" is up where the binding is, hopefully
-	    statement.append(" ");
+	    statement.append(" (* translateCall *) ");
             statement.append(methodName);
 	    int argNumber = 0;
             for (BSVParser.ExpressionContext expr: ctx.expression()) {
