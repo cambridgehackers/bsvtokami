@@ -860,7 +860,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
             if (call != null && call.fcn != null && call.fcn.getText().equals("mkReg")) {
 		logger.fine("mkReg " + call.expression().get(0).getText());
-                statement.append("$" + call.expression().get(0).getText());
+                statement.append(visit(call.expression().get(0)));
 	    } else if (call != null && call.fcn != null && call.fcn.getText().equals("mkRegU")) {
 		logger.fine("mkRegU");
                 statement.append("Default");
@@ -2056,16 +2056,18 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
     @Override public String visitIntliteral(BSVParser.IntliteralContext ctx) {
 	IntValue intValue = new IntValue(ctx.IntLiteral().getText());
-	if (intValue.width != 0) {
-	    return String.format("$$ %s", intToWord(intValue.width, intValue.value));
+	if (intValue.width != 0 || intValue.basespec != null) {
+	    return String.format("%1$s (* intwidth *) %2$s",
+				 (actionContext ? "$$" : ""),
+				 intToWord(intValue.width, intValue.value));
 	} else {
 	    //FIXME width from type
 	    assert (intValue.value < 128) : "Specify width of int literal %d at " + StaticAnalysis.sourceLocation(ctx);
-	    return (String.format("$%d", intValue.value));
+	    return (String.format("$ (* int *) %d", intValue.value));
 	}
     }
     @Override public String visitRealliteral(BSVParser.RealliteralContext ctx) {
-        return ("$" + ctx.RealLiteral().getText());
+        return ("$ (* real *) " + ctx.RealLiteral().getText());
     }
     @Override public String visitUndefinedexpr(BSVParser.UndefinedexprContext ctx) {
 	return "Default";
@@ -2088,11 +2090,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		char firstChar = varName.charAt(0);
 		if (entry.symbolType == SymbolType.ModuleParam
 		    && entry.type.isVar)
-		    prefix = "$$";
+		    prefix = "$$ (* isVar *)";
 		if (entry.isConstT)
-		    prefix = "$$";
+		    prefix = "$$ (* isConstT *)";
 		else if (entry.type.name.equals("Integer"))
-		    prefix = "$";
+		    prefix = "$ (* Integer *) ";
 		else if (firstChar >= 'A' && firstChar <= 'Z')
 		    prefix = "";
 		if (!actionContext)
@@ -2382,7 +2384,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     String intToWord(int width, long value) {
-	if (value < 128 || width == 0) {
+	if (value < 128 && width == 0) {
+	    return String.format("(natToWord _ %d)", value);
+	} else if (value < 128 && width != 0) {
 	    return String.format("(natToWord %d %d)", width, value);
 	} else {
 	    StringBuilder woNotation = new StringBuilder();

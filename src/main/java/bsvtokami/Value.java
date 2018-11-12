@@ -25,15 +25,18 @@ class IntValue extends Value {
     private static Logger logger = Logger.getGlobal();
     final long value;
     final int width;
+    final String basespec;
     final static Pattern verilogIntPattern = Pattern.compile("([0-9]*)'([bdho])?([A-Za-z0-9_]+)");
 
     IntValue(long x) {
 	value = x;
 	width = 0;
+	basespec = null;
     }
     IntValue(long x, int width) {
 	value = x;
 	this.width = 0;
+	basespec = null;
     }
 
     void tryMatch(String pat, String x) {
@@ -47,6 +50,7 @@ class IntValue extends Value {
 	    String basespec = m.group(2);
 	    int base = 10;
 	    assert widthspec != null : "Null widthspec: " + x;
+	    this.basespec = basespec;
 	    if (basespec == null) {
 		base = 10;
 	    } else if (basespec.equals("b")) {
@@ -72,6 +76,7 @@ class IntValue extends Value {
 	} else {
 	    value = Integer.parseInt(x);
 	    width = 0;
+	    this.basespec = null;
 	}
     }
 
