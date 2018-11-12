@@ -1024,7 +1024,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 statements.clear();
             }
 	    statement.append(newline);
-            statement.append("        Assert(" + rulecondValue + ");\n");
+            statement.append("        Assert(" + rulecondValue + ") ;\n");
         }
 
 	// now visit the body statements
