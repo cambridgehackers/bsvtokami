@@ -20,23 +20,23 @@ Definition RegFileSz := 32.
 
 Definition PgmSz := 16.
 
-Definition opArith : ConstT (Bit 2) := ( (natToWord 2 0))%kami.
+Definition opArith : ConstT (Bit 2) := ( (* intwidth *) (natToWord 2 0))%kami.
 
-Definition opLd : ConstT (Bit 2) := ( (natToWord 2 1))%kami.
+Definition opLd : ConstT (Bit 2) := ( (* intwidth *) (natToWord 2 1))%kami.
 
-Definition opSt : ConstT (Bit 2) := ( (natToWord 2 2))%kami.
+Definition opSt : ConstT (Bit 2) := ( (* intwidth *) (natToWord 2 2))%kami.
 
-Definition opTh : ConstT (Bit 2) := ( (natToWord 2 3))%kami.
+Definition opTh : ConstT (Bit 2) := ( (* intwidth *) (natToWord 2 3))%kami.
 
 Definition OpK := Bit 2.
 
-Definition opArithAdd : ConstT (Bit 2) := ( (natToWord 2 0))%kami.
+Definition opArithAdd : ConstT (Bit 2) := ( (* intwidth *) (natToWord 2 0))%kami.
 
-Definition opArithSub : ConstT (Bit 2) := ( (natToWord 2 1))%kami.
+Definition opArithSub : ConstT (Bit 2) := ( (* intwidth *) (natToWord 2 1))%kami.
 
-Definition opArithMul : ConstT (Bit 2) := ( (natToWord 2 2))%kami.
+Definition opArithMul : ConstT (Bit 2) := ( (* intwidth *) (natToWord 2 2))%kami.
 
-Definition opArithDiv : ConstT (Bit 2) := ( (natToWord 2 3))%kami.
+Definition opArithDiv : ConstT (Bit 2) := ( (* intwidth *) (natToWord 2 3))%kami.
 
 Definition OpArithK := Bit 2.
 
@@ -88,10 +88,10 @@ Module module'mkMemory.
     Section Section'mkMemory.
     Variable instancePrefix: string.
         (* method bindings *)
-    Let mem := mkRegFileFull (Bit AddrSz) (Bit DataSz) (instancePrefix--"mem").
+    Let (* action binding *) mem := mkRegFileFull (Bit AddrSz) (Bit DataSz) (instancePrefix--"mem").
     (* instance methods *)
-    Let memsub : string := (RegFile'sub mem).
-    Let memupd : string := (RegFile'upd mem).
+    Let mem'sub : string := (RegFile'sub mem).
+    Let mem'upd : string := (RegFile'upd mem).
     Local Open Scope kami_expr.
 
     Definition mkMemoryModule: Mod :=
@@ -99,27 +99,29 @@ Module module'mkMemory.
         (BKMod (RegFile'mod mem :: nil))
     with Method (instancePrefix--"doMem") (req : MemRq) : (Bit DataSz) :=
     (
-        If ((#req @% "isLoad") ==  $$(natToWord 1 1)) then (
+        If ((#req @% "isLoad") == $$ (* intwidth *) (natToWord 1 1)) then (
         
-        LET addr : Bit AddrSz <- (#req @% "addr") ;
-        Call ldval : Bit DataSz (* varbinding *) <-  memsub ((#addr) : Bit AddrSz) ;
+        LET addr : Bit AddrSz (* non-call varbinding *) <- (#req @% "addr") ;
+        BKCall ldval : Bit DataSz (* varbinding *) <-  (* translateCall *) mem'sub ((#addr) : Bit AddrSz) ;
                 Ret #ldval
         ) else (
         
-        LET addr : Bit AddrSz <- (#req @% "addr") ;
-                LET newval : Bit DataSz <- (#req @% "data") ;
-                BKCall unused : Void (* actionBinding *) <- memupd ((#addr) : Bit AddrSz) ((#newval) : Bit DataSz) ;
-        Call placeholder : Bit DataSz (* varbinding *) <-  memsub ((#addr) : Bit AddrSz) ;
+        LET addr : Bit AddrSz (* non-call varbinding *) <- (#req @% "addr") ;
+                LET newval : Bit DataSz (* non-call varbinding *) <- (#req @% "data") ;
+                BKCall unused : Void (* actionBinding *) <- mem'upd ((#addr) : Bit AddrSz) ((#newval) : Bit DataSz) ;
+        BKCall placeholder : Bit DataSz (* varbinding *) <-  (* translateCall *) mem'sub ((#addr) : Bit AddrSz) ;
                 Ret #placeholder) as retval
  ;
         Ret #retval    )
 
     }). (* mkMemory *)
 
-
+    Hint Unfold mkMemoryModule : ModuleDefs.
 (* Module mkMemory type Module#(Memory) return type Memory *)
     Definition mkMemory := Build_Memory mkMemoryModule (instancePrefix--"doMem").
+    Hint Unfold mkMemory : ModuleDefs.
     Hint Unfold mkMemoryModule : ModuleDefs.
+    (* Definition wellformed_mkMemory : ModWf := @Build_ModWf mkMemoryModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
 
     End Section'mkMemory.
 End module'mkMemory.
@@ -146,94 +148,101 @@ Module module'procSpec.
     Variable exec: Executer.
     Variable tohost: ToHost.
         (* method bindings *)
-    Let pc := mkReg (instancePrefix--"pc") (natToWord PgmSz 0)%bk.
-    Let rf := mkRegFileFull (Bit RegFileSz) (Bit DataSz) (instancePrefix--"rf").
-    Let mem := mkMemory (instancePrefix--"mem").
-    Let pc_read : string := (Reg'_read pc).
-    Let pc_write : string := (Reg'_write pc).
+    Let pc : string := instancePrefix--"pc".
+    Let (* action binding *) rf := mkRegFileFull (Bit RegFileSz) (Bit DataSz) (instancePrefix--"rf").
+    Let (* action binding *) mem := mkMemory (instancePrefix--"mem").
     (* instance methods *)
-    Let decgetAddr : string := (Decoder'getAddr dec).
-    Let decgetDst : string := (Decoder'getDst dec).
-    Let decgetOp : string := (Decoder'getOp dec).
-    Let decgetSrc1 : string := (Decoder'getSrc1 dec).
-    Let decgetSrc2 : string := (Decoder'getSrc2 dec).
-    Let decisOp : string := (Decoder'isOp dec).
-    Let execexecArith : string := (Executer'execArith exec).
-    Let memdoMem : string := (Memory'doMem mem).
-    Let pgmsub : string := (RegFile'sub pgm).
-    Let rfsub : string := (RegFile'sub rf).
-    Let rfupd : string := (RegFile'upd rf).
-    Let tohosttoHost : string := (ToHost'toHost tohost).
+    Let dec'getAddr : string := (Decoder'getAddr dec).
+    Let dec'getDst : string := (Decoder'getDst dec).
+    Let dec'getOp : string := (Decoder'getOp dec).
+    Let dec'getSrc1 : string := (Decoder'getSrc1 dec).
+    Let dec'getSrc2 : string := (Decoder'getSrc2 dec).
+    Let dec'isOp : string := (Decoder'isOp dec).
+    Let exec'execArith : string := (Executer'execArith exec).
+    Let mem'doMem : string := (Memory'doMem mem).
+    Let pgm'sub : string := (RegFile'sub pgm).
+    Let rf'sub : string := (RegFile'sub rf).
+    Let rf'upd : string := (RegFile'upd rf).
+    Let tohost'toHost : string := (ToHost'toHost tohost).
     Local Open Scope kami_expr.
 
     Definition procSpecModule: Mod :=
          (BKMODULE {
-        (BKMod (Reg'mod pc :: nil))
+        Register pc : Bit PgmSz <-  (* intwidth *) (natToWord 16 0)
     with (BKMod (RegFile'mod rf :: nil))
     with (BKMod (Memory'mod mem :: nil))
     with Rule instancePrefix--"doArith" :=
     (
-        Call pc_v : Bit PgmSz (* regRead *) <- pc_read() ;
-       Call inst : Bit InstrSz (* varbinding *) <-  pgmsub ((#pc_v) : Bit PgmSz) ;
-       BKCall call0 : Bool <-  decisOp ((#inst) : Bit InstrSz) (($$opArith) : OpK) ;
+        Read pc_v : Bit PgmSz <- pc ;
+       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
+       BKCall call1 : Bit InstrSz <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
+       BKCall call0 : Bool <-  (* translateCall *) dec'isOp ((#call1) : Bit InstrSz) (($$ (* isConstT *)opArith) : OpK) ;
 
         Assert(#call0) ;
-       Call op : OpK (* varbinding *) <-  decgetOp ((#inst) : Bit InstrSz) ;
-       Call src1 : Bit RegFileSz (* varbinding *) <-  decgetSrc1 ((#inst) : Bit InstrSz) ;
-       Call src2 : Bit RegFileSz (* varbinding *) <-  decgetSrc2 ((#inst) : Bit InstrSz) ;
-       Call dst : Bit RegFileSz (* varbinding *) <-  decgetDst ((#inst) : Bit InstrSz) ;
-       Call val1 : Bit DataSz (* varbinding *) <-  rfsub ((#src1) : Bit RegFileSz) ;
-       Call val2 : Bit DataSz (* varbinding *) <-  rfsub ((#src2) : Bit RegFileSz) ;
-       BKCall dval : Bit DataSz (* varbinding *) <-  execexecArith ((#op) : OpArithK) ((#val1) : Bit DataSz) ((#val2) : Bit DataSz) ;
-               BKCall unused : Void (* actionBinding *) <- rfupd ((#dst) : Bit RegFileSz) ((#dval) : Bit DataSz) ;
-               Call pc_write ( ((#pc_v + $1)) : Bit PgmSz ) ;
+       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
+       BKCall op : OpK (* varbinding *) <-  (* translateCall *) dec'getOp ((#inst) : Bit InstrSz) ;
+       BKCall src1 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getSrc1 ((#inst) : Bit InstrSz) ;
+       BKCall src2 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getSrc2 ((#inst) : Bit InstrSz) ;
+       BKCall dst : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getDst ((#inst) : Bit InstrSz) ;
+       BKCall val1 : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'sub ((#src1) : Bit RegFileSz) ;
+       BKCall val2 : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'sub ((#src2) : Bit RegFileSz) ;
+       BKCall dval : Bit DataSz (* varbinding *) <-  (* translateCall *) exec'execArith ((#op) : OpArithK) ((#val1) : Bit DataSz) ((#val2) : Bit DataSz) ;
+               BKCall unused : Void (* actionBinding *) <- rf'upd ((#dst) : Bit RegFileSz) ((#dval) : Bit DataSz) ;
+               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord 16 1)) ;
         Retv ) (* rule doArith *)
     with Rule instancePrefix--"doLoad" :=
     (
-        Call pc_v : Bit PgmSz (* regRead *) <- pc_read() ;
-       Call inst : Bit InstrSz (* varbinding *) <-  pgmsub ((#pc_v) : Bit PgmSz) ;
-       BKCall call1 : Bool <-  decisOp ((#inst) : Bit InstrSz) (($$opLd) : OpK) ;
+        Read pc_v : Bit PgmSz <- pc ;
+       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
+       BKCall call3 : Bit InstrSz <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
+       BKCall call2 : Bool <-  (* translateCall *) dec'isOp ((#call3) : Bit InstrSz) (($$ (* isConstT *)opLd) : OpK) ;
 
-        Assert(#call1) ;
-       Call addr : Bit AddrSz (* varbinding *) <-  decgetAddr ((#inst) : Bit InstrSz) ;
-       Call dst : Bit RegFileSz (* varbinding *) <-  decgetDst ((#inst) : Bit InstrSz) ;
-               Call val : Bit DataSz (* actionBinding *) <- memdoMem ((STRUCT { "addr" ::= (#addr) ; "data" ::= ($0) ; "isLoad" ::= ( $$(natToWord 1 1))  }%kami_expr) : MemRq) ;
-       BKCall call2 : Void <-  rfupd ((#dst) : Bit RegFileSz) ((#val) : Bit DataSz) ;
-               Call pc_write ( ((#pc_v + $1)) : Bit PgmSz ) ;
+        Assert(#call2) ;
+       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
+       BKCall addr : Bit AddrSz (* varbinding *) <-  (* translateCall *) dec'getAddr ((#inst) : Bit InstrSz) ;
+       BKCall dst : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getDst ((#inst) : Bit InstrSz) ;
+               BKCall val : Bit DataSz (* actionBinding *) <- mem'doMem ((STRUCT { "addr" ::= (#addr) ; "data" ::= ($$ (* intwidth *) (natToWord 32 0)) ; "isLoad" ::= ($$ (* intwidth *) (natToWord 1 1))  }%kami_expr) : MemRq) ;
+       BKCall call4 : Void <-  (* translateCall *) rf'upd ((#dst) : Bit RegFileSz) ((#val) : Bit DataSz) ;
+               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord 16 1)) ;
         Retv ) (* rule doLoad *)
     with Rule instancePrefix--"doStore" :=
     (
-        Call pc_v : Bit PgmSz (* regRead *) <- pc_read() ;
-       Call inst : Bit InstrSz (* varbinding *) <-  pgmsub ((#pc_v) : Bit PgmSz) ;
-       BKCall call3 : Bool <-  decisOp ((#inst) : Bit InstrSz) (($$opSt) : OpK) ;
+        Read pc_v : Bit PgmSz <- pc ;
+       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
+       BKCall call6 : Bit InstrSz <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
+       BKCall call5 : Bool <-  (* translateCall *) dec'isOp ((#call6) : Bit InstrSz) (($$ (* isConstT *)opSt) : OpK) ;
 
-        Assert(#call3) ;
-       Call addr : Bit AddrSz (* varbinding *) <-  decgetAddr ((#inst) : Bit InstrSz) ;
-       Call src : Bit RegFileSz (* varbinding *) <-  decgetSrc1 ((#inst) : Bit InstrSz) ;
-       Call val : Bit DataSz (* varbinding *) <-  rfsub ((#src) : Bit RegFileSz) ;
-               Call unused : Bit DataSz (* actionBinding *) <- memdoMem ((STRUCT { "addr" ::= (#addr) ; "data" ::= (#val) ; "isLoad" ::= ( $$(natToWord 1 0))  }%kami_expr) : MemRq) ;
-               Call pc_write ( ((#pc_v + $1)) : Bit PgmSz ) ;
+        Assert(#call5) ;
+       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
+       BKCall addr : Bit AddrSz (* varbinding *) <-  (* translateCall *) dec'getAddr ((#inst) : Bit InstrSz) ;
+       BKCall src : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getSrc1 ((#inst) : Bit InstrSz) ;
+       BKCall val : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'sub ((#src) : Bit RegFileSz) ;
+               BKCall unused : Bit DataSz (* actionBinding *) <- mem'doMem ((STRUCT { "addr" ::= (#addr) ; "data" ::= (#val) ; "isLoad" ::= ($$ (* intwidth *) (natToWord 1 0))  }%kami_expr) : MemRq) ;
+               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord 16 1)) ;
         Retv ) (* rule doStore *)
     with Rule instancePrefix--"doHost" :=
     (
-        Call pc_v : Bit PgmSz (* regRead *) <- pc_read() ;
-       Call inst : Bit InstrSz (* varbinding *) <-  pgmsub ((#pc_v) : Bit PgmSz) ;
-       BKCall call4 : Bool <-  decisOp ((#inst) : Bit InstrSz) (($$opTh) : OpK) ;
+        Read pc_v : Bit PgmSz <- pc ;
+       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
+       BKCall call8 : Bit InstrSz <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
+       BKCall call7 : Bool <-  (* translateCall *) dec'isOp ((#call8) : Bit InstrSz) (($$ (* isConstT *)opTh) : OpK) ;
 
-        Assert(#call4) ;
-       Call src1 : Bit RegFileSz (* varbinding *) <-  decgetSrc1 ((#inst) : Bit InstrSz) ;
-       Call val1 : Bit DataSz (* varbinding *) <-  rfsub ((#src1) : Bit RegFileSz) ;
-               Call unused : Void (* actionBinding *) <- tohosttoHost ((#val1) : Bit DataSz) ;
-               Call pc_write ( ((#pc_v + $1)) : Bit PgmSz ) ;
+        Assert(#call7) ;
+       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
+       BKCall src1 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getSrc1 ((#inst) : Bit InstrSz) ;
+       BKCall val1 : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'sub ((#src1) : Bit RegFileSz) ;
+               BKCall unused : Void (* actionBinding *) <- tohost'toHost ((#val1) : Bit DataSz) ;
+               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord 16 1)) ;
         Retv ) (* rule doHost *)
     }). (* procSpec *)
 
-
-
+    Hint Unfold procSpecModule : ModuleDefs.
 (* Module procSpec type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> ToHost -> Module#(Empty) return type Decoder *)
     Definition procSpec := Build_Empty procSpecModule.
-    Hint Unfold procSpecModule : ModuleDefs.
     Hint Unfold procSpec : ModuleDefs.
+    Hint Unfold procSpecModule : ModuleDefs.
+    (* Definition wellformed_procSpec : ModWf := @Build_ModWf procSpecModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
+
     End Section'procSpec.
 End module'procSpec.
 

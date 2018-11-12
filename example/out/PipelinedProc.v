@@ -31,10 +31,10 @@ Module module'mkProcRegs.
     (* let bindings *)
     Definition write'paramsT :=  ( STRUCT { "_1" :: (Bit RegFileSz) ; "_2" :: (Bit DataSz) })%kami_struct.
         (* method bindings *)
-    Let rf := mkRegFileFull (Bit RegFileSz) (Bit DataSz) (instancePrefix--"rf").
+    Let (* action binding *) rf := mkRegFileFull (Bit RegFileSz) (Bit DataSz) (instancePrefix--"rf").
     (* instance methods *)
-    Let rfsub : string := (RegFile'sub rf).
-    Let rfupd : string := (RegFile'upd rf).
+    Let rf'sub : string := (RegFile'sub rf).
+    Let rf'upd : string := (RegFile'upd rf).
     Local Open Scope kami_expr.
 
     Definition mkProcRegsModule: Mod :=
@@ -42,28 +42,30 @@ Module module'mkProcRegs.
         (BKMod (RegFile'mod rf :: nil))
     with Method (instancePrefix--"read1") (r1 : (Bit RegFileSz)) : Bit DataSz :=
     (
-Call val : Bit DataSz (* varbinding *) <-  rfsub ((#r1) : Bit RegFileSz) ;
+BKCall val : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'sub ((#r1) : Bit RegFileSz) ;
         Ret #val    )
 
     with Method (instancePrefix--"read2") (r2 : (Bit RegFileSz)) : Bit DataSz :=
     (
-Call val : Bit DataSz (* varbinding *) <-  rfsub ((#r2) : Bit RegFileSz) ;
+BKCall val : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'sub ((#r2) : Bit RegFileSz) ;
         Ret #val    )
 
     with Method (instancePrefix--"write") ( params : write'paramsT )  : Void :=
     (
         LET r : (Bit RegFileSz) <- #params @% "_1" ;
         LET val : (Bit DataSz) <- #params @% "_2" ;
-        BKCall written : Void (* actionBinding *) <- rfupd ((#r) : Bit RegFileSz) ((#val) : Bit DataSz) ;
+        BKCall written : Void (* actionBinding *) <- rf'upd ((#r) : Bit RegFileSz) ((#val) : Bit DataSz) ;
         Retv    )
 
     }). (* mkProcRegs *)
 
-
-
+    Hint Unfold mkProcRegsModule : ModuleDefs.
 (* Module mkProcRegs type Module#(ProcRegs) return type ProcRegs *)
     Definition mkProcRegs := Build_ProcRegs mkProcRegsModule (instancePrefix--"read1") (instancePrefix--"read2") (instancePrefix--"write").
     Hint Unfold mkProcRegs : ModuleDefs.
+    Hint Unfold mkProcRegsModule : ModuleDefs.
+    (* Definition wellformed_mkProcRegs : ModWf := @Build_ModWf mkProcRegsModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
+
     End Section'mkProcRegs.
 End module'mkProcRegs.
 
@@ -88,45 +90,44 @@ Module module'mkPipelinedDecoder.
     Variable dec: Decoder.
     Variable d2eFifo: FIFO.
         (* method bindings *)
-    Let pc := mkReg (instancePrefix--"pc") (natToWord PgmSz 0)%bk.
-    Let pc_read : string := (Reg'_read pc).
-    Let pc_write : string := (Reg'_write pc).
+    Let pc : string := instancePrefix--"pc".
     (* instance methods *)
-    Let d2eFifoenq : string := (FIFO'enq d2eFifo).
-    Let decgetAddr : string := (Decoder'getAddr dec).
-    Let decgetArithOp : string := (Decoder'getArithOp dec).
-    Let decgetDst : string := (Decoder'getDst dec).
-    Let decgetOp : string := (Decoder'getOp dec).
-    Let decgetSrc1 : string := (Decoder'getSrc1 dec).
-    Let decgetSrc2 : string := (Decoder'getSrc2 dec).
-    Let pgmsub : string := (RegFile'sub pgm).
+    Let d2eFifo'enq : string := (FIFO'enq d2eFifo).
+    Let dec'getAddr : string := (Decoder'getAddr dec).
+    Let dec'getArithOp : string := (Decoder'getArithOp dec).
+    Let dec'getDst : string := (Decoder'getDst dec).
+    Let dec'getOp : string := (Decoder'getOp dec).
+    Let dec'getSrc1 : string := (Decoder'getSrc1 dec).
+    Let dec'getSrc2 : string := (Decoder'getSrc2 dec).
+    Let pgm'sub : string := (RegFile'sub pgm).
     Local Open Scope kami_expr.
 
     Definition mkPipelinedDecoderModule: Mod :=
          (BKMODULE {
-        (BKMod (Reg'mod pc :: nil))
+        Register pc : Bit PgmSz <-  (* intwidth *) (natToWord 16 0)
     with Rule instancePrefix--"decode" :=
     (
-        Call pc_v : Bit PgmSz (* regRead *) <- pc_read() ;
-       Call inst : Bit InstrSz (* varbinding *) <-  pgmsub ((#pc_v) : Bit PgmSz) ;
-       Call op : OpK (* varbinding *) <-  decgetOp ((#inst) : Bit InstrSz) ;
-       Call arithOp : OpArithK (* varbinding *) <-  decgetArithOp ((#inst) : Bit InstrSz) ;
-       Call src1 : Bit RegFileSz (* varbinding *) <-  decgetSrc1 ((#inst) : Bit InstrSz) ;
-       Call src2 : Bit RegFileSz (* varbinding *) <-  decgetSrc2 ((#inst) : Bit InstrSz) ;
-       Call dst : Bit RegFileSz (* varbinding *) <-  decgetDst ((#inst) : Bit InstrSz) ;
-       Call addr : Bit AddrSz (* varbinding *) <-  decgetAddr ((#inst) : Bit InstrSz) ;
-               LET decoded : D2E <- STRUCT { "addr" ::= (#addr) ; "arithOp" ::= (#arithOp) ; "dst" ::= (#dst) ; "op" ::= (#op) ; "pc" ::= (#pc_v) ; "src1" ::= (#src1) ; "src2" ::= (#src2)  }%kami_expr ;
-               Call enq : Void (* actionBinding *) <- d2eFifoenq ((#decoded) : D2E) ;
-               Call pc_write ( ((#pc_v + $1)) : Bit PgmSz ) ;
+        Read pc_v : Bit PgmSz <- pc ;
+       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
+       BKCall op : OpK (* varbinding *) <-  (* translateCall *) dec'getOp ((#inst) : Bit InstrSz) ;
+       BKCall arithOp : OpArithK (* varbinding *) <-  (* translateCall *) dec'getArithOp ((#inst) : Bit InstrSz) ;
+       BKCall src1 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getSrc1 ((#inst) : Bit InstrSz) ;
+       BKCall src2 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getSrc2 ((#inst) : Bit InstrSz) ;
+       BKCall dst : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getDst ((#inst) : Bit InstrSz) ;
+       BKCall addr : Bit AddrSz (* varbinding *) <-  (* translateCall *) dec'getAddr ((#inst) : Bit InstrSz) ;
+               LET decoded : D2E (* non-call varbinding *) <- STRUCT { "addr" ::= (#addr) ; "arithOp" ::= (#arithOp) ; "dst" ::= (#dst) ; "op" ::= (#op) ; "pc" ::= (#pc_v) ; "src1" ::= (#src1) ; "src2" ::= (#src2)  }%kami_expr ;
+               BKCall enq : Void (* actionBinding *) <- d2eFifo'enq ((#decoded) : D2E) ;
+               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord 16 1)) ;
         Retv ) (* rule decode *)
     }). (* mkPipelinedDecoder *)
 
-
-
+    Hint Unfold mkPipelinedDecoderModule : ModuleDefs.
 (* Module mkPipelinedDecoder type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> FIFO#(D2E) -> Module#(Empty) return type Decoder *)
     Definition mkPipelinedDecoder := Build_Empty mkPipelinedDecoderModule.
+    Hint Unfold mkPipelinedDecoder : ModuleDefs.
     Hint Unfold mkPipelinedDecoderModule : ModuleDefs.
-    Definition wellformed_mkPipelinedDecoder : ModWf := @Build_ModWf mkPipelinedDecoderModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf).
+    (* Definition wellformed_mkPipelinedDecoder : ModWf := @Build_ModWf mkPipelinedDecoderModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
+
     End Section'mkPipelinedDecoder.
 End module'mkPipelinedDecoder.
 
@@ -154,10 +155,10 @@ Module module'mkScoreboard.
     Section Section'mkScoreboard.
     Variable instancePrefix: string.
         (* method bindings *)
-    Let sbFlags := mkRegFileFull (Bit RegFileSz) (Bit DataSz) (instancePrefix--"sbFlags").
+    Let (* action binding *) sbFlags := mkRegFileFull (Bit RegFileSz) (Bool) (instancePrefix--"sbFlags").
     (* instance methods *)
-    Let sbFlagssub : string := (RegFile'sub sbFlags).
-    Let sbFlagsupd : string := (RegFile'upd sbFlags).
+    Let sbFlags'sub : string := (RegFile'sub sbFlags).
+    Let sbFlags'upd : string := (RegFile'upd sbFlags).
     Local Open Scope kami_expr.
 
     Definition mkScoreboardModule: Mod :=
@@ -165,31 +166,38 @@ Module module'mkScoreboard.
         (BKMod (RegFile'mod sbFlags :: nil))
     with Method (instancePrefix--"search1") (sidx : (Bit RegFileSz)) : Bool :=
     (
-Call flag : Bool (* varbinding *) <-  sbFlagssub ((#sidx) : Bit RegFileSz) ;
+               LET unused : Bit 10 (* non-call varbinding *) <- $$ (* intwidth *) (natToWord 10 0) ;
+
+        Assert(($$true)%kami_expr) ;
+BKCall flag : Bool (* varbinding *) <-  (* translateCall *) sbFlags'sub ((#sidx) : Bit RegFileSz) ;
         Ret #flag    )
 
     with Method (instancePrefix--"search2") (sidx : (Bit RegFileSz)) : Bool :=
     (
-Call flag : Bool (* varbinding *) <-  sbFlagssub ((#sidx) : Bit RegFileSz) ;
+               LET unused : Bit 10 (* non-call varbinding *) <- $$ (* intwidth *) (natToWord 10 0) ;
+BKCall flag : Bool (* varbinding *) <-  (* translateCall *) sbFlags'sub ((#sidx) : Bit RegFileSz) ;
         Ret #flag    )
 
     with Method (instancePrefix--"insert") (nidx : (Bit RegFileSz)) : Void :=
     (
-        BKCall unused : Void (* actionBinding *) <- sbFlagsupd ((#nidx) : Bit RegFileSz) ((($$true)%kami_expr) : Bool) ;
+               LET unused : Bit 10 (* non-call varbinding *) <- $$ (* intwidth *) (natToWord 10 0) ;
+        BKCall unused : Void (* actionBinding *) <- sbFlags'upd ((#nidx) : Bit RegFileSz) ((($$true)%kami_expr) : Bool) ;
         Retv    )
 
     with Method (instancePrefix--"remove") (nidx : (Bit RegFileSz)) : Void :=
     (
-        BKCall unused : Void (* actionBinding *) <- sbFlagsupd ((#nidx) : Bit RegFileSz) ((($$false)%kami_expr) : Bool) ;
+               LET unused : Bit 10 (* non-call varbinding *) <- $$ (* intwidth *) (natToWord 10 0) ;
+        BKCall unused : Void (* actionBinding *) <- sbFlags'upd ((#nidx) : Bit RegFileSz) ((($$false)%kami_expr) : Bool) ;
         Retv    )
 
     }). (* mkScoreboard *)
 
-
+    Hint Unfold mkScoreboardModule : ModuleDefs.
 (* Module mkScoreboard type Module#(Scoreboard) return type Scoreboard *)
     Definition mkScoreboard := Build_Scoreboard mkScoreboardModule (instancePrefix--"insert") (instancePrefix--"remove") (instancePrefix--"search1") (instancePrefix--"search2").
-
+    Hint Unfold mkScoreboard : ModuleDefs.
     Hint Unfold mkScoreboardModule : ModuleDefs.
+    (* Definition wellformed_mkScoreboard : ModWf := @Build_ModWf mkScoreboardModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
 
     End Section'mkScoreboard.
 End module'mkScoreboard.
@@ -214,90 +222,95 @@ Module module'mkPipelinedExecuter.
     Variable mem: Memory.
     Variable toHost: ToHost.
     (* instance methods *)
-    Let d2eFifodeq : string := (FIFO'deq d2eFifo).
-    Let d2eFifofirst : string := (FIFO'first d2eFifo).
-    Let e2wFifoenq : string := (FIFO'enq e2wFifo).
-    Let execexecArith : string := (Executer'execArith exec).
-    Let memdoMem : string := (Memory'doMem mem).
-    Let rfread1 : string := (ProcRegs'read1 rf).
-    Let rfread2 : string := (ProcRegs'read2 rf).
-    Let sbinsert : string := (Scoreboard'insert sb).
-    Let sbsearch1 : string := (Scoreboard'search1 sb).
-    Let sbsearch2 : string := (Scoreboard'search2 sb).
-    Let toHosttoHost : string := (ToHost'toHost toHost).
+    Let d2eFifo'deq : string := (FIFO'deq d2eFifo).
+    Let d2eFifo'first : string := (FIFO'first d2eFifo).
+    Let e2wFifo'enq : string := (FIFO'enq e2wFifo).
+    Let exec'execArith : string := (Executer'execArith exec).
+    Let mem'doMem : string := (Memory'doMem mem).
+    Let rf'read1 : string := (ProcRegs'read1 rf).
+    Let rf'read2 : string := (ProcRegs'read2 rf).
+    Let sb'insert : string := (Scoreboard'insert sb).
+    Let sb'search1 : string := (Scoreboard'search1 sb).
+    Let sb'search2 : string := (Scoreboard'search2 sb).
+    Let toHost'toHost : string := (ToHost'toHost toHost).
     Local Open Scope kami_expr.
 
     Definition mkPipelinedExecuterModule: Mod :=
          (BKMODULE {
         Rule instancePrefix--"executeArith" :=
     (
-       Call d2e : D2E (* varbinding *) <-  d2eFifofirst () ;
-       Call call5 : Bool <-  sbsearch1 (((#d2e @% "src1")) : Bit RegFileSz) ;
-       Call call6 : Bool <-  sbsearch2 (((#d2e @% "src2")) : Bit RegFileSz) ;
+       BKCall d2e : D2E (* varbinding *) <-  (* translateCall *) d2eFifo'first () ;
+       BKCall call9 : Bool <-  (* translateCall *) sb'search1 (((#d2e @% "src1")) : Bit RegFileSz) ;
+       BKCall call10 : Bool <-  (* translateCall *) sb'search2 (((#d2e @% "src2")) : Bit RegFileSz) ;
 
-        Assert(((((#d2e @% "op") == $$opArith) && (!#call5)) && (!#call6))) ;
-               Call deq : Void (* actionBinding *) <- d2eFifodeq () ;
-               LET src1 : Bit RegFileSz <- (#d2e @% "src1") ;
-               LET src2 : Bit RegFileSz <- (#d2e @% "src2") ;
-               LET dst : Bit RegFileSz <- (#d2e @% "dst") ;
-               LET arithOp : OpArithK <- (#d2e @% "arithOp") ;
-       Call val1 : Bit DataSz (* varbinding *) <-  rfread1 ((#src1) : Bit RegFileSz) ;
-       Call val2 : Bit DataSz (* varbinding *) <-  rfread2 ((#src2) : Bit RegFileSz) ;
-       BKCall execVal : Bit DataSz (* varbinding *) <-  execexecArith ((#arithOp) : OpArithK) ((#val1) : Bit DataSz) ((#val2) : Bit DataSz) ;
-               Call upd : Void (* actionBinding *) <- sbinsert ((#dst) : Bit RegFileSz) ;
-               LET e2w : E2W <- STRUCT { "idx" ::= (#dst) ; "val" ::= (#execVal)  }%kami_expr ;
-               Call enq : Void (* actionBinding *) <- e2wFifoenq ((#e2w) : E2W) ;
+        Assert(((((#d2e @% "op") == $$ (* isConstT *)opArith) && (!#call9)) && (!#call10))) ;
+       BKCall d2e : D2E (* varbinding *) <-  (* translateCall *) d2eFifo'first () ;
+               BKCall deq : Void (* actionBinding *) <- d2eFifo'deq () ;
+               LET src1 : Bit RegFileSz (* non-call varbinding *) <- (#d2e @% "src1") ;
+               LET src2 : Bit RegFileSz (* non-call varbinding *) <- (#d2e @% "src2") ;
+               LET dst : Bit RegFileSz (* non-call varbinding *) <- (#d2e @% "dst") ;
+               LET arithOp : OpArithK (* non-call varbinding *) <- (#d2e @% "arithOp") ;
+       BKCall val1 : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'read1 ((#src1) : Bit RegFileSz) ;
+       BKCall val2 : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'read2 ((#src2) : Bit RegFileSz) ;
+       BKCall execVal : Bit DataSz (* varbinding *) <-  (* translateCall *) exec'execArith ((#arithOp) : OpArithK) ((#val1) : Bit DataSz) ((#val2) : Bit DataSz) ;
+               BKCall upd : Void (* actionBinding *) <- sb'insert ((#dst) : Bit RegFileSz) ;
+               LET e2w : E2W (* non-call varbinding *) <- STRUCT { "idx" ::= (#dst) ; "val" ::= (#execVal)  }%kami_expr ;
+               BKCall enq : Void (* actionBinding *) <- e2wFifo'enq ((#e2w) : E2W) ;
         Retv ) (* rule executeArith *)
     with Rule instancePrefix--"executeLoad" :=
     (
-       Call d2e : D2E (* varbinding *) <-  d2eFifofirst () ;
-       Call call7 : Bool <-  sbsearch1 (((#d2e @% "src1")) : Bit RegFileSz) ;
-       Call call8 : Bool <-  sbsearch2 (((#d2e @% "dst")) : Bit RegFileSz) ;
+       BKCall d2e : D2E (* varbinding *) <-  (* translateCall *) d2eFifo'first () ;
+       BKCall call11 : Bool <-  (* translateCall *) sb'search1 (((#d2e @% "src1")) : Bit RegFileSz) ;
+       BKCall call12 : Bool <-  (* translateCall *) sb'search2 (((#d2e @% "dst")) : Bit RegFileSz) ;
 
-        Assert(((((#d2e @% "op") == $$opLd) && (!#call7)) && (!#call8))) ;
-               Call deq : Void (* actionBinding *) <- d2eFifodeq () ;
-               LET src1 : Bit RegFileSz <- (#d2e @% "src1") ;
-               LET dst : Bit RegFileSz <- (#d2e @% "dst") ;
-               LET addr : Bit AddrSz <- (#d2e @% "addr") ;
-       Call val1 : Bit DataSz (* varbinding *) <-  rfread1 ((#src1) : Bit RegFileSz) ;
-               LET memrq : MemRq <- STRUCT { "addr" ::= (#addr) ; "data" ::= ($$ (natToWord 32 0)) ; "isLoad" ::= ($$ (natToWord 1 1))  }%kami_expr ;
-               Call ldVal : Bit DataSz (* actionBinding *) <- memdoMem ((#memrq) : MemRq) ;
-               Call insert : Void (* actionBinding *) <- sbinsert ((#dst) : Bit RegFileSz) ;
-               LET e2w : E2W <- STRUCT { "idx" ::= (#dst) ; "val" ::= (#ldVal)  }%kami_expr ;
-               Call enq : Void (* actionBinding *) <- e2wFifoenq ((#e2w) : E2W) ;
+        Assert(((((#d2e @% "op") == $$ (* isConstT *)opLd) && (!#call11)) && (!#call12))) ;
+       BKCall d2e : D2E (* varbinding *) <-  (* translateCall *) d2eFifo'first () ;
+               BKCall deq : Void (* actionBinding *) <- d2eFifo'deq () ;
+               LET src1 : Bit RegFileSz (* non-call varbinding *) <- (#d2e @% "src1") ;
+               LET dst : Bit RegFileSz (* non-call varbinding *) <- (#d2e @% "dst") ;
+               LET addr : Bit AddrSz (* non-call varbinding *) <- (#d2e @% "addr") ;
+       BKCall val1 : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'read1 ((#src1) : Bit RegFileSz) ;
+               LET memrq : MemRq (* non-call varbinding *) <- STRUCT { "addr" ::= (#addr) ; "data" ::= ($$ (* intwidth *) (natToWord 32 0)) ; "isLoad" ::= ($$ (* intwidth *) (natToWord 1 1))  }%kami_expr ;
+               BKCall ldVal : Bit DataSz (* actionBinding *) <- mem'doMem ((#memrq) : MemRq) ;
+               BKCall insert : Void (* actionBinding *) <- sb'insert ((#dst) : Bit RegFileSz) ;
+               LET e2w : E2W (* non-call varbinding *) <- STRUCT { "idx" ::= (#dst) ; "val" ::= (#ldVal)  }%kami_expr ;
+               BKCall enq : Void (* actionBinding *) <- e2wFifo'enq ((#e2w) : E2W) ;
         Retv ) (* rule executeLoad *)
     with Rule instancePrefix--"executeStore" :=
     (
-       Call d2e : D2E (* varbinding *) <-  d2eFifofirst () ;
-       Call call9 : Bool <-  sbsearch1 (((#d2e @% "src1")) : Bit RegFileSz) ;
+       BKCall d2e : D2E (* varbinding *) <-  (* translateCall *) d2eFifo'first () ;
+       BKCall call13 : Bool <-  (* translateCall *) sb'search1 (((#d2e @% "src1")) : Bit RegFileSz) ;
 
-        Assert((((#d2e @% "op") == $$opSt) && (!#call9))) ;
-               Call deq : Void (* actionBinding *) <- d2eFifodeq () ;
-               LET src1 : Bit RegFileSz <- (#d2e @% "src1") ;
-               LET addr : Bit AddrSz <- (#d2e @% "addr") ;
-       Call val1 : Bit DataSz (* varbinding *) <-  rfread1 ((#src1) : Bit RegFileSz) ;
-               LET memrq : MemRq <- STRUCT { "addr" ::= (#addr) ; "data" ::= (#val1) ; "isLoad" ::= ($$ (natToWord 1 0))  }%kami_expr ;
-               Call unused : Bit DataSz (* actionBinding *) <- memdoMem ((#memrq) : MemRq) ;
+        Assert((((#d2e @% "op") == $$ (* isConstT *)opSt) && (!#call13))) ;
+       BKCall d2e : D2E (* varbinding *) <-  (* translateCall *) d2eFifo'first () ;
+               BKCall deq : Void (* actionBinding *) <- d2eFifo'deq () ;
+               LET src1 : Bit RegFileSz (* non-call varbinding *) <- (#d2e @% "src1") ;
+               LET addr : Bit AddrSz (* non-call varbinding *) <- (#d2e @% "addr") ;
+       BKCall val1 : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'read1 ((#src1) : Bit RegFileSz) ;
+               LET memrq : MemRq (* non-call varbinding *) <- STRUCT { "addr" ::= (#addr) ; "data" ::= (#val1) ; "isLoad" ::= ($$ (* intwidth *) (natToWord 1 0))  }%kami_expr ;
+               BKCall unused : Bit DataSz (* actionBinding *) <- mem'doMem ((#memrq) : MemRq) ;
         Retv ) (* rule executeStore *)
     with Rule instancePrefix--"executeToHost" :=
     (
-       Call d2e : D2E (* varbinding *) <-  d2eFifofirst () ;
-       Call call10 : Bool <-  sbsearch1 (((#d2e @% "src1")) : Bit RegFileSz) ;
+       BKCall d2e : D2E (* varbinding *) <-  (* translateCall *) d2eFifo'first () ;
+       BKCall call14 : Bool <-  (* translateCall *) sb'search1 (((#d2e @% "src1")) : Bit RegFileSz) ;
 
-        Assert((((#d2e @% "op") == $$opTh) && (!#call10))) ;
-               Call deq : Void (* actionBinding *) <- d2eFifodeq () ;
-               LET src1 : Bit RegFileSz <- (#d2e @% "src1") ;
-               LET addr : Bit AddrSz <- (#d2e @% "addr") ;
-       Call val1 : Bit DataSz (* varbinding *) <-  rfread1 ((#src1) : Bit RegFileSz) ;
-               Call unused : Void (* actionBinding *) <- toHosttoHost ((#val1) : Bit DataSz) ;
+        Assert((((#d2e @% "op") == $$ (* isConstT *)opTh) && (!#call14))) ;
+       BKCall d2e : D2E (* varbinding *) <-  (* translateCall *) d2eFifo'first () ;
+               BKCall deq : Void (* actionBinding *) <- d2eFifo'deq () ;
+               LET src1 : Bit RegFileSz (* non-call varbinding *) <- (#d2e @% "src1") ;
+               LET addr : Bit AddrSz (* non-call varbinding *) <- (#d2e @% "addr") ;
+       BKCall val1 : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'read1 ((#src1) : Bit RegFileSz) ;
+               BKCall unused : Void (* actionBinding *) <- toHost'toHost ((#val1) : Bit DataSz) ;
         Retv ) (* rule executeToHost *)
     }). (* mkPipelinedExecuter *)
 
-
-
+    Hint Unfold mkPipelinedExecuterModule : ModuleDefs.
 (* Module mkPipelinedExecuter type FIFO#(D2E) -> FIFO#(E2W) -> Scoreboard -> Executer -> ProcRegs -> Memory -> ToHost -> Module#(Empty) return type FIFO#(E2W) *)
     Definition mkPipelinedExecuter := Build_Empty mkPipelinedExecuterModule.
     Hint Unfold mkPipelinedExecuter : ModuleDefs.
+    Hint Unfold mkPipelinedExecuterModule : ModuleDefs.
+    (* Definition wellformed_mkPipelinedExecuter : ModWf := @Build_ModWf mkPipelinedExecuterModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
 
     End Section'mkPipelinedExecuter.
 End module'mkPipelinedExecuter.
@@ -314,30 +327,32 @@ Module module'mkPipelinedWriteback.
     Variable sb: Scoreboard.
     Variable rf: ProcRegs.
     (* instance methods *)
-    Let e2wFifodeq : string := (FIFO'deq e2wFifo).
-    Let e2wFifofirst : string := (FIFO'first e2wFifo).
-    Let rfwrite : string := (ProcRegs'write rf).
-    Let sbremove : string := (Scoreboard'remove sb).
+    Let e2wFifo'deq : string := (FIFO'deq e2wFifo).
+    Let e2wFifo'first : string := (FIFO'first e2wFifo).
+    Let rf'write : string := (ProcRegs'write rf).
+    Let sb'remove : string := (Scoreboard'remove sb).
     Local Open Scope kami_expr.
 
     Definition mkPipelinedWritebackModule: Mod :=
          (BKMODULE {
         Rule instancePrefix--"writeback" :=
     (
-       Call e2w : E2W (* varbinding *) <-  e2wFifofirst () ;
-               Call deq : Void (* actionBinding *) <- e2wFifodeq () ;
-               LET idx : Bit RegFileSz <- (#e2w @% "idx") ;
-               LET val : Bit DataSz <- (#e2w @% "val") ;
-               BKCall written : Void (* actionBinding *) <- rfwrite ((#idx) : Bit RegFileSz) ((#val) : Bit DataSz) ;
-               Call removed : Void (* actionBinding *) <- sbremove ((#idx) : Bit RegFileSz) ;
+       BKCall e2w : E2W (* varbinding *) <-  (* translateCall *) e2wFifo'first () ;
+               BKCall deq : Void (* actionBinding *) <- e2wFifo'deq () ;
+               LET idx : Bit RegFileSz (* non-call varbinding *) <- (#e2w @% "idx") ;
+               LET val : Bit DataSz (* non-call varbinding *) <- (#e2w @% "val") ;
+               BKCall written : Void (* actionBinding *) <- rf'write ((#idx) : Bit RegFileSz) ((#val) : Bit DataSz) ;
+               BKCall removed : Void (* actionBinding *) <- sb'remove ((#idx) : Bit RegFileSz) ;
         Retv ) (* rule writeback *)
     }). (* mkPipelinedWriteback *)
 
-
     Hint Unfold mkPipelinedWritebackModule : ModuleDefs.
-
 (* Module mkPipelinedWriteback type FIFO#(E2W) -> Scoreboard -> ProcRegs -> Module#(Empty) return type Scoreboard *)
     Definition mkPipelinedWriteback := Build_Empty mkPipelinedWritebackModule.
+    Hint Unfold mkPipelinedWriteback : ModuleDefs.
+    Hint Unfold mkPipelinedWritebackModule : ModuleDefs.
+    (* Definition wellformed_mkPipelinedWriteback : ModWf := @Build_ModWf mkPipelinedWritebackModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
+
     End Section'mkPipelinedWriteback.
 End module'mkPipelinedWriteback.
 
@@ -354,14 +369,14 @@ Module module'mkProcImpl.
     Variable exec: Executer.
     Variable toHost: ToHost.
         (* method bindings *)
-    Let d2eFifo := mkFIFO D2E (instancePrefix--"d2eFifo").
-    Let e2wFifo := mkFIFO E2W (instancePrefix--"e2wFifo").
-    Let mem := mkMemory (instancePrefix--"mem").
-    Let rf := mkProcRegs (instancePrefix--"rf").
-    Let sb := mkScoreboard (instancePrefix--"sb").
-    Let decoder := mkPipelinedDecoder (instancePrefix--"decoder") (pgm)%bk (dec)%bk (d2eFifo)%bk.
-    Let executer := mkPipelinedExecuter (instancePrefix--"executer") (d2eFifo)%bk (e2wFifo)%bk (sb)%bk (exec)%bk (rf)%bk (mem)%bk (toHost)%bk.
-    Let writeback := mkPipelinedWriteback (instancePrefix--"writeback") (e2wFifo)%bk (sb)%bk (rf)%bk.
+    Let (* action binding *) d2eFifo := mkFIFO (D2E) (instancePrefix--"d2eFifo").
+    Let (* action binding *) e2wFifo := mkFIFO (E2W) (instancePrefix--"e2wFifo").
+    Let (* action binding *) mem := mkMemory (instancePrefix--"mem").
+    Let (* action binding *) rf := mkProcRegs (instancePrefix--"rf").
+    Let (* action binding *) sb := mkScoreboard (instancePrefix--"sb").
+    Let (* action binding *) decoder := mkPipelinedDecoder (instancePrefix--"decoder") (pgm)%bk (dec)%bk (d2eFifo)%bk.
+    Let (* action binding *) executer := mkPipelinedExecuter (instancePrefix--"executer") (d2eFifo)%bk (e2wFifo)%bk (sb)%bk (exec)%bk (rf)%bk (mem)%bk (toHost)%bk.
+    Let (* action binding *) writeback := mkPipelinedWriteback (instancePrefix--"writeback") (e2wFifo)%bk (sb)%bk (rf)%bk.
     Local Open Scope kami_expr.
 
     Definition mkProcImplModule: Mod :=
@@ -376,11 +391,13 @@ Module module'mkProcImpl.
     with (BKMod (Empty'mod writeback :: nil))
     }). (* mkProcImpl *)
 
-
     Hint Unfold mkProcImplModule : ModuleDefs.
-
 (* Module mkProcImpl type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> ToHost -> Module#(Empty) return type Decoder *)
     Definition mkProcImpl := Build_Empty mkProcImplModule.
+    Hint Unfold mkProcImpl : ModuleDefs.
+    Hint Unfold mkProcImplModule : ModuleDefs.
+    (* Definition wellformed_mkProcImpl : ModWf := @Build_ModWf mkProcImplModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
+
     End Section'mkProcImpl.
 End module'mkProcImpl.
 

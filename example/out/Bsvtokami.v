@@ -97,6 +97,14 @@ Notation "'BKMODULE' { s1 'with' .. 'with' sN }" :=
   (makeBKModule (ConsInBKModule s1%bk .. (ConsInBKModule sN%bk NilInBKModule) ..))
     (at level 0, only parsing).
 
+Notation "'BKCall' name : retT <- meth () ; cont " :=
+  (MCall meth%string (Void, retT) (Const _ Default) (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_action_scope.
+
+Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ; cont " :=
+  (MCall meth%string (a1T, retT) a1%kami_expr (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0, a1 at level 99) : kami_action_scope.
+
 Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ; cont " :=
   (let argT := STRUCT { "_1" :: a1T ; "_2" :: a2T } in
    let args := (STRUCT { "_1" ::= a1 ; "_2" ::= a2 })%kami_expr in

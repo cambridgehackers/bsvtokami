@@ -28,100 +28,227 @@ Module module'mkFIFO.
     Variable element_type : Kind.
     Variable instancePrefix: string.
     Variable esz: nat.
-    (* let bindings *)
-    Let initialValid : ConstT (Bit 1) := ($0)%kami.
         (* method bindings *)
-    Let v := mkRegU (element_type) (instancePrefix--"v").
-    Let valid := mkReg (instancePrefix--"valid") (initialValid)%bk.
-    Let v_read : string := (Reg'_read v).
-    Let v_write : string := (Reg'_write v).
-    Let valid_write : string := (Reg'_write valid).
+    Let v : string := instancePrefix--"v".
+    Let valid : string := instancePrefix--"valid".
     Local Open Scope kami_expr.
 
-    Definition mkFIFOModule: Mod := (BKMODULE {
-        (BKMod (Reg'mod v :: nil))
-    with (BKMod (Reg'mod valid :: nil))
+    Definition mkFIFOModule: Mod :=
+         (BKMODULE {
+        Register v : element_type <- Default
+    with Register valid : Bit 1 <-  (* intwidth *) (natToWord 1 0)
     with Method (instancePrefix--"first") () : element_type :=
     (
-Call v_v : element_type (* methoddef regread *) <- v_read();
-        LET result : element_type <- #v_v ;
+        Read v_v : element_type <- "v" ;        Read valid_v : Bit 1 <- "valid" ;
+        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
+        LET result : element_type (* non-call varbinding *) <- #v_v ;
         Ret #result    )
 
     with Method (instancePrefix--"enq") (new_v : element_type) : Void :=
     (
-        Call v_write ( (#new_v) : element_type ) ;
-        Call valid_write ( ($1) : Bit 1 ) ;
+        Read valid_v : Bit 1 <- "valid" ;
+        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 0))) ;
+        Write v : element_type <- #new_v ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 1) ;
         Retv    )
 
     with Method (instancePrefix--"deq") () : Void :=
     (
-        Call valid_write ( ($0) : Bit 1 ) ;
+        Read valid_v : Bit 1 <- "valid" ;
+        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0) ;
         Retv    )
 
     with Method (instancePrefix--"clear") () : Void :=
     (
-        Call valid_write ( ($0) : Bit 1 ) ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0) ;
         Retv    )
 
     }). (* mkFIFO *)
 
+    Hint Unfold mkFIFOModule : ModuleDefs.
 (* Module mkFIFO type Module#(FIFO#(element_type)) return type FIFO#(element_type) *)
-    Definition mkFIFO := Build_FIFO mkFIFOModule%kami (instancePrefix--"clear") (instancePrefix--"deq") (instancePrefix--"enq") (instancePrefix--"first").
+    Definition mkFIFO := Build_FIFO mkFIFOModule (instancePrefix--"clear") (instancePrefix--"deq") (instancePrefix--"enq") (instancePrefix--"first").
+    Hint Unfold mkFIFO : ModuleDefs.
+    Hint Unfold mkFIFOModule : ModuleDefs.
+    (* Definition wellformed_mkFIFO : ModWf := @Build_ModWf mkFIFOModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
+
     End Section'mkFIFO.
 End module'mkFIFO.
 
 Definition mkFIFO := module'mkFIFO.mkFIFO.
 Hint Unfold mkFIFO : ModuleDefs.
 Hint Unfold module'mkFIFO.mkFIFO : ModuleDefs.
+Hint Unfold module'mkFIFO.mkFIFOModule : ModuleDefs.
 
 Module module'mkLFIFO.
     Section Section'mkLFIFO.
     Variable element_type : Kind.
     Variable instancePrefix: string.
     Variable esz: nat.
-    (* let bindings *)
-    Let initialValid : ConstT (Bit 1) := ($0)%kami.
         (* method bindings *)
-    Let v := mkRegU (element_type) (instancePrefix--"v").
-    Let valid := mkReg (instancePrefix--"valid") (initialValid)%bk.
-    Let v_read : string := (Reg'_read v).
-    Let v_write : string := (Reg'_write v).
-    Let valid_write : string := (Reg'_write valid).
+    Let v : string := instancePrefix--"v".
+    Let valid : string := instancePrefix--"valid".
     Local Open Scope kami_expr.
 
-    Definition mkLFIFOModule: Mod := (BKMODULE {
-        (BKMod (Reg'mod v :: nil))
-    with (BKMod (Reg'mod valid :: nil))
+    Definition mkLFIFOModule: Mod :=
+         (BKMODULE {
+        Register v : element_type <- Default
+    with Register valid : Bit 1 <-  (* intwidth *) (natToWord 1 0)
     with Method (instancePrefix--"first") () : element_type :=
     (
-Call v_v : element_type (* methoddef regread *) <- v_read();
-        LET result : element_type <- #v_v ;
+        Read v_v : element_type <- "v" ;        Read valid_v : Bit 1 <- "valid" ;
+        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
+        LET result : element_type (* non-call varbinding *) <- #v_v ;
         Ret #result    )
 
     with Method (instancePrefix--"enq") (new_v : element_type) : Void :=
     (
-        Call v_write ( (#new_v) : element_type ) ;
-        Call valid_write ( ($1) : Bit 1 ) ;
+        Read valid_v : Bit 1 <- "valid" ;
+        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 0))) ;
+        Write v : element_type <- #new_v ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 1) ;
         Retv    )
 
     with Method (instancePrefix--"deq") () : Void :=
     (
-        Call valid_write ( ($0) : Bit 1 ) ;
+        Read valid_v : Bit 1 <- "valid" ;
+        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0) ;
         Retv    )
 
     with Method (instancePrefix--"clear") () : Void :=
     (
-        Call valid_write ( ($0) : Bit 1 ) ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0) ;
         Retv    )
 
     }). (* mkLFIFO *)
 
+    Hint Unfold mkLFIFOModule : ModuleDefs.
 (* Module mkLFIFO type Module#(FIFO#(element_type)) return type FIFO#(element_type) *)
-    Definition mkLFIFO := Build_FIFO mkLFIFOModule%kami (instancePrefix--"clear") (instancePrefix--"deq") (instancePrefix--"enq") (instancePrefix--"first").
+    Definition mkLFIFO := Build_FIFO mkLFIFOModule (instancePrefix--"clear") (instancePrefix--"deq") (instancePrefix--"enq") (instancePrefix--"first").
+    Hint Unfold mkLFIFO : ModuleDefs.
+    Hint Unfold mkLFIFOModule : ModuleDefs.
+    (* Definition wellformed_mkLFIFO : ModWf := @Build_ModWf mkLFIFOModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
+
     End Section'mkLFIFO.
 End module'mkLFIFO.
 
 Definition mkLFIFO := module'mkLFIFO.mkLFIFO.
 Hint Unfold mkLFIFO : ModuleDefs.
 Hint Unfold module'mkLFIFO.mkLFIFO : ModuleDefs.
+Hint Unfold module'mkLFIFO.mkLFIFOModule : ModuleDefs.
+
+Module module'mkFIFO1.
+    Section Section'mkFIFO1.
+    Variable element_type : Kind.
+    Variable instancePrefix: string.
+        (* method bindings *)
+    Let v : string := instancePrefix--"v".
+    Let valid : string := instancePrefix--"valid".
+    Local Open Scope kami_expr.
+
+    Definition mkFIFO1Module: Mod :=
+         (BKMODULE {
+        Register v : element_type <- Default
+    with Register valid : Bit 1 <-  (* intwidth *) (natToWord 1 0)
+    with Method (instancePrefix--"first") () : element_type :=
+    (
+        Read v_v : element_type <- "v" ;        Read valid_v : Bit 1 <- "valid" ;
+        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
+        Ret #v_v    )
+
+    with Method (instancePrefix--"enq") (new_v : element_type) : Void :=
+    (
+        Read valid_v : Bit 1 <- "valid" ;
+        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 0))) ;
+        Write v : element_type <- #new_v ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 1) ;
+        Retv    )
+
+    with Method (instancePrefix--"deq") () : Void :=
+    (
+        Read valid_v : Bit 1 <- "valid" ;
+        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0) ;
+        Retv    )
+
+    with Method (instancePrefix--"clear") () : Void :=
+    (
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0) ;
+        Retv    )
+
+    }). (* mkFIFO1 *)
+
+    Hint Unfold mkFIFO1Module : ModuleDefs.
+(* Module mkFIFO1 type Module#(FIFO#(element_type)) return type FIFO#(element_type) *)
+    Definition mkFIFO1 := Build_FIFO mkFIFO1Module (instancePrefix--"clear") (instancePrefix--"deq") (instancePrefix--"enq") (instancePrefix--"first").
+    Hint Unfold mkFIFO1 : ModuleDefs.
+    Hint Unfold mkFIFO1Module : ModuleDefs.
+    (* Definition wellformed_mkFIFO1 : ModWf := @Build_ModWf mkFIFO1Module ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
+
+    End Section'mkFIFO1.
+End module'mkFIFO1.
+
+Definition mkFIFO1 := module'mkFIFO1.mkFIFO1.
+Hint Unfold mkFIFO1 : ModuleDefs.
+Hint Unfold module'mkFIFO1.mkFIFO1 : ModuleDefs.
+Hint Unfold module'mkFIFO1.mkFIFO1Module : ModuleDefs.
+
+Module module'mkSizedFIFO.
+    Section Section'mkSizedFIFO.
+    Variable element_type : Kind.
+    Variable instancePrefix: string.
+    Variable n: Integer.
+        (* method bindings *)
+    Let v : string := instancePrefix--"v".
+    Let valid : string := instancePrefix--"valid".
+    Local Open Scope kami_expr.
+
+    Definition mkSizedFIFOModule: Mod :=
+         (BKMODULE {
+        Register v : element_type <- Default
+    with Register valid : Bit 1 <-  (* intwidth *) (natToWord 1 0)
+    with Method (instancePrefix--"first") () : element_type :=
+    (
+        Read v_v : element_type <- "v" ;        Read valid_v : Bit 1 <- "valid" ;
+        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
+        Ret #v_v    )
+
+    with Method (instancePrefix--"enq") (new_v : element_type) : Void :=
+    (
+        Read valid_v : Bit 1 <- "valid" ;
+        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 0))) ;
+        Write v : element_type <- #new_v ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 1) ;
+        Retv    )
+
+    with Method (instancePrefix--"deq") () : Void :=
+    (
+        Read valid_v : Bit 1 <- "valid" ;
+        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0) ;
+        Retv    )
+
+    with Method (instancePrefix--"clear") () : Void :=
+    (
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0) ;
+        Retv    )
+
+    }). (* mkSizedFIFO *)
+
+    Hint Unfold mkSizedFIFOModule : ModuleDefs.
+(* Module mkSizedFIFO type Integer -> Module#(FIFO#(element_type)) return type FIFO#(element_type) *)
+    Definition mkSizedFIFO := Build_FIFO mkSizedFIFOModule (instancePrefix--"clear") (instancePrefix--"deq") (instancePrefix--"enq") (instancePrefix--"first").
+    Hint Unfold mkSizedFIFO : ModuleDefs.
+    Hint Unfold mkSizedFIFOModule : ModuleDefs.
+    (* Definition wellformed_mkSizedFIFO : ModWf := @Build_ModWf mkSizedFIFOModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
+
+    End Section'mkSizedFIFO.
+End module'mkSizedFIFO.
+
+Definition mkSizedFIFO := module'mkSizedFIFO.mkSizedFIFO.
+Hint Unfold mkSizedFIFO : ModuleDefs.
+Hint Unfold module'mkSizedFIFO.mkSizedFIFO : ModuleDefs.
+Hint Unfold module'mkSizedFIFO.mkSizedFIFOModule : ModuleDefs.
 

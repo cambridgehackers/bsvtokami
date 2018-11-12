@@ -87,16 +87,16 @@ module procSpec#(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
       Bit#(DataSz) val2 = rf.sub(src2);
       Bit#(DataSz) dval = exec.execArith(op, val1, val2);
       void unused <- rf.upd(dst, dval);
-      pc <= pc + 1;
+      pc <= pc + 16'd1;
    endrule
 
    rule doLoad if (dec.isOp(pgm.sub(pc),opLd));
       Bit#(InstrSz) inst = pgm.sub(pc);
       Bit#(AddrSz) addr = dec.getAddr(inst);
       Bit#(RegFileSz) dst = dec.getDst(inst);
-      Bit#(DataSz) val <- mem.doMem(MemRq { isLoad: 1'b1, addr: addr, data: 0 });
+      Bit#(DataSz) val <- mem.doMem(MemRq { isLoad: 1'b1, addr: addr, data: 32'd0 });
       rf.upd(dst, val);
-      pc <= pc + 1;
+      pc <= pc + 16'd1;
    endrule
 
    rule doStore if (dec.isOp(pgm.sub(pc),opSt));
@@ -105,7 +105,7 @@ module procSpec#(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
       Bit#(RegFileSz) src = dec.getSrc1(inst);
       Bit#(DataSz) val = rf.sub(src);
       Bit#(DataSz) unused <- mem.doMem(MemRq { isLoad: 1'b0, addr: addr, data: val });
-      pc <= pc + 1;
+      pc <= pc + 16'd1;
    endrule
 
    rule doHost if (dec.isOp(pgm.sub(pc),opTh));
@@ -114,7 +114,7 @@ module procSpec#(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
       Bit#(DataSz) val1 = rf.sub(src1);
 
       void unused <- tohost.toHost(val1);
-      pc <= pc + 1;
+      pc <= pc + 16'd1;
    endrule
 
 endmodule

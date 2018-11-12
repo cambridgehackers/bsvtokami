@@ -1,7 +1,8 @@
 #!/bin/bash
 
 BKDIR=$PWD/..
-KAMIDIR=$PWD/../../kami/Kami
+KAMIDIR=$PWD/../../kami2
+BBVDIR=$PWD/../../bbv
 
 (cd $BKDIR; gradle installDist) && \
     rm -f bsvtokami.log && \
@@ -12,5 +13,5 @@ KAMIDIR=$PWD/../../kami/Kami
 
 mkdir -p out
 cp -f $BKDIR/prooftests/Bsvtokami.v out
-(cd out; coq_makefile -R $KAMIDIR Kami -R $PWD BK -o Makefile *.v)
+(cd out; coq_makefile -R $KAMIDIR Kami -R $BBVDIR/theories bbv -R $PWD BK -o Makefile *.v)
 grep Assertion bsvtokami.log
