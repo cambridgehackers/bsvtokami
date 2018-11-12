@@ -639,7 +639,20 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitMethodcond(BSVParser.MethodcondContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitMethodcond(BSVParser.MethodcondContext ctx) {
+            if (types.containsKey(ctx))
+                return types.get(ctx);
+            BSVType booltype = new BSVType("Bool");
+            BSVType exprtype = visit(ctx.expression());
+            try {
+                exprtype.unify(booltype);
+            } catch (InferenceError e) {
+                logger.fine(e.toString());
+                System.err.println(e.toString() + " at " + StaticAnalysis.sourceLocation(ctx));
+            }
+            types.put(ctx, exprtype);
+            return exprtype;
+	}
         /**
          * {@inheritDoc}
          *
