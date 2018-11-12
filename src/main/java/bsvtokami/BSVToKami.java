@@ -2056,7 +2056,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
     @Override public String visitIntliteral(BSVParser.IntliteralContext ctx) {
 	IntValue intValue = new IntValue(ctx.IntLiteral().getText());
-	if (intValue.width != 0 || intValue.basespec != null) {
+	if (intValue.width != 0 || intValue.basespec != null || actionContext) {
 	    return String.format("%1$s (* intwidth *) %2$s",
 				 (actionContext ? "$$" : ""),
 				 intToWord(intValue.width, intValue.value));
