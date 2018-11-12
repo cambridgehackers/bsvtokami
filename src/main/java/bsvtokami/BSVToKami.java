@@ -478,12 +478,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    System.err.println(String.format("Module %s instances visited %s",
 					     moduleName,
 					     String.join(", ", inv.methodsUsed.keySet())));
-	    for (Map.Entry<String,TreeSet<InstanceEntry>> iterator: inv.methodsUsed.entrySet()) {
-		String instanceName = iterator.getKey();
-		System.err.print(String.format("    %s: ", instanceName));
-		for (InstanceEntry ie: iterator.getValue()) {
-		    System.err.print(String.format(" <%s.%s>", ie.interfaceName, ie.methodName));
-		}
+	    for (Map.Entry<String,InstanceEntry> iterator: inv.methodsUsed.entrySet()) {
+		InstanceEntry ie = iterator.getValue();
+		System.err.print(String.format("    %s: <%s'%s>", ie.instanceName, ie.interfaceName, ie.methodName));
 	    }
 	}
 
@@ -570,21 +567,19 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	if (inv.methodsUsed.size() > 0) {
 	    printstream.print(stmtPrefix);
 	    printstream.println("(* instance methods *)");
-	    for (Map.Entry<String,TreeSet<InstanceEntry>> iter: inv.methodsUsed.entrySet()) {
-		String instanceName = iter.getKey();
-		TreeSet<InstanceEntry> methods = iter.getValue();
-		for (InstanceEntry methodEntry: methods) {
-		    String method = methodEntry.methodName;
-		    BSVType methodType = methodEntry.methodType;
-		    System.err.println(String.format("inv %s.%s: %s", instanceName, method, methodType));
-		    BSVType returnType = methodType.name.equals("Function") ? methodType.params.get(1) : methodType;
-		    String methodInterfaceName = methodEntry.interfaceName;
-		    printstream.print(stmtPrefix);
-		    printstream.println(String.format("Let %1$s%2$s : string := (%3$s'%2$s %1$s).",
-						      instanceName,
-						      method,
-						      methodInterfaceName));
-		}
+	    for (Map.Entry<String,InstanceEntry> iter: inv.methodsUsed.entrySet()) {
+		InstanceEntry methodEntry = iter.getValue();
+		String instanceName = methodEntry.instanceName;
+		String method = methodEntry.methodName;
+		BSVType methodType = methodEntry.methodType;
+		System.err.println(String.format("inv %s.%s: %s", instanceName, method, methodType));
+		BSVType returnType = methodType.name.equals("Function") ? methodType.params.get(1) : methodType;
+		String methodInterfaceName = methodEntry.interfaceName;
+		printstream.print(stmtPrefix);
+		printstream.println(String.format("Let %1$s'%2$s : string := (%3$s'%2$s %1$s).",
+						  instanceName,
+						  method,
+						  methodInterfaceName));
 	    }
 	}
 
@@ -1162,25 +1157,23 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	//FIXME letBindings go here
 
-        for (Map.Entry<String,TreeSet<InstanceEntry>> iter: inv.methodsUsed.entrySet()) {
-            String instanceName = iter.getKey();
-            TreeSet<InstanceEntry> methods = iter.getValue();
-            for (InstanceEntry methodEntry: methods) {
-                String method = methodEntry.methodName;
-                BSVType methodType = methodEntry.methodType;
-		System.err.println(String.format("INV: function def instance %s method %s : %s",
-						 instanceName, method, methodType));
-		if (methodType.name.equals("Function"))  {
-		    assert methodType.params.size() == 2: "Unhandled method " + method + " has type " + methodType + " from interface " + methodEntry.interfaceName;
-		    BSVType argType = methodType.params.get(0);
-		    BSVType returnType = methodType.params.get(1);
-		    String methodInterfaceName = methodEntry.interfaceName;
-		    printstream.println(String.format("    Let %1$s%2$s : string := (%3$s'%2$s %1$s).",
-						      instanceName, method, methodInterfaceName));
-		} else {
-		    printstream.println(String.format("(* FIXME: interface %s subinterface %s *)", methodEntry.interfaceName, method));
-		}
-            }
+        for (Map.Entry<String,InstanceEntry> iter: inv.methodsUsed.entrySet()) {
+            InstanceEntry methodEntry = iter.getValue();
+            String instanceName = methodEntry.instanceName;
+	    String method = methodEntry.methodName;
+	    BSVType methodType = methodEntry.methodType;
+	    System.err.println(String.format("INV: function def instance %s method %s : %s",
+					     instanceName, method, methodType));
+	    if (methodType.name.equals("Function"))  {
+		assert methodType.params.size() == 2: "Unhandled method " + method + " has type " + methodType + " from interface " + methodEntry.interfaceName;
+		BSVType argType = methodType.params.get(0);
+		BSVType returnType = methodType.params.get(1);
+		String methodInterfaceName = methodEntry.interfaceName;
+		printstream.println(String.format("    Let %1$s%2$s : string := (%3$s'%2$s %1$s).",
+						  instanceName, method, methodInterfaceName));
+	    } else {
+		printstream.println(String.format("(* FIXME: interface %s subinterface %s *)", methodEntry.interfaceName, method));
+	    }
         }
 	for (String letBinding: letBindings) {
 	    printstream.println(String.format("       Let %s.", letBinding));
@@ -2218,9 +2211,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	BSVType resultType = callResultType;
 	if (inv.methodsUsed.size() > 0) {
 	    System.err.println(String.format("First key %s", inv.methodsUsed.firstKey()));
-	    TreeSet<InstanceEntry> instanceEntries = inv.methodsUsed.get(inv.methodsUsed.firstKey());
-	    InstanceEntry instanceEntry = instanceEntries.first();
-	    System.err.println(String.format("Calling method %s (%s) at %s", methodName, instanceEntry.methodType, StaticAnalysis.sourceLocation(ctx)));
+	    InstanceEntry instanceEntry = inv.methodsUsed.get(inv.methodsUsed.firstKey());
 
 	    BSVType methodType = instanceEntry.methodType;
 	    if (methodType.name.equals("Function")) {
