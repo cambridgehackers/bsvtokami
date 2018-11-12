@@ -688,6 +688,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 
     @Override public Void visitActionBinding(BSVParser.ActionBindingContext ctx) {
         assert !declOnly : "something funny about action binding at " + sourceLocation(ctx);
+	typeVisitor.visit(ctx);
         BSVType lhstype = typeVisitor.visit(ctx.t);
         BSVType rhstype = typeVisitor.visit(ctx.rhs);
         String varName = ctx.var.getText();
