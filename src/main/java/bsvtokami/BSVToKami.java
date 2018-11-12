@@ -524,7 +524,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
 
 	boolean hasProvisos = moduleproto.provisos() != null;
-	useAbstractOmega = hasProvisos;
+	useAbstractOmega = false; // does not seem to work with sifive kami: hasProvisos;
 	if (hasProvisos) {
 	    for (BSVParser.ProvisoContext proviso: moduleproto.provisos().proviso()) {
 		// emit Variable declaration for free variable in proviso
