@@ -871,7 +871,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             BSVParser.CallexprContext call = getCall(ctx.rhs);
 	    assert call != null && call.fcn != null: "Something wrong with action context " + ctx.rhs.getText() + " at " + StaticAnalysis.sourceLocation(ctx.rhs);
 
-	    statement.append(String.format("        Call %s : %s (* actionBinding *) <- %s",
+	    statement.append(String.format("        BKCall %s : %s (* actionBinding *) <- %s",
 					   varName, bsvTypeToKami(bsvtype),calleeInstanceName));
 	    for (BSVParser.ExpressionContext arg: call.expression()) {
 		BSVType argType = typeVisitor.visit(arg);
