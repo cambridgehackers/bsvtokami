@@ -97,6 +97,14 @@ Notation "'BKMODULE' { s1 'with' .. 'with' sN }" :=
   (makeBKModule (ConsInBKModule s1%bk .. (ConsInBKModule sN%bk NilInBKModule) ..))
     (at level 0, only parsing).
 
+Notation "'BKCall' name : retT <- meth () ; cont " :=
+  (MCall meth%string (Void, retT) (Const _ Default) (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_action_scope.
+
+Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ; cont " :=
+  (MCall meth%string (a1T, retT) a1%kami_expr (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0, a1 at level 99) : kami_action_scope.
+
 Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ; cont " :=
   (let argT := STRUCT { "_1" :: a1T ; "_2" :: a2T } in
    let args := (STRUCT { "_1" ::= a1 ; "_2" ::= a2 })%kami_expr in
@@ -118,7 +126,7 @@ Notation "'Method2' name ( p1 : d1 ) ( p2 : d2 ) : retT := c" :=
      p1 at level 99, p2 at level 99) : bk_scope.
 
 
-Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ( a3 : a3T ); cont " :=
+Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ( a3 : a3T ) ; cont " :=
   (let argT := STRUCT { "_1" :: a1T ; "_2" :: a2T ; "_3" :: a3T } in
    let args := (STRUCT { "_1" ::= a1 ; "_2" ::= a2 ; "_3" ::= a3 })%kami_expr in
   (MCall meth%string (argT, retT) args%kami_expr (fun name => cont)))
@@ -158,7 +166,7 @@ Definition castBits ty ni no (pf: ni = no) (e: Expr ty (SyntaxKind (Bit ni))) :=
   end.
 
 Record Empty := {
-    Empty'modules: Mod;
+    Empty'mod: Mod;
 }.
 
 
@@ -273,6 +281,41 @@ Hint Unfold module'mkRegU.reg : ModuleDefs.
 Hint Unfold module'mkRegU.mkRegU : ModuleDefs.
 Hint Unfold module'mkRegU.mkRegUModule : ModuleDefs.
 
+(* * interface RegFile#(index_t, data_t) *)
+Record RegFile := {
+    RegFile'mod: Mod;
+    RegFile'upd : string;
+    RegFile'sub : string;
+}.
+
+Module module'mkRegFileFull.
+    Section Section'mkRegFileFull.
+    Variable data_t : Kind.
+    Variable index_t : Kind.
+    Variable instancePrefix: string.
+    Definition rf : string := instancePrefix--"rf".
+    Definition mkRegFileFullModule: Mod := (BKMODULE {
+           Register rf : data_t <- Default
+           with Method instancePrefix--"sub" (idx : index_t) : data_t :=
+             (Read regs : data_t <- rf;
+                Ret #regs)
+               (* fixme:
+             with Method instancePrefix--"upd" (idx : index_t) (v : data_t) : Void :=
+               (Read regs : data_t <- rf;
+                  Write rf : data_t <- #v;
+               Retv)
+               *)
+    }). (* mkRegFileFull *)
+
+(* Module mkRegFileFull type Module#(RegFile#(index_t, data_t)) return type RegFile#(index_t, data_t) *)
+    Definition mkRegFileFull := Build_RegFile mkRegFileFullModule%kami (instancePrefix--"sub") (instancePrefix--"upd").
+    End Section'mkRegFileFull.
+End module'mkRegFileFull.
+
+Definition mkRegFileFull := module'mkRegFileFull.mkRegFileFull.
+Hint Unfold mkRegFileFull : ModuleDefs.
+Hint Unfold module'mkRegFileFull.mkRegFileFull : ModuleDefs.
+
 (* more stuff *)
 
 Fixpoint toBinaryP (p: positive) : string :=
@@ -301,16 +344,16 @@ Check bitlt.
 
 (* interface for module wrapper for myTruncate *)
 Record Interface'myTruncate := {
-    Interface'myTruncate'modules: Mod;
+    Interface'myTruncate'mod: Mod;
     Interface'myTruncate'myTruncate: string;
 }.
 
 (* interface for module wrapper for isValid *)
 Record Interface'isValid := {
-    Interface'isValid'modules: Mod;
+    Interface'isValid'mod: Mod;
     Interface'isValid'isValid: string;
 }.
-Hint Unfold Interface'isValid'modules : ModuleDefs.
+Hint Unfold Interface'isValid'mod : ModuleDefs.
 Hint Unfold Interface'isValid'isValid : ModuleDefs.
 
 Module module'isValid.
@@ -342,10 +385,10 @@ Hint Unfold module'isValid.isValid : ModuleDefs.
 
 (* interface for module wrapper for fromMaybe *)
 Record Interface'fromMaybe := {
-    Interface'fromMaybe'modules: Mod;
+    Interface'fromMaybe'mod: Mod;
     Interface'fromMaybe'fromMaybe: string;
 }.
-Hint Unfold Interface'fromMaybe'modules : ModuleDefs.
+Hint Unfold Interface'fromMaybe'mod : ModuleDefs.
 Hint Unfold Interface'fromMaybe'fromMaybe : ModuleDefs.
 
 Module module'fromMaybe.
