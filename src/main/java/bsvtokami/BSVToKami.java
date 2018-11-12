@@ -629,6 +629,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    ? moduleType.params.get(0)
 	    : moduleType.params.get(1).params.get(0);
 
+	printstream.println("");
 	printstream.println(String.format("(* Module %s type %s return type %s *)",
 					  moduleName, moduleType, moduleReturnType));
 
