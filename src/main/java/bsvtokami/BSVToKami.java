@@ -60,6 +60,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     private LetBindings letBindings;
     private LetBindings methodBindings;
     private ArrayList<String> statements;
+    private ArrayList<String> modulevarbindings;
     private TreeMap<String,String> mSizeRelationshipProvisos;
 
     BSVToKami(String pkgName, File ofile, StaticAnalysis scopes) {
@@ -438,6 +439,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	methodBindings = new LetBindings();
 	letBindings = new LetBindings();
 	statements = new ArrayList<>();
+	modulevarbindings = new ArrayList<>();
 
         for (BSVParser.AttributeinstanceContext attrinstance: ctx.attributeinstance()) {
             for (BSVParser.AttrspecContext attr: attrinstance.attrspec()) {
@@ -781,24 +783,35 @@ public class BSVToKami extends BSVBaseVisitor<String>
 						       visit(args.get(0))));
 		    } else {
 			System.err.println(String.format("Call varbinding %s fcn %s", varName, functionName));
+			boolean wasActionContext = actionContext;
+			actionContext = true;
 			statement.append(String.format("BKCall %s : %s (* varbinding *) <- %s", varName, bsvTypeToKami(t), translateCall(call)));
+			actionContext = wasActionContext;
 		    }
                 } else {
-		    if (actionContext) {
-			statement.append(String.format("        LET %s : %s <- ", varName, bsvTypeToKami(t)));
-			statement.append(visit(rhs));
-		    } else {
-			letBindings.add(String.format("%s : ConstT %s := (%s)%%kami", varName, bsvTypeToKami(t, 1), visit(rhs)));
-			statement.append("(* varbinding in action context *)");
-			varEntry.isConstT = true;
-		    }
+                    if (inModule) {
+                        statement.append(String.format("        LET %s : %s (* non-call varbinding *) <- ", varName, bsvTypeToKami(t)));
+			boolean wasActionContext = actionContext;
+			actionContext = true;
+                        statement.append(visit(rhs));
+			actionContext = wasActionContext;
+                    } else {
+                        letBindings.add(String.format("%s : ConstT %s := (%s)%%kami", varName, bsvTypeToKami(t, 1), visit(rhs)));
+                        statement.append("(* varbinding in action context *)");
+                        varEntry.isConstT = true;
+                    }
                 }
             } else {
                 System.err.println("No rhs for " + ctx.getText() + " at " + StaticAnalysis.sourceLocation(ctx));
                 statement.append(String.format("        LET %s : %s", varName, bsvTypeToKami(t)));
             }
-	    if (actionContext)
-		statements.add(statement.toString());
+            if (actionContext) {
+                statements.add(statement.toString());
+            } else if (inModule) {
+                modulevarbindings.add(statement.toString());
+            } else {
+                // already added to letBindings
+            }
         }
 	typeVisitor.popScope();
 	return null;
@@ -1008,6 +1021,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		logger.fine(e.toString());
 		System.err.println(e.toString() + " at " + StaticAnalysis.sourceLocation(rulecond));
 	    }
+	    if (modulevarbindings.size() > 0) {
+                for (String s: modulevarbindings) {
+                    statement.append("       ");
+                    statement.append(s);
+                    statement.append(" ;");
+                    statement.append(newline);
+                }
+	    }
             String rulecondValue = visit(rulecond);
             if (statements.size() > 0) {
                 for (String s: statements) {
@@ -1057,6 +1078,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         methodBindings = new LetBindings();
         letBindings = new LetBindings();
         statements = new ArrayList<>();
+        modulevarbindings = new ArrayList<>();
         scope = scopes.pushScope(ctx);
 	returnPending = "Retv";
 
@@ -1239,6 +1261,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
         actionContext = true;
 	//LetBindings parentLetBindings = letBindings;
 	ArrayList<String> parentStatements = statements;
+
+        BSVParser.MethodcondContext methodcond = ctx.methodcond();
+	if (methodcond != null)
+	    typeVisitor.visit(methodcond);
+
         scope = scopes.pushScope(ctx);
 	typeVisitor.pushScope(scope);
 
@@ -1293,7 +1320,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	statement.append("    (");
 	statement.append(newline);
 	statement.append(paramunpack.toString());
+
         RegReadVisitor regReadVisitor = new RegReadVisitor(scope);
+	if (methodcond != null)
+	    regReadVisitor.visit(methodcond);
         for (BSVParser.StmtContext stmt: ctx.stmt())
             regReadVisitor.visit(stmt);
         if (ctx.expression() != null)
@@ -1310,9 +1340,31 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    }
         }
 
-	//letBindings = new LetBindings();
-	statements = new ArrayList<>();
 
+	if (modulevarbindings.size() > 0) {
+	    for (String s: modulevarbindings) {
+		statement.append("       ");
+		statement.append(s);
+		statement.append(" ;");
+		statement.append(newline);
+	    }
+	}
+	statements = new ArrayList<>();
+	//letBindings = new LetBindings();
+	if (methodcond != null) {
+            String methodcondValue = visit(methodcond);
+            if (statements.size() > 0) {
+                for (String s: statements) {
+                    statement.append("       ");
+                    statement.append(s);
+                    statement.append(" ;");
+                    statement.append(newline);
+                }
+                statements.clear();
+            }
+	    statement.append(newline);
+            statement.append("        Assert(" + methodcondValue + ") ;\n");
+	}
         for (BSVParser.StmtContext stmt: ctx.stmt())
             visit(stmt);
 	boolean hasStatements = statements.size() > 0;
