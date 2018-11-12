@@ -71,13 +71,13 @@ module procSpec#(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
 		 Decoder dec,
 		 Executer exec,
 		 ToHost tohost)(Empty);
-   Reg#(Bit#(PgmSz)) pc <- mkReg(0);
+   Reg#(Bit#(PgmSz)) pc <- mkReg(16'h0);
    RegFile#(Bit#(RegFileSz), Bit#(DataSz)) rf <- mkRegFileFull();
    Memory mem <- mkMemory();
 
    Bit#(InstrSz) inst = pgm.sub(pc);
 
-   rule doArith if (dec.isOp(inst,opArith));
+   rule doArith if (dec.isOp(pgm.sub(pc),opArith));
       Bit#(InstrSz) inst = pgm.sub(pc);
       OpK op = dec.getOp(inst);
       Bit#(RegFileSz) src1 = dec.getSrc1(inst);
@@ -90,7 +90,7 @@ module procSpec#(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
       pc <= pc + 1;
    endrule
 
-   rule doLoad if (dec.isOp(inst,opLd));
+   rule doLoad if (dec.isOp(pgm.sub(pc),opLd));
       Bit#(InstrSz) inst = pgm.sub(pc);
       Bit#(AddrSz) addr = dec.getAddr(inst);
       Bit#(RegFileSz) dst = dec.getDst(inst);
@@ -99,7 +99,7 @@ module procSpec#(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
       pc <= pc + 1;
    endrule
 
-   rule doStore if (dec.isOp(inst,opSt));
+   rule doStore if (dec.isOp(pgm.sub(pc),opSt));
       Bit#(InstrSz) inst = pgm.sub(pc);
       Bit#(AddrSz) addr = dec.getAddr(inst);
       Bit#(RegFileSz) src = dec.getSrc1(inst);
@@ -108,7 +108,7 @@ module procSpec#(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
       pc <= pc + 1;
    endrule
 
-   rule doHost if (dec.isOp(inst,opTh));
+   rule doHost if (dec.isOp(pgm.sub(pc),opTh));
       Bit#(InstrSz) inst = pgm.sub(pc);
       Bit#(RegFileSz) src1 = dec.getSrc1(inst);
       Bit#(DataSz) val1 = rf.sub(src1);
