@@ -1254,7 +1254,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    noParams = "";
 	}
 
-        statement.append(String.format("Method (instancePrefix--\"%s\"%s)", methodName, noParams));
+        statement.append(String.format("Method (instancePrefix--\"%s\")%s", methodName, noParams));
         if (numArgs == 1) {
             for (BSVParser.MethodformalContext formal: ctx.methodformals().methodformal()) {
                 BSVType bsvtype = typeVisitor.visit(formal.bsvtype());
