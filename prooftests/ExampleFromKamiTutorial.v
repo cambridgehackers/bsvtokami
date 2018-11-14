@@ -66,6 +66,7 @@ End module'mkExtCall.
 Definition mkExtCall := module'mkExtCall.mkExtCall.
 Hint Unfold mkExtCall : ModuleDefs.
 Hint Unfold module'mkExtCall.mkExtCall : ModuleDefs.
+Hint Unfold module'mkExtCall.wellformed_mkExtCall : ModuleDefs.
 Hint Unfold module'mkExtCall.mkExtCallModule : ModuleDefs.
 
 Module module'mkConsumer.
@@ -91,7 +92,6 @@ BKCall call0 : Void <-  (* translateCall *) ext'extCall ((#v) : Bit 32) ;
     Hint Unfold mkConsumer : ModuleDefs.
     Hint Unfold mkConsumerModule : ModuleDefs.
     Definition wellformed_mkConsumer : ModWf := @Build_ModWf mkConsumerModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf).
-    Hint Unfold wellformed_mkConsumer : ModuleDefs.
 
     End Section'mkConsumer.
 End module'mkConsumer.
@@ -99,6 +99,7 @@ End module'mkConsumer.
 Definition mkConsumer := module'mkConsumer.mkConsumer.
 Hint Unfold mkConsumer : ModuleDefs.
 Hint Unfold module'mkConsumer.mkConsumer : ModuleDefs.
+Hint Unfold module'mkConsumer.wellformed_mkConsumer : ModuleDefs.
 Hint Unfold module'mkConsumer.mkConsumerModule : ModuleDefs.
 
 Module module'mkProducer.
@@ -128,7 +129,6 @@ Module module'mkProducer.
     Hint Unfold mkProducer : ModuleDefs.
     Hint Unfold mkProducerModule : ModuleDefs.
     Definition wellformed_mkProducer : ModWf := @Build_ModWf mkProducerModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf).
-    Hint Unfold wellformed_mkProducer : ModuleDefs.
 
     End Section'mkProducer.
 End module'mkProducer.
@@ -136,7 +136,47 @@ End module'mkProducer.
 Definition mkProducer := module'mkProducer.mkProducer.
 Hint Unfold mkProducer : ModuleDefs.
 Hint Unfold module'mkProducer.mkProducer : ModuleDefs.
+Hint Unfold module'mkProducer.wellformed_mkProducer : ModuleDefs.
 Hint Unfold module'mkProducer.mkProducerModule : ModuleDefs.
+
+Module module'mkProducerConsumer.
+    Section Section'mkProducerConsumer.
+    Variable instancePrefix: string.
+    Variable ext: ExtCall.
+        (* method bindings *)
+    Let (* action binding *) consumer := mkConsumer (instancePrefix--"consumer") (ext)%bk.
+    Let data : string := instancePrefix--"data".
+    (* instance methods *)
+    Let consumer'send : string := (Consumer'send consumer).
+    Local Open Scope kami_expr.
+
+    Definition mkProducerConsumerModule: Mod :=
+         (BKMODULE {
+        (BKMod (Consumer'mod consumer :: nil))
+    with Register data : Bit 32 <-  (* intwidth *) (natToWord 32 0)
+    with Rule instancePrefix--"produce" :=
+    (
+        Read data_v : Bit 32 <- data ;
+       BKCall call2 : Void <-  (* translateCall *) consumer'send ((#data_v) : Bit 32) ;
+               Write data : Bit 32 <- (#data_v + $$ (* intwidth *) (natToWord 32 1)) ;
+        Retv ) (* rule produce *)
+    }). (* mkProducerConsumer *)
+
+    Hint Unfold mkProducerConsumerModule : ModuleDefs.
+(* Module mkProducerConsumer type ExtCall -> Module#(Producer) return type Producer *)
+    Definition mkProducerConsumer := Build_Producer mkProducerConsumerModule.
+    Hint Unfold mkProducerConsumer : ModuleDefs.
+    Hint Unfold mkProducerConsumerModule : ModuleDefs.
+    Definition wellformed_mkProducerConsumer : ModWf := @Build_ModWf mkProducerConsumerModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf).
+
+    End Section'mkProducerConsumer.
+End module'mkProducerConsumer.
+
+Definition mkProducerConsumer := module'mkProducerConsumer.mkProducerConsumer.
+Hint Unfold mkProducerConsumer : ModuleDefs.
+Hint Unfold module'mkProducerConsumer.mkProducerConsumer : ModuleDefs.
+Hint Unfold module'mkProducerConsumer.wellformed_mkProducerConsumer : ModuleDefs.
+Hint Unfold module'mkProducerConsumer.mkProducerConsumerModule : ModuleDefs.
 
 Module module'mkProduceConsume.
     Section Section'mkProduceConsume.
@@ -151,12 +191,12 @@ Module module'mkProduceConsume.
     Definition mkProduceConsumeModule: Mod :=
          (BKMODULE {
         Register data : Bit 32 <-  (* intwidth *) (natToWord 32 0)
-    with Rule instancePrefix--"produce_consume" :=
+    with Rule instancePrefix--"produce" :=
     (
         Read data_v : Bit 32 <- data ;
-       BKCall call2 : Void <-  (* translateCall *) extpc'extCall ((#data_v) : Bit 32) ;
+       BKCall call3 : Void <-  (* translateCall *) extpc'extCall ((#data_v) : Bit 32) ;
                Write data : Bit 32 <- (#data_v + $$ (* intwidth *) (natToWord 32 1)) ;
-        Retv ) (* rule produce_consume *)
+        Retv ) (* rule produce *)
     }). (* mkProduceConsume *)
 
     Hint Unfold mkProduceConsumeModule : ModuleDefs.
@@ -165,7 +205,6 @@ Module module'mkProduceConsume.
     Hint Unfold mkProduceConsume : ModuleDefs.
     Hint Unfold mkProduceConsumeModule : ModuleDefs.
     Definition wellformed_mkProduceConsume : ModWf := @Build_ModWf mkProduceConsumeModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf).
-    Hint Unfold wellformed_mkProduceConsume : ModuleDefs.
 
     End Section'mkProduceConsume.
 End module'mkProduceConsume.
@@ -173,5 +212,6 @@ End module'mkProduceConsume.
 Definition mkProduceConsume := module'mkProduceConsume.mkProduceConsume.
 Hint Unfold mkProduceConsume : ModuleDefs.
 Hint Unfold module'mkProduceConsume.mkProduceConsume : ModuleDefs.
+Hint Unfold module'mkProduceConsume.wellformed_mkProduceConsume : ModuleDefs.
 Hint Unfold module'mkProduceConsume.mkProduceConsumeModule : ModuleDefs.
 

@@ -34,9 +34,19 @@ module mkProducer#(Consumer consumer)(Producer);
 
 endmodule
 
+module mkProducerConsumer#(ExtCall ext)(Producer);
+   Consumer consumer <- mkConsumer(ext);
+   Reg#(Bit#(32)) data <- mkReg(32'd0);
+   rule produce;
+      consumer.send(data);
+      data <= data + 32'd1;
+   endrule
+
+endmodule
+
 module mkProduceConsume#(ExtCall extpc)(Foo);
    Reg#(Bit#(32)) data <- mkReg(32'd0);
-   rule produce_consume;
+   rule produce;
       extpc.extCall(data);
       data <= data + 32'd1;
    endrule
