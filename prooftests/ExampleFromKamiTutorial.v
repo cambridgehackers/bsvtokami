@@ -43,6 +43,8 @@ Hint Unfold ExtCall'extCall : ModuleDefs.
 Module module'mkExtCall.
     Section Section'mkExtCall.
     Variable instancePrefix: string.
+    Local Open Scope kami_expr.
+
     Definition mkExtCallModule: Mod :=
          (BKMODULE {
         Method (instancePrefix--"extCall") (v : (Bit 32)) : Void :=
@@ -51,8 +53,13 @@ Module module'mkExtCall.
 
     }). (* mkExtCall *)
 
+    Hint Unfold mkExtCallModule : ModuleDefs.
 (* Module mkExtCall type Module#(ExtCall) return type ExtCall *)
-    Definition mkExtCall := Build_ExtCall mkExtCallModule%kami (instancePrefix--"extCall").
+    Definition mkExtCall := Build_ExtCall mkExtCallModule (instancePrefix--"extCall").
+    Hint Unfold mkExtCall : ModuleDefs.
+    Hint Unfold mkExtCallModule : ModuleDefs.
+    Definition wellformed_mkExtCall : ModWf := @Build_ModWf mkExtCallModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf).
+
     End Section'mkExtCall.
 End module'mkExtCall.
 
@@ -66,18 +73,26 @@ Module module'mkConsumer.
     Variable instancePrefix: string.
     Variable ext: ExtCall.
     (* instance methods *)
-    Let extextCall : string := (ExtCall'extCall ext).
+    Let ext'extCall : string := (ExtCall'extCall ext).
+    Local Open Scope kami_expr.
+
     Definition mkConsumerModule: Mod :=
-			       (BKMODULE {
-					  Method (instancePrefix--"send") (v : (Bit 32)) : Void :=
-					  (
-					   Call call0 : Void <-  extextCall ((#v) : Bit 32) ;
-					   Retv    )
+         (BKMODULE {
+        Method (instancePrefix--"send") (v : (Bit 32)) : Void :=
+    (
+BKCall call0 : Void <-  (* translateCall *) ext'extCall ((#v) : Bit 32) ;
+        Retv    )
 
-					  }). (* mkConsumer *)
+    }). (* mkConsumer *)
 
+    Hint Unfold mkConsumerModule : ModuleDefs.
 (* Module mkConsumer type ExtCall -> Module#(Consumer) return type Consumer *)
-    Definition mkConsumer := Build_Consumer mkConsumerModule%kami (instancePrefix--"send").
+    Definition mkConsumer := Build_Consumer mkConsumerModule (instancePrefix--"send").
+    Hint Unfold mkConsumer : ModuleDefs.
+    Hint Unfold mkConsumerModule : ModuleDefs.
+    Definition wellformed_mkConsumer : ModWf := @Build_ModWf mkConsumerModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf).
+    Hint Unfold wellformed_mkConsumer : ModuleDefs.
+
     End Section'mkConsumer.
 End module'mkConsumer.
 
@@ -90,27 +105,31 @@ Module module'mkProducer.
     Section Section'mkProducer.
     Variable instancePrefix: string.
     Variable consumer: Consumer.
-    (* let bindings *)
-    Let initval : ConstT (Bit 32) := (ConstBit (natToWord 32 0))%kami.
         (* method bindings *)
-    Let data := mkReg (instancePrefix--"data") (initval)%bk.
-    Let data_read : string := (Reg'_read data).
-    Let data_write : string := (Reg'_write data).
+    Let data : string := instancePrefix--"data".
     (* instance methods *)
-    Let consumersend : string := (Consumer'send consumer).
-    Definition mkProducerModule: Mod :=
-				     (BKMODULE {
-						(BKMod (Reg'mod data :: nil))
-						with Rule instancePrefix--"produce_rule" :=
-						(
-						 Call data_v : Bit 32 (* regRead *) <- data_read() ;
-						 Call call1 : Void <-  consumersend ((#data_v) : Bit 32) ;
-						 Call data_write ( ((#data_v + $1)) : Bit 32 ) ;
-						 Retv ) (* rule produce *)
-						}). (* mkProducer *)
+    Let consumer'send : string := (Consumer'send consumer).
+    Local Open Scope kami_expr.
 
+    Definition mkProducerModule: Mod :=
+         (BKMODULE {
+        Register data : Bit 32 <-  (* intwidth *) (natToWord 32 0)
+    with Rule instancePrefix--"produce" :=
+    (
+        Read data_v : Bit 32 <- data ;
+       BKCall call1 : Void <-  (* translateCall *) consumer'send ((#data_v) : Bit 32) ;
+               Write data : Bit 32 <- (#data_v + $$ (* intwidth *) (natToWord 32 1)) ;
+        Retv ) (* rule produce *)
+    }). (* mkProducer *)
+
+    Hint Unfold mkProducerModule : ModuleDefs.
 (* Module mkProducer type Consumer -> Module#(Producer) return type Producer *)
-    Definition mkProducer := Build_Producer mkProducerModule%kami.
+    Definition mkProducer := Build_Producer mkProducerModule.
+    Hint Unfold mkProducer : ModuleDefs.
+    Hint Unfold mkProducerModule : ModuleDefs.
+    Definition wellformed_mkProducer : ModWf := @Build_ModWf mkProducerModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf).
+    Hint Unfold wellformed_mkProducer : ModuleDefs.
+
     End Section'mkProducer.
 End module'mkProducer.
 
@@ -123,27 +142,31 @@ Module module'mkProduceConsume.
     Section Section'mkProduceConsume.
     Variable instancePrefix: string.
     Variable extpc: ExtCall.
-    (* let bindings *)
-    Let initval : ConstT (Bit 32) := (ConstBit (natToWord 32 0))%kami.
         (* method bindings *)
-    Let data := mkReg (instancePrefix--"data") (initval)%bk.
-    Let data_read : string := (Reg'_read data).
-    Let data_write : string := (Reg'_write data).
+    Let data : string := instancePrefix--"data".
     (* instance methods *)
-    Let extpcextCall : string := (ExtCall'extCall extpc).
+    Let extpc'extCall : string := (ExtCall'extCall extpc).
+    Local Open Scope kami_expr.
+
     Definition mkProduceConsumeModule: Mod :=
          (BKMODULE {
-        (BKMod (Reg'mod data :: nil))
-    with Rule instancePrefix--"produce_rule" :=
+        Register data : Bit 32 <-  (* intwidth *) (natToWord 32 0)
+    with Rule instancePrefix--"produce_consume" :=
     (
-        Call data_v : Bit 32 (* regRead *) <- data_read() ;
-       Call call2 : Void <-  extpcextCall ((#data_v) : Bit 32) ;
-               Call data_write ( ((#data_v + $1)) : Bit 32 ) ;
+        Read data_v : Bit 32 <- data ;
+       BKCall call2 : Void <-  (* translateCall *) extpc'extCall ((#data_v) : Bit 32) ;
+               Write data : Bit 32 <- (#data_v + $$ (* intwidth *) (natToWord 32 1)) ;
         Retv ) (* rule produce_consume *)
     }). (* mkProduceConsume *)
 
+    Hint Unfold mkProduceConsumeModule : ModuleDefs.
 (* Module mkProduceConsume type ExtCall -> Module#(Foo) return type Foo *)
-    Definition mkProduceConsume := Build_Foo mkProduceConsumeModule%kami.
+    Definition mkProduceConsume := Build_Foo mkProduceConsumeModule.
+    Hint Unfold mkProduceConsume : ModuleDefs.
+    Hint Unfold mkProduceConsumeModule : ModuleDefs.
+    Definition wellformed_mkProduceConsume : ModWf := @Build_ModWf mkProduceConsumeModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf).
+    Hint Unfold wellformed_mkProduceConsume : ModuleDefs.
+
     End Section'mkProduceConsume.
 End module'mkProduceConsume.
 
