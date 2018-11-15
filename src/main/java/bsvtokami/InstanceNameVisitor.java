@@ -8,6 +8,7 @@ import java.util.*;
 import java.util.logging.Logger;
 
 class InstanceEntry implements java.lang.Comparable {
+    public String instanceName;
     public String interfaceName;
     public String methodName;
     public BSVType instanceType;
@@ -29,7 +30,7 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
     private final StaticAnalysis scopes;
     private Stack<SymbolTable> scopeStack = new Stack<>();
     private SymbolTable scope;
-    public TreeMap<String,TreeSet<InstanceEntry>> methodsUsed;
+    public TreeMap<String,InstanceEntry> methodsUsed;
     InstanceNameVisitor(StaticAnalysis scopes) {
 	this.scopes = scopes;
         methodsUsed = new TreeMap<>();
@@ -98,13 +99,15 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
         String instanceName = visit(ctx.exprprimary());
         if (instanceName != null) {
             String fieldName = ctx.field.getText();
-            String methodName = String.format("%s.%s", instanceName, fieldName);
+            String methodName = String.format("%s'%s", instanceName, fieldName);
             SymbolTableEntry entry = scope.lookup(instanceName);
-            assert entry != null: String.format("No entry for field expr instance %s at %s",
-						instanceName, StaticAnalysis.sourceLocation(ctx));
-	    BSVType interfaceType = dereferenceTypedef(entry.type);
+	    InstanceEntry InstanceNameEntry = methodsUsed.containsKey(instanceName) ? methodsUsed.get(instanceName) : null;
+            assert InstanceNameEntry != null || entry != null: String.format("No entry for field expr instance %s at %s",
+								       instanceName, StaticAnalysis.sourceLocation(ctx));
+	    BSVType entryType = (InstanceNameEntry != null) ? InstanceNameEntry.instanceType : entry.type;
+	    BSVType interfaceType = dereferenceTypedef(entryType);
 	    System.err.println(String.format("Type %s interface %s instance %s at %s",
-					     entry.type, interfaceType, instanceName, StaticAnalysis.sourceLocation(ctx)));
+					     entryType, interfaceType, instanceName, StaticAnalysis.sourceLocation(ctx)));
             SymbolTableEntry interfaceEntry = scope.lookupType(interfaceType.name);
             assert interfaceEntry != null : "No interface entry for " + interfaceType + " at " +  StaticAnalysis.sourceLocation(ctx);
 
@@ -113,7 +116,7 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
 		return null;
 	    }
 
-	    assert interfaceEntry.mappings != null: "No interface mappings for " + entry.type.name;
+	    assert interfaceEntry.mappings != null: "No interface mappings for " + entryType.name;
             SymbolTableEntry methodEntry = interfaceEntry.mappings.lookup(fieldName);
 	    if (methodEntry == null) {
 		for (Map.Entry<String,SymbolTableEntry> mapping: interfaceEntry.mappings.bindings.entrySet()) {
@@ -121,20 +124,21 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
 		}
 	    }
 	    assert methodEntry != null: String.format("No symbol table entry for method %s of interface %s at %s",
-						      fieldName, entry.type.name, StaticAnalysis.sourceLocation(ctx));
-	    BSVType instantiatedType = methodEntry.type.instantiate(interfaceType.params, entry.type.params);
+						      fieldName, entryType.name, StaticAnalysis.sourceLocation(ctx));
+	    BSVType instantiatedType = methodEntry.type.instantiate(interfaceType.params, entryType.params);
 	    System.err.println(String.format("    method %s type %s interface type %s",
 					     fieldName, instantiatedType, methodEntry.type));
 
-            logger.fine("methodName " + methodName + " " + entry.type + " method type " + methodEntry.type);
-            if (!methodsUsed.containsKey(instanceName))
-                methodsUsed.put(instanceName, new TreeSet<InstanceEntry>());
+            logger.fine("methodName " + methodName + " " + entryType + " method type " + methodEntry.type);
+            if (methodsUsed.containsKey(methodName))
+		return methodName;
 	    InstanceEntry instanceEntry = new InstanceEntry();
+	    instanceEntry.instanceName = instanceName;
 	    instanceEntry.methodName = fieldName;
 	    instanceEntry.methodType = instantiatedType;
 	    instanceEntry.interfaceName = interfaceType.name;
 	    instanceEntry.instanceType = entry.type;
-            methodsUsed.get(instanceName).add(instanceEntry);
+            methodsUsed.put(methodName, instanceEntry);
             return methodName;
         }
         return null;

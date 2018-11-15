@@ -83,6 +83,27 @@ public class BSVType {
 	return freeVariables;
     }
 
+    private void getInstanceVariables(ArrayList<BSVType> freeVars) {
+	System.err.println("getInstanceVariables " + this + " instance " + instance);
+	if (isVar) {
+	    if (instance != null) {
+		System.err.println("    name " + name + " instance " + instance);
+		freeVars.add(instance);
+	    }
+	} else {
+	    for (BSVType param: params) {
+		System.err.println("    param " + param + " " + param.isVar);
+		param.getInstanceVariables(freeVars);
+	    }
+	}
+    }
+
+    public List<BSVType> getInstanceVariables() {
+	ArrayList<BSVType> freeVariables = new ArrayList<>();
+	getInstanceVariables(freeVariables);
+	return freeVariables;
+    }
+
     public BSVType prune() {
 	if (isVar && instance != null) {
 		instance = instance.prune();
@@ -202,7 +223,7 @@ public class BSVType {
 
     public String toString() {
 	if (instance != null)
-	    return instance.toString();
+	    return "(*" + name + "*)" + instance.toString();
 	if (name.equals("Function")) {
 	    String result = "";
 	    BSVType p0 = params.get(0);

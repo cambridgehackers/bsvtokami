@@ -1,6 +1,7 @@
 
 BKDIR?=..
-KAMIDIR?=$(realpath ../../kami/Kami)
+KAMIDIR?=$(realpath ../../kami2)
+BBVDIR?=$(realpath ../../bbv/theories)
 
 BSV_FILES = ProcMemSpec.bsv PipelinedProc.bsv ProcDecExec.bsv ProcMemInterm.bsv
 BO_FILES = $(patsubst %.bsv,%.bo, $(BSV_FILES))
@@ -14,7 +15,7 @@ out:
 
 out/Makefile: $(BO_FILES) $(PROOF_FILES) out
 	echo KAMIDIR $(KAMIDIR)
-	(cd out; coq_makefile -R $(KAMIDIR) Kami -R $(PWD)/out BK -o Makefile *.v)
+	(cd out; coq_makefile -R $(KAMIDIR) Kami -R $(BBVDIR) bbv -R $(PWD)/out BK -o Makefile *.v)
 
 out/_CoqProject: _CoqProject out
 	@cp -fv _CoqProject out

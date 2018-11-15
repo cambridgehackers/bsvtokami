@@ -1,5 +1,4 @@
-Require Import Kami.
-Require Import Lib.FinNotations.
+Require Import Kami.All.
 Require Import Bsvtokami.
 Require Import FIFO.
 Require Import ProcMemSpec PipelinedProc ProcDecExec.
@@ -32,7 +31,7 @@ Section DecExec.
             (pgm : RegFile).
 
 
-  Local Definition decexecSep : Modules := (Empty'modules (ProcDecExec.mkDecExecSep  "decexec" pgm dec exec tohost)).
+  Local Definition decexecSep : Mod := (Empty'modules (ProcDecExec.mkDecExecSep  "decexec" pgm dec exec tohost)).
   Lemma decexecSep_PhoasWf: ModPhoasWf decexecSep.
   Proof. kequiv. Qed.
   Lemma decexecSep_RegsWf: ModRegsWf decexecSep.
@@ -41,7 +40,7 @@ Section DecExec.
 
   Hint Unfold decexecSep: ModuleDefs.
 
-  Local Definition decexecSepInl: {m: Modules & decexecSep <<== m}.
+  Local Definition decexecSepInl: {m: Mod & decexecSep <<== m}.
   Proof.
     kinline_refine decexecSep.
   Defined.

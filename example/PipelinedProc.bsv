@@ -38,7 +38,7 @@ typedef struct {
 module mkPipelinedDecoder#(RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm,
                            Decoder dec,
                            FIFO#(D2E) d2eFifo)(Empty);
-   Reg#(Bit#(PgmSz)) pc <- mkReg(0);
+   Reg#(Bit#(PgmSz)) pc <- mkReg(16'h0);
 
    rule decode;
       Bit#(InstrSz) inst = pgm.sub(pc);
@@ -53,7 +53,7 @@ module mkPipelinedDecoder#(RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm,
          op: op, arithOp: arithOp, src1: src1, src2: src2, dst: dst, addr: addr, pc: pc
          };
       void enq <- d2eFifo.enq(decoded);
-      pc <= pc + 1;
+      pc <= pc + 16'd1;
    endrule
 endmodule
 
@@ -67,7 +67,8 @@ endinterface
 module mkScoreboard(Scoreboard);
    RegFile#(Bit#(RegFileSz), Bool) sbFlags <- mkRegFileFull();
 
-   method Bool search1(Bit#(RegFileSz) sidx);
+   Bit#(10) unused = 10'd0;
+   method Bool search1(Bit#(RegFileSz) sidx) if (True);
       Bool flag = sbFlags.sub(sidx);
       return flag;
    endmethod

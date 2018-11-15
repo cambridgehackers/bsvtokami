@@ -1,8 +1,6 @@
 Require Import Bool String List Arith.
 Require Import Omega.
-Require Import micromega.Lia.
-Require Import Kami.
-Require Import Lib.Indexer.
+Require Import Kami.All.
 Require Import Bsvtokami.
 
 Require Import FunctionalExtensionality.
@@ -30,22 +28,17 @@ Module module'mkProcInterm.
     Let e2wFifo := mkFIFO (instancePrefix--"e2wFifo").
     Let decexec := mkDecExec (instancePrefix--"decexec") (pgm)%bk (dec)%bk (exec)%bk (sb)%bk (e2wFifo)%bk (rf)%bk (mem)%bk (toHost)%bk.
     Let writeback := mkPipelinedWriteback (instancePrefix--"writeback") (e2wFifo)%bk (sb)%bk (rf)%bk.
-    Definition mkProcIntermModule: Modules :=
+    Local Open Scope kami_expr.
+
+    Definition mkProcIntermModule: Mod :=
          (BKMODULE {
-        (BKMod (Reg'modules pc :: nil))
-    with (BKMod (ProcRegs'modules rf :: nil))
-    with (BKMod (Scoreboard'modules sb :: nil))
-    with (BKMod (FIFO'modules e2wFifo :: nil))
-    with (BKMod (Empty'modules decexec :: nil))
-    with (BKMod (Empty'modules writeback :: nil))
+        (BKMod (Reg'mod pc :: nil))
+    with (BKMod (ProcRegs'mod rf :: nil))
+    with (BKMod (Scoreboard'mod sb :: nil))
+    with (BKMod (FIFO'mod e2wFifo :: nil))
+    with (BKMod (Empty'mod decexec :: nil))
+    with (BKMod (Empty'mod writeback :: nil))
     }). (* mkProcInterm *)
-
-
-    Lemma mkProcInterm_PhoasWf: ModPhoasWf mkProcIntermModule.
-    Proof. kequiv. Qed.
-    Lemma mkProcInterm_RegsWf: ModRegsWf mkProcIntermModule.
-    Proof. kvr. Qed.
-    Hint Resolve mkProcInterm_PhoasWf mkProcInterm_RegsWf.
 
 (* Module mkProcInterm type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> Memory -> ToHost -> Module#(Empty) return type Decoder *)
     Definition mkProcInterm := Build_Empty mkProcIntermModule%kami.

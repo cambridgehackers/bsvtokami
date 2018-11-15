@@ -311,8 +311,12 @@ class Main {
 	//Evaluator evaluator = new Evaluator(staticAnalyzer);
 	//evaluator.evaluate(packagedef);
 	if (translateToKami) {
+	    System.err.println(String.format("filename=%s", filename));
 	    File file = new File(filename);
+	    System.err.println(String.format("filename=%s file=%s", filename, file));
+	    System.err.println(String.format("file.getParent()=%s", file.getParent()));
 	    String dirname = (kamidir != null) ? kamidir : file.getParent();
+	    System.err.println(String.format("kamidir=%s dirname=%s", kamidir, dirname));
 	    File dir = new File(dirname);
 	    if (!dir.exists()) {
 		dir.mkdirs();

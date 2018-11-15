@@ -424,8 +424,21 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitActionBinding(BSVParser.ActionBindingContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
+	    assert ctx.arraydims().expression().size() == 0;
             BSVType bsvtype = visit(ctx.t);
             logger.fine("actiondecl " + ctx.var.getText() + " <- " + bsvtype);
+	    BSVType rhstype = visit(ctx.rhs);
+            try {
+		BSVType actiontype = new BSVType("ActionValue", bsvtype);
+		System.err.println(String.format("actiontype %1$s rhstype %2$s", actiontype, rhstype));
+		actiontype.unify(rhstype);
+		System.err.println(String.format("   unified %1$s rhstype %2$s", actiontype, rhstype));
+            } catch (InferenceError e) {
+                logger.fine(e.toString());
+            }
+	    types.put(ctx, bsvtype);
             return bsvtype;
         }
         /**
@@ -626,7 +639,20 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitMethodcond(BSVParser.MethodcondContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitMethodcond(BSVParser.MethodcondContext ctx) {
+            if (types.containsKey(ctx))
+                return types.get(ctx);
+            BSVType booltype = new BSVType("Bool");
+            BSVType exprtype = visit(ctx.expression());
+            try {
+                exprtype.unify(booltype);
+            } catch (InferenceError e) {
+                logger.fine(e.toString());
+                System.err.println(e.toString() + " at " + StaticAnalysis.sourceLocation(ctx));
+            }
+            types.put(ctx, exprtype);
+            return exprtype;
+	}
         /**
          * {@inheritDoc}
          *
@@ -647,7 +673,20 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitRulecond(BSVParser.RulecondContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitRulecond(BSVParser.RulecondContext ctx) {
+            if (types.containsKey(ctx))
+                return types.get(ctx);
+            BSVType booltype = new BSVType("Bool");
+            BSVType exprtype = visit(ctx.expression());
+            try {
+                exprtype.unify(booltype);
+            } catch (InferenceError e) {
+                logger.fine(e.toString());
+                System.err.println(e.toString() + " at " + StaticAnalysis.sourceLocation(ctx));
+            }
+            types.put(ctx, exprtype);
+            return exprtype;
+        }
         @Override public BSVType visitRulebody(BSVParser.RulebodyContext ctx) { return visitChildren(ctx); }
         /**
          * {@inheritDoc}
@@ -1279,7 +1318,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         @Override public BSVType visitCallexpr(BSVParser.CallexprContext ctx) {
 	    if (types.containsKey(ctx))
 		return types.get(ctx);
-            BSVType fcntype = visit(ctx.fcn);
+            BSVType fcntype = visit(ctx.fcn).fresh(new ArrayList<>());
             System.err.println("call " + ctx.fcn.getText() + " type " + fcntype + " at " + StaticAnalysis.sourceLocation(ctx));
             assert fcntype != null : String.format("Null type for %s at %s", ctx.fcn.getText(), StaticAnalysis.sourceLocation(ctx));
             BSVType resulttype = new BSVType();
