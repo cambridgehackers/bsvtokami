@@ -2185,7 +2185,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     @Override public String visitArraysub(BSVParser.ArraysubContext ctx) {
 	boolean hasSecondArg = (ctx.expression(1) != null);
-        if (true || hasSecondArg) {
+	BSVType arraytype = typeVisitor.visit(ctx.array);
+	System.err.println(String.format("arraysub array %s type %s", ctx.array.getText(), arraytype));
+	if (arraytype.name.equals("Vector")) {
+	    return String.format("(%1$s @[ %2$s ])", visit(ctx.array), visit(ctx.expression(0)));
+        } else {
 	    typeVisitor.pushScope(scope);
 
 	    Evaluator evaluator = new Evaluator(scopes, typeVisitor);
@@ -2201,9 +2205,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    return String.format("(%1$s $#[ %2$d : %3$d ])",
 				 visit(ctx.array),
 				 imsb.value, ilsb.value, exprWidth);
-        } else {
-	    return String.format("(%1$s $#[ %2$s : %2$s ])", visit(ctx.array), visit(ctx.expression(0)));
-	}
+        }
     }
 
     @Override public String visitLvalue(BSVParser.LvalueContext ctx) {
@@ -2472,6 +2474,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    kamitype = "nat";
 	else if (kamitype.equals("Action"))
 	    kamitype = "Void";
+	else if (kamitype.equals("Vector"))
+	    kamitype = "Array";
 	else if (kamitype.equals("void"))
 	    kamitype = "Void";
 	return kamitype;
@@ -2495,6 +2499,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		kamitype = "nat";
 	} else if (t.name.equals("ActionValue")) {
 	    kamitype = convertedParams.get(0);
+	} else if (t.name.equals("Vector")) {
+	    kamitype = String.format("Array %s", String.join(" ", convertedParams));
 	} else if (t.name.equals("TAdd")) {
 	    kamitype = String.join(" + ", convertedParams);
 	} else if (t.name.equals("TSub")) {
@@ -2568,6 +2574,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 				   bsvTypeSize(bsvtype.params.get(0), ctx));
 	} else if (bsvtype.name.equals("Bit") || bsvtype.name.equals("Int") || bsvtype.name.equals("UInt")) {
 	    result = bsvTypeSize(bsvtype.params.get(0), ctx);
+	} else if (bsvtype.name.equals("Vector")) {
+	    result = String.format("(%s * %s)",
+				   bsvTypeSize(bsvtype.params.get(0), ctx),
+				   bsvTypeSize(bsvtype.params.get(1), ctx));
 	} else {
 	    assert bsvtype.numeric : "Expecting numeric type, got " + bsvtype + " at " + StaticAnalysis.sourceLocation(ctx);
 	    result = bsvtype.toString();
