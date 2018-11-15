@@ -644,7 +644,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	printstream.println("");
 	printstream.println(String.format("    Hint Unfold %1$sModule : ModuleDefs.", moduleName));
-	printstream.println(String.format("    (* Definition wellformed_%1$s : ModWf := @Build_ModWf %1$sModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)",
+	printstream.println(String.format("    Definition wellformed_%1$s : ModWf := @Build_ModWf %1$sModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf).",
 					  moduleName));
 	printstream.println("");
 
@@ -655,6 +655,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	printstream.println(String.format("Definition %1$s := module'%1$s.%1$s.", moduleName));
 	printstream.println(String.format("Hint Unfold %1$s : ModuleDefs.", moduleName));
 	printstream.println(String.format("Hint Unfold module'%1$s.%1$s : ModuleDefs.", moduleName));
+	printstream.println(String.format("Hint Unfold module'%1$s.wellformed_%1$s : ModuleDefs.", moduleName));
 	if (!useAbstractOmega)
 	    printstream.println(String.format("Hint Unfold module'%1$s.%1$sModule : ModuleDefs.", moduleName));
 	printstream.println("");
