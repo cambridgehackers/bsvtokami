@@ -188,9 +188,9 @@ Module module'mkProduceConsume.
         Register data : Bit 32 <-  (* intwidth *) (natToWord 32 0)
     with Rule "produce" :=
     (
-        Read data_v : Bit 32 <- data ;
-       BKCall call3 : Void <-  (* translateCall *) extpc'extCall ((#data_v) : Bit 32) ;
-               Write data : Bit 32 <- (#data_v + $$ (* intwidth *) (natToWord 32 1)) ;
+        Read ret : Bit 32 <- data ;
+       LETA _ : Void <- (LET v : Bit 32 <- #ret; BKCall call3 : Void <-  (* translateCall *) extpc'extCall ((#v) : Bit 32) ; Retv) ;
+               Write data : Bit 32 <- (#ret + $$ (* intwidth *) (natToWord 32 1)) ;
         Retv ) (* rule produce *)
     }). (* mkProduceConsume *)
 
