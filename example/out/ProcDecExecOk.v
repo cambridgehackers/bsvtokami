@@ -2,6 +2,7 @@ Require Import Kami.All.
 Require Import Bsvtokami.
 Require Import FIFO.
 Require Import ProcMemSpec PipelinedProc ProcDecExec.
+Require Import FinNotations.
 
 Set Implicit Arguments.
 
@@ -17,6 +18,16 @@ Set Implicit Arguments.
  * - ProcMemOk.v: a complete refinement proof
  *)
 
+    Record Decoder :=
+      { getOp: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind OpK) ;
+        getArithOp: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind OpArithK) ;
+        getSrc1: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind (Bit RegFileSz)) ;
+        getSrc2: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind (Bit RegFileSz)) ;
+        getDst: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind (Bit RegFileSz)) ;
+        getAddr: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind (Bit AddrSz))
+      }.
+
+
 (* Here we prove that merging the first two stages ([decoder] and [executer])
  * is correct by providing a refinement from [decexecSep] to [decexec]. *)
 Section DecExec.
@@ -24,29 +35,27 @@ Section DecExec.
   Local Definition dataK := Bit ProcMemSpec.DataSz.
   Local Definition instK := Bit ProcMemSpec.InstrSz.
 
-  Variables (dec: ProcMemSpec.Decoder)
+  Variables (coqdec: Decoder)
+            (dec: ProcMemSpec.Decoder)
             (exec: ProcMemSpec.Executer)
             (tohost: ProcMemSpec.ToHost)
             (pcInit : ConstT (Bit ProcMemSpec.PgmSz))
             (pgm : RegFile).
 
 
-  Local Definition decexecSep : Mod := (Empty'modules (ProcDecExec.mkDecExecSep  "decexec" pgm dec exec tohost)).
-  Lemma decexecSep_PhoasWf: ModPhoasWf decexecSep.
-  Proof. kequiv. Qed.
-  Lemma decexecSep_RegsWf: ModRegsWf decexecSep.
-  Proof. kvr. Qed.
-  Hint Resolve decexecSep_PhoasWf decexecSep_RegsWf.
-
+  Local Definition decexecSep : Mod := (Empty'mod (ProcDecExec.mkDecExecSep  "decexec" pgm dec exec tohost)).
   Hint Unfold decexecSep: ModuleDefs.
 
-  Local Definition decexecSepInl: {m: Mod & decexecSep <<== m}.
+(*
+  Local Definition decexecSepInl: {m: Mod & TraceInclusion decexecSep m}.
   Proof.
-    kinline_refine decexecSep.
+    fresh Hequiv.
+    econstructor; eauto.
+    (* kinline_refine decexecSep. *)
   Defined.
 
   Local Definition decexecSepInl := decexecSepInl dec exec pcInit pgmInit.
-
+*)
   (* What would be good invariants to prove the correctness of stage merging?
    * For two given stages, we usually need to provide relations among states in
    * the two stages and elements in the fifo between them.
@@ -58,34 +67,34 @@ Section DecExec.
   Definition decexec_pc_inv
              (pcv: fullType type (SyntaxKind (Bit PgmSz)))
              (d2efullv: fullType type (SyntaxKind Bool))
-             (d2eeltv: fullType type (SyntaxKind (Struct D2E))) :=
-    d2efullv = true -> pcv = d2eeltv F7 ^+ $1.
+             (d2eeltv: fullType type (SyntaxKind D2E)) :=
+    d2efullv = true -> pcv = d2eeltv F5 ^+ $1.
   
   Definition decexec_d2e_inv
-             (pgmv: fullType type (SyntaxKind (Vector instK PgmSz)))
+             (pgmv: fullType type (SyntaxKind (Array NumInstrs (Bit InstrSz))))
              (d2efullv: fullType type (SyntaxKind Bool))
-             (d2eeltv: fullType type (SyntaxKind (Struct D2E))) :=
+             (d2eeltv: fullType type (SyntaxKind D2E)) :=
     d2efullv = true ->
-    let pc := d2eeltv F7 in
-    let inst := evalExpr (#pgmv@[#pc])%kami_expr in
-    d2eeltv F1 = evalExpr (getOp dec inst) /\
-    d2eeltv F2 = evalExpr (getArithOp dec inst) /\
-    d2eeltv F3 = evalExpr (getSrc1 dec inst) /\
-    d2eeltv F4 = evalExpr (getSrc2 dec inst) /\
-    d2eeltv F5 = evalExpr (getDst dec inst) /\
-    d2eeltv F6 = evalExpr (getAddr dec inst).
+    let pc := d2eeltv F5 in
+    let inst := evalExpr (ReadArray (Var type (SyntaxKind _) pgmv) (Var type (SyntaxKind (Bit PgmSz)) pc )) in
+    d2eeltv F4 = evalExpr (getOp coqdec _ inst) /\
+    d2eeltv F2 = evalExpr (getArithOp coqdec _ inst) /\
+    d2eeltv F6 = evalExpr (getSrc1 coqdec _ inst) /\
+    d2eeltv F7 = evalExpr (getSrc2 coqdec _ inst) /\
+    d2eeltv F3 = evalExpr (getDst coqdec _ inst) /\
+    d2eeltv F1 = evalExpr (getAddr coqdec _ inst).
 
   Record decexec_inv (o: RegsT): Prop :=
-    { pcv: fullType type (SyntaxKind (Bit PgmSz));
-      Hpcv: M.find "pc"%string o = Some (existT _ _ pcv);
-      pgmv: fullType type (SyntaxKind (Vector instK PgmSz));
-      Hpgmv: M.find "pgm"%string o = Some (existT _ _ pgmv);
-      d2efullv: fullType type (SyntaxKind Bool);
-      Hd2efullv: M.find "full.d2e"%string o = Some (existT _ _ d2efullv);
-      d2eeltv: fullType type (SyntaxKind (Struct D2E));
-      Hd2eeltv: M.find "elt.d2e"%string o = Some (existT _ _ d2eeltv);
+    { pcv: fullType type (SyntaxKind (Bit PgmSz)) ;
+      Hpcv: findReg "pc"%string o = Some (existT _ _ pcv) ;
+      pgmv: fullType type (SyntaxKind (Array NumInstrs (Bit InstrSz))) ;
+      Hpgmv: findReg "pgm"%string o = Some (existT _ _ pgmv) ;
+      d2efullv: fullType type (SyntaxKind Bool) ;
+      Hd2efullv: findReg "full.d2e"%string o = Some (existT _ _ d2efullv) ;
+      d2eeltv: fullType type (SyntaxKind D2E) ;
+      Hd2eeltv: findReg "elt.d2e"%string o = Some (existT _ _ d2eeltv) ;
 
-      Hpcinv: decexec_pc_inv pcv d2efullv d2eeltv;
+      Hpcinv: decexec_pc_inv pcv d2efullv d2eeltv ;
       Hdeinv: decexec_d2e_inv pgmv d2efullv d2eeltv
     }.
 
@@ -99,10 +108,27 @@ Section DecExec.
    * ([decexec_inv_dest_tac]), and the other is for constructing invariants for
    * the next state ([decexec_inv_constr_tac]). *)
   Ltac decexec_inv_dest_tac :=
-    unfold getRegInits, decexecSepInl, projT1;
+    unfold getAllRegisters, (* decexecSepInl, *) projT1;
     try match goal with
         | [H: decexec_inv _ |- _] => destruct H
         end.
+
+(* fixme *)
+Ltac kinv_eq :=
+  repeat
+    (first [ reflexivity
+           (* | meqReify *)
+           (* | findReify *)
+           (* | fin_func_eq *)
+           (* | apply existT_eq *)
+           (* | apply pair_eq *)
+    ]).
+
+
+(* fixme too *)
+Ltac kinv_red :=
+  intros; repeat autounfold with InvDefs in *;
+  dest; try subst (* ; kinv_simpl *).
 
   Ltac decexec_inv_constr_tac :=
     econstructor; intros;
@@ -150,23 +176,8 @@ Section DecExec.
 
   (* Equipped with invariants, it is time to prove refinement.
    * Following the Kami verification flow, we will use a decomposition theorem.
-   * Register and rule mappings are required to use the theorem. *)
-  Definition decexec_regMap (r: RegsT): RegsT :=
-    (mlet pcv : (Bit PgmSz) <- r |> "pc";
-       mlet pgmv : (Vector instK PgmSz) <- r |> "pgm";
-       mlet d2efullv : Bool <- r |> "d2e"--"full";
-       mlet d2eeltv : (Struct D2E) <- r |> "d2e"--"elt";
-       (["pgm" <- existT _ _ pgmv]
-        +["pc" <- existT _ (SyntaxKind (Bit PgmSz))
-               (if d2efullv then d2eeltv F7 else pcv)])%fmap)%mapping.
-  Hint Unfold decexec_regMap: MethDefs.
-  
-  Definition decexec_ruleMap (o: RegsT): string -> option string :=
-    "executeArith" |-> "decexecArith";
-      "executeLd" |-> "decexecLd";
-      "executeSt" |-> "decexecSt";
-      "executeTh" |-> "decexecTh"; ||.
-  Hint Unfold decexec_ruleMap: MethDefs.
+   *)
+
   
   (* Finally the correctness proof!
    * The proof is highly automated as well, following a typical verification

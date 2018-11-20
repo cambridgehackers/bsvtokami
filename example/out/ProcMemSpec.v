@@ -18,7 +18,9 @@ Definition InstrSz := 32.
 
 Definition RegFileSz := 32.
 
-Definition PgmSz := 16.
+Definition NumInstrs := 16.
+
+Definition PgmSz := Nat.log2_up NumInstrs.
 
 Definition opArith : ConstT (Bit 2) := ( (* intwidth *) (natToWord 2 0))%kami.
 
@@ -90,8 +92,6 @@ Module module'mkMemory.
         (* method bindings *)
     Let (* action binding *) mem := mkRegFileFull (Bit AddrSz) (Bit DataSz) (instancePrefix--"mem").
     (* instance methods *)
-    Let mem'sub : string := (RegFile'sub mem).
-    Let mem'upd : string := (RegFile'upd mem).
     Local Open Scope kami_expr.
 
     Definition mkMemoryModule: Mod :=
@@ -102,14 +102,14 @@ Module module'mkMemory.
         If ((#req @% "isLoad") == $$ (* intwidth *) (natToWord 1 1)) then (
         
         LET addr : Bit AddrSz (* non-call varbinding *) <- (#req @% "addr") ;
-        BKCall ldval : Bit DataSz (* varbinding *) <-  (* translateCall *) mem'sub ((#addr) : Bit AddrSz) ;
+        BKCall ldval : Bit DataSz (* varbinding *) <-  (* translateCall *) (RegFile'sub mem) ((#addr) : Bit AddrSz) ;
                 Ret #ldval
         ) else (
         
         LET addr : Bit AddrSz (* non-call varbinding *) <- (#req @% "addr") ;
                 LET newval : Bit DataSz (* non-call varbinding *) <- (#req @% "data") ;
-                BKCall unused : Void (* actionBinding *) <- mem'upd ((#addr) : Bit AddrSz) ((#newval) : Bit DataSz) ;
-        BKCall placeholder : Bit DataSz (* varbinding *) <-  (* translateCall *) mem'sub ((#addr) : Bit AddrSz) ;
+                BKCall unused : Void (* actionBinding *) <- (RegFile'upd mem) ((#addr) : Bit AddrSz) ((#newval) : Bit DataSz) ;
+        BKCall placeholder : Bit DataSz (* varbinding *) <-  (* translateCall *) (RegFile'sub mem) ((#addr) : Bit AddrSz) ;
                 Ret #placeholder) as retval
  ;
         Ret #retval    )
@@ -117,11 +117,9 @@ Module module'mkMemory.
     }). (* mkMemory *)
 
     Hint Unfold mkMemoryModule : ModuleDefs.
-(* Module mkMemory type Module#(Memory) return type Memory *)
     Definition mkMemory := Build_Memory mkMemoryModule (instancePrefix--"doMem").
     Hint Unfold mkMemory : ModuleDefs.
     Hint Unfold mkMemoryModule : ModuleDefs.
-    (* Definition wellformed_mkMemory : ModWf := @Build_ModWf mkMemoryModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
 
     End Section'mkMemory.
 End module'mkMemory.
@@ -168,7 +166,7 @@ Module module'procSpec.
 
     Definition procSpecModule: Mod :=
          (BKMODULE {
-        Register pc : Bit PgmSz <-  (* intwidth *) (natToWord 16 0)
+        Register pc : Bit PgmSz <-  (* intwidth *) (natToWord PgmSz 0)
     with (BKMod (RegFile'mod rf :: nil))
     with (BKMod (Memory'mod mem :: nil))
     with Rule instancePrefix--"doArith" :=
@@ -188,7 +186,7 @@ Module module'procSpec.
        BKCall val2 : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'sub ((#src2) : Bit RegFileSz) ;
        BKCall dval : Bit DataSz (* varbinding *) <-  (* translateCall *) exec'execArith ((#op) : OpArithK) ((#val1) : Bit DataSz) ((#val2) : Bit DataSz) ;
                BKCall unused : Void (* actionBinding *) <- rf'upd ((#dst) : Bit RegFileSz) ((#dval) : Bit DataSz) ;
-               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord 16 1)) ;
+               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1)) ;
         Retv ) (* rule doArith *)
     with Rule instancePrefix--"doLoad" :=
     (
@@ -203,7 +201,7 @@ Module module'procSpec.
        BKCall dst : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getDst ((#inst) : Bit InstrSz) ;
                BKCall val : Bit DataSz (* actionBinding *) <- mem'doMem ((STRUCT { "addr" ::= (#addr) ; "data" ::= ($$ (* intwidth *) (natToWord 32 0)) ; "isLoad" ::= ($$ (* intwidth *) (natToWord 1 1))  }%kami_expr) : MemRq) ;
        BKCall call4 : Void <-  (* translateCall *) rf'upd ((#dst) : Bit RegFileSz) ((#val) : Bit DataSz) ;
-               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord 16 1)) ;
+               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1)) ;
         Retv ) (* rule doLoad *)
     with Rule instancePrefix--"doStore" :=
     (
@@ -218,7 +216,7 @@ Module module'procSpec.
        BKCall src : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getSrc1 ((#inst) : Bit InstrSz) ;
        BKCall val : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'sub ((#src) : Bit RegFileSz) ;
                BKCall unused : Bit DataSz (* actionBinding *) <- mem'doMem ((STRUCT { "addr" ::= (#addr) ; "data" ::= (#val) ; "isLoad" ::= ($$ (* intwidth *) (natToWord 1 0))  }%kami_expr) : MemRq) ;
-               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord 16 1)) ;
+               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1)) ;
         Retv ) (* rule doStore *)
     with Rule instancePrefix--"doHost" :=
     (
@@ -232,7 +230,7 @@ Module module'procSpec.
        BKCall src1 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getSrc1 ((#inst) : Bit InstrSz) ;
        BKCall val1 : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'sub ((#src1) : Bit RegFileSz) ;
                BKCall unused : Void (* actionBinding *) <- tohost'toHost ((#val1) : Bit DataSz) ;
-               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord 16 1)) ;
+               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1)) ;
         Retv ) (* rule doHost *)
     }). (* procSpec *)
 
@@ -241,7 +239,6 @@ Module module'procSpec.
     Definition procSpec := Build_Empty procSpecModule.
     Hint Unfold procSpec : ModuleDefs.
     Hint Unfold procSpecModule : ModuleDefs.
-    (* Definition wellformed_procSpec : ModWf := @Build_ModWf procSpecModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
 
     End Section'procSpec.
 End module'procSpec.

@@ -131,7 +131,6 @@ Module module'mkDecExec.
     }). (* mkDecExec *)
 
     Hint Unfold mkDecExecModule : ModuleDefs.
-    Definition wellformed_mkDecExecModule : ModWf := @Build_ModWf mkDecExecModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf).
 
 (* Module mkDecExec type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> Scoreboard -> FIFO#(E2W) -> ProcRegs -> Memory -> ToHost -> Module#(Empty) return type Decoder *)
     Definition mkDecExec := Build_Empty mkDecExecModule%kami.
@@ -143,23 +142,6 @@ Definition mkDecExec := module'mkDecExec.mkDecExec.
 Hint Unfold mkDecExec : ModuleDefs.
 Hint Unfold module'mkDecExec.mkDecExec : ModuleDefs.
 Hint Unfold module'mkDecExec.mkDecExecModule : ModuleDefs.
-
-Theorem wellformed_mkDecExecModule:
-  forall prefix: string,
-  forall rf: RegFile,
-  forall dec : Decoder,
-  forall exec: Executer,
-  forall sc: Scoreboard,
-  forall fifo: FIFO,
-  forall regs: ProcRegs,
-  forall mem: Memory,
-  forall th: ToHost,
-  WfMod (module'mkDecExec.mkDecExecModule prefix rf dec exec sc fifo regs mem th).
-Proof.
-  intros.
-  repeat autounfold with ModuleDefs.
-  discharge_wf.
-Qed.
 
 Module module'mkDecExecSep.
     Section Section'mkDecExecSep.

@@ -64,7 +64,6 @@ BKCall val : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'sub ((#r2) :
     Definition mkProcRegs := Build_ProcRegs mkProcRegsModule (instancePrefix--"read1") (instancePrefix--"read2") (instancePrefix--"write").
     Hint Unfold mkProcRegs : ModuleDefs.
     Hint Unfold mkProcRegsModule : ModuleDefs.
-    (* Definition wellformed_mkProcRegs : ModWf := @Build_ModWf mkProcRegsModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
 
     End Section'mkProcRegs.
 End module'mkProcRegs.
@@ -79,7 +78,7 @@ Definition D2E := (STRUCT {
     "arithOp" :: OpArithK;
     "dst" :: Bit RegFileSz;
     "op" :: OpK;
-    "pc" :: Bit PgmSz;
+    "pc" :: Bit PgmSz ;
     "src1" :: Bit RegFileSz;
     "src2" :: Bit RegFileSz}).
 
@@ -104,7 +103,7 @@ Module module'mkPipelinedDecoder.
 
     Definition mkPipelinedDecoderModule: Mod :=
          (BKMODULE {
-        Register pc : Bit PgmSz <-  (* intwidth *) (natToWord 16 0)
+        Register pc : Bit PgmSz <-  (* intwidth *) (natToWord PgmSz 0)
     with Rule instancePrefix--"decode" :=
     (
         Read pc_v : Bit PgmSz <- pc ;
@@ -117,7 +116,7 @@ Module module'mkPipelinedDecoder.
        BKCall addr : Bit AddrSz (* varbinding *) <-  (* translateCall *) dec'getAddr ((#inst) : Bit InstrSz) ;
                LET decoded : D2E (* non-call varbinding *) <- STRUCT { "addr" ::= (#addr) ; "arithOp" ::= (#arithOp) ; "dst" ::= (#dst) ; "op" ::= (#op) ; "pc" ::= (#pc_v) ; "src1" ::= (#src1) ; "src2" ::= (#src2)  }%kami_expr ;
                BKCall enq : Void (* actionBinding *) <- d2eFifo'enq ((#decoded) : D2E) ;
-               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord 16 1)) ;
+               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1)) ;
         Retv ) (* rule decode *)
     }). (* mkPipelinedDecoder *)
 
@@ -126,7 +125,6 @@ Module module'mkPipelinedDecoder.
     Definition mkPipelinedDecoder := Build_Empty mkPipelinedDecoderModule.
     Hint Unfold mkPipelinedDecoder : ModuleDefs.
     Hint Unfold mkPipelinedDecoderModule : ModuleDefs.
-    (* Definition wellformed_mkPipelinedDecoder : ModWf := @Build_ModWf mkPipelinedDecoderModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
 
     End Section'mkPipelinedDecoder.
 End module'mkPipelinedDecoder.
@@ -197,7 +195,6 @@ BKCall flag : Bool (* varbinding *) <-  (* translateCall *) sbFlags'sub ((#sidx)
     Definition mkScoreboard := Build_Scoreboard mkScoreboardModule (instancePrefix--"insert") (instancePrefix--"remove") (instancePrefix--"search1") (instancePrefix--"search2").
     Hint Unfold mkScoreboard : ModuleDefs.
     Hint Unfold mkScoreboardModule : ModuleDefs.
-    (* Definition wellformed_mkScoreboard : ModWf := @Build_ModWf mkScoreboardModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
 
     End Section'mkScoreboard.
 End module'mkScoreboard.
@@ -310,7 +307,6 @@ Module module'mkPipelinedExecuter.
     Definition mkPipelinedExecuter := Build_Empty mkPipelinedExecuterModule.
     Hint Unfold mkPipelinedExecuter : ModuleDefs.
     Hint Unfold mkPipelinedExecuterModule : ModuleDefs.
-    (* Definition wellformed_mkPipelinedExecuter : ModWf := @Build_ModWf mkPipelinedExecuterModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
 
     End Section'mkPipelinedExecuter.
 End module'mkPipelinedExecuter.
@@ -351,7 +347,6 @@ Module module'mkPipelinedWriteback.
     Definition mkPipelinedWriteback := Build_Empty mkPipelinedWritebackModule.
     Hint Unfold mkPipelinedWriteback : ModuleDefs.
     Hint Unfold mkPipelinedWritebackModule : ModuleDefs.
-    (* Definition wellformed_mkPipelinedWriteback : ModWf := @Build_ModWf mkPipelinedWritebackModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
 
     End Section'mkPipelinedWriteback.
 End module'mkPipelinedWriteback.
@@ -396,7 +391,6 @@ Module module'mkProcImpl.
     Definition mkProcImpl := Build_Empty mkProcImplModule.
     Hint Unfold mkProcImpl : ModuleDefs.
     Hint Unfold mkProcImplModule : ModuleDefs.
-    (* Definition wellformed_mkProcImpl : ModWf := @Build_ModWf mkProcImplModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
 
     End Section'mkProcImpl.
 End module'mkProcImpl.
