@@ -7,17 +7,6 @@ Require Import FunctionalExtensionality.
 
 Set Implicit Arguments.
 
-Theorem produce_consume_refinement:
-  TraceInclusion (Foo'mod (mkProduceConsume (mkExtCall)))
-                 (flattened_ModWf (module'mkProducerConsumer.wellformed_mkProducerConsumer (mkExtCall))).
-Proof.
-  repeat autounfold with ModuleDefs.
-    unfold TraceInclusion.
-  intros.
-  exists o1, ls1.
-  repeat split; auto; intros; unfold nthProp2; intros; try destruct (nth_error ls1 i) ; auto; repeat split; intros; try firstorder.
-Qed.
-
 Theorem consumer_refinement:
   TraceInclusion (Consumer'mod (mkConsumer (mkExtCall))) (flattened_ModWf (module'mkConsumer.wellformed_mkConsumer (mkExtCall))).
 Proof.
@@ -56,7 +45,6 @@ Proof.
   simpl.
   unfold removeHides.
   simpl.
-
 
     unfold TraceInclusion.
   intros.
