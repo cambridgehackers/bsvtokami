@@ -46,16 +46,18 @@ Section DecExec.
   Local Definition decexecSep : Mod := (Empty'mod (ProcDecExec.mkDecExecSep  "decexec" pgm dec exec tohost)).
   Hint Unfold decexecSep: ModuleDefs.
 
-(*
-  Local Definition decexecSepInl: {m: Mod & TraceInclusion decexecSep m}.
+  (* Local Definition decexecSepInl: {m: Mod & TraceInclusion (flatten_inline_remove decexecSep) m}.
   Proof.
-    fresh Hequiv.
-    econstructor; eauto.
-    (* kinline_refine decexecSep. *)
+    unfold TraceInclusion.
+    intros.
+    exists o1, ls1.
+    repeat split; auto; intros; unfold nthProp2; intros; try destruct (nth_error ls1 i) ; auto; repeat split; intros; try firstorder.
   Defined.
 
-  Local Definition decexecSepInl := decexecSepInl dec exec pcInit pgmInit.
+  Local Definition decexecSepInl := decexecSepInl dec exec pcInit pgm.
 *)
+  Local Definition decexecSepInl := (flatten_inline_remove decexecSep).
+
   (* What would be good invariants to prove the correctness of stage merging?
    * For two given stages, we usually need to provide relations among states in
    * the two stages and elements in the fifo between them.
@@ -137,15 +139,22 @@ Ltac kinv_red :=
   Ltac decexec_inv_tac :=
     decexec_inv_dest_tac; decexec_inv_constr_tac.
 
+  Check (getRegFileRegisters _).
+  Check (evalConstFullT _).
+ (*  Definition rawInitRegs (init: list RegInitT) : RegsT :=
+    map (fun r => match r with
+        ) init.
+*)
+
   (* Now we are ready to prove the invariant!
    * Thanks to some Kami tactics, the proof will be highly automated. *)
   Lemma decexec_inv_ok':
     forall init n ll,
-      init = initRegs (getRegInits (projT1 decexecSepInl)) ->
-      Multistep (projT1 decexecSepInl) init n ll ->
+      init = (map evalConstFullT (getAllRegisters decexecSepInl)) ->
+      Trace decexecSepInl init n ll ->
       decexec_inv n.
   Proof.
-    (* Induction on [Multistep] is the natural choice. *)
+    (* Induction on [Trace] is the natural choice. *)
     induction 2.
     - (* Our custom destruction-construction tactic is used 
        * for the initial case as well. *)
