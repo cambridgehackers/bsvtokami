@@ -28,26 +28,42 @@ Proof.
   repeat split; auto; intros; unfold nthProp2; intros; try destruct (nth_error ls1 i) ; auto; repeat split; intros; try firstorder.
 Qed.
 
+Ltac do_inlining :=
+  repeat autounfold with ModuleDefs;
+  unfold flatten_inline_remove, getHidden, inlineAll_All_mod, getAllRegisters,
+         getAllMethods, getAllRules, getRules, getRegisters, getMethods, app;
+  unfold inlineAll_All, inlineAll_Meths;
+  simpl;
+  unfold inlineSingle_Meths_pos, nth_error, map;
+  unfold inlineSingle_Meth;
+  unfold inlineSingle; simpl;
+  unfold inlineAll_Rules, inlineSingle_Rules_pos;
+  simpl;
+  unfold removeHides;
+  simpl.
+
 Theorem spec_impl_refinement:
   TraceInclusion (Foo'mod (mkProduceConsume (mkExtCall)))
                  (flatten_inline_remove (HideMeth (Producer'mod (mkProducerConsumer (mkExtCall))) "send")).
 Proof.
 
-  repeat autounfold with ModuleDefs.
-  unfold flatten_inline_remove, getHidden, inlineAll_All_mod, getAllRegisters,
-         getAllMethods, getAllRules, getRules, getRegisters, getMethods, app.
-  unfold inlineAll_All, inlineAll_Meths.
-  simpl.
-  unfold inlineSingle_Meths_pos, nth_error, map.
-  unfold inlineSingle_Meth.
-  unfold inlineSingle. simpl.
-  unfold inlineAll_Rules, inlineSingle_Rules_pos.
-  simpl.
-  unfold removeHides.
-  simpl.
+  do_inlining.
 
     unfold TraceInclusion.
   intros.
   exists o1, ls1.
   repeat split; auto; intros; unfold nthProp2; intros; try destruct (nth_error ls1 i) ; auto; repeat split; intros; try firstorder.
+Qed.
+
+Definition spec := (Foo'mod (mkProduceConsume (mkExtCall))).
+Definition impl := (flatten_inline_remove (HideMeth (Producer'mod (mkProducerConsumer (mkExtCall))) "send")).
+Hint Unfold spec : ModuleDefs.
+Hint Unfold impl : ModuleDefs.
+
+Theorem spec_impl_discharge_simulation (simRel: RegsT -> RegsT -> Prop):
+  TraceInclusion spec impl.
+Proof.
+  do_inlining.
+
+  discharge_simulationGeneral simRel (NoDup (map fst (getRegisters impl))).
 Qed.
