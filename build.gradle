@@ -5,7 +5,6 @@ apply plugin: 'antlr'
 
 mainClassName = 'bsvtokami.Main'
 
-
 repositories {
     mavenCentral()
 }
@@ -13,9 +12,16 @@ repositories {
 dependencies {
     antlr "org.antlr:antlr4:4.7.1" // use ANTLR version 4
     compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.1.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.1.0'
 }
 
 generateGrammarSource {
     maxHeapSize = "64m"
     arguments += ["-visitor"]
+}
+
+test {
+    useJUnitPlatform()
 }
