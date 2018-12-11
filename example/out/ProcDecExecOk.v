@@ -3,6 +3,8 @@ Require Import Bsvtokami.
 Require Import FIFO.
 Require Import ProcMemSpec PipelinedProc ProcDecExec.
 Require Import FinNotations.
+Require Import BKTactics.
+Require Import Decoder.
 
 Set Implicit Arguments.
 
@@ -18,7 +20,7 @@ Set Implicit Arguments.
  * - ProcMemOk.v: a complete refinement proof
  *)
 
-    Record Decoder :=
+    Record CoqDecoder :=
       { getOp: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind OpK) ;
         getArithOp: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind OpArithK) ;
         getSrc1: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind (Bit RegFileSz)) ;
@@ -26,6 +28,8 @@ Set Implicit Arguments.
         getDst: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind (Bit RegFileSz)) ;
         getAddr: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind (Bit AddrSz))
       }.
+
+Compute "CoqDecoder"%string.
 
 
 (* Here we prove that merging the first two stages ([decoder] and [executer])
@@ -35,16 +39,26 @@ Section DecExec.
   Local Definition dataK := Bit ProcMemSpec.DataSz.
   Local Definition instK := Bit ProcMemSpec.InstrSz.
 
-  Variables (coqdec: Decoder)
-            (dec: ProcMemSpec.Decoder)
-            (exec: ProcMemSpec.Executer)
-            (tohost: ProcMemSpec.ToHost)
-            (pcInit : ConstT (Bit ProcMemSpec.PgmSz))
-            (pgm : RegFile).
+  Variables (coqdec: CoqDecoder)
+            (kamidec: Decoder.Decoder)
+            (kamiexec: Decoder.Executer)
+            (sb: Scoreboard)
+            (e2wfifo: FIFO)
+            (rf: ProcRegs)
+            (mem: Memory)
+            (tohostmod: Mod)
+            (pcInit : ConstT (Bit ProcMemSpec.PgmSz)).
 
+  Local Definition pgm: RegFile := mkRegFileFull (Bit InstrSz) (Bit PgmSz) "pgm".
+  Local Definition dec: ProcMemSpec.Decoder := mkDecoder kamidec "dec".
+  Local Definition exec: ProcMemSpec.Executer := mkExecuter kamiexec "exec".
+  Local Definition tohost: ToHost := (Build_ToHost tohostmod "tohost").
 
   Local Definition decexecSep : Mod := (Empty'mod (ProcDecExec.mkDecExecSep  "decexec" pgm dec exec tohost)).
   Hint Unfold decexecSep: ModuleDefs.
+
+  Local Definition decexec : Mod := (Empty'mod (ProcDecExec.mkDecExec "decexec" pgm dec exec sb e2wfifo rf mem tohost)).
+  Hint Unfold decexec: ModuleDefs.
 
   (* Local Definition decexecSepInl: {m: Mod & TraceInclusion (flatten_inline_remove decexecSep) m}.
   Proof.
@@ -57,6 +71,16 @@ Section DecExec.
   Local Definition decexecSepInl := decexecSepInl dec exec pcInit pgm.
 *)
   Local Definition decexecSepInl := (flatten_inline_remove decexecSep).
+
+  Set Printing Depth 10000.
+
+  Print Assumptions decexec.
+  Eval cbv in (flatten_inline_remove decexec).
+  Compute "decexecInl"%string.
+
+  Print Assumptions decexecSepInl.
+  Eval cbv in (flatten_inline_remove decexecSep).
+  Compute "decexecSepInl"%string.
 
   (* What would be good invariants to prove the correctness of stage merging?
    * For two given stages, we usually need to provide relations among states in
@@ -105,6 +129,7 @@ Section DecExec.
    * automatically. *)
   Hint Unfold decexec_pc_inv decexec_d2e_inv: InvDefs.
 
+
   (* In order to prove invariants, we need to provide two customized tactics:
    * one is for destructing invariants for the current state
    * ([decexec_inv_dest_tac]), and the other is for constructing invariants for
@@ -114,6 +139,36 @@ Section DecExec.
     try match goal with
         | [H: decexec_inv _ |- _] => destruct H
         end.
+
+(*  Set Ltac Profiling.
+Theorem decexec_ok:
+    TraceInclusion (flatten_inline_remove decexecSep)
+                   (flatten_inline_remove decexec).
+  Proof.
+  repeat autounfold with ModuleDefs.
+  unfold flatten_inline_remove, getHidden, inlineAll_All_mod, getAllRegisters,
+         getAllMethods, getAllRules, getRules, getRegisters, getMethods, app.
+  unfold inlineAll_All.
+  simpl.
+
+  unfold inlineAll_Meths.
+
+  unfold inlineSingle_Meths_pos.
+  unfold inlineSingle_Meth.
+  simpl.
+  specialize (inlineSingle_Meths_pos _ 0) as INL0.
+
+  Show Ltac Profile.
+  unfold inlineSingle_Meths_pos.
+  unfold inlineSingle_Meths_pos, nth_error, map.
+  unfold inlineSingle_Meth.
+  unfold inlineSingle. simpl.
+  unfold inlineAll_Rules, inlineSingle_Rules_pos.
+  simpl.
+  unfold removeHides.
+  simpl.
+  do_inlining.
+Admitted.
 
 (* fixme *)
 Ltac kinv_eq :=
@@ -146,13 +201,18 @@ Ltac kinv_red :=
         ) init.
 *)
 
+Print Trace.
+Print FullLabel.
+Search (FullLabel -> _).
+Check (nat * string)%type.
   (* Now we are ready to prove the invariant!
    * Thanks to some Kami tactics, the proof will be highly automated. *)
   Lemma decexec_inv_ok':
-    forall init n ll,
-      init = (map evalConstFullT (getAllRegisters decexecSepInl)) ->
-      Trace decexecSepInl init n ll ->
-      decexec_inv n.
+(* what should init be *)
+    forall init n,
+      decexec_inv init ->
+      Trace decexecSepInl init n ->
+      (Forall (fun (lfl : list FullLabel) => Forall (fun (fl : FullLabel) => (decexec_inv (fst fl) )) lfl) n).
   Proof.
     (* Induction on [Trace] is the natural choice. *)
     induction 2.
@@ -222,5 +282,7 @@ Ltac kinv_red :=
     - kinv_magic_with decexec_inv_dest_tac idtac.
     - kinv_magic_with decexec_inv_dest_tac idtac.
   Qed.
+
+*)
 
 End DecExec.
