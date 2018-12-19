@@ -146,26 +146,6 @@ Definition mySimRel (iregs sregs: RegsT) :=
    /\ Forall2 (fun (sreg ireg: RegT) => (fst sreg) = (fst ireg)) sregs iregs.
 
 End DecExec.
-Section SimulationFoo.
-  Variable (impl spec : BaseModule).
-
-Theorem _simulationFoo:
-   TraceInclusion (Base impl) (Base spec).
-Proof.
-Admitted.
-End SimulationFoo.
-
-Section FooOk.
-
-
-  Variable (fooimpl foospec : BaseModule).
-  Theorem foo_ok:
-    TraceInclusion (Base fooimpl)
-                   (Base foospec).
-  Proof.
-  apply _simulationFoo.
-  Admitted.
-End FooOk.
 
 Fixpoint getRegistersFromMod m :=
   match m with
