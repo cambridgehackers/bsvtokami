@@ -78,7 +78,7 @@ Definition D2E := (STRUCT {
     "arithOp" :: OpArithK;
     "dst" :: Bit RegFileSz;
     "op" :: OpK;
-    "pc" :: Bit PgmSz ;
+    "pc" :: Bit PgmSz;
     "src1" :: Bit RegFileSz;
     "src2" :: Bit RegFileSz}).
 
@@ -164,7 +164,6 @@ Module module'mkScoreboard.
         (BKMod (RegFile'mod sbFlags :: nil))
     with Method (instancePrefix--"search1") (sidx : (Bit RegFileSz)) : Bool :=
     (
-               LET unused : Bit 10 (* non-call varbinding *) <- $$ (* intwidth *) (natToWord 10 0) ;
 
         Assert(($$true)%kami_expr) ;
 BKCall flag : Bool (* varbinding *) <-  (* translateCall *) sbFlags'sub ((#sidx) : Bit RegFileSz) ;
@@ -172,19 +171,16 @@ BKCall flag : Bool (* varbinding *) <-  (* translateCall *) sbFlags'sub ((#sidx)
 
     with Method (instancePrefix--"search2") (sidx : (Bit RegFileSz)) : Bool :=
     (
-               LET unused : Bit 10 (* non-call varbinding *) <- $$ (* intwidth *) (natToWord 10 0) ;
 BKCall flag : Bool (* varbinding *) <-  (* translateCall *) sbFlags'sub ((#sidx) : Bit RegFileSz) ;
         Ret #flag    )
 
     with Method (instancePrefix--"insert") (nidx : (Bit RegFileSz)) : Void :=
     (
-               LET unused : Bit 10 (* non-call varbinding *) <- $$ (* intwidth *) (natToWord 10 0) ;
         BKCall unused : Void (* actionBinding *) <- sbFlags'upd ((#nidx) : Bit RegFileSz) ((($$true)%kami_expr) : Bool) ;
         Retv    )
 
     with Method (instancePrefix--"remove") (nidx : (Bit RegFileSz)) : Void :=
     (
-               LET unused : Bit 10 (* non-call varbinding *) <- $$ (* intwidth *) (natToWord 10 0) ;
         BKCall unused : Void (* actionBinding *) <- sbFlags'upd ((#nidx) : Bit RegFileSz) ((($$false)%kami_expr) : Bool) ;
         Retv    )
 

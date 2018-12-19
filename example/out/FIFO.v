@@ -71,7 +71,6 @@ Module module'mkFIFO.
     Definition mkFIFO := Build_FIFO mkFIFOModule (instancePrefix--"clear") (instancePrefix--"deq") (instancePrefix--"enq") (instancePrefix--"first").
     Hint Unfold mkFIFO : ModuleDefs.
     Hint Unfold mkFIFOModule : ModuleDefs.
-    (* Definition wellformed_mkFIFO : ModWf := @Build_ModWf mkFIFOModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
 
     End Section'mkFIFO.
 End module'mkFIFO.
@@ -129,7 +128,6 @@ Module module'mkLFIFO.
     Definition mkLFIFO := Build_FIFO mkLFIFOModule (instancePrefix--"clear") (instancePrefix--"deq") (instancePrefix--"enq") (instancePrefix--"first").
     Hint Unfold mkLFIFO : ModuleDefs.
     Hint Unfold mkLFIFOModule : ModuleDefs.
-    (* Definition wellformed_mkLFIFO : ModWf := @Build_ModWf mkLFIFOModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
 
     End Section'mkLFIFO.
 End module'mkLFIFO.
@@ -185,7 +183,6 @@ Module module'mkFIFO1.
     Definition mkFIFO1 := Build_FIFO mkFIFO1Module (instancePrefix--"clear") (instancePrefix--"deq") (instancePrefix--"enq") (instancePrefix--"first").
     Hint Unfold mkFIFO1 : ModuleDefs.
     Hint Unfold mkFIFO1Module : ModuleDefs.
-    (* Definition wellformed_mkFIFO1 : ModWf := @Build_ModWf mkFIFO1Module ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
 
     End Section'mkFIFO1.
 End module'mkFIFO1.
@@ -242,7 +239,6 @@ Module module'mkSizedFIFO.
     Definition mkSizedFIFO := Build_FIFO mkSizedFIFOModule (instancePrefix--"clear") (instancePrefix--"deq") (instancePrefix--"enq") (instancePrefix--"first").
     Hint Unfold mkSizedFIFO : ModuleDefs.
     Hint Unfold mkSizedFIFOModule : ModuleDefs.
-    (* Definition wellformed_mkSizedFIFO : ModWf := @Build_ModWf mkSizedFIFOModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf). *)
 
     End Section'mkSizedFIFO.
 End module'mkSizedFIFO.

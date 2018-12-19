@@ -16,10 +16,22 @@ Record Decoder :=
     getAddr: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind (Bit AddrSz))
   }.
 
+Definition decStub := Build_Decoder
+			  (fun ty (instr: ty (Bit InstrSz)) => ($$opLd)%kami_expr)
+			  (fun ty (instr: ty (Bit InstrSz)) => ($$opArithAdd)%kami_expr)
+			  (fun ty (instr: ty (Bit InstrSz)) => ($$(natToWord RegFileSz 0))%kami_expr)
+			  (fun ty (instr: ty (Bit InstrSz)) => ($$(natToWord RegFileSz 0))%kami_expr)
+			  (fun ty (instr: ty (Bit InstrSz)) => ($$(natToWord RegFileSz 0))%kami_expr)
+			  (fun ty (instr: ty (Bit InstrSz)) => ($$(natToWord AddrSz 0))%kami_expr)
+			  .
+
 Record Executer :=
   {
     execArith: forall ty, ty OpArithK -> ty (Bit DataSz) -> ty (Bit DataSz) -> Expr ty (SyntaxKind (Bit DataSz))
   }.
+
+Definition execStub := Build_Executer
+			  (fun ty (op: ty OpArithK) (val1 val2: ty (Bit DataSz)) => ($$(natToWord DataSz 22))%kami_expr).
 
 Module module'decoder.
     Section Section'decoder.

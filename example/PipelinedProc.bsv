@@ -67,7 +67,6 @@ endinterface
 module mkScoreboard(Scoreboard);
    RegFile#(Bit#(RegFileSz), Bool) sbFlags <- mkRegFileFull();
 
-   Bit#(10) unused = 10'd0;
    method Bool search1(Bit#(RegFileSz) sidx) if (True);
       Bool flag = sbFlags.sub(sidx);
       return flag;

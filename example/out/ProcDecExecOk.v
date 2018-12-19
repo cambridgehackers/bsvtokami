@@ -44,21 +44,21 @@ Section DecExec.
             (kamiexec: Decoder.Executer)
             (sb: Scoreboard)
             (e2wfifo: FIFO)
-            (rf: ProcRegs)
-            (mem: Memory)
-            (tohostmod: Mod)
+            (rf: string)
+(spec impl: BaseModule)
+	    (pgm : string)
+            (mem: string)
+            (tohost: string)
             (pcInit : ConstT (Bit ProcMemSpec.PgmSz)).
 
-  Local Definition pgm: RegFile := mkRegFileFull (Bit InstrSz) (Bit PgmSz) "pgm".
   Local Definition dec: ProcMemSpec.Decoder := mkDecoder kamidec "dec".
   Local Definition exec: ProcMemSpec.Executer := mkExecuter kamiexec "exec".
-  Local Definition tohost: ToHost := (Build_ToHost tohostmod "tohost").
 
-  Local Definition decexecSep : Mod := (Empty'mod (ProcDecExec.mkDecExecSep  "decexec" pgm dec exec tohost)).
-  Hint Unfold decexecSep: ModuleDefs.
-
-  Local Definition decexec : Mod := (Empty'mod (ProcDecExec.mkDecExec "decexec" pgm dec exec sb e2wfifo rf mem tohost)).
+  Local Definition decexec : Mod := (Empty'mod (ProcDecExec.mkDecExec "decexec" pgm kamidec kamiexec (*sb*)  "e2wfifo_reg" "e2wfifo_valid" rf mem tohost)).
   Hint Unfold decexec: ModuleDefs.
+
+  Local Definition decexecSep : Mod := (Empty'mod (ProcDecExec.mkDecExecSep  "decexec" pgm kamidec kamiexec rf mem tohost)).
+  Hint Unfold decexecSep: ModuleDefs.
 
   (* Local Definition decexecSepInl: {m: Mod & TraceInclusion (flatten_inline_remove decexecSep) m}.
   Proof.
@@ -72,14 +72,14 @@ Section DecExec.
 *)
   Local Definition decexecSepInl := (flatten_inline_remove decexecSep).
 
-  Set Printing Depth 10000.
+  (* Set Printing Depth 10000. *)
 
   Print Assumptions decexec.
-  Eval cbv in (flatten_inline_remove decexec).
+  (* Eval cbv in (flatten_inline_remove decexec). *)
   Compute "decexecInl"%string.
 
   Print Assumptions decexecSepInl.
-  Eval cbv in (flatten_inline_remove decexecSep).
+  (* Eval cbv in (flatten_inline_remove decexecSep). *)
   Compute "decexecSepInl"%string.
 
   (* What would be good invariants to prove the correctness of stage merging?
@@ -140,34 +140,73 @@ Section DecExec.
         | [H: decexec_inv _ |- _] => destruct H
         end.
 
-(*  Set Ltac Profiling.
-Theorem decexec_ok:
-    TraceInclusion (flatten_inline_remove decexecSep)
-                   (flatten_inline_remove decexec).
+Definition mySimRel (iregs sregs: RegsT) :=
+  (getKindAttr sregs = ("data", SyntaxKind (Bit 32)) :: nil)
+   /\ (getKindAttr iregs = ("data", SyntaxKind (Bit 32)) :: nil)
+   /\ Forall2 (fun (sreg ireg: RegT) => (fst sreg) = (fst ireg)) sregs iregs.
+
+End DecExec.
+Section SimulationFoo.
+  Variable (impl spec : BaseModule).
+
+Theorem _simulationFoo:
+   TraceInclusion (Base impl) (Base spec).
+Proof.
+Admitted.
+End SimulationFoo.
+
+Section FooOk.
+
+
+  Variable (fooimpl foospec : BaseModule).
+  Theorem foo_ok:
+    TraceInclusion (Base fooimpl)
+                   (Base foospec).
   Proof.
+  apply _simulationFoo.
+  Admitted.
+End FooOk.
+
+Fixpoint getRegistersFromMod m :=
+  match m with
+  | Base bm => getRegisters bm
+  | HideMeth m' meth => getRegistersFromMod m'
+  | ConcatMod m1 m2 => getRegistersFromMod m1 ++ getRegistersFromMod m2
+  end.
+
+Section DecExecOk.
+Theorem decexec_ok:
+    TraceInclusion (decexecSep decStub execStub "pgm" "foo" "bar" "baz")
+                   (decexec decStub execStub "pgm" "foo" "bar" "baz").
+  Proof.
+    (* pose proof (modWf (decexecSep decStub execStub "pgm" "foo" "bar" "baz")) as wfImp. *)
+
+  unfold decexecSep, decexec.
+
   repeat autounfold with ModuleDefs.
+  simpl.
+  unfold module'mkRegFileFull.mkRegFileFullModule.
+  repeat autounfold with ModuleDefs.
+  simpl.
   unfold flatten_inline_remove, getHidden, inlineAll_All_mod, getAllRegisters,
          getAllMethods, getAllRules, getRules, getRegisters, getMethods, app.
   unfold inlineAll_All.
   simpl.
-
   unfold inlineAll_Meths.
+  simpl.
 
   unfold inlineSingle_Meths_pos.
-  unfold inlineSingle_Meth.
-  simpl.
-  specialize (inlineSingle_Meths_pos _ 0) as INL0.
 
-  Show Ltac Profile.
-  unfold inlineSingle_Meths_pos.
-  unfold inlineSingle_Meths_pos, nth_error, map.
   unfold inlineSingle_Meth.
-  unfold inlineSingle. simpl.
-  unfold inlineAll_Rules, inlineSingle_Rules_pos.
-  simpl.
   unfold removeHides.
+  unfold getRegisters.
+  unfold inlineAll_Rules.
+  unfold getMethods.
+  discharge_appendage.
   simpl.
-  do_inlining.
+
+  discharge_simulationGeneral mySimRel (NoDup (map fst (getRegistersFromMod (decexec decStub execStub "pgm" "foo" "bar" "baz")))).
+
 Admitted.
 
 (* fixme *)

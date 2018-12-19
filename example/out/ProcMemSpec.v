@@ -16,10 +16,10 @@ Definition AddrSz := 32.
 
 Definition InstrSz := 32.
 
-Definition RegFileSz := 32.
+Notation NumRegs := 32 (only parsing).
+Notation RegFileSz := (Nat.log2_up 32) (only parsing).
 
-Definition NumInstrs := 16.
-
+Definition NumInstrs := 128.
 Definition PgmSz := Nat.log2_up NumInstrs.
 
 Definition opArith : ConstT (Bit 2) := ( (* intwidth *) (natToWord 2 0))%kami.
@@ -92,6 +92,8 @@ Module module'mkMemory.
         (* method bindings *)
     Let (* action binding *) mem := mkRegFileFull (Bit AddrSz) (Bit DataSz) (instancePrefix--"mem").
     (* instance methods *)
+    Let mem'sub : string := (RegFile'sub mem).
+    Let mem'upd : string := (RegFile'upd mem).
     Local Open Scope kami_expr.
 
     Definition mkMemoryModule: Mod :=
@@ -102,14 +104,14 @@ Module module'mkMemory.
         If ((#req @% "isLoad") == $$ (* intwidth *) (natToWord 1 1)) then (
         
         LET addr : Bit AddrSz (* non-call varbinding *) <- (#req @% "addr") ;
-        BKCall ldval : Bit DataSz (* varbinding *) <-  (* translateCall *) (RegFile'sub mem) ((#addr) : Bit AddrSz) ;
+        BKCall ldval : Bit DataSz (* varbinding *) <-  (* translateCall *) mem'sub ((#addr) : Bit AddrSz) ;
                 Ret #ldval
         ) else (
         
         LET addr : Bit AddrSz (* non-call varbinding *) <- (#req @% "addr") ;
                 LET newval : Bit DataSz (* non-call varbinding *) <- (#req @% "data") ;
-                BKCall unused : Void (* actionBinding *) <- (RegFile'upd mem) ((#addr) : Bit AddrSz) ((#newval) : Bit DataSz) ;
-        BKCall placeholder : Bit DataSz (* varbinding *) <-  (* translateCall *) (RegFile'sub mem) ((#addr) : Bit AddrSz) ;
+                BKCall unused : Void (* actionBinding *) <- mem'upd ((#addr) : Bit AddrSz) ((#newval) : Bit DataSz) ;
+        BKCall placeholder : Bit DataSz (* varbinding *) <-  (* translateCall *) mem'sub ((#addr) : Bit AddrSz) ;
                 Ret #placeholder) as retval
  ;
         Ret #retval    )
@@ -117,6 +119,7 @@ Module module'mkMemory.
     }). (* mkMemory *)
 
     Hint Unfold mkMemoryModule : ModuleDefs.
+(* Module mkMemory type Module#(Memory) return type Memory *)
     Definition mkMemory := Build_Memory mkMemoryModule (instancePrefix--"doMem").
     Hint Unfold mkMemory : ModuleDefs.
     Hint Unfold mkMemoryModule : ModuleDefs.

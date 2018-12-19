@@ -22,7 +22,7 @@ out/_CoqProject: _CoqProject out
 
 %.bo: %.bsv
 	@mkdir -p obj
-	bsc -info-dir obj $(*).bsv
+	bsc -bdir obj -info-dir obj $(*).bsv
 
 out/%.v: %.bo
 	JAVA_OPTS=-ea $(BKDIR)/build/install/bsvtokami/bin/bsvtokami \
