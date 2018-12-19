@@ -72,16 +72,6 @@ Section DecExec.
 *)
   Local Definition decexecSepInl := (flatten_inline_remove decexecSep).
 
-  (* Set Printing Depth 10000. *)
-
-  Print Assumptions decexec.
-  (* Eval cbv in (flatten_inline_remove decexec). *)
-  Compute "decexecInl"%string.
-
-  Print Assumptions decexecSepInl.
-  (* Eval cbv in (flatten_inline_remove decexecSep). *)
-  Compute "decexecSepInl"%string.
-
   (* What would be good invariants to prove the correctness of stage merging?
    * For two given stages, we usually need to provide relations among states in
    * the two stages and elements in the fifo between them.
@@ -159,31 +149,10 @@ Theorem decexec_ok:
     TraceInclusion (decexecSep decStub execStub "pgm" "foo" "bar" "baz")
                    (decexec decStub execStub "pgm" "foo" "bar" "baz").
   Proof.
-    (* pose proof (modWf (decexecSep decStub execStub "pgm" "foo" "bar" "baz")) as wfImp. *)
 
   unfold decexecSep, decexec.
-
-  repeat autounfold with ModuleDefs.
-  simpl.
-  unfold module'mkRegFileFull.mkRegFileFullModule.
-  repeat autounfold with ModuleDefs.
-  simpl.
-  unfold flatten_inline_remove, getHidden, inlineAll_All_mod, getAllRegisters,
-         getAllMethods, getAllRules, getRules, getRegisters, getMethods, app.
-  unfold inlineAll_All.
-  simpl.
-  unfold inlineAll_Meths.
-  simpl.
-
-  unfold inlineSingle_Meths_pos.
-
-  unfold inlineSingle_Meth.
-  unfold removeHides.
-  unfold getRegisters.
-  unfold inlineAll_Rules.
-  unfold getMethods.
+  repeat autounfold with ModuleDefs. unfold Empty'mod.
   discharge_appendage.
-  simpl.
 
   discharge_simulationGeneral mySimRel (NoDup (map fst (getRegistersFromMod (decexec decStub execStub "pgm" "foo" "bar" "baz")))).
 
