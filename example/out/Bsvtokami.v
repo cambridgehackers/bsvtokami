@@ -49,6 +49,25 @@ Hint Unfold makeBKModule' : ModuleDefs.
 Hint Unfold makeBKModule : ModuleDefs.
 Hint Unfold app : ModuleDefs.
 
+Fixpoint getOrderBK (im : InBKModule) :=
+  match im with
+  | NilInBKModule => nil
+  | ConsInBKModule e i =>
+    let rest := getOrderBK i in
+    match e with
+    | BKRule mrule => fst mrule :: rest
+    | BKMeth mmeth => fst mmeth :: rest
+    | _ => rest
+    end
+  end.
+
+Fixpoint getOrderFromMod (m : Mod) := 
+  match m with
+  | Base bm => map fst (getRules bm) ++ map fst (getMethods bm)
+  | HideMeth m' meth => getOrderFromMod m'
+  | ConcatMod m1 m2 => getOrderFromMod m1 ++ getOrderFromMod m2
+  end.
+
 (* * BSV to Kami Notation *)
 
 Delimit Scope bk_scope with bk.

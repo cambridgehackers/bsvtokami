@@ -17,17 +17,17 @@ Require Import Vector.
 Module module'mkDecExec.
     Section Section'mkDecExec.
     Variable instancePrefix: string.
-    Variable pgm: string.
     Variable dec: Decoder.Decoder.
     Variable exec: Decoder.Executer.
-    Variable e2wFifo_reg: string.
-    Variable e2wFifo_valid: string.
-    Variable rf: string.
-    Variable mem: string.
-    Variable toHost: string.
         (* method bindings *)
     Let pc : string := instancePrefix--"pc".
     Let sbFlags : string := instancePrefix--"sbFlags".
+    Let rf: string := instancePrefix--"regs".
+    Let mem: string := instancePrefix--"mem".
+    Let pgm: string := "pgm".
+    Let toHost: string := instancePrefix--"th".
+    Let e2wFifo_reg: string := instancePrefix--"e2wFifo_reg".
+    Let e2wFifo_valid: string := instancePrefix--"e2wFifo_valid".
     (* instance methods *)
     Let mem'doMem : string := mem--"doMem".
     Let toHost'toHost : string := toHost--"toHost".
@@ -35,7 +35,11 @@ Module module'mkDecExec.
 
     Definition mkDecExecModule: Mod :=
          (BKMODULE {
-        Register pc : Bit PgmSz <- natToWord PgmSz 0
+    Register e2wFifo_reg : E2W <- Default
+    with Register e2wFifo_valid : Bool <- (false)%kami_expr
+    with Register pc : Bit PgmSz <- natToWord PgmSz 0
+    with Register pgm : Array NumInstrs (Bit InstrSz) <- Default
+    with Register rf : Array NumRegs (Bit DataSz) <- Default
     with Register sbFlags : Array NumRegs Bool <- Default
     with Rule instancePrefix--"decexecArith" :=
     (
@@ -44,16 +48,12 @@ Module module'mkDecExec.
         Read sbFlags_v : Array NumRegs Bool <- sbFlags ;
        Read instrs : Array NumInstrs (Bit InstrSz) <- pgm ;
        LET call17 : Bit InstrSz <- #instrs @[  #pc_v ] ;
-       LET call16 : Bool <- (getOp dec _ call17) == $$opArith ;
-       LET call19 : Bit InstrSz <- #instrs @[ #pc_v ] ;
-       LET call18 : Bit RegFileSz <-  getSrc1 dec _ call19 ;
-       LET call21 : Bit InstrSz <-  #instrs @[ #pc_v ] ;
-       LET call20 : Bit RegFileSz <-  getSrc2 dec _ call21 ;
+       LET isOpArith : Bool <- (getOp dec _ call17) == $$opArith ;
+       LET inst : Bit InstrSz <- #instrs @[ #pc_v ] ;
+       LET src1 : Bit RegFileSz <-  getSrc1 dec _ inst ;
+       LET src2 : Bit RegFileSz <-  getSrc2 dec _ inst ;
 
-        Assert((((#call16 && (!(#sbFlags_v @[ #call18 ]))) && (!(#sbFlags_v @[ #call20 ]))) && (!#e2wFifo_valid_v))) ;
-       LET inst : Bit InstrSz (* varbinding *) <-  #instrs @[ #pc_v ] ;
-       LET src1 : Bit RegFileSz (* varbinding *) <-  getSrc1 dec _ inst ;
-       LET src2 : Bit RegFileSz (* varbinding *) <-  getSrc2 dec _ inst ;
+        Assert((((#isOpArith && (!(#sbFlags_v @[ #src1 ]))) && (!(#sbFlags_v @[ #src2 ]))) && (!#e2wFifo_valid_v))) ;
        LET dst : Bit RegFileSz (* varbinding *) <-  getDst dec _ inst ;
        LET arithOp : OpArithK (* varbinding *) <- getArithOp dec _ inst ;
        Read regsval : Array NumRegs (Bit DataSz) <- rf ;
@@ -152,18 +152,18 @@ Hint Unfold module'mkDecExec.mkDecExecModule : ModuleDefs.
 Module module'mkDecExecSep.
     Section Section'mkDecExecSep.
     Variable instancePrefix: string.
-    Variable pgm: string.
     Variable dec: Decoder.Decoder.
     Variable exec: Decoder.Executer.
-    Variable rf: string.
-    Variable mem: string.
-    Variable toHost: string.
         (* method bindings *)
+    Let rf: string := instancePrefix--"regs".
+    Let mem: string := instancePrefix--"mem".
+    Let pgm: string := "pgm".
+    Let toHost: string := instancePrefix--"th".
     Let d2eFifo_reg : string := instancePrefix--"d2eFifo_reg".
     Let d2eFifo_valid : string := instancePrefix--"d2eFifo_valid".
     Let e2wFifo_reg : string := instancePrefix--"e2wFifo_reg".
     Let e2wFifo_valid : string := instancePrefix--"e2wFifo_valid".
-    Let decoder_pc : string := instancePrefix--"decoder_pc".
+    Let decoder_pc : string := instancePrefix--"pc".
     Let sbFlags : string := instancePrefix--"sbFlags".
     (* instance methods *)
     Let mem'doMem : string := mem--"doMem".
@@ -172,11 +172,13 @@ Module module'mkDecExecSep.
 
     Definition mkDecExecSepModule: Mod :=
          (BKMODULE {
-        Register d2eFifo_reg : D2E <- Default
+    Register d2eFifo_reg : D2E <- Default
     with Register d2eFifo_valid : Bool <- (false)%kami_expr
+    with Register decoder_pc : Bit PgmSz <-  (* intwidth *) (natToWord PgmSz 0)
     with Register e2wFifo_reg : E2W <- Default
     with Register e2wFifo_valid : Bool <- (false)%kami_expr
-    with Register decoder_pc : Bit PgmSz <-  (* intwidth *) (natToWord PgmSz 0)
+    with Register pgm : Array NumInstrs (Bit InstrSz) <- Default
+    with Register rf : Array NumRegs (Bit DataSz) <- Default
     with Register sbFlags : Array NumRegs Bool <- Default
     with Rule instancePrefix--"decode" :=
     (

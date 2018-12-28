@@ -20,17 +20,7 @@ Set Implicit Arguments.
  * - ProcMemOk.v: a complete refinement proof
  *)
 
-    Record CoqDecoder :=
-      { getOp: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind OpK) ;
-        getArithOp: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind OpArithK) ;
-        getSrc1: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind (Bit RegFileSz)) ;
-        getSrc2: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind (Bit RegFileSz)) ;
-        getDst: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind (Bit RegFileSz)) ;
-        getAddr: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind (Bit AddrSz))
-      }.
-
-Compute "CoqDecoder"%string.
-
+Hint Unfold Empty'mod : ModuleDefs.
 
 (* Here we prove that merging the first two stages ([decoder] and [executer])
  * is correct by providing a refinement from [decexecSep] to [decexec]. *)
@@ -39,37 +29,20 @@ Section DecExec.
   Local Definition dataK := Bit ProcMemSpec.DataSz.
   Local Definition instK := Bit ProcMemSpec.InstrSz.
 
-  Variables (coqdec: CoqDecoder)
-            (kamidec: Decoder.Decoder)
+  Variables (kamidec: Decoder.Decoder)
             (kamiexec: Decoder.Executer)
-            (sb: Scoreboard)
-            (e2wfifo: FIFO)
-            (rf: string)
 (spec impl: BaseModule)
-	    (pgm : string)
-            (mem: string)
-            (tohost: string)
             (pcInit : ConstT (Bit ProcMemSpec.PgmSz)).
 
   Local Definition dec: ProcMemSpec.Decoder := mkDecoder kamidec "dec".
   Local Definition exec: ProcMemSpec.Executer := mkExecuter kamiexec "exec".
 
-  Local Definition decexec : Mod := (Empty'mod (ProcDecExec.mkDecExec "decexec" pgm kamidec kamiexec (*sb*)  "e2wfifo_reg" "e2wfifo_valid" rf mem tohost)).
+  Local Definition decexec : Mod := (Empty'mod (ProcDecExec.mkDecExec "decexec" kamidec kamiexec)).
   Hint Unfold decexec: ModuleDefs.
 
-  Local Definition decexecSep : Mod := (Empty'mod (ProcDecExec.mkDecExecSep  "decexec" pgm kamidec kamiexec rf mem tohost)).
+  Local Definition decexecSep : Mod := (Empty'mod (ProcDecExec.mkDecExecSep  "decexec" kamidec kamiexec)).
   Hint Unfold decexecSep: ModuleDefs.
 
-  (* Local Definition decexecSepInl: {m: Mod & TraceInclusion (flatten_inline_remove decexecSep) m}.
-  Proof.
-    unfold TraceInclusion.
-    intros.
-    exists o1, ls1.
-    repeat split; auto; intros; unfold nthProp2; intros; try destruct (nth_error ls1 i) ; auto; repeat split; intros; try firstorder.
-  Defined.
-
-  Local Definition decexecSepInl := decexecSepInl dec exec pcInit pgm.
-*)
   Local Definition decexecSepInl := (flatten_inline_remove decexecSep).
 
   (* What would be good invariants to prove the correctness of stage merging?
@@ -93,26 +66,37 @@ Section DecExec.
     d2efullv = true ->
     let pc := d2eeltv F5 in
     let inst := evalExpr (ReadArray (Var type (SyntaxKind _) pgmv) (Var type (SyntaxKind (Bit PgmSz)) pc )) in
-    d2eeltv F4 = evalExpr (getOp coqdec _ inst) /\
-    d2eeltv F2 = evalExpr (getArithOp coqdec _ inst) /\
-    d2eeltv F6 = evalExpr (getSrc1 coqdec _ inst) /\
-    d2eeltv F7 = evalExpr (getSrc2 coqdec _ inst) /\
-    d2eeltv F3 = evalExpr (getDst coqdec _ inst) /\
-    d2eeltv F1 = evalExpr (getAddr coqdec _ inst).
+    d2eeltv F4 = evalExpr (getOp kamidec _ inst) /\
+    d2eeltv F2 = evalExpr (getArithOp kamidec _ inst) /\
+    d2eeltv F6 = evalExpr (getSrc1 kamidec _ inst) /\
+    d2eeltv F7 = evalExpr (getSrc2 kamidec _ inst) /\
+    d2eeltv F3 = evalExpr (getDst kamidec _ inst) /\
+    d2eeltv F1 = evalExpr (getAddr kamidec _ inst).
 
   Record decexec_inv (o: RegsT): Prop :=
     { pcv: fullType type (SyntaxKind (Bit PgmSz)) ;
-      Hpcv: findReg "pc"%string o = Some (existT _ _ pcv) ;
+      Hpcv: findReg "decexec-pc"%string o = Some (existT _ _ pcv) ;
       pgmv: fullType type (SyntaxKind (Array NumInstrs (Bit InstrSz))) ;
       Hpgmv: findReg "pgm"%string o = Some (existT _ _ pgmv) ;
       d2efullv: fullType type (SyntaxKind Bool) ;
-      Hd2efullv: findReg "full.d2e"%string o = Some (existT _ _ d2efullv) ;
+      Hd2efullv: findReg "decexec-d2eFifo_valid"%string o = Some (existT _ _ d2efullv) ;
       d2eeltv: fullType type (SyntaxKind D2E) ;
-      Hd2eeltv: findReg "elt.d2e"%string o = Some (existT _ _ d2eeltv) ;
+      Hd2eeltv: findReg "decexec-d2eFifo_reg"%string o = Some (existT _ _ d2eeltv) ;
 
       Hpcinv: decexec_pc_inv pcv d2efullv d2eeltv ;
       Hdeinv: decexec_d2e_inv pgmv d2efullv d2eeltv
     }.
+
+  Definition decexec_inv_jeh (o: RegsT): Prop :=
+    match findReg "decexec-pc" o,
+          findReg "pgm" o,
+          findReg "decexec-d2eFifo_valid" o,
+          findReg "decexec-d2eFifo_reg" o with
+    | (Some pcreg), (Some pgmreg), (Some validreg), (Some fiforeg) => True
+ (*     (decexec_pc_inv (projT2 pcreg) (projT2 validreg) (projT2 fiforeg))
+      /\ (decexec_d2e_inv (projT2 pgmreg) (projT2 validreg) (projT2 fiforeg)) *)
+    | _, _, _, _ => False
+    end.
 
   (* Make sure to register all invariant-related definitions in the [InvDefs]
    * hint database, in order for Kami invariant-solving tactics to unfold them
@@ -127,15 +111,155 @@ Section DecExec.
   Ltac decexec_inv_dest_tac :=
     unfold getAllRegisters, (* decexecSepInl, *) projT1;
     try match goal with
-        | [H: decexec_inv _ |- _] => destruct H
+        | [ H: decexec_inv _ |- _ ] => destruct H
+        | [ |- decexec_inv _ ] => destruct decexec_inv
         end.
 
 Definition mySimRel (iregs sregs: RegsT) :=
-  (getKindAttr sregs = ("data", SyntaxKind (Bit 32)) :: nil)
-   /\ (getKindAttr iregs = ("data", SyntaxKind (Bit 32)) :: nil)
-   /\ Forall2 (fun (sreg ireg: RegT) => (fst sreg) = (fst ireg)) sregs iregs.
+  findReg "pgm" iregs = findReg "pgm" sregs
+/\ decexec_inv iregs
+/\ getKindAttr iregs =
+   ("decexec-d2eFifo_reg", SyntaxKind D2E)
+  :: ("decexec-d2eFifo_valid", SyntaxKind Bool)
+    :: ("decexec-pc", SyntaxKind (Bit PgmSz))
+      :: ("decexec-e2wFifo_reg", SyntaxKind E2W)
+	:: ("decexec-e2wFifo_valid", SyntaxKind Bool)
+	  :: ("pgm", SyntaxKind (Array NumInstrs (Bit InstrSz)))
+	    :: ("decexec-regs", SyntaxKind (Array 32 (Bit DataSz)))
+	      :: ("decexec-sbFlags", SyntaxKind (Array 32 Bool))
+                :: nil
+  /\ getKindAttr sregs =
+  ("decexec-e2wFifo_reg", SyntaxKind E2W)
+    :: ("decexec-e2wFifo_valid", SyntaxKind Bool)
+      :: ("decexec-pc", SyntaxKind (Bit PgmSz))
+	:: ("pgm", SyntaxKind (Array NumInstrs (Bit InstrSz)))
+	  :: ("decexec-regs", SyntaxKind (Array 32 (Bit DataSz)))
+	    :: ("decexec-sbFlags", SyntaxKind (Array 32 Bool))
+	      :: nil.
 
+Check mySimRel.
 End DecExec.
+
+Definition decexecSepWf := {| baseModule := (getFlat (decexecSep decStub execStub)) ;
+				     wfBaseModule := ltac:(discharge_wf)  |}.
+
+Theorem decexec_wfBaseModule:
+  WfBaseModule
+   (getFlat
+      (decexec decStub execStub)).
+Proof.
+  discharge_wf.
+Qed.
+
+Definition decexecWf := {| baseModule := (getFlat (decexec decStub execStub)) ;
+				     wfBaseModule := ltac:(discharge_wf)  |}.
+
+Section DecExecSepOk.
+Theorem decexecSep_ok:
+    TraceInclusion decexecSepWf
+                   decexecWf.
+  Proof.
+  discharge_appendage.
+  discharge_simulationGeneral (mySimRel decStub) ltac:(discharge_DisjKey).
+  + discharge_NoSelfCall.
+  + unfold mySimRel in H. destruct H, H0, H1. rewrite <- H2. reflexivity.
+  + unfold mySimRel in H. destruct H, H0, H1. rewrite <- H1. reflexivity.
+  + unfold mySimRel. exists (("decexec-e2wFifo_reg",
+    x2 :: x3 ::x1 :: x4 :: x5 :: x6 :: nil). repeat split.
+   ++ repeat apply Forall2_cons.
+    +++ rewrite H5. unfold fst. split.
+     ++++ reflexivity.
+     ++++ admit.
+    +++ rewrite H6. unfold fst. split.
+     ++++ reflexivity.
+     ++++ admit.
+    +++
+Admitted.
+
+
+Theorem findReg_doUpdRegs_updated:
+  forall (u o: RegsT) (s: string),
+    None <> findReg s u
+    -> None <> findReg s o
+      -> None <> findReg s (doUpdRegs u o).
+Proof.
+Admitted.
+
+Theorem findReg_doUpdRegs_unchanged:
+  forall (u o: RegsT) (s: string),
+    None = findReg s u
+    -> None <> findReg s o
+      -> None <> findReg s (doUpdRegs u o).
+Proof.
+Admitted.
+
+
+Lemma getKindAttr_doUpdRegs2 o:
+  NoDup (map fst o) ->
+  forall u,
+    NoDup (map fst u) ->
+    (forall s v, In (s, v) u -> In (s, projT1 v) (getKindAttr o)) ->
+    getKindAttr (doUpdRegs u o) = getKindAttr o.
+Proof.
+  intros.
+  setoid_rewrite getKindAttr_doUpdRegs'.
+  rewrite forall_map; intros.
+  case_eq (findReg (fst x) u) ; intros; auto.
+  rewrite <- findRegs_Some in H3 ; auto.
+  specialize (H1 _ _ H3).
+  f_equal.
+  destruct x ; simpl in *.
+  apply (in_map (fun x => (fst x, projT1 (snd x)))) in H2; simpl in *.
+  assert (sth: map fst o = map fst (getKindAttr o)). {
+    rewrite map_map; simpl.
+    assert (sth2: fst = fun x : RegT => fst x) by (extensionality x; intros; auto).
+    rewrite sth2 ; auto.
+  }
+  rewrite sth in H.
+  pose proof (@KeyMatching_gen _ _ (getKindAttr o) _ _ H H1 H2 eq_refl) ; simpl in *.
+  inv H4; congruence.
+Qed.
+
+
+Section DecExecSepOk2.
+Theorem decexecSep_ok2:
+    TraceInclusion decexecSepWf
+                   decexecWf.
+  Proof.
+  discharge_appendage.
+  discharge_simulationGeneral (mySimRel) ltac:(discharge_DisjKey).
+  + discharge_NoSelfCall.
+  + unfold mySimRel in H. destruct H, H0, H1. rewrite <- H2. reflexivity.
+  + unfold mySimRel in H. destruct H, H0, H1. rewrite <- H1. reflexivity.
+  + unfold mySimRel. exists (x2 :: x3 ::x1 :: x4 :: x5 :: x6 :: nil). split.
+  ++ apply Forall2_cons.
+     rewrite H5. 
+  +++ unfold fst. admit.
+  +++ admit.
+  ++ unfold findReg.
+     rewrite H3, H2, H4, H5, H6, H7, H1. simpl. split.
+  +++ reflexivity.
+  +++ split.
+  ++++ unfold decexec_inv. unfold findReg.
+       rewrite H3, H2, H4, H5, H6, H7, H1, H. simpl. trivial.
+  ++++ rewrite H3, H2, H4, H5, H6, H7, H1, H. 
+       rewrite x14, x13, x12, x11, x10, x9, x8, x7.
+       split.
+       * reflexivity.
+       * reflexivity.
+  + left. split.
+  ++ admit. (* fixme *)
+  ++ reflexivity.
+  + left. split.
+  ++ admit.
+  ++ reflexivity.
+  + left. split.
+  ++ admit.
+  ++ admit. (* seems wrong *)
+  + admit.
+  + admit. (* tohost *)
+Admitted.
+
 
 Fixpoint getRegistersFromMod m :=
   match m with
@@ -146,17 +270,52 @@ Fixpoint getRegistersFromMod m :=
 
 Section DecExecOk.
 Theorem decexec_ok:
-    TraceInclusion (decexecSep decStub execStub "pgm" "foo" "bar" "baz")
-                   (decexec decStub execStub "pgm" "foo" "bar" "baz").
+    TraceInclusion (decexec decStub execStub)
+                   (decexec decStub execStub).
   Proof.
 
   unfold decexecSep, decexec.
   repeat autounfold with ModuleDefs. unfold Empty'mod.
   discharge_appendage.
+  unfold TraceInclusion.
+  intros.
+  pose (o2 := o1).
+  refine (ex_intro _ o1 _).
+  pose (ls2 := ls1).
+  refine (ex_intro _ ls1 _).
+  split.
+  - apply H.
+  - split.
+    + reflexivity.
+    + Search (nthProp2 _ _ _).
+      apply WeakInclusions_WeakInclusion.
+      Search (WeakInclusions _ _).
+      apply WeakInclusionsRefl.
 
-  discharge_simulationGeneral mySimRel (NoDup (map fst (getRegistersFromMod (decexec decStub execStub "pgm" "foo" "bar" "baz")))).
+Qed.
+End DecExecOk.
 
-Admitted.
+Theorem decexecSep_wfBaseModule:
+  WfBaseModule
+   (getFlat
+      (decexecSep decStub execStub)).
+Proof.
+  discharge_wf.
+Qed.
+
+End DecExecSepOk.
+
+Theorem nodupregs_spec:
+  (NoDup (map fst (getRegisters decexecWf))).
+Proof.
+  discharge_wf.
+Qed.
+
+Theorem noselfCalls_impl:
+  NoSelfCallBaseModule (getFlat (decexecSep decStub execStub)).
+Proof.
+  discharge_NoSelfCall.
+Qed.
 
 (* fixme *)
 Ltac kinv_eq :=
@@ -182,17 +341,6 @@ Ltac kinv_red :=
   Ltac decexec_inv_tac :=
     decexec_inv_dest_tac; decexec_inv_constr_tac.
 
-  Check (getRegFileRegisters _).
-  Check (evalConstFullT _).
- (*  Definition rawInitRegs (init: list RegInitT) : RegsT :=
-    map (fun r => match r with
-        ) init.
-*)
-
-Print Trace.
-Print FullLabel.
-Search (FullLabel -> _).
-Check (nat * string)%type.
   (* Now we are ready to prove the invariant!
    * Thanks to some Kami tactics, the proof will be highly automated. *)
   Lemma decexec_inv_ok':
