@@ -103,18 +103,6 @@ Section DecExec.
    * automatically. *)
   Hint Unfold decexec_pc_inv decexec_d2e_inv: InvDefs.
 
-
-  (* In order to prove invariants, we need to provide two customized tactics:
-   * one is for destructing invariants for the current state
-   * ([decexec_inv_dest_tac]), and the other is for constructing invariants for
-   * the next state ([decexec_inv_constr_tac]). *)
-  Ltac decexec_inv_dest_tac :=
-    unfold getAllRegisters, (* decexecSepInl, *) projT1;
-    try match goal with
-        | [ H: decexec_inv _ |- _ ] => destruct H
-        | [ |- decexec_inv _ ] => destruct decexec_inv
-        end.
-
 Definition mySimRel (iregs sregs: RegsT) :=
   findReg "pgm" iregs = findReg "pgm" sregs
 /\ decexec_inv iregs
@@ -140,6 +128,17 @@ Definition mySimRel (iregs sregs: RegsT) :=
 Check mySimRel.
 End DecExec.
 
+  (* In order to prove invariants, we need to provide two customized tactics:
+   * one is for destructing invariants for the current state
+   * ([decexec_inv_dest_tac]), and the other is for constructing invariants for
+   * the next state ([decexec_inv_constr_tac]). *)
+Ltac decexec_inv_dest_tac :=
+    unfold getAllRegisters, (* decexecSepInl, *) projT1;
+    try match goal with
+        | [ H: decexec_inv _ |- _ ] => destruct H
+        | [ |- decexec_inv _ ] => destruct decexec_inv
+        end.
+
 Definition decexecSepWf := {| baseModule := (getFlat (decexecSep decStub execStub)) ;
 				     wfBaseModule := ltac:(discharge_wf)  |}.
 
@@ -164,261 +163,69 @@ Theorem decexecSep_ok:
   + discharge_NoSelfCall.
   + unfold mySimRel in H. destruct H, H0, H1. rewrite <- H2. reflexivity.
   + unfold mySimRel in H. destruct H, H0, H1. rewrite <- H1. reflexivity.
-  + unfold mySimRel. exists (("decexec-e2wFifo_reg",
-    x2 :: x3 ::x1 :: x4 :: x5 :: x6 :: nil). repeat split.
-   ++ repeat apply Forall2_cons.
-    +++ rewrite H5. unfold fst. split.
-     ++++ reflexivity.
-     ++++ admit.
-    +++ rewrite H6. unfold fst. split.
-     ++++ reflexivity.
-     ++++ admit.
-    +++
-Admitted.
-
-
-Theorem findReg_doUpdRegs_updated:
-  forall (u o: RegsT) (s: string),
-    None <> findReg s u
-    -> None <> findReg s o
-      -> None <> findReg s (doUpdRegs u o).
-Proof.
-Admitted.
-
-Theorem findReg_doUpdRegs_unchanged:
-  forall (u o: RegsT) (s: string),
-    None = findReg s u
-    -> None <> findReg s o
-      -> None <> findReg s (doUpdRegs u o).
-Proof.
-Admitted.
-
-
-Lemma getKindAttr_doUpdRegs2 o:
-  NoDup (map fst o) ->
-  forall u,
-    NoDup (map fst u) ->
-    (forall s v, In (s, v) u -> In (s, projT1 v) (getKindAttr o)) ->
-    getKindAttr (doUpdRegs u o) = getKindAttr o.
-Proof.
-  intros.
-  setoid_rewrite getKindAttr_doUpdRegs'.
-  rewrite forall_map; intros.
-  case_eq (findReg (fst x) u) ; intros; auto.
-  rewrite <- findRegs_Some in H3 ; auto.
-  specialize (H1 _ _ H3).
-  f_equal.
-  destruct x ; simpl in *.
-  apply (in_map (fun x => (fst x, projT1 (snd x)))) in H2; simpl in *.
-  assert (sth: map fst o = map fst (getKindAttr o)). {
-    rewrite map_map; simpl.
-    assert (sth2: fst = fun x : RegT => fst x) by (extensionality x; intros; auto).
-    rewrite sth2 ; auto.
-  }
-  rewrite sth in H.
-  pose proof (@KeyMatching_gen _ _ (getKindAttr o) _ _ H H1 H2 eq_refl) ; simpl in *.
-  inv H4; congruence.
-Qed.
-
-
-Section DecExecSepOk2.
-Theorem decexecSep_ok2:
-    TraceInclusion decexecSepWf
-                   decexecWf.
-  Proof.
-  discharge_appendage.
-  discharge_simulationGeneral (mySimRel) ltac:(discharge_DisjKey).
-  + discharge_NoSelfCall.
-  + unfold mySimRel in H. destruct H, H0, H1. rewrite <- H2. reflexivity.
-  + unfold mySimRel in H. destruct H, H0, H1. rewrite <- H1. reflexivity.
   + unfold mySimRel. exists (x2 :: x3 ::x1 :: x4 :: x5 :: x6 :: nil). split.
-  ++ apply Forall2_cons.
-     rewrite H5. 
-  +++ unfold fst. admit.
-  +++ admit.
-  ++ unfold findReg.
-     rewrite H3, H2, H4, H5, H6, H7, H1. simpl. split.
-  +++ reflexivity.
-  +++ split.
-  ++++ unfold decexec_inv. unfold findReg.
-       rewrite H3, H2, H4, H5, H6, H7, H1, H. simpl. trivial.
-  ++++ rewrite H3, H2, H4, H5, H6, H7, H1, H. 
-       rewrite x14, x13, x12, x11, x10, x9, x8, x7.
-       split.
-       * reflexivity.
-       * reflexivity.
-  + left. split.
-  ++ admit. (* fixme *)
-  ++ reflexivity.
-  + left. split.
-  ++ admit.
-  ++ reflexivity.
-  + left. split.
-  ++ admit.
-  ++ admit. (* seems wrong *)
+   ++ repeat apply Forall2_cons; simpl; try (split; [try congruence | eexists; eauto]).
+      apply Forall2_nil.
+   ++ split.
+   +++ unfold findReg. rewrite H3, H2, H4, H5, H6, H7, H1, H. econstructor.
+   +++ split.
+   ++++ econstructor.
+   * unfold findReg. rewrite H3, H2, H4, H5, H6, H7, H1, H.
+simpl. admit. (* need ?pcv for x2 *)
+   * unfold findReg. rewrite H3, H2, H4, H5, H6, H7, H1, H. simpl.
+     admit. (* need ?pgmv for x4 *)
+   * unfold findReg. rewrite H3, H2, H4, H5, H6, H7, H1, H. simpl.
+     admit. (* need ?d2efullv for x0 *)
+   * unfold findReg. rewrite H3, H2, H4, H5, H6, H7, H1, H. simpl.
+     admit.
+   * unfold decexec_pc_inv. intro. trivial.
+   * unfold decexec_d2e_inv.
+     simpl. intro. repeat split; admit. (* need ?d2eltv and ?d2efullv *)
+   ++++ repeat split; unfold getKindAttr; congruence.
+  + unfold mySimRel. left. repeat split.
+   ++ unfold mySimRel in H1. repeat destruct H1. apply findReg_doUpdRegs_unchanged with (s := "pgm").
+      unfold findReg. econstructor.
+      assert (findReg "pgm" oImp = Some (existT (fullType type)
+         (SyntaxKind (Array NumInstrs (Bit InstrSz))) x2)).
+      +++ apply findRegs_Some.
+      ++++ admit. (* nodup (map fst oImp) *)
+      ++++ apply H4.
+      +++ rewrite H1. admit. (* findReg "pgm" oImp <> None *)
+   ++ econstructor.
+    +++ apply findReg_doUpdRegs_updated with (s := "decexec-pc") (t := (SyntaxKind (Bit PgmSz))).
+     * simpl. trivial. (* ?pcv0 *)
+     * congruence.
+    +++ admit. (* pgm *)
+    +++ apply findReg_doUpdRegs_updated with (t := (SyntaxKind Bool)).
+     * simpl. trivial.
+     * congruence.
+    +++ apply findReg_doUpdRegs_updated with (t := (SyntaxKind D2E)).
+     * simpl. trivial.
+     * congruence.
+    +++ unfold decexec_pc_inv. simpl. intro. 
+        rewrite wzero_wplus with (sz := PgmSz) (w := x1). reflexivity.
+    +++ unfold decexec_d2e_inv. simpl. intro. repeat split; reflexivity.
+   ++ Search (getKindAttr (doUpdRegs _ _ )).
+      rewrite <- getKindAttr_doUpdRegs.
+     +++ unfold mySimRel in H1. destruct H1, H2, H13. rewrite H13. reflexivity.
+     +++ assert (map fst oImp = map fst (getKindAttr oImp)).
+      * admit.
+      * rewrite H2. unfold mySimRel in H1. destruct H1, H13, H14. rewrite H14. simpl. 
+        (* repeat apply NoDup_cons; simpl. Search (_ -> False). *)
+        admit.
+    +++ simpl. trivial. admit. (* NoDup *)
+    +++ simpl. admit.
+    ++ unfold mySimRel in H1. destruct H1, H2, H13. rewrite H14. reflexivity.
   + admit.
-  + admit. (* tohost *)
+  + admit.
+  + right. exists "decexec-decexecArith". eexists. split.
+    * left. trivial.
+    * exists oSpec. exists nil. split.
+      admit.
+      admit.
+  + right. exists "decexec-decexecArith". eexists. split.
+   * left. trivial.
+   * exists oSpec. exists nil. split.
+     ** simpl. Search (SemAction _). admit. (* SemAction *)
+     ** admit. (* mySimRel *)
 Admitted.
-
-
-Fixpoint getRegistersFromMod m :=
-  match m with
-  | Base bm => getRegisters bm
-  | HideMeth m' meth => getRegistersFromMod m'
-  | ConcatMod m1 m2 => getRegistersFromMod m1 ++ getRegistersFromMod m2
-  end.
-
-Section DecExecOk.
-Theorem decexec_ok:
-    TraceInclusion (decexec decStub execStub)
-                   (decexec decStub execStub).
-  Proof.
-
-  unfold decexecSep, decexec.
-  repeat autounfold with ModuleDefs. unfold Empty'mod.
-  discharge_appendage.
-  unfold TraceInclusion.
-  intros.
-  pose (o2 := o1).
-  refine (ex_intro _ o1 _).
-  pose (ls2 := ls1).
-  refine (ex_intro _ ls1 _).
-  split.
-  - apply H.
-  - split.
-    + reflexivity.
-    + Search (nthProp2 _ _ _).
-      apply WeakInclusions_WeakInclusion.
-      Search (WeakInclusions _ _).
-      apply WeakInclusionsRefl.
-
-Qed.
-End DecExecOk.
-
-Theorem decexecSep_wfBaseModule:
-  WfBaseModule
-   (getFlat
-      (decexecSep decStub execStub)).
-Proof.
-  discharge_wf.
-Qed.
-
-End DecExecSepOk.
-
-Theorem nodupregs_spec:
-  (NoDup (map fst (getRegisters decexecWf))).
-Proof.
-  discharge_wf.
-Qed.
-
-Theorem noselfCalls_impl:
-  NoSelfCallBaseModule (getFlat (decexecSep decStub execStub)).
-Proof.
-  discharge_NoSelfCall.
-Qed.
-
-(* fixme *)
-Ltac kinv_eq :=
-  repeat
-    (first [ reflexivity
-           (* | meqReify *)
-           (* | findReify *)
-           (* | fin_func_eq *)
-           (* | apply existT_eq *)
-           (* | apply pair_eq *)
-    ]).
-
-
-(* fixme too *)
-Ltac kinv_red :=
-  intros; repeat autounfold with InvDefs in *;
-  dest; try subst (* ; kinv_simpl *).
-
-  Ltac decexec_inv_constr_tac :=
-    econstructor; intros;
-    repeat (kinv_eq; kinv_red; eauto).
-
-  Ltac decexec_inv_tac :=
-    decexec_inv_dest_tac; decexec_inv_constr_tac.
-
-  (* Now we are ready to prove the invariant!
-   * Thanks to some Kami tactics, the proof will be highly automated. *)
-  Lemma decexec_inv_ok':
-(* what should init be *)
-    forall init n,
-      decexec_inv init ->
-      Trace decexecSepInl init n ->
-      (Forall (fun (lfl : list FullLabel) => Forall (fun (fl : FullLabel) => (decexec_inv (fst fl) )) lfl) n).
-  Proof.
-    (* Induction on [Trace] is the natural choice. *)
-    induction 2.
-    - (* Our custom destruction-construction tactic is used 
-       * for the initial case as well. *)
-      decexec_inv_tac; cbn in *; kinv_red.
-    - (* [kinvert] is for inverting Kami steps. 
-       * It may generate multiple subgoals corresponding to possible steps 
-       * by a rule or a method. *)
-      kinvert.
-      + (* [kinv_dest_custom] is a tactic for proving invariants, and it takes
-         * our customized tactic as a parameter. *)
-        kinv_dest_custom decexec_inv_tac.
-      + kinv_dest_custom decexec_inv_tac.
-      + kinv_dest_custom decexec_inv_tac.
-      + kinv_dest_custom decexec_inv_tac.
-      + kinv_dest_custom decexec_inv_tac.
-      + kinv_dest_custom decexec_inv_tac.
-      + kinv_dest_custom decexec_inv_tac.
-  Qed.
-
-  Lemma decexec_inv_ok:
-    forall o,
-      reachable o (projT1 decexecSepInl) ->
-      decexec_inv o.
-  Proof.
-    intros; inv H; inv H0.
-    eapply decexec_inv_ok'; eauto.
-  Qed.
-
-  (* Equipped with invariants, it is time to prove refinement.
-   * Following the Kami verification flow, we will use a decomposition theorem.
-   *)
-
-  
-  (* Finally the correctness proof!
-   * The proof is highly automated as well, following a typical verification
-   * flow and using the Kami tactics.
-   *)
-  Theorem decexec_ok:
-    decexecSep dec exec pcInit pgmInit <<== decexec dec exec pcInit pgmInit.
-  Proof.
-    (* 1) Inlining: we already have an inlined module. 
-     *    Let's use [kinline_refine_left] to substitute the LHS module 
-     *    to the inlined one. *)
-    kinline_refine_left decexecSepInl.
-
-    (* 2) Decomposition: [kdecompose_nodefs] is mostly used for decomposition;
-     *    it requires a target module without any methods. Indeed the module
-     *    has no methods, since it is inlined. The tactic takes register and
-     *    rule mappings as arguments. *)
-    kdecompose_nodefs decexec_regMap decexec_ruleMap.
-
-    (* 3) Simulation: we can add invariants using [kinv_add] and [kinv_add_end]
-     *    before proving simulation. [kinvert] is used to invert Kami steps as
-     *    well. [kinv_magic_with] is a high-level tactic to prove simulation for
-     *    each possible step. It takes custom destruction and construction 
-     *    tactics as arguments. For this proof, no construction tactics are
-     *    required.
-     *)
-    kinv_add decexec_inv_ok.
-    kinv_add_end.
-    kinvert.
-    - kinv_magic_with decexec_inv_dest_tac idtac.
-    - kinv_magic_with decexec_inv_dest_tac idtac.
-    - kinv_magic_with decexec_inv_dest_tac idtac.
-    - kinv_magic_with decexec_inv_dest_tac idtac.
-    - kinv_magic_with decexec_inv_dest_tac idtac.
-  Qed.
-
-*)
-
-End DecExec.

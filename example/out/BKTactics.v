@@ -23,3 +23,43 @@ Ltac do_inlining :=
   then meth
   else (methname, inlineSingle f _).
 *)
+
+Theorem findReg_doUpdRegs_updated_not_none:
+  forall (u o: RegsT) (s: string),
+    None <> findReg s u
+    -> None <> findReg s o
+      -> None <> findReg s (doUpdRegs u o).
+Proof.
+Admitted.
+
+Theorem findReg_doUpdRegs_updated:
+  forall (u o: RegsT) (s: string) t v,
+    findReg s u = v
+    -> In (s, t) (getKindAttr o)
+      -> findReg s (doUpdRegs u o) = v.
+Proof.
+Admitted.
+
+Theorem findReg_doUpdRegs_unchanged_none:
+  forall (u o: RegsT) (s: string),
+    None = findReg s u
+    -> None <> findReg s o
+      -> None <> findReg s (doUpdRegs u o).
+Proof.
+Admitted.
+
+Theorem findReg_doUpdRegs_unchanged:
+  forall (u o: RegsT) (s: string),
+    None = findReg s u
+    -> findReg s o <> None
+      -> findReg s (doUpdRegs u o) = findReg s o.
+Proof.
+Admitted.
+
+Theorem findRegs_Some:
+  forall u : list RegT,
+  NoDup (map fst u) ->
+  forall (s : string) (v : {x : FullKind & fullType type x}),
+  In (s, v) u <-> findReg s u = Some v.
+Proof.
+Admitted.
