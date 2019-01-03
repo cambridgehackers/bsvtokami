@@ -226,6 +226,6 @@ simpl. admit. (* need ?pcv for x2 *)
   + right. exists "decexec-decexecArith". eexists. split.
    * left. trivial.
    * exists oSpec. exists nil. split.
-     ** simpl. Search (SemAction _). admit. (* SemAction *)
+     ** simpl. Search (SemAction _). (* what to do here with SemAction *) admit. (* SemAction *)
      ** admit. (* mySimRel *)
 Admitted.
