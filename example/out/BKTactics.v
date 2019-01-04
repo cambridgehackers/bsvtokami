@@ -63,3 +63,10 @@ Theorem findRegs_Some:
   In (s, v) u <-> findReg s u = Some v.
 Proof.
 Admitted.
+
+Theorem InKindAttr:
+  forall (s : string) t (o : RegsT),
+    exists v,
+      In (s, t) (getKindAttr o) -> In (s, existT (fullType type) t v) o.
+Proof.
+Admitted.
