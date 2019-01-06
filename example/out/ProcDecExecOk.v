@@ -58,8 +58,7 @@ Section DecExec.
              (spcv: fullType type (SyntaxKind (Bit PgmSz)))
              (d2efullv: fullType type (SyntaxKind Bool))
              (d2eeltv: fullType type (SyntaxKind D2E)) :=
-     (d2efullv = true -> ipcv = d2eeltv F5 ^+ $1 /\ spcv = d2eeltv F5) /\ 
-     (d2efullv = false -> True).
+     (d2efullv = true -> ipcv = d2eeltv F5 ^+ $1 /\ spcv = d2eeltv F5).
   
   Definition decexec_d2e_inv
              (pgmv: fullType type (SyntaxKind (Array NumInstrs (Bit InstrSz))))
@@ -132,6 +131,15 @@ Ltac decexec_inv_dest_tac :=
         | [ |- decexec_inv _ ] => destruct decexec_inv
         end.
 
+Section DecExecSepOk.
+  Variable decoder: Decoder.Decoder.
+  
+  Definition decexecSepWf := {| baseModule := (getFlat (decexecSep decoder execStub)) ;
+			        wfBaseModule := ltac:(discharge_wf)  |}.
+
+  Definition decexecWf := {| baseModule := (getFlat (decexec decoder execStub)) ;
+			     wfBaseModule := ltac:(discharge_wf)  |}.
+
 Ltac exists_uspec :=
   match goal with
       | [ |- exists _ : RegsT, SemAction _ _ _ _ _ _ /\
@@ -141,10 +149,10 @@ Ltac exists_uspec :=
            :: ("decexec-e2wFifo_reg", ?v3)
               :: ("decexec-e2wFifo_valid", ?v4)
 	               :: nil) _)
-	  (doUpdRegs _ _) ] => idtac "matched"; exists (("decexec-e2wFifo_reg", v3) :: ("decexec-e2wFifo_valid", v4) :: nil)
+	  (doUpdRegs _ _) ] => idtac "matched"; idtac v1; exists (("decexec-e2wFifo_reg", v3) :: ("decexec-e2wFifo_valid", v4) :: nil)
       | [ |- exists _ : RegsT, SemAction _ _ _ _ _ _ /\
              mySimRel _ (doUpdRegs (("decexec-d2eFifo_valid", ?v1) :: nil) _) (doUpdRegs _ _)
-        ] => idtac "matched"; exists nil
+          ] => idtac "matched2"; idtac v1; exists nil
    | [ |- _ /\ _ ] => split
    | [ |- SemAction _ _ _ _ _ _ ] => idtac "semaction"; discharge_SemAction
    | [ |- In ("decexec-e2wFifo_valid", _) _ ] => admit
@@ -156,15 +164,6 @@ Ltac exists_uspec :=
    | [ |- In ("decexec-sbFlags", _) (getKindAttr _) ] => admit
    | [ |- In ("pgm", _) _ ] => admit
    end.
-
-Section DecExecSepOk.
-  Variable decoder: Decoder.Decoder.
-  
-  Definition decexecSepWf := {| baseModule := (getFlat (decexecSep decoder execStub)) ;
-			        wfBaseModule := ltac:(discharge_wf)  |}.
-
-  Definition decexecWf := {| baseModule := (getFlat (decexec decoder execStub)) ;
-			     wfBaseModule := ltac:(discharge_wf)  |}.
 
 Theorem decexecSep_ok:
     TraceInclusion decexecSepWf
@@ -243,28 +242,31 @@ simpl. admit. (* need ?ipcv for x2 *)
     ** admit. (* this looks wrong *)
     ** admit. (* this looks wrong *)
     ** admit. (* mySimRel doUpdRegs tactic needed *)
-  + right. exists "decexec-decexecArith". eexists. split.
-    * left. trivial.
+  + right. exists "decexec-decexecLd". eexists. split.
+    * right. left. trivial.
     * exists oSpec. repeat exists_uspec.
       ** admit.
       ** simpl. admit.
       ** admit.
       ** admit.
       ** admit.
-  + right. exists "decexec-decexecArith". eexists. split.
-    * left. trivial.
-    * exists oSpec. repeat exists_uspec.
-      ** admit. (* getBool *)
-      ** (* FIXME nil = _ :: nil *) admit.
-      ** (* FIXME call to doMEM *) admit.
+  + right. exists "decexec-decexecSt". eexists. split.
+    * right. right. left. trivial.
+    * exists oImp. repeat exists_uspec.
+unfold mySimRel in H1. destruct H1. destruct a. destruct d. destruct Hdeinv, Hpcinv.
+
+      ** admit. (* getOp instr == 2 && d2efifo_valid *)
+      ** simpl. trivial. (* FIXME nil = _ :: nil *) admit.
+      **  admit.
       ** admit.
       ** admit.
-  + right. exists "decexec-decexecArith". eexists. split.
-   * left. trivial.
+  + right. exists "decexec-decexecToHost". eexists. split.
+   * right. right. right. left. trivial.
    * exists oSpec. repeat exists_uspec.
-     ** (* getBool *) admit.
-     ** (* FIXME nil = _ :: nil *) admit.
-     ** (* FIXME call toHost *) admit.
+     ** simpl. Search (_ && _). admit.
+     ** admit.
+     ** simpl.  admit.
      ** (* FIXME oSPEC missing decexec-e2wFifo_reg *) admit.
+     ** admit.
      ** admit.
 Admitted.
