@@ -84,6 +84,7 @@ Section DecExec.
       d2efullv: fullType type (SyntaxKind Bool) ;
       Hd2efullv: findReg "decexec-d2eFifo_valid"%string iregs = Some (existT _ _ d2efullv) ;
       d2eeltv: fullType type (SyntaxKind D2E) ;
+      d2efullv_true: d2efullv = evalExpr (Const _ true )%kami_expr ;
       Hd2eeltv: findReg "decexec-d2eFifo_reg"%string iregs = Some (existT _ _ d2eeltv) ;
 
       Hpcinv: decexec_pc_inv ipcv spcv d2efullv d2eeltv ;
@@ -154,6 +155,7 @@ Ltac exists_uspec :=
              mySimRel _ (doUpdRegs (("decexec-d2eFifo_valid", ?v1) :: nil) _) (doUpdRegs _ _)
           ] => idtac "matched2"; idtac v1; exists nil
    | [ |- _ /\ _ ] => split
+   | [ H: mySimRel _ _ _ |- _ ] => unfold mySimRel
    | [ |- SemAction _ _ _ _ _ _ ] => idtac "semaction"; discharge_SemAction
    | [ |- In ("decexec-e2wFifo_valid", _) _ ] => admit
    | [ |- In ("decexec-e2wFifo_reg", _) _ ] => admit
@@ -163,8 +165,16 @@ Ltac exists_uspec :=
    | [ |- In ("decexec-regs", _) _ ] => admit
    | [ |- In ("decexec-sbFlags", _) (getKindAttr _) ] => admit
    | [ |- In ("pgm", _) _ ] => admit
+   | [ |- findReg _ (_ :: _) = _ ] => unfold findReg
+   | [ H3: fst ?x = _ |- (if string_dec ?m (fst ?x) then _ else _) = _ ] => idtac "fstx"; idtac x ; rewrite H3 
    end.
 
+Ltac discharge_findreg :=
+   match goal with
+   | [ |- findReg _ _ = _ ] => idtac "findreg"; unfold findReg 
+   end; repeat discharge_string_dec.
+
+Search (string_dec _ _).
 Theorem decexecSep_ok:
     TraceInclusion decexecSepWf
                    decexecWf.
@@ -181,15 +191,15 @@ Theorem decexecSep_ok:
    +++ unfold findReg. rewrite H3, H2, H4, H5, H6, H7, H1, H. econstructor.
    +++ split.
    ++++ econstructor.
-   * unfold findReg. rewrite H3, H2, H4, H5, H6, H7, H1, H.
+   * discharge_findreg. trivial.
+admit. (* need ?ipcv for x2 *)
+   * discharge_findreg.
 simpl. admit. (* need ?ipcv for x2 *)
-   * unfold findReg. rewrite H4, H5, H6, H7, H1, H.
-simpl. admit. (* need ?ipcv for x2 *)
-   * unfold findReg. rewrite H3, H2, H4, H5, H6, H7, H1, H. simpl.
+   * discharge_findreg.
      admit. (* need ?pgmv for x4 *)
-   * unfold findReg. rewrite H3, H2, H4, H5, H6, H7, H1, H. simpl.
+   * discharge_findreg.
      admit. (* need ?d2efullv for x0 *)
-   * unfold findReg. rewrite H3, H2, H4, H5, H6, H7, H1, H. simpl.
+   * discharge_findreg.
      admit.
    * unfold decexec_pc_inv. split. 
      ** intro. repeat split; trivial.
