@@ -199,11 +199,10 @@ simpl. admit. (* need ?ipcv for x2 *)
      admit. (* need ?pgmv for x4 *)
    * discharge_findreg.
      admit. (* need ?d2efullv for x0 *)
-   * discharge_findreg.
-     admit.
-   * unfold decexec_pc_inv. split. 
+   * trivial.
+   * discharge_findreg. admit.
+   * unfold decexec_pc_inv. 
      ** intro. repeat split; trivial.
-     ** intro; trivial.
    * unfold decexec_d2e_inv.
      simpl. intro. repeat split; admit. (* need ?d2eltv and ?d2efullv *)
    ++++ repeat split; unfold getKindAttr; congruence.
@@ -225,14 +224,15 @@ simpl. admit. (* need ?ipcv for x2 *)
     +++ apply findReg_doUpdRegs_updated with (t := (SyntaxKind Bool)).
      * simpl. trivial.
      * congruence.
+    +++ simpl. trivial. 
     +++ apply findReg_doUpdRegs_updated with (t := (SyntaxKind D2E)).
+
      * simpl. trivial.
      * congruence.
     +++ unfold decexec_pc_inv. split.
-        ** simpl. intro. split.
+        ** simpl.
          *** rewrite wzero_wplus with (sz := PgmSz) (w := x1). reflexivity.
-         *** trivial.
-        ** intro. trivial.
+        ** trivial.
     +++ unfold decexec_d2e_inv. simpl. intro. repeat split; reflexivity.
    ++ Search (getKindAttr (doUpdRegs _ _ )).
       rewrite <- getKindAttr_doUpdRegs.
@@ -248,7 +248,10 @@ simpl. admit. (* need ?ipcv for x2 *)
   + right. exists "decexec-decexecArith". eexists. split.
     * left. trivial.
     * exists oSpec. repeat exists_uspec.
-    ** admit. (* getbool something *)
+    ** discharge_SemAction. (* getbool something *)
+      *** admit.
+      *** admit.
+      *** 
     ** admit. (* this looks wrong *)
     ** admit. (* this looks wrong *)
     ** admit. (* mySimRel doUpdRegs tactic needed *)

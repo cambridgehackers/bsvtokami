@@ -45,6 +45,7 @@ interface Memory;
    method ActionValue#(Bit#(DataSz)) doMem(MemRq req);
 endinterface
 
+(* synthesize *)
 module mkMemory(Memory);
    RegFile#(Bit#(AddrSz),Bit#(DataSz)) mem <- mkRegFileFull();
    method ActionValue#(Bit#(DataSz)) doMem(MemRq req);
@@ -56,7 +57,7 @@ module mkMemory(Memory);
       else begin
 	 Bit#(AddrSz) addr = req.addr;
 	 Bit#(DataSz) newval = req.data;
-	 void unused <- mem.upd(addr, newval);
+	 mem.upd(addr, newval);
 	 Bit#(DataSz) placeholder = mem.sub(addr);
 	 return placeholder;
       end
@@ -67,6 +68,7 @@ interface ToHost;
    method Action toHost(Bit#(DataSz) val);
 endinterface
 
+(* synthesize *)
 module procSpec#(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
 		 Decoder dec,
 		 Executer exec,
@@ -86,7 +88,7 @@ module procSpec#(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
       Bit#(DataSz) val1 = rf.sub(src1);
       Bit#(DataSz) val2 = rf.sub(src2);
       Bit#(DataSz) dval = exec.execArith(op, val1, val2);
-      void unused <- rf.upd(dst, dval);
+      rf.upd(dst, dval);
       pc <= pc + 16'd1;
    endrule
 
@@ -113,7 +115,7 @@ module procSpec#(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
       Bit#(RegFileSz) src1 = dec.getSrc1(inst);
       Bit#(DataSz) val1 = rf.sub(src1);
 
-      void unused <- tohost.toHost(val1);
+      tohost.toHost(val1);
       pc <= pc + 16'd1;
    endrule
 
