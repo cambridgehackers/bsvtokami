@@ -49,6 +49,25 @@ Hint Unfold makeBKModule' : ModuleDefs.
 Hint Unfold makeBKModule : ModuleDefs.
 Hint Unfold app : ModuleDefs.
 
+Fixpoint getOrderBK (im : InBKModule) :=
+  match im with
+  | NilInBKModule => nil
+  | ConsInBKModule e i =>
+    let rest := getOrderBK i in
+    match e with
+    | BKRule mrule => fst mrule :: rest
+    | BKMeth mmeth => fst mmeth :: rest
+    | _ => rest
+    end
+  end.
+
+Fixpoint getOrderFromMod (m : Mod) := 
+  match m with
+  | Base bm => map fst (getRules bm) ++ map fst (getMethods bm)
+  | HideMeth m' meth => getOrderFromMod m'
+  | ConcatMod m1 m2 => getOrderFromMod m1 ++ getOrderFromMod m2
+  end.
+
 (* * BSV to Kami Notation *)
 
 Delimit Scope bk_scope with bk.
@@ -64,15 +83,15 @@ Notation "'LOOP' { s1 'with' .. 'with' sN } SL" :=
     (at level 0, only parsing).
 
 Notation "'RegisterN' name : type <- init" :=
-  (BKRegister (name%string, existT optConstFullT type (Some init)))
+  (BKRegister (name%string, existT RegInitValT type (Some init)))
     (at level 12, name at level 99) : bk_scope.
 
 Notation "'Register' name : type <- init" :=
-  (BKRegister (name%string, existT optConstFullT (SyntaxKind type) (Some (makeConst init))))
+  (BKRegister (name%string, existT RegInitValT (SyntaxKind type) (Init (makeConst init))))
     (at level 12, name at level 99) : bk_scope.
 
 Notation "'RegisterU' name : type" :=
-  (BKRegister (name%string, existT optConstFullT (SyntaxKind type) None))
+  (BKRegister (name%string, existT RegInitValT (SyntaxKind type) (Uninit _)))
     (at level 12, name at level 99) : bk_scope.
 
 Notation "'Method' name () : retT := c" :=

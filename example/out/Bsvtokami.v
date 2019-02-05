@@ -83,15 +83,15 @@ Notation "'LOOP' { s1 'with' .. 'with' sN } SL" :=
     (at level 0, only parsing).
 
 Notation "'RegisterN' name : type <- init" :=
-  (BKRegister (name%string, existT optConstFullT type (Some init)))
+  (BKRegister (name%string, existT RegInitValT type (Some init)))
     (at level 12, name at level 99) : bk_scope.
 
 Notation "'Register' name : type <- init" :=
-  (BKRegister (name%string, existT optConstFullT (SyntaxKind type) (Some (makeConst init))))
+  (BKRegister (name%string, existT RegInitValT (SyntaxKind type) (Init (makeConst init))))
     (at level 12, name at level 99) : bk_scope.
 
 Notation "'RegisterU' name : type" :=
-  (BKRegister (name%string, existT optConstFullT (SyntaxKind type) None))
+  (BKRegister (name%string, existT RegInitValT (SyntaxKind type) (Uninit _)))
     (at level 12, name at level 99) : bk_scope.
 
 Notation "'Method' name () : retT := c" :=
