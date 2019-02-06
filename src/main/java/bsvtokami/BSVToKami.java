@@ -2187,7 +2187,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
     @Override public String visitArraysub(BSVParser.ArraysubContext ctx) {
 	boolean hasSecondArg = (ctx.expression(1) != null);
 	BSVType arraytype = typeVisitor.visit(ctx.array);
-	System.err.println(String.format("arraysub array %s type %s", ctx.array.getText(), arraytype));
+	System.err.println(String.format("arraysub array %s type %s at %s",
+					 ctx.array.getText(), arraytype, StaticAnalysis.sourceLocation(ctx)));
 	if (arraytype.name.equals("Vector")) {
 	    return String.format("(%1$s @[ %2$s ])", visit(ctx.array), visit(ctx.expression(0)));
         } else {
@@ -2199,6 +2200,16 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    Value lsb = (hasSecondArg) ? evaluator.evaluate(ctx.expression(1), scope) : msb;
 	    BSVType exprType = typeVisitor.visit(ctx.array);
 	    String exprWidth = bsvTypeSize(exprType, ctx.array);
+
+	    if (msb == null) {
+		String msbexpr = visit(ctx.expression(0));
+		assert !hasSecondArg;
+		return String.format("(%1$s $#[ %2$s : %3$d ])",
+				     visit(ctx.array), msbexpr, 1);
+	    }
+
+	    System.err.println(String.format("secondArg %s hasSecondArg %s msb %s lsb %s at %s",
+					     ctx.expression(1), hasSecondArg, msb, lsb, StaticAnalysis.sourceLocation(ctx)));
 
 	    IntValue imsb = (IntValue)msb;
 	    IntValue ilsb = (IntValue)lsb;
