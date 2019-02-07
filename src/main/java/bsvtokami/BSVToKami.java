@@ -815,7 +815,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 			System.err.println(String.format("Call varbinding %s fcn %s", varName, functionName));
 			boolean wasActionContext = actionContext;
 			actionContext = true;
-			statement.append(String.format("BKCall %s : %s (* varbinding *) <- %s", varName, bsvTypeToKami(t), translateCall(call)));
+			statement.append(String.format("BKCall %s : %s (* varbinding *) <- %s ", varName, bsvTypeToKami(t), translateCall(call)));
 			actionContext = wasActionContext;
 		    }
                 } else {
@@ -864,6 +864,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         if (ctx.op != null) {
             statement.append(String.format(" %s ", (call != null) ? "<-" : ctx.op.getText()));
 	    statement.append(visit(ctx.rhs));
+	    statement.append(" ");
 	}
         statements.add(statement.toString());
 	return null;
@@ -923,6 +924,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    if (call.expression().size() == 0) {
 		statement.append(" ()");
 	    }
+	    statement.append(" ");
 
         } else if (!actionContext) {
             BSVParser.CallexprContext call = getCall(ctx.rhs);
@@ -1173,7 +1175,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 String regName = entry.getKey();
 		if (callRegMethods) {
 		    methodBindings.add(String.format("%s_read : string := (Reg'_read %s)", regName, regName));
-		    functionBody.append(String.format("BKCall %s_v : %s (* funcdef regread *) <- %s_read();\nL",
+		    functionBody.append(String.format("BKCall %s_v : %s (* funcdef regread *) <- %s_read() ; \nL",
 						      regName, bsvTypeToKami(entry.getValue()), regName));
 		} else {
 		    functionBody.append("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- \"" + regName + "\" ;");
@@ -1363,7 +1365,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             String regName = entry.getKey();
 	    if (callRegMethods) {
 		methodBindings.add(String.format("%s_read : string := (Reg'_read %s)", regName, regName));
-		statement.append(String.format("BKCall %s_v : %s (* methoddef regread *) <- %s_read();\n",
+		statement.append(String.format("BKCall %s_v : %s (* methoddef regread *) <- %s_read() ; \n",
 					       regName, bsvTypeToKami(entry.getValue()), regName));
 	    } else {
 		statement.append("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- \"" + regName + "\" ;");
@@ -1435,11 +1437,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	if (callRegMethods) {
 	    String regName = regwrite.lhs.getText();
-	    methodBindings.add(String.format("%1$s_write : string := (Reg'_write %1$s)",
+	    methodBindings.add(String.format("%1$s_write : string := (Reg'_write %1$s) ",
 					     regName));
 	    if (rhsType.name.equals("Reg"))
 		rhsType = rhsType.params.get(0);
-	    statement.append(String.format("        Call %s_write ( (%s) : %s )",
+	    statement.append(String.format("        Call %s_write ( (%s) : %s ) ",
 					   regName,
 					   visit(rhs),
 					   bsvTypeToKami(rhsType)));
@@ -1455,7 +1457,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    }
 	    statement.append(" <- ");
 	    statement.append(visit(regwrite.rhs));
-
+	    statement.append(" ");
 	    statements.add(statement.toString());
 	}
 	typeVisitor.popScope();
@@ -2391,7 +2393,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	String varName = String.format("call%d", callCount);
 	callCount++;
 
-	statements.add(String.format("BKCall %s : %s <- %s",
+	statements.add(String.format("(* call expr *) BKCall %s : %s <- %s ",
 				     varName,
 				     bsvTypeToKami(resultType),
 				     translateCall(ctx)));
