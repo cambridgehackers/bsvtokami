@@ -785,6 +785,32 @@ public class BSVToKami extends BSVBaseVisitor<String>
 						       arg0Width,
 						       varWidth,
 						       visit(args.get(0))));
+		    } else if (functionName.equals("pack") || functionName.equals("unpack")) {
+			BSVType arg0Type = typeVisitor.visit(args.get(0));
+			statement.append(String.format("LET %1$s : %2$s <-  %3$s %4$s",
+						       varName,
+						       bsvTypeToKami(varType, 1),
+						       functionName,
+						       visit(args.get(0))));
+		    } else if (functionName.startsWith("tuple")) {
+			BSVType arg0Type = typeVisitor.visit(args.get(0));
+			StringBuilder struct = new StringBuilder();
+			for (int i = 0; i < args.size(); i++) {
+			    if (i != 0)
+				struct.append(" ; ");
+			    struct.append(String.format("\"tpl_%d\" ::= (%s)", i + 1, visit(args.get(i))));
+			}
+			statement.append(String.format("LET %1$s : %2$s <- STRUCT { %3$s }",
+						       varName,
+						       bsvTypeToKami(varType, 1),
+						       struct.toString()));
+		    } else if (functionName.startsWith("tpl_")) {
+			BSVType arg0Type = typeVisitor.visit(args.get(0));
+			statement.append(String.format("LET %1$s : %2$s <-  %3$s @%% \"tpl_%4$s\"",
+						       varName,
+						       bsvTypeToKami(varType, 1),
+						       visit(args.get(0)),
+						       functionName.substring(4)));
 		    } else {
 			System.err.println(String.format("Call varbinding %s fcn %s", varName, functionName));
 			boolean wasActionContext = actionContext;
