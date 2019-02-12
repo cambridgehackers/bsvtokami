@@ -1505,14 +1505,23 @@ public class BSVToKami extends BSVBaseVisitor<String>
         letBindings = new LetBindings();
         statements = new ArrayList<>();
 
+	String predicate = visit(ctx.expression());
+
         returnPending = "Retv";
-        visit(ctx.stmt(0));
         assert(letBindings.size() == 0) : "Unexpected let bindings at " + StaticAnalysis.sourceLocation(ctx) + "\n" + String.join("\n", letBindings);
 
         StringBuilder statement = new StringBuilder();
+        statement.append(String.join(";\n        ", statements));
+	if (statements.size() > 0)
+	    statement.append(";\n        ");
+	statements.clear();
+
         statement.append("        If ");
-        statement.append(visit(ctx.expression()));
+        statement.append(predicate);
         statement.append(" then (\n        ");
+	System.err.println(String.format("if stmts %d bindings %d at %s",
+					 statements.size(), letBindings.size(), StaticAnalysis.sourceLocation(ctx)));
+        visit(ctx.stmt(0));
         statement.append(String.join(";\n        ", statements));
         if (returnPending != null) {
             if (statements.size() > 0)
