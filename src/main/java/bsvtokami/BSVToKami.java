@@ -312,13 +312,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	};
 	ArrayList<TagValue> tagsAndValues = new ArrayList<>();
 	long maxValue = 0;
-
 	long tagValue = 0;
+	long tagFrom = 0;
 	for (BSVParser.TypedefenumelementContext elt: ctx.typedefenumelement()) {
             String basetagname = elt.upperCaseIdentifier().getText();
             long tagCount = 1;
             boolean numbered = false;
-            long tagFrom = 0;
 
             if (elt.tagval != null) {
 		IntValue intValue = new IntValue(elt.tagval.getText());
@@ -355,18 +354,22 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 IntValue entryValue = (IntValue)entry.value;
                 assert entryValue != null;
 		maxValue = java.lang.Math.max(maxValue, tagFrom + i);
-		tagsAndValues.add(new TagValue(tagname, entryValue.value));
+		System.err.println("tag entry " + tagname + "    maxValue " + maxValue);
+		tagsAndValues.add(new TagValue(tagname, tagFrom + i //entryValue.value
+					       ));
             }
 	    tagFrom += tagCount;
         }
+	System.err.println(String.format("enum %s maxValue %d", typeName, maxValue));
 	maxValue += 1;
 	int tagSize = (int)java.lang.Math.ceil(java.lang.Math.log(maxValue) / java.lang.Math.log(2.0));
-        printstream.println(String.format("Definition %s := (STRUCT { \"$tag\" :: (Bit %d) }).", typeName, tagSize));
+	// emit type declaration
+        printstream.println(String.format("Definition %s : Kind := (STRUCT { \"$tag\" :: (Bit %d) }).", typeName, tagSize));
 
 	for (TagValue pair: tagsAndValues) {
 	    if (pair.value < 128)
-		printstream.println(String.format("Notation %s := (STRUCT { \"$tag\" ::= (ConstBit %s) })%%kami_expr.",
-						  pair.tag, intToWord(tagSize, pair.value)));
+		printstream.println(String.format("Definition  %s {ty} : %s @# ty := (STRUCT { \"$tag\" ::= $$(%s) })%%kami_expr.",
+						  pair.tag, typeName, intToWord(tagSize, pair.value)));
 
 	}
 
