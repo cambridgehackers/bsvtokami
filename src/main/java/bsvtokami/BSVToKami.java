@@ -2039,6 +2039,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		typeVisitor.popScope();
 		op = String.format("UniBit (Neg %1$s) ", exprSize);
 	    }
+	    if (op.equals("-")) {
+		typeVisitor.pushScope(scope);
+		BSVType exprType = typeVisitor.visit(ctx.exprprimary());
+		String exprSize = bsvTypeSize(exprType, ctx.exprprimary());
+		typeVisitor.popScope();
+		op = String.format("BinBit (Sub %1$s) $$(natToWord %1$s 0) ", exprSize);
+	    }
             expression.append(op);
         }
 	expression.append(visit(ctx.exprprimary()));
