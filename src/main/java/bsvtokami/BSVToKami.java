@@ -361,11 +361,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
 	maxValue += 1;
 	int tagSize = (int)java.lang.Math.ceil(java.lang.Math.log(maxValue) / java.lang.Math.log(2.0));
-	System.err.println(String.format("%sFields maxValue=%d log maxValue %f tagSize=%d at %s",
-					 typeName, maxValue, java.lang.Math.log(maxValue), tagSize,
-					 StaticAnalysis.sourceLocation(ctx)));
         printstream.println(String.format("Definition %s := (STRUCT { \"$tag\" :: (Bit %d) }).", typeName, tagSize));
-        //printstream.println(String.format("Definition %s := (Struct %sFields).", typeName, typeName));
 
 	for (TagValue pair: tagsAndValues) {
 	    if (pair.value < 128)
