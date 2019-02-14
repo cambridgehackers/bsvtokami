@@ -774,6 +774,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 			BSVType arg0Type = typeVisitor.visit(args.get(0));
 			if (functionName.equals("extend"))
 			    functionName = (arg0Type.name.startsWith("Int")) ? "signExtend" : "zeroExtend";
+			System.err.println(String.format("extending var %1$s to type %2$s from %3$s", varName, varType, arg0Type));
 			String op = (functionName.equals("signExtend")) ? "SignExtendTrunc" : "ZeroExtendTrunc";
 			String arg0Width = bsvTypeSize(arg0Type, args.get(0));
 			String varWidth = bsvTypeSize(varType, varinit.var);
@@ -1466,6 +1467,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     @Override public String visitStmt(BSVParser.StmtContext ctx) {
 	if (ctx.expression() != null) {
+	    typeVisitor.pushScope(scope);
+	    BSVType exprType = typeVisitor.visit(ctx.expression());
+	    System.err.println(String.format("BSVToKami stmt expr type %s at %s", exprType, StaticAnalysis.sourceLocation(ctx)));
+	    typeVisitor.popScope();
 	    BSVParser.CallexprContext call = getCall(ctx.expression());
 	    if (call != null) {
 		// call is performed for side effect, so visit it but ignore the expression it returns
@@ -2402,7 +2407,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	String varName = String.format("call%d", callCount);
 	callCount++;
 
-	statements.add(String.format("(* call expr *) BKCall %s : %s <- %s ",
+	System.err.println(String.format("BSVToKami callexpr resultType %s (forcing Action) at %s", resultType, StaticAnalysis.sourceLocation(ctx)));
+
+	statements.add(String.format("(* call expr %s *) BKCall %s : %s <- %s ",
+				     StaticAnalysis.sourceLocation(ctx),
 				     varName,
 				     bsvTypeToKami(resultType),
 				     translateCall(ctx)));

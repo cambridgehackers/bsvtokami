@@ -1003,7 +1003,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 		return types.get(ctx);
             BSVType bsvtype = visit(ctx.exprprimary());
             if (ctx.op == null) {
-                logger.fine("Unop expr " + ctx.exprprimary().getText() + " : " + bsvtype);
+                System.err.println("Unop expr " + ctx.exprprimary().getText() + " : " + bsvtype + " at " + StaticAnalysis.sourceLocation(ctx));
+		types.put(ctx, bsvtype);
                 return bsvtype;
             }
             String op = ctx.op.getText();
@@ -1319,13 +1320,12 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	    if (types.containsKey(ctx))
 		return types.get(ctx);
             BSVType fcntype = visit(ctx.fcn).fresh(new ArrayList<>());
-            System.err.println("call " + ctx.fcn.getText() + " type " + fcntype + " at " + StaticAnalysis.sourceLocation(ctx));
+            System.err.println("call " + ctx.fcn.getText() + " freshened type " + fcntype + " at " + StaticAnalysis.sourceLocation(ctx));
             assert fcntype != null : String.format("Null type for %s at %s", ctx.fcn.getText(), StaticAnalysis.sourceLocation(ctx));
-            BSVType resulttype = new BSVType();
 	    BSVType fcntype_i = fcntype;
 	    int i = 0;
             for (BSVParser.ExpressionContext expr: ctx.expression()) {
-                resulttype = new BSVType();
+                BSVType resulttype = new BSVType();
                 try {
                     BSVType argtype = visit(expr);
                     assert argtype != null : String.format("Null type for %s at %s", expr.getText(), StaticAnalysis.sourceLocation(ctx));
@@ -1339,13 +1339,13 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 } catch (InferenceError e) {
                     logger.fine("Apply InferenceError " + e);
                 }
-                fcntype_i = resulttype;
+                fcntype_i = fcntype_i.prune().params.get(1);
 		i++;
             }
-	    BSVType bsvtype = fcntype.prune();
-	    System.err.println("    now type " + bsvtype + " resulttype " + resulttype);
-	    types.put(ctx, resulttype.prune());
-	    return resulttype.prune();
+	    System.err.println("    now type " + fcntype.prune() + " resulttype " + fcntype_i + " prune " + fcntype_i.prune());
+	    System.err.println("    and fcntype_i " + fcntype_i);
+	    types.put(ctx, fcntype_i.prune());
+	    return fcntype_i.prune();
         }
         /**
          * {@inheritDoc}
@@ -1454,7 +1454,24 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitRulesstmt(BSVParser.RulesstmtContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitRulesstmt(BSVParser.RulesstmtContext ctx) {
+	    if (ctx.expression() != null) {
+		if (types.containsKey(ctx))
+		    return types.get(ctx);
+		BSVType exprType = visit(ctx.expression());
+		BSVType actionType = new BSVType("Action");
+		try {
+		    exprType.unify(actionType);
+		    System.err.println(String.format("   unified rules stmt expr %1$s actiontype %2$s", exprType, actionType));
+		} catch (InferenceError e) {
+		    logger.fine(e.toString());
+		}
+		types.put(ctx, exprType);
+		return exprType;
+	    } else {
+		return visitChildren(ctx);
+	    }
+	}
         /**
          * {@inheritDoc}
          *
@@ -1490,7 +1507,22 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitStmt(BSVParser.StmtContext ctx) {
-            return visitChildren(ctx);
+	    if (ctx.expression() != null) {
+		if (types.containsKey(ctx))
+		    return types.get(ctx);
+		BSVType exprType = visit(ctx.expression());
+		BSVType actionType = new BSVType("Action");
+		try {
+		    exprType.unify(actionType);
+		    System.err.println(String.format("   unified stmt expr %1$s actiontype %2$s", exprType, actionType));
+		} catch (InferenceError e) {
+		    logger.fine(e.toString());
+		}
+		types.put(ctx, exprType);
+		return exprType;
+	    } else {
+		return visitChildren(ctx);
+	    }
         }
         /**
          * {@inheritDoc}
@@ -1690,7 +1722,24 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-        @Override public BSVType visitFsmstmt(BSVParser.FsmstmtContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitFsmstmt(BSVParser.FsmstmtContext ctx) {
+	    if (ctx.expression() != null) {
+		if (types.containsKey(ctx))
+		    return types.get(ctx);
+		BSVType exprType = visit(ctx.expression());
+		BSVType actionType = new BSVType("Action");
+		try {
+		    exprType.unify(actionType);
+		    System.err.println(String.format("   unified fsm stmt expr %1$s actiontype %2$s", exprType, actionType));
+		} catch (InferenceError e) {
+		    logger.fine(e.toString());
+		}
+		types.put(ctx, exprType);
+		return exprType;
+	    } else {
+		return visitChildren(ctx);
+	    }
+	}
         /**
          * {@inheritDoc}
          *
