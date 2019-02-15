@@ -1434,6 +1434,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	StringBuilder statement = new StringBuilder();
 	BSVParser.ExpressionContext rhs = regwrite.rhs;
 	BSVType rhsType = typeVisitor.visit(rhs);
+	typeVisitor.visit(regwrite);
 
 	if (callRegMethods) {
 	    String regName = regwrite.lhs.getText();
@@ -2111,15 +2112,31 @@ public class BSVToKami extends BSVBaseVisitor<String>
     @Override public String visitTaggedunionexpr(BSVParser.TaggedunionexprContext ctx) {
 	StringBuilder expression = new StringBuilder();
         String tagName = ctx.tag.getText();
-        expression.append(String.format("(* tagged union %s *) STRUCT { ", tagName));
+	String sourceLocation = StaticAnalysis.sourceLocation(ctx);
+        expression.append(String.format("(* tagged union %s %s *) STRUCT { ", tagName, sourceLocation));
         SymbolTableEntry tagEntry = scope.lookup(tagName);
         assert tagEntry != null;
-        BSVType tagtype = tagEntry.type;
+        BSVType tagtype = tagEntry.type.fresh();
         assert tagEntry.value != null : String.format("Missing value for tag %s", tagName);
         IntValue tagValue = (IntValue)tagEntry.value;
         SymbolTableEntry typedefEntry = scope.lookupType(tagtype.name);
-        assert typedefEntry != null: String.format("tagged union tag %s expr %s type %s at %s", tagName, ctx.getText(), tagtype, StaticAnalysis.sourceLocation(ctx));
+        assert typedefEntry != null:
+	    String.format("tagged union tag %s expr %s type %s at %s", tagName, ctx.getText(), tagtype, sourceLocation);
         ArrayList<String> visitedFields = new ArrayList<>();
+
+	typeVisitor.pushScope(scope);
+	BSVType exprtype = typeVisitor.visit(ctx);
+	typeVisitor.popScope();
+	TreeMap<String,BSVType> tagtypevars = tagtype.getFreeVariables();
+	try {
+	    tagtype.unify(exprtype);
+	} catch (InferenceError e) {
+	    logger.fine(e.toString());
+	    System.err.println(e.toString() + " at " + StaticAnalysis.sourceLocation(ctx));
+	}
+
+	System.err.println(String.format("tagged union tag %s type %s expr type %s at %s",
+					 tagName, tagtype, exprtype, sourceLocation));
 
         expression.append(String.format(" \"$tag\" ::= $%d", tagValue.value));
 
@@ -2145,7 +2162,16 @@ public class BSVToKami extends BSVBaseVisitor<String>
                 }
             }
             if (!visitedFields.contains(fieldName)) {
-                expression.append(String.format("; \"%s\" ::= $0", fieldName));
+		SymbolTableEntry fieldEntry = iterator.getValue();
+		BSVType fieldType = fieldEntry.type.fresh();
+		BSVType fieldTypeInstance = BSVType.instantiate(fieldType, tagtypevars);
+		System.err.println(tagtypevars);
+		System.err.println(String.format("    field %s fieldType %s fieldTypeInstance %s at %s",
+						 fieldName, fieldType, fieldTypeInstance, sourceLocation));
+
+                expression.append(String.format("; \"%s\" ::= $$(getDefaultConst %s) ",
+						fieldName,
+						bsvTypeToKami(fieldTypeInstance, 1)));
             }
         }
         expression.append(" }%kami_expr");

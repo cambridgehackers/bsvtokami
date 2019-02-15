@@ -126,7 +126,7 @@ public class BSVType {
 	return instantiate(this, mappings);
     }
 
-    private BSVType instantiate(BSVType t, Map<String, BSVType> mappings) {
+    static BSVType instantiate(BSVType t, Map<String, BSVType> mappings) {
 	if (t.isVar) {
 	    if (mappings.containsKey(t.name))
 		return mappings.get(t.name);
