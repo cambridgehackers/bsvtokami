@@ -1098,8 +1098,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 entryType = new BSVType("Function", new BSVType(), new BSVType());
             else {
 		entryType = entry.type;
+		// freshen type of global vars
 		if (entry.pkgName != null)
-		    entryType = entryType.fresh(new ArrayList<>());
+		    entryType = entryType.fresh();
 	    }
 	    types.put(ctx, entryType);
 	    return entryType;
@@ -1370,11 +1371,14 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         @Override public BSVType visitSeqfsmexpr(BSVParser.SeqfsmexprContext ctx) { return visitChildren(ctx); }
 
         @Override public BSVType visitTaggedunionexpr(BSVParser.TaggedunionexprContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
             String tagname = ctx.tag.getText();
             SymbolTableEntry tagentry = scope.lookup(tagname);
             assert tagentry != null : String.format("Failed to lookup tag %s", tagname);
-            BSVType tagtype = tagentry.type;
+            BSVType tagtype = tagentry.type.fresh();
             //FIXME: check type of memberbinds here or in StaticAnalysis
+	    types.put(ctx, tagtype);
             return tagtype;
         }
         /**
