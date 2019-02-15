@@ -1499,7 +1499,24 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * <p>The default implementation returns the result of calling
          * {@link #visitChildren} on {@code ctx}.</p>
          */
-    @Override public BSVType visitRegwrite(BSVParser.RegwriteContext ctx) { return visitChildren(ctx); }
+        @Override public BSVType visitRegwrite(BSVParser.RegwriteContext ctx) {
+	    if (types.containsKey(ctx))
+		return types.get(ctx);
+
+	    BSVType lhstype = visit(ctx.lhs);
+	    BSVType rhstype = visit(ctx.rhs);
+	    BSVType regtype = new BSVType("Reg", rhstype);
+
+	    try {
+		lhstype.unify(rhstype);
+		System.err.println(String.format("   regwrite lhs %1$s rhs %2$s", lhstype, rhstype));
+	    } catch (InferenceError e) {
+		logger.fine(e.toString());
+	    }
+
+	    types.put(ctx, lhstype);
+	    return lhstype;
+	}
         /**
          * {@inheritDoc}
          *
