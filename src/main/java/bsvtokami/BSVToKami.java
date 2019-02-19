@@ -1514,6 +1514,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
         letBindings = new LetBindings();
         statements = new ArrayList<>();
 
+	typeVisitor.pushScope(scope);
+	typeVisitor.visit(ctx.expression());
+	typeVisitor.popScope();
+
 	String predicate = visit(ctx.expression());
 
         returnPending = "Retv";
