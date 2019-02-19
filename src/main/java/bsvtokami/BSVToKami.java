@@ -770,6 +770,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 						       leftValue, rightValue,
 						       kamiOp));
 		    } else if (functionName.equals("signExtend") || functionName.equals("zeroExtend") || functionName.equals("extend")) {
+			boolean wasActionContext = actionContext;
+			actionContext = true;
+
 			BSVType arg0Type = typeVisitor.visit(args.get(0));
 			if (functionName.equals("extend"))
 			    functionName = (arg0Type.name.startsWith("Int")) ? "signExtend" : "zeroExtend";
@@ -785,6 +788,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 						       arg0Width,
 						       varWidth,
 						       visit(args.get(0))));
+			actionContext = wasActionContext;
 		    } else if (functionName.equals("pack") || functionName.equals("unpack")) {
 			BSVType arg0Type = typeVisitor.visit(args.get(0));
 			statement.append(String.format("LET %1$s : %2$s <-  %3$s %4$s",
