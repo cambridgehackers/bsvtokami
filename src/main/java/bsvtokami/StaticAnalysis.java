@@ -416,7 +416,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
         else
             bsvtype = typeVisitor.visit(ctx.functionproto());
         symbolTable.bindType(packageName, typedefname, bsvtype)
-	    .setSymbolType(SymbolType.Typedef);
+	    .setSymbolType(SymbolType.Synonym);
         return null;
     }
 
