@@ -2183,6 +2183,15 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
     @Override public String visitIntliteral(BSVParser.IntliteralContext ctx) {
 	IntValue intValue = new IntValue(ctx.IntLiteral().getText());
+	long intWidth = intValue.width;
+	BSVType bsvType = typeVisitor.visit(ctx);
+	if (bsvType.name.equals("Bit")) {
+	    BSVType typeWidth = bsvType.params.get(0).prune();
+	    assert !typeWidth.isVar : String.format("Unknown width for type %s at %s", bsvType, StaticAnalysis.sourceLocation(ctx));
+	    long widthFromType = typeWidth.asLong();
+	    assert intWidth == 0 || intWidth == widthFromType;
+	    intWidth = widthFromType;
+	}
 	if (intValue.width != 0 || intValue.basespec != null || actionContext) {
 	    return String.format("%1$s (* intwidth *) %2$s",
 				 (actionContext ? "$$" : ""),
