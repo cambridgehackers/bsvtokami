@@ -19,7 +19,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
     private Stack<SymbolTable> scopeStack = new Stack<>();
     private HashMap<ParserRuleContext, BSVType> types;
     private static Logger logger = Logger.getGlobal();
-    private static boolean callUnify = false;
+    private static boolean callUnify = true;
 
     BSVTypeVisitor(StaticAnalysis staticAnalyzer) {
         this.staticAnalyzer = staticAnalyzer;
@@ -45,6 +45,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         SymbolTableEntry entry = scope.lookupType(bsvtype.name);
         if (entry != null && entry.symbolType == SymbolType.Synonym) {
             System.err.println("DT entry type " + entry.type);
+	    //fixme
 	    if (entry.pkgName != null)
 		return entry.type.fresh(new ArrayList<>());
 	    else
@@ -977,8 +978,11 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 		    try {
 			if (lhstype.prune() != rhstype.prune())
 			    lhstype.unify(rhstype);
+			System.err.println(String.format("Binop lhstype %s rhstype %s at %s",
+							 lhstype.prune(), rhstype.prune(),
+							 StaticAnalysis.sourceLocation(ctx)));
 		    } catch (InferenceError e) {
-			logger.fine("binop " + op + ": " + e);
+			System.err.println("binop " + op + ": " + e + " at " + StaticAnalysis.sourceLocation(ctx));
 		    }
 		}
                 if (op.equals("==") || op.equals("!=")
@@ -1253,9 +1257,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
          * {@link #visitChildren} on {@code ctx}.</p>
          */
         @Override public BSVType visitFieldexpr(BSVParser.FieldexprContext ctx) {
-	    if (types.containsKey(ctx))
-		return types.get(ctx);
-            logger.fine("computing type of field " + ctx.getText());
+            if (types.containsKey(ctx))
+                return types.get(ctx);
+            System.err.println("computing type of field " + ctx.getText());
             BSVType basetype = visit(ctx.exprprimary());
             String interfaceName = basetype.name;
             String subname = ctx.field.getText();
@@ -1268,14 +1272,16 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 logger.fine(String.format(" found %s subname %s subentry %s", entry.name, subname, subentry));
                 if (subentry != null) {
                     // FIXME: instantiate interface
-                    logger.fine("expr field " + interfaceName + "." + subname + " : " + subentry.type);
-                    return subentry.type;
+                    BSVType dereftype = dereferenceTypedef(subentry.type);
+                    System.err.println("expr field " + interfaceName + "." + subname + " : " + subentry.type
+                                       + "(" + dereftype + ")" + " at " + StaticAnalysis.sourceLocation(ctx));
+                    return dereftype;
                 }
             }
             logger.fine(String.format("Failed to find type of %s at %s", ctx.getText(), StaticAnalysis.sourceLocation(ctx)));
             BSVType bsvtype = new BSVType();
-	    types.put(ctx, bsvtype);
-	    return bsvtype;
+            types.put(ctx, bsvtype);
+            return bsvtype;
         }
         /**
          * {@inheritDoc}
