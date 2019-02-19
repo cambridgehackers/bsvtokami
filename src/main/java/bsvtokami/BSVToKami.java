@@ -2184,7 +2184,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     @Override public String visitIntliteral(BSVParser.IntliteralContext ctx) {
 	IntValue intValue = new IntValue(ctx.IntLiteral().getText());
 	long intWidth = intValue.width;
-	BSVType bsvType = typeVisitor.visit(ctx);
+	BSVType bsvType = typeVisitor.visit(ctx).prune();
 	if (bsvType.name.equals("Bit")) {
 	    BSVType typeWidth = bsvType.params.get(0).prune();
 	    assert !typeWidth.isVar : String.format("Unknown width for type %s at %s", bsvType, StaticAnalysis.sourceLocation(ctx));
@@ -2192,10 +2192,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    assert intWidth == 0 || intWidth == widthFromType;
 	    intWidth = widthFromType;
 	}
-	if (intValue.width != 0 || intValue.basespec != null || actionContext) {
-	    return String.format("%1$s (* intwidth *) %2$s",
-				 (actionContext ? "$$" : ""),
-				 intToWord(intValue.width, intValue.value));
+	if (intWidth != 0 || intValue.basespec != null || actionContext) {
+            return String.format("%1$s (* intwidth *) %2$s",
+                                 (actionContext ? "$$" : ""),
+                                 intToWord(intWidth, intValue.value));
 	} else {
 	    //FIXME width from type
 	    assert (intValue.value < 128) : "Specify width of int literal %d at " + StaticAnalysis.sourceLocation(ctx);
@@ -2533,7 +2533,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
     }
 
-    String intToWord(int width, long value) {
+    String intToWord(long width, long value) {
 	if (value < 128 && width == 0) {
 	    return String.format("(natToWord _ %d)", value);
 	} else if (value < 128 && width != 0) {
