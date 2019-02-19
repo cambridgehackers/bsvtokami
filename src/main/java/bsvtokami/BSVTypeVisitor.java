@@ -43,8 +43,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         assert scope != null;
         assert bsvtype != null;
         SymbolTableEntry entry = scope.lookupType(bsvtype.name);
-        if (entry != null) {
-	    //fixme
+        if (entry != null && entry.symbolType == SymbolType.Synonym) {
+            System.err.println("DT entry type " + entry.type);
 	    if (entry.pkgName != null)
 		return entry.type.fresh(new ArrayList<>());
 	    else
