@@ -791,11 +791,15 @@ public class BSVToKami extends BSVBaseVisitor<String>
 			actionContext = wasActionContext;
 		    } else if (functionName.equals("pack") || functionName.equals("unpack")) {
 			BSVType arg0Type = typeVisitor.visit(args.get(0));
-			statement.append(String.format("LET %1$s : %2$s <-  %3$s %4$s",
+			statement.append(String.format("LET %1$s : %2$s <-  %3$s %5$s %4$s",
 						       varName,
 						       bsvTypeToKami(varType, 1),
 						       functionName,
-						       visit(args.get(0))));
+						       visit(args.get(0)),
+						       (functionName.equals("unpack")
+							? varType
+							: "")
+						       ));
 		    } else if (functionName.startsWith("tuple")) {
 			BSVType arg0Type = typeVisitor.visit(args.get(0));
 			StringBuilder struct = new StringBuilder();
