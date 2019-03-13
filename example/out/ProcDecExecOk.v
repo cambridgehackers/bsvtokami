@@ -58,13 +58,13 @@ Section DecExec.
              (* (spcv: fullType type (SyntaxKind (Bit PgmSz))) *)
              (d2efullv: fullType type (SyntaxKind Bool))
              (d2eeltv: fullType type (SyntaxKind D2E)) :=
-     (d2efullv = true -> ipcv = d2eeltv F5 ^+ $1 (* /\ spcv = d2eeltv F5 *)).
+     (d2efullv = false \/ ipcv = d2eeltv F5 ^+ $1 (* /\ spcv = d2eeltv F5 *)).
   
   Definition decexec_d2e_inv
              (pgmv: fullType type (SyntaxKind (Array NumInstrs (Bit InstrSz))))
              (d2efullv: fullType type (SyntaxKind Bool))
              (d2eeltv: fullType type (SyntaxKind D2E)) :=
-    d2efullv = true ->
+    (d2efullv = false) \/ (
     let pc := d2eeltv F5 in
     let inst := evalExpr (ReadArray (Var type (SyntaxKind _) pgmv) (Var type (SyntaxKind (Bit PgmSz)) pc )) in
     d2eeltv F4 = evalExpr (getOp kamidec _ inst) /\
@@ -72,7 +72,8 @@ Section DecExec.
     d2eeltv F6 = evalExpr (getSrc1 kamidec _ inst) /\
     d2eeltv F7 = evalExpr (getSrc2 kamidec _ inst) /\
     d2eeltv F3 = evalExpr (getDst kamidec _ inst) /\
-    d2eeltv F1 = evalExpr (getAddr kamidec _ inst).
+    d2eeltv F1 = evalExpr (getAddr kamidec _ inst)
+    ).
 
 
   (* Make sure to register all invariant-related definitions in the [InvDefs]
@@ -140,33 +141,6 @@ Section DecExecSepOk.
   Definition decexecWf := {| baseModule := (getFlat (decexec decoder execStub)) ;
 			     wfBaseModule := ltac:(discharge_wf)  |}.
 
-(* 
-Definition decexecInitRegs : RegsT :=
-   ("decexec" -- "d2eFifo_reg", existT (fullType type) (SyntaxKind D2E) _)
-   :: ("decexec" -- "d2eFifo_valid", existT (fullType type) (SyntaxKind Bool) false)
-   (* :: ("decexe" -- "-pc", existT (fullType type) (SyntaxKind (Bit PgmSz)) ($0)) *)
-	 :: ("decexec" -- "e2wFifo_valid", existT (fullType type) (SyntaxKind Bool) false)
-   (* :: ("decexec" -- "sbFlags", existT (fullType type) (SyntaxKind (Array 32 Bool)) sdesbflagsv) *)
-   :: nil.
-
-*)
-(*
-Theorem DecExecSepTraceInvariant:
-   exists decexecInitRegs, forall trace,
-    (decexec_inv decoder decexecInitRegs)
-    -> Trace decexecSepWf decexecInitRegs trace.
-Proof.
-   eexists.
-   intros.
-   econstructor.
-   + unfold getAllRegisters, getRegisters, decexecSepWf.
-     unfold baseModule, getFlat, decexecSep. repeat autounfold with ModuleDefs.
-     unfold getAllRegisters, getRegisters.
-     repeat apply Forall2_cons.
-     admit.
-     
-   + trivial.
-Admitted. *)
 
 Ltac unfold_mySimRel :=
   match goal with
@@ -219,64 +193,18 @@ Theorem decexecSep_ok:
   + exists (x2 :: x3 :: x1 :: x4 :: x5 :: x6 :: nil). split.
    ++ repeat apply Forall2_cons; simpl; try (split; [try congruence | eexists; eauto]).
       apply Forall2_nil.
-   ++ econstructor.
-    * admit. (* fullType type (SyntaxKind E2W) *)
-    * admit.
-    * admit.
-    * econstructor.
-      ++++ discharge_findreg. admit.
-      ++++ discharge_findreg. admit.
-      ++++ discharge_findreg. admit.
-      ++++ discharge_findreg. admit.
-      ++++ trivial.
-      ++++ discharge_findreg. admit.
-      ++++ unfold decexec_pc_inv. intro. simpl in H15. repeat split ; trivial.
-      ++++ unfold decexec_d2e_inv. intro. simpl in H15. admit.
-    * repeat congruence.
-   ++++ repeat split; unfold getKindAttr; congruence. *)
-  + left. repeat split. repeat exists_uspec.
-   ++ unfold mySimRel in H1. repeat destruct H1. apply findReg_doUpdRegs_unchanged with (s := "pgm").
-      unfold findReg. econstructor.
-      assert (findReg "pgm" oImp = Some (existT (fullType type)
-         (SyntaxKind (Array NumInstrs (Bit InstrSz))) x2)).
-      +++ apply findRegs_Some.
-      ++++ admit. (* nodup (map fst oImp) *)
-      ++++ apply H4.
-      +++ rewrite H1. admit. (* findReg "pgm" oImp <> None *)
-   ++ econstructor.
-    +++ apply findReg_doUpdRegs_updated with (s := "decexec-pc") (t := (SyntaxKind (Bit PgmSz))).
-     * simpl. trivial. (* ?pcv0 *)
-     * congruence.
-    +++ (* spcv *) admit.
-    +++ admit. (* pgm *)
-    +++ apply findReg_doUpdRegs_updated with (t := (SyntaxKind Bool)).
-     * simpl. trivial.
-     * congruence.
-    +++ simpl. trivial. 
-    +++ apply findReg_doUpdRegs_updated with (t := (SyntaxKind D2E)).
-
-     * simpl. trivial.
-     * congruence.
-    +++ unfold decexec_pc_inv. split.
-        ** simpl.
-         *** rewrite wzero_wplus with (sz := PgmSz) (w := x1). reflexivity.
-        ** trivial.
-    +++ unfold decexec_d2e_inv. simpl. intro. repeat split; reflexivity.
-   ++ Search (getKindAttr (doUpdRegs _ _ )).
-      rewrite <- getKindAttr_doUpdRegs.
-     +++ unfold mySimRel in H1. destruct H1, H2, H13. rewrite H13. reflexivity.
-     +++ assert (map fst oImp = map fst (getKindAttr oImp)).
-      * admit.
-      * rewrite H2. unfold mySimRel in H1. destruct H1, H13, H14. rewrite H14. simpl. 
-        (* repeat apply NoDup_cons; simpl. Search (_ -> False). *)
-        admit.
-    +++ simpl. trivial. admit. (* NoDup *)
-    +++ simpl. admit.
-    ++ unfold mySimRel in H1. destruct H1, H2, H13. rewrite H14. reflexivity.
+   ++ repeat match goal with
+            | H: RegT |- _ => let m1 := fresh "nm" in
+                              let m2 := fresh "knd" in
+                              let m3 := fresh "v" in destruct H as [m1 [m2 m3]]
+            end; simpl in *; subst.
+           econstructor; try repeat f_equal; eauto.
+    * unfold decexec_pc_inv; rewrite H13. left; reflexivity. 
+    * unfold decexec_d2e_inv. rewrite H13. left; reflexivity.
   + right. exists "decexec-decexecArith". eexists. split.
     * left. trivial.
-    * exists oSpec. repeat exists_uspec.
-    ** discharge_SemAction. (* getbool something *)
+    * destruct H1. exists oImp; eexists. rewrite Hiregs. split.
+      ** discharge_SemAction. (* getbool something *)
       *** admit.
       *** admit.
       *** 
