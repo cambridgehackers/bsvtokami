@@ -19,7 +19,7 @@ Definition InstrSz := 32.
 Notation NumRegs := 32 (only parsing).
 Notation RegFileSz := (Nat.log2_up 32) (only parsing).
 
-Definition NumInstrs := 128.
+Definition NumInstrs := 1.
 Definition PgmSz := Nat.log2_up NumInstrs.
 
 Definition opArith : ConstT (Bit 2) := ( (* intwidth *) (natToWord 2 0))%kami.
