@@ -87,11 +87,11 @@ Notation "'RegisterN' name : type <- init" :=
     (at level 12, name at level 99) : bk_scope.
 
 Notation "'Register' name : type <- init" :=
-  (BKRegister (name%string, existT RegInitValT (SyntaxKind type) (Init (makeConst init))))
+  (BKRegister (name%string, existT RegInitValT (SyntaxKind type) (Some (makeConst init))))
     (at level 12, name at level 99) : bk_scope.
 
 Notation "'RegisterU' name : type" :=
-  (BKRegister (name%string, existT RegInitValT (SyntaxKind type) (Uninit _)))
+  (BKRegister (name%string, existT RegInitValT (SyntaxKind type) None))
     (at level 12, name at level 99) : bk_scope.
 
 Notation "'Method' name () : retT := c" :=
