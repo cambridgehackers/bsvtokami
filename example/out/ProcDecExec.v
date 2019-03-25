@@ -26,7 +26,8 @@ Module module'mkDecExec.
     Let mem: string := instancePrefix--"mem".
     Let pgm: string := "pgm".
     Let toHost: string := instancePrefix--"th".
-    Let e2wFifo_reg: string := instancePrefix--"e2wFifo_reg".
+    Let e2wFifo_idx: string := instancePrefix--"e2wFifo_idx".
+    Let e2wFifo_val: string := instancePrefix--"e2wFifo_val".
     Let e2wFifo_valid: string := instancePrefix--"e2wFifo_valid".
     (* instance methods *)
     Let mem'doMem : string := mem--"doMem".
@@ -35,7 +36,8 @@ Module module'mkDecExec.
 
     Definition mkDecExecModule: Mod :=
          (BKMODULE {
-    Register e2wFifo_reg : E2W <- Default
+    Register e2wFifo_idx : Bit RegFileSz <- Default
+    with Register e2wFifo_val : Bit DataSz <- Default
     with Register e2wFifo_valid : Bool <- (false)%kami_expr
     with Register pc : Bit PgmSz <- natToWord PgmSz 0
     with Register pgm : Array NumInstrs (Bit InstrSz) <- Default
@@ -65,8 +67,10 @@ Module module'mkDecExec.
        (* LET flags : Array NumRegs Bool (* non-call varbinding *) <- #sbFlags_v ;
                LET flags : Array NumRegs Bool <- #flags @[#dst <- $$true] ;
                Write sbFlags : Array NumRegs Bool <- #flags ; *)
-               LET e2w : E2W (* non-call varbinding *) <- STRUCT { "idx" ::= (#dst) ; "val" ::= (#execVal)  }%kami_expr ;
-               Write e2wFifo_reg : E2W <- #e2w ;
+               (* LET e2w : E2W (* non-call varbinding *) <- STRUCT { "idx" ::= (#dst) ; "val" ::= (#execVal)  }%kami_expr ;
+               Write e2wFifo_reg : E2W <- #e2w ; *)
+               Write e2wFifo_idx : Bit RegFileSz <- #dst ;
+               Write e2wFifo_val : Bit DataSz <- #execVal ;
                Write e2wFifo_valid : Bool <- ($$true)%kami_expr ;
                Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1)) ;
         Retv ) (* rule decexecArith *)
@@ -104,7 +108,8 @@ Module module'mkDecExecSep.
     Let d2eFifo_src1    : string := instancePrefix--"d2eFifo_src1".
     Let d2eFifo_src2    : string := instancePrefix--"d2eFifo_src2".
     Let d2eFifo_valid : string := instancePrefix--"d2eFifo_valid".
-    Let e2wFifo_reg : string := instancePrefix--"e2wFifo_reg".
+    Let e2wFifo_idx : string := instancePrefix--"e2wFifo_idx".
+    Let e2wFifo_val : string := instancePrefix--"e2wFifo_val".
     Let e2wFifo_valid : string := instancePrefix--"e2wFifo_valid".
     Let decoder_pc : string := instancePrefix--"pc".
     (* Let sbFlags : string := instancePrefix--"sbFlags". *)
@@ -127,7 +132,8 @@ Module module'mkDecExecSep.
     with Register d2eFifo_src1    : Bit RegFileSz <- Default
     with Register d2eFifo_src2    : Bit RegFileSz <- Default
 
-    with Register e2wFifo_reg : E2W <- Default
+    with Register e2wFifo_idx : Bit RegFileSz <- Default
+    with Register e2wFifo_val : Bit DataSz <- Default
     with Register e2wFifo_valid : Bool <- (false)%kami_expr
     with Register pgm : Array NumInstrs (Bit InstrSz) <- Default
     with Register rf : Array NumRegs (Bit DataSz) <- Default
@@ -189,8 +195,8 @@ Module module'mkDecExecSep.
                (* LET flags : Array NumRegs Bool (* non-call varbinding *) <- #sbFlags_v ;
                LET flags : Array NumRegs Bool <- #flags @[#dst <- $$true ] ;
                Write sbFlags : Array NumRegs Bool <- #flags ; *)
-               LET e2w : E2W (* non-call varbinding *) <- STRUCT { "idx" ::= (#dst) ; "val" ::= (#execVal)  }%kami_expr ;
-               Write e2wFifo_reg : E2W <- #e2w ;
+               Write e2wFifo_idx : Bit RegFileSz <- #dst ;
+               Write e2wFifo_val : Bit DataSz <- #execVal ;
                Write e2wFifo_valid : Bool <- ($$true)%kami_expr ;
         Retv ) (* rule executeArith *)
 
