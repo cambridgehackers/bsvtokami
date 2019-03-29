@@ -118,6 +118,8 @@ Module module'mkMemory.
 
     }). (* mkMemory *)
 
+    Close Scope kami_expr.
+
     Hint Unfold mkMemoryModule : ModuleDefs.
 (* Module mkMemory type Module#(Memory) return type Memory *)
     Definition mkMemory := Build_Memory mkMemoryModule (instancePrefix--"doMem").
@@ -236,6 +238,8 @@ Module module'procSpec.
                Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1)) ;
         Retv ) (* rule doHost *)
     }). (* procSpec *)
+
+    Close Scope kami_expr.
 
     Hint Unfold procSpecModule : ModuleDefs.
 (* Module procSpec type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> ToHost -> Module#(Empty) return type Decoder *)

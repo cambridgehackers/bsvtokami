@@ -225,6 +225,8 @@ Module module'mkReg.
 
          }). (* mkReg *)
 
+    Close Scope kami_expr.
+
 (* Module mkReg type a -> Module#(Reg#(a)) return type Reg#(a) *)
     Definition mkReg := Build_Reg mkRegModule%kami (instancePrefix--"_read") (instancePrefix--"_write").
     End Section'mkReg.
@@ -394,6 +396,9 @@ Module module'isValid.
 
 			   )
     })%kami; abstract omega. Qed. (* isValid *)
+
+    Close Scope kami_expr.
+
     Definition isValid := Build_Interface'isValid Modules'isValid (instancePrefix--"isValid").
     End Section'isValid.
 End module'isValid.
@@ -432,6 +437,9 @@ Module module'fromMaybe.
 
 						     )
     }). (* fromMaybe *)
+
+    Close Scope kami_expr.
+
     Definition fromMaybe := Build_Interface'fromMaybe Modules'fromMaybe (instancePrefix--"fromMaybe").
     End Section'fromMaybe.
 End module'fromMaybe.

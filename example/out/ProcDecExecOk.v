@@ -37,10 +37,10 @@ Section DecExec.
   Local Definition dec: ProcMemSpec.Decoder := mkDecoder kamidec "dec".
   Local Definition exec: ProcMemSpec.Executer := mkExecuter kamiexec "exec".
 
-  Local Definition decexec : Mod := (Empty'mod (ProcDecExec.mkDecExec "decexec" kamidec kamiexec)).
+  Local Definition decexec : Mod := (Empty'mod (ProcDecExec.mkDecExec "spec" kamidec kamiexec)).
   Hint Unfold decexec: ModuleDefs.
 
-  Local Definition decexecSep : Mod := (Empty'mod (ProcDecExec.mkDecExecSep  "decexec" kamidec kamiexec)).
+  Local Definition decexecSep : Mod := (Empty'mod (ProcDecExec.mkDecExecSep  "impl" kamidec kamiexec)).
   Hint Unfold decexecSep: ModuleDefs.
 
   Local Definition decexecSepInl := (flatten_inline_remove decexecSep).
@@ -54,14 +54,14 @@ Section DecExec.
    * [decexec_d2e_inv] states that the fifo element is valid with respect to the
    * current instruction. *)
   Definition decexec_pc_inv
-             (ipcv: fullType type (SyntaxKind (Bit PgmSz)))
+             (impl_pcv: fullType type (SyntaxKind (Bit PgmSz)))
              (d2efullv: fullType type (SyntaxKind Bool))
              (d2e_pcv:      word PgmSz) :=
-             (d2efullv = true ) -> (ipcv = d2e_pcv ^+ $1 ).
+             (d2efullv = true ) -> (impl_pcv = d2e_pcv ^+ $1 ).
   
   Definition decexec_d2e_inv
              (pgmv: fullType type (SyntaxKind (Array NumInstrs (Bit InstrSz))))
-             (ipcv:         word PgmSz)
+             (impl_pcv:         word PgmSz)
              (d2e_pcv:      word PgmSz)
              (d2efullv: fullType type (SyntaxKind Bool))
              (d2e_addrv:    word AddrSz)
@@ -79,7 +79,7 @@ Section DecExec.
     d2e_src2v = evalExpr (getSrc2 kamidec _ inst) /\
     d2e_dstv = evalExpr (getDst kamidec _ inst) /\
     d2e_addrv = evalExpr (getAddr kamidec _ inst) /\
-    ipcv = (wzero PgmSz ^+ d2e_pcv ^+ $1)
+    impl_pcv = (wzero PgmSz ^+ d2e_pcv ^+ $1)
     ).
 
 
@@ -94,69 +94,64 @@ Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
  {
    pgmv: (Fin.t NumInstrs -> word DataSz) ;
 
-   ide_fifo_validv: bool ;
-   ipcv: word PgmSz ;
-   ide_e2wfifo_validv: bool ;
-   ide_e2wfifo_idxv: fullType type (SyntaxKind (Bit RegFileSz)) ;
-   ide_e2wfifo_valv: fullType type (SyntaxKind (Bit DataSz)) ;
-   ideregv: fullType type (SyntaxKind (Array 32 (Bit DataSz))) ;
-   (* idesbflagsv: fullType type (SyntaxKind (Array 32 Bool)) ; *)
+   impl_d2efifo_validv: bool ;
+   impl_pcv: word PgmSz ;
+   impl_e2wfifo_validv: bool ;
+   impl_e2wfifo_idxv: fullType type (SyntaxKind (Bit RegFileSz)) ;
+   impl_e2wfifo_valv: fullType type (SyntaxKind (Bit DataSz)) ;
+   impl_rf_v: fullType type (SyntaxKind (Array 32 (Bit DataSz))) ;
 
-   spcv: word PgmSz ;
-   sde_e2wfifo_validv: bool ;
-   sde_e2wfifo_idxv: fullType type (SyntaxKind (Bit RegFileSz)) ;
-   sde_e2wfifo_valv: fullType type (SyntaxKind (Bit DataSz)) ;
-   sderegv: (Fin.t 32 -> word DataSz) ;
-   (* sdesbflagsv: (Fin.t 32 -> bool) ; *)
+   spec_pcv: word PgmSz ;
+   spec_e2wfifo_validv: bool ;
+   spec_e2wfifo_idxv: fullType type (SyntaxKind (Bit RegFileSz)) ;
+   spec_e2wfifo_valv: fullType type (SyntaxKind (Bit DataSz)) ;
+   spec_rf_v: (Fin.t 32 -> word DataSz) ;
 
-   ide_fifo_addrv    : word AddrSz ;
-   ide_fifo_arithopv : fullType type (SyntaxKind OpArithK) ;
-   ide_fifo_opv      : fullType type (SyntaxKind OpK) ;
-   ide_fifo_pcv      : word PgmSz ;
-   ide_fifo_dstv     : word RegFileSz ;
-   ide_fifo_src1v    : word RegFileSz ;
-   ide_fifo_src2v    : word RegFileSz ;
-
-   Hpcinv: (ide_fifo_validv = true ) -> (ipcv = ide_fifo_pcv ^+ $1 ) ;
-   Hdeinv: decexec_d2e_inv dec pgmv ipcv
-               ide_fifo_pcv
-               ide_fifo_validv
-               ide_fifo_addrv
-               ide_fifo_arithopv
-               ide_fifo_opv
-               ide_fifo_pcv
-               ide_fifo_dstv 
-               ide_fifo_src1v
-               ide_fifo_src2v ;
+   impl_d2efifo_addrv    : word AddrSz ;
+   impl_d2efifo_arithopv : fullType type (SyntaxKind OpArithK) ;
+   impl_d2efifo_opv      : fullType type (SyntaxKind OpK) ;
+   impl_d2efifo_pcv      : word PgmSz ;
+   impl_d2efifo_dstv     : word RegFileSz ;
+   impl_d2efifo_src1v    : word RegFileSz ;
+   impl_d2efifo_src2v    : word RegFileSz ;
 
    Hiregs: iregs =
-   ("decexec-pc", existT _ (SyntaxKind (Bit PgmSz)) ipcv)
-   :: ("decexec-d2eFifo_valid", existT _ (SyntaxKind Bool) ide_fifo_validv)
-   :: ("decexec-d2eFifo_addr", existT _ (SyntaxKind (Bit AddrSz)) ide_fifo_addrv)
-   :: ("decexec-d2eFifo_arithOp", existT _ (SyntaxKind OpArithK) ide_fifo_arithopv)
-   :: ("decexec-d2eFifo_op", existT _ (SyntaxKind OpK) ide_fifo_opv)
-   :: ("decexec-d2eFifo_pc", existT _ (SyntaxKind (Bit PgmSz)) ide_fifo_pcv)
-   :: ("decexec-d2eFifo_dst", existT _ (SyntaxKind (Bit RegFileSz)) ide_fifo_dstv)
-   :: ("decexec-d2eFifo_src1", existT _ (SyntaxKind (Bit RegFileSz)) ide_fifo_src1v)
-   :: ("decexec-d2eFifo_src2", existT _ (SyntaxKind (Bit RegFileSz)) ide_fifo_src2v)
-   :: ("decexec-e2wFifo_idx", existT _ (SyntaxKind (Bit RegFileSz)) ide_e2wfifo_idxv)
-   :: ("decexec-e2wFifo_val", existT _ (SyntaxKind (Bit DataSz)) ide_e2wfifo_valv)
-   :: ("decexec-e2wFifo_valid", existT _ (SyntaxKind Bool) ide_e2wfifo_validv )
+   ("impl-pc", existT _ (SyntaxKind (Bit PgmSz)) impl_pcv)
+   :: ("impl-d2eFifo_valid", existT _ (SyntaxKind Bool) impl_d2efifo_validv)
+   :: ("impl-d2eFifo_addr", existT _ (SyntaxKind (Bit AddrSz)) impl_d2efifo_addrv)
+   :: ("impl-d2eFifo_arithOp", existT _ (SyntaxKind OpArithK) impl_d2efifo_arithopv)
+   :: ("impl-d2eFifo_op", existT _ (SyntaxKind OpK) impl_d2efifo_opv)
+   :: ("impl-d2eFifo_pc", existT _ (SyntaxKind (Bit PgmSz)) impl_d2efifo_pcv)
+   :: ("impl-d2eFifo_dst", existT _ (SyntaxKind (Bit RegFileSz)) impl_d2efifo_dstv)
+   :: ("impl-d2eFifo_src1", existT _ (SyntaxKind (Bit RegFileSz)) impl_d2efifo_src1v)
+   :: ("impl-d2eFifo_src2", existT _ (SyntaxKind (Bit RegFileSz)) impl_d2efifo_src2v)
+   :: ("impl-e2wFifo_idx", existT _ (SyntaxKind (Bit RegFileSz)) impl_e2wfifo_idxv)
+   :: ("impl-e2wFifo_val", existT _ (SyntaxKind (Bit DataSz)) impl_e2wfifo_valv)
+   :: ("impl-e2wFifo_valid", existT _ (SyntaxKind Bool) impl_e2wfifo_validv )
    :: ("pgm", existT _ (SyntaxKind (Array NumInstrs (Bit InstrSz))) pgmv)
-   :: ("decexec-regs", existT _ (SyntaxKind (Array 32 (Bit DataSz))) sderegv)
-   (* :: ("decexec-sbFlags", existT _ (SyntaxKind (Array 32 Bool)) sdesbflagsv) *)
+   :: ("impl-rf", existT _ (SyntaxKind (Array 32 (Bit DataSz))) impl_rf_v)
    :: nil ;
 
    Hsregs: sregs =
-   ("decexec-e2wFifo_idx", existT (fullType type) (SyntaxKind (Bit RegFileSz)) sde_e2wfifo_idxv)
-    :: ("decexec-e2wFifo_val", existT (fullType type) (SyntaxKind (Bit DataSz)) sde_e2wfifo_valv)
-    :: ("decexec-e2wFifo_valid", existT (fullType type) (SyntaxKind Bool) sde_e2wfifo_validv )
-    :: ("decexec-pc", existT (fullType type) (SyntaxKind (Bit PgmSz)) spcv)
+   ("spec-e2wFifo_idx", existT (fullType type) (SyntaxKind (Bit RegFileSz)) spec_e2wfifo_idxv)
+    :: ("spec-e2wFifo_val", existT (fullType type) (SyntaxKind (Bit DataSz)) spec_e2wfifo_valv)
+    :: ("spec-e2wFifo_valid", existT (fullType type) (SyntaxKind Bool) spec_e2wfifo_validv )
+    :: ("spec-pc", existT (fullType type) (SyntaxKind (Bit PgmSz)) spec_pcv)
     :: ("pgm", existT (fullType type) (SyntaxKind (Array NumInstrs (Bit InstrSz))) pgmv)
-    :: ("decexec-regs", existT (fullType type) (SyntaxKind (Array 32 (Bit DataSz))) ideregv)
-    (* :: ("decexec-sbFlags", existT (fullType type) (SyntaxKind (Array 32 Bool)) idesbflagsv) *)
-    :: nil
+    :: ("spec-rf", existT (fullType type) (SyntaxKind (Array 32 (Bit DataSz))) spec_rf_v)
+    :: nil ;
 
+   Hpcinv: (impl_d2efifo_validv = true ) -> (impl_pcv = impl_d2efifo_pcv ^+ $1 ) ;
+   Hdeinv: decexec_d2e_inv dec pgmv impl_pcv
+               impl_d2efifo_pcv
+               impl_d2efifo_validv
+               impl_d2efifo_addrv
+               impl_d2efifo_arithopv
+               impl_d2efifo_opv
+               impl_d2efifo_pcv
+               impl_d2efifo_dstv 
+               impl_d2efifo_src1v
+               impl_d2efifo_src2v
  }.
 
 
@@ -207,6 +202,52 @@ Ltac discharge_simulationZero mySimRel :=
           end) ; dest; simpl in *; repeat subst; simpl in *.
 
 Ltac andb_true_intro_split := apply andb_true_intro; split.
+
+Lemma findStr A B (dec: forall a1 a2, {a1 = a2} + {a1 <> a2}):
+  forall (ls: list (A * B)),
+  forall x, In x ls <->
+            In x (filter (fun t => getBool (dec (fst x) (fst t))) ls).
+Proof.
+  induction ls; simpl; split; auto; intros.
+  - destruct H; [subst|]; auto.
+    + destruct (dec (fst x) (fst x)) ; simpl in *; tauto.
+    + apply IHls in H.
+      destruct (dec (fst x) (fst a)) ; simpl in *; auto.
+  - destruct (dec (fst x) (fst a)) ; simpl in *.
+    + destruct H; auto.
+      apply IHls in H; auto.
+    + eapply IHls in H; eauto.
+Qed.
+
+
+Ltac foo :=
+    subst;
+    repeat
+      (match goal with
+       | H:DisjKey _ _
+         |- _ =>
+         apply DisjKeyWeak_same in H;
+           [ unfold DisjKeyWeak in H; simpl in H | apply string_dec ]
+       | H: In ?x ?ls |- _ =>
+         apply (findStr string_dec) in H; simpl in H; destruct H; [|exfalso; auto]
+       | H:False |- _ => exfalso; apply H
+       | H:(?A, ?B) = (?P, ?Q)
+         |- _ =>
+         let H1 := fresh in
+         let H2 := fresh in
+         pose proof (f_equal fst H) as H1; pose proof (f_equal snd H) as H2; simpl in H1, H2;
+           clear H
+       | H:?A = ?A |- _ => clear H
+       | H:(?a ++ ?b)%string = (?a ++ ?c)%string |- _ => rewrite append_remove_prefix in H; subst
+       | H:(?a ++ ?b)%string = (?c ++ ?b)%string |- _ => rewrite append_remove_suffix in H; subst
+       | H:existT ?a ?b ?c1 = existT ?a ?b ?c2
+         |- _ => apply Eqdep.EqdepTheory.inj_pair2 in H
+       | H:?A = ?B |- _ => discriminate
+       | H:SemAction _ (convertLetExprSyntax_ActionT ?e) _ _ _ _
+         |- _ => apply convertLetExprSyntax_ActionT_full in H; dest
+       end; subst). 
+
+
 Theorem decexecSep_ok:
     TraceInclusion decexecSepWf
                    decexecWf.
@@ -215,7 +256,7 @@ Theorem decexecSep_ok:
   discharge_simulationZero (mySimRel decoder).
   + destruct H. rewrite Hsregs. unfold getKindAttr. simpl. reflexivity.
   + destruct H. rewrite Hiregs. unfold getKindAttr. simpl. reflexivity.
-  + exists (x8 :: x9 :: x10 :: x :: x11 :: x12:: nil). split.
+  + (* exists (x8 :: x9 :: x10 :: x :: x11 :: x12:: nil). split.
    ++ repeat apply Forall2_cons; simpl; try (split; [try congruence | eexists; eauto]).
       apply Forall2_nil.
    ++ repeat match goal with
@@ -225,22 +266,35 @@ Theorem decexecSep_ok:
             end. simpl in *. subst.
            econstructor; try repeat f_equal; eauto.
     * rewrite H25. intro. inv H.
-    * unfold decexec_d2e_inv. rewrite H25. intro. inv H.
+    * unfold decexec_d2e_inv. rewrite H25. intro. inv H. *)
+
+    admit.
+
   + (* decode rule *)
     left. split.
-    * destruct H1. rewrite Hiregs. rewrite Hsregs. simpl. econstructor.
-      ** eauto.
-      ** eauto.
-      ** destruct Hdeinv.
-         *** admit.
-         *** destruct H2. destruct H24. destruct H25. destruct H26. destruct H27.
-             rewrite H1; rewrite H2; rewrite H24; rewrite H25; rewrite H26. rewrite H27; rewrite H28.
-             simpl. admit.
-      ** trivial.
+    * (* simRel oImp' oSpec *)
+      destruct H1.
+      rewrite Hiregs. rewrite Hsregs. simpl.
+
+      evar (impl_d2efifo_validv0 : bool).
+      evar (impl_pcv0 : word PgmSz).
+      econstructor 1 with (pgmv := pgmv)
+          (impl_d2efifo_validv := impl_d2efifo_validv0)
+          (impl_pcv := impl_pcv0).
+      ** repeat f_equal.
+       *** instantiate (impl_pcv0 := wzero PgmSz ^+ x1 ^+ $1). eauto.
+       *** instantiate (impl_d2efifo_validv0 := true). eauto.
+      ** repeat f_equal.
+      ** intro. unfold impl_pcv0.
+         assert (wzero PgmSz ^+ x1 = x1) as Hx1. apply wzero_wplus. rewrite Hx1.
+         reflexivity.
+      ** constructor. foo.
+         *** simpl. trivial.
+         *** simpl. foo. repeat split.
     * reflexivity.
   + (* arith rule *)
     destruct H1.
-    right. exists "decexec-decexecArith". eexists. split.
+    right. exists "spec-decexecArith". eexists. split.
     * left. trivial.
     * exists oSpec. eexists. split.
      ** rewrite Hsregs. discharge_SemAction.

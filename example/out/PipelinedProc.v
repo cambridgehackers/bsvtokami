@@ -59,6 +59,8 @@ BKCall val : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'sub ((#r2) :
 
     }). (* mkProcRegs *)
 
+    Close Scope kami_expr.
+
     Hint Unfold mkProcRegsModule : ModuleDefs.
 (* Module mkProcRegs type Module#(ProcRegs) return type ProcRegs *)
     Definition mkProcRegs := Build_ProcRegs mkProcRegsModule (instancePrefix--"read1") (instancePrefix--"read2") (instancePrefix--"write").
@@ -119,6 +121,8 @@ Module module'mkPipelinedDecoder.
                Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1)) ;
         Retv ) (* rule decode *)
     }). (* mkPipelinedDecoder *)
+
+    Close Scope kami_expr.
 
     Hint Unfold mkPipelinedDecoderModule : ModuleDefs.
 (* Module mkPipelinedDecoder type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> FIFO#(D2E) -> Module#(Empty) return type Decoder *)
@@ -185,6 +189,8 @@ BKCall flag : Bool (* varbinding *) <-  (* translateCall *) sbFlags'sub ((#sidx)
         Retv    )
 
     }). (* mkScoreboard *)
+
+    Close Scope kami_expr.
 
     Hint Unfold mkScoreboardModule : ModuleDefs.
 (* Module mkScoreboard type Module#(Scoreboard) return type Scoreboard *)
@@ -298,6 +304,8 @@ Module module'mkPipelinedExecuter.
         Retv ) (* rule executeToHost *)
     }). (* mkPipelinedExecuter *)
 
+    Close Scope kami_expr.
+
     Hint Unfold mkPipelinedExecuterModule : ModuleDefs.
 (* Module mkPipelinedExecuter type FIFO#(D2E) -> FIFO#(E2W) -> Scoreboard -> Executer -> ProcRegs -> Memory -> ToHost -> Module#(Empty) return type FIFO#(E2W) *)
     Definition mkPipelinedExecuter := Build_Empty mkPipelinedExecuterModule.
@@ -337,6 +345,8 @@ Module module'mkPipelinedWriteback.
                BKCall removed : Void (* actionBinding *) <- sb'remove ((#idx) : Bit RegFileSz) ;
         Retv ) (* rule writeback *)
     }). (* mkPipelinedWriteback *)
+
+    Close Scope kami_expr.
 
     Hint Unfold mkPipelinedWritebackModule : ModuleDefs.
 (* Module mkPipelinedWriteback type FIFO#(E2W) -> Scoreboard -> ProcRegs -> Module#(Empty) return type Scoreboard *)
@@ -381,6 +391,8 @@ Module module'mkProcImpl.
     with (BKMod (Empty'mod executer :: nil))
     with (BKMod (Empty'mod writeback :: nil))
     }). (* mkProcImpl *)
+
+    Close Scope kami_expr.
 
     Hint Unfold mkProcImplModule : ModuleDefs.
 (* Module mkProcImpl type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> ToHost -> Module#(Empty) return type Decoder *)

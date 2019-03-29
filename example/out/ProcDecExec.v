@@ -22,7 +22,7 @@ Module module'mkDecExec.
         (* method bindings *)
     Let pc : string := instancePrefix--"pc".
     (* Let sbFlags : string := instancePrefix--"sbFlags". *)
-    Let rf: string := instancePrefix--"regs".
+    Let rf: string := instancePrefix--"rf".
     Let mem: string := instancePrefix--"mem".
     Let pgm: string := "pgm".
     Let toHost: string := instancePrefix--"th".
@@ -76,6 +76,8 @@ Module module'mkDecExec.
         Retv ) (* rule decexecArith *)
     }). (* mkDecExec *)
 
+    Close Scope kami_expr.
+
     Hint Unfold mkDecExecModule : ModuleDefs.
 (* Module mkDecExec type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> Reg#(E2W) -> Reg#(Bool) -> ProcRegs -> Memory -> ToHost -> Module#(Empty) return type Decoder *)
     Definition mkDecExec := Build_Empty mkDecExecModule.
@@ -96,7 +98,7 @@ Module module'mkDecExecSep.
     Variable dec: Decoder.Decoder.
     Variable exec: Decoder.Executer.
         (* method bindings *)
-    Let rf: string := instancePrefix--"regs".
+    Let rf: string := instancePrefix--"rf".
     Let mem: string := instancePrefix--"mem".
     Let pgm: string := "pgm".
     Let toHost: string := instancePrefix--"th".
@@ -201,6 +203,8 @@ Module module'mkDecExecSep.
         Retv ) (* rule executeArith *)
 
     }). (* mkDecExecSep *)
+
+    Close Scope kami_expr.
 
     Hint Unfold mkDecExecSepModule : ModuleDefs.
 (* Module mkDecExecSep type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> ProcRegs -> Memory -> ToHost -> Module#(Empty) return type Decoder *)
