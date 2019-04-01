@@ -249,9 +249,21 @@ Ltac foo :=
        | H: ?x /\ ?y |- _ => destruct H
        | H:SemAction _ (convertLetExprSyntax_ActionT ?e) _ _ _ _
          |- _ => apply convertLetExprSyntax_ActionT_full in H; dest
+       | |- _ -> _ => intro
+       | |- ?a = ?a => reflexivity
        end; subst).
 
+Ltac discharge_whatever :=
+  repeat (match goal with
+          | H: _ |- Forall2 ?p ?l1 ?l2 => apply Forall2_cons; simpl
+          | H: _ |- Forall2 ?p nil nil => apply Forall2_nil
+          | H: _ |- ?a /\ ?b => split
+          | H: _ |- _ :: _ = _ :: _ => repeat f_equal
+          | H: _ |- ?a = ?a => reflexivity
+          | H: _ |- exists _, _ => exists eq_refl
+          end).
 
+(* repeat apply Forall2_cons. simpl; try (split; [try congruence | exists eq_refl; reflexivity; eauto]). *)
 Theorem decexecSep_ok:
     TraceInclusion decexecSepWf
                    decexecWf.
@@ -261,32 +273,32 @@ Theorem decexecSep_ok:
   + destruct H. rewrite Hsregs. unfold getKindAttr. simpl. reflexivity.
   + destruct H. rewrite Hiregs. unfold getKindAttr. simpl. reflexivity.
   + 
-(*
-   exists
-    (("spec-e2wFifo_idx", existT (fullType type) (SyntaxKind (Bit RegFileSz)) v6)
-    :: ("spec-e2wFifo_val", existT (fullType type) (SyntaxKind (Bit DataSz)) v2)
-    :: ("spec-e2wFifo_valid", existT (fullType type) (SyntaxKind Bool) v11 )
-    :: spec_pcv
-    :: ("pgmv", existT (fullType type) (SyntaxKind (Array NumInstrs (Bit InstrSz))) v0)
-    :: ("spec-rf", existT (fullType type) (SyntaxKind (Array 32 (Bit DataSz))) v)
-    :: nil ).
-
-
-   split.
-
-   ++ repeat apply Forall2_cons. simpl; try (split; [try congruence | eexists; eauto]).
-apply Forall2_nil.
-   ++ repeat match goal with
-            | H: RegT |- _ => let m1 := fresh "nm" in
-                              let m2 := fresh "knd" in
-                              let m3 := fresh "v" in destruct H as [m1 [m2 m3]]
-            end. simpl in *. subst.
-           econstructor; try repeat f_equal; eauto.
-    * rewrite H25. intro. inv H.
-    * unfold decexec_d2e_inv. rewrite H25. intro. inv H. *)
-
-    admit.
-
+    repeat (match goal with
+           | H: RegT |- _ => let nm := fresh "nm" in
+                             let k := fresh "k" in
+                             let val := fresh "val" in
+                             destruct H as [nm [k val]]
+           end).
+    simpl in *. subst.
+    exists (("spec-e2wFifo_idx", existT (fullType type) (SyntaxKind (Bit (Nat.log2_up 32))) (wzero (Nat.log2_up 32)))
+          :: ("spec-e2wFifo_val", existT (fullType type) (SyntaxKind (Bit DataSz)) (wzero DataSz))
+          :: ("spec-e2wFifo_valid", existT (fullType type) (SyntaxKind Bool) false)
+          :: ("spec-pc", existT (fullType type) (SyntaxKind (Bit PgmSz)) (natToWord PgmSz 0))
+          :: ("pgm", existT (fullType type) (SyntaxKind (Array NumInstrs (Bit InstrSz))) val0)
+          :: ("spec-rf", existT (fullType type) (SyntaxKind (Array 32 (Bit DataSz))) val)
+          :: nil).
+   rewrite H14. rewrite H0.
+   simpl. split.
+   * discharge_whatever.
+   * econstructor. 
+    ** discharge_whatever.
+    ** discharge_whatever.
+    ** foo.
+    ** foo.
+    ** econstructor. foo. discharge_whatever. foo. foo. foo. foo. foo. foo.
+    ** foo.
+    ** foo.
+    ** foo.
   + (* decode rule *)
     left. split.
     * (* simRel oImp' oSpec *)
@@ -346,9 +358,8 @@ econstructor 1 with (impl_d2efifo_validv := impl_d2efifo_validv0).
      *** econstructor. foo. foo.
      *** reflexivity.
      *** intro; reflexivity.
-     *** intro. destruct Hdeinv. foo. reflexivity. destruct Hpcinv.
-      **** foo. reflexivity.
-      **** foo. simpl. reflexivity.
+     *** intro. destruct Hdeinv. foo.
+      **** foo. simpl. destruct Hpcinv. reflexivity. rewrite H1. reflexivity.
 
-Admitted.
+Qed.
 End DecExecSepOk.
