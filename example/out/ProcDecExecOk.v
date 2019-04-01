@@ -1,4 +1,5 @@
 Require Import Kami.All.
+Require Import Kami.Tactics.
 Require Import Bsvtokami.
 Require Import FIFO.
 Require Import ProcMemSpec PipelinedProc ProcDecExec.
@@ -141,7 +142,8 @@ Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
     :: ("spec-rf", existT (fullType type) (SyntaxKind (Array 32 (Bit DataSz))) spec_rf_v)
     :: nil ;
 
-   Hpcinv: (impl_d2efifo_validv = true ) -> (impl_pcv = impl_d2efifo_pcv ^+ $1 ) ;
+   Hpcinv: (impl_d2efifo_validv = true ) -> (impl_pcv = impl_d2efifo_pcv ^+ $1 /\ spec_pcv = impl_d2efifo_pcv) ;
+   Hpcinv_decode: (impl_d2efifo_validv = false ) -> (impl_pcv = spec_pcv) ;
    Hdeinv: decexec_d2e_inv dec pgmv impl_pcv
                impl_d2efifo_pcv
                impl_d2efifo_validv
@@ -151,7 +153,11 @@ Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
                impl_d2efifo_pcv
                impl_d2efifo_dstv 
                impl_d2efifo_src1v
-               impl_d2efifo_src2v
+               impl_d2efifo_src2v ;
+
+   He2w_valid: impl_e2wfifo_validv = spec_e2wfifo_validv ;
+   He2w_val:   impl_e2wfifo_validv = true ->  impl_e2wfifo_validv = spec_e2wfifo_validv ;
+   He2w_idx:   impl_e2wfifo_validv = true ->  impl_e2wfifo_idxv = spec_e2wfifo_idxv
  }.
 
 
@@ -170,13 +176,8 @@ Ltac unfold_mySimRel :=
    | [ |- ?goal ] => idtac "mySimRel" ; simple refine goal
    end.
 
-Ltac discharge_findreg :=
-   match goal with
-   | [ |- findReg _ _ = _ ] => idtac "findreg"; unfold findReg 
-   end; repeat discharge_string_dec.
-
 Ltac discharge_simulationZero mySimRel :=
-  apply _simulationZeroAction with (simRel := mySimRel) ; auto; simpl; intros;
+  apply simulationZeroAction with (simRel := mySimRel) ; auto; simpl; intros;
   (repeat match goal with
           | H: _ \/ _ |- _ => destruct H
           | H: False |- _ => exfalso; apply H
@@ -219,7 +220,6 @@ Proof.
     + eapply IHls in H; eauto.
 Qed.
 
-
 Ltac foo :=
     subst;
     repeat
@@ -243,9 +243,13 @@ Ltac foo :=
        | H:existT ?a ?b ?c1 = existT ?a ?b ?c2
          |- _ => apply Eqdep.EqdepTheory.inj_pair2 in H
        | H:?A = ?B |- _ => discriminate
+       | H: ?x && ?y = true |- _ => rewrite andb_true_iff in H
+       | H: negb ?x = true |- _ => apply negb_true_iff in H
+       | H: negb ?x = false |- _ => apply negb_false_iff in H
+       | H: ?x /\ ?y |- _ => destruct H
        | H:SemAction _ (convertLetExprSyntax_ActionT ?e) _ _ _ _
          |- _ => apply convertLetExprSyntax_ActionT_full in H; dest
-       end; subst). 
+       end; subst).
 
 
 Theorem decexecSep_ok:
@@ -256,9 +260,22 @@ Theorem decexecSep_ok:
   discharge_simulationZero (mySimRel decoder).
   + destruct H. rewrite Hsregs. unfold getKindAttr. simpl. reflexivity.
   + destruct H. rewrite Hiregs. unfold getKindAttr. simpl. reflexivity.
-  + (* exists (x8 :: x9 :: x10 :: x :: x11 :: x12:: nil). split.
-   ++ repeat apply Forall2_cons; simpl; try (split; [try congruence | eexists; eauto]).
-      apply Forall2_nil.
+  + 
+(*
+   exists
+    (("spec-e2wFifo_idx", existT (fullType type) (SyntaxKind (Bit RegFileSz)) v6)
+    :: ("spec-e2wFifo_val", existT (fullType type) (SyntaxKind (Bit DataSz)) v2)
+    :: ("spec-e2wFifo_valid", existT (fullType type) (SyntaxKind Bool) v11 )
+    :: spec_pcv
+    :: ("pgmv", existT (fullType type) (SyntaxKind (Array NumInstrs (Bit InstrSz))) v0)
+    :: ("spec-rf", existT (fullType type) (SyntaxKind (Array 32 (Bit DataSz))) v)
+    :: nil ).
+
+
+   split.
+
+   ++ repeat apply Forall2_cons. simpl; try (split; [try congruence | eexists; eauto]).
+apply Forall2_nil.
    ++ repeat match goal with
             | H: RegT |- _ => let m1 := fresh "nm" in
                               let m2 := fresh "knd" in
@@ -278,32 +295,60 @@ Theorem decexecSep_ok:
 
       evar (impl_d2efifo_validv0 : bool).
       evar (impl_pcv0 : word PgmSz).
+
+
       econstructor 1 with (pgmv := pgmv)
           (impl_d2efifo_validv := impl_d2efifo_validv0)
+
+
           (impl_pcv := impl_pcv0).
       ** repeat f_equal.
        *** instantiate (impl_pcv0 := wzero PgmSz ^+ x1 ^+ $1). eauto.
        *** instantiate (impl_d2efifo_validv0 := true). eauto.
+
+
+
       ** repeat f_equal.
-      ** intro. unfold impl_pcv0.
-         assert (wzero PgmSz ^+ x1 = x1) as Hx1. apply wzero_wplus. rewrite Hx1.
-         reflexivity.
+      ** intro. unfold impl_pcv0. split.
+         *** rewrite wzero_wplus with (w := x1) ; reflexivity.
+         *** foo. (* spec_pcv = x1 *)
+             destruct Hpcinv_decode. reflexivity. reflexivity.
+      ** intro. unfold impl_d2efifo_validv0 in H1. inv H1.
       ** constructor. foo.
          *** simpl. trivial.
          *** simpl. foo. repeat split.
+      ** subst. trivial.
+      ** intro. subst. trivial.
+      ** intro. subst.  destruct He2w_idx. reflexivity. reflexivity.
     * reflexivity.
   + (* arith rule *)
     destruct H1.
     right. exists "spec-decexecArith". eexists. split.
     * left. trivial.
-    * exists oSpec. eexists. split.
-     ** rewrite Hsregs. discharge_SemAction.
-      ++ admit.
-      ++ admit.
-     ** rewrite Hsregs. rewrite Hiregs. simpl. econstructor.
-     *** eauto.
-     *** unfold decexec_pc_inv. intro. repeat split.
-     *** admit.
-     *** admit.
+    * (* reads spec *) eexists. (* updates spec *) eexists. split.
+     **
+
+ rewrite Hsregs. discharge_SemAction. foo.
+rewrite andb_true_iff. split.
+      *** destruct Hdeinv. reflexivity. 
+          destruct Hpcinv. reflexivity. rewrite H3. foo. simpl in H. apply H.
+      *** rewrite negb_true_iff. reflexivity.
+
+     ** rewrite Hsregs. rewrite Hiregs. simpl.
+evar (impl_d2efifo_validv0 : bool).
+econstructor 1 with (impl_d2efifo_validv := impl_d2efifo_validv0).
+     *** repeat f_equal. unfold impl_d2efifo_validv0. trivial.
+     *** repeat f_equal.
+     *** intro. inv H1.
+     *** unfold impl_d2efifo_validv0. intro. foo. destruct Hpcinv.
+         **** reflexivity.
+         **** rewrite H1. rewrite H0. rewrite wzero_wplus. reflexivity.
+     *** econstructor. foo. foo.
+     *** reflexivity.
+     *** intro; reflexivity.
+     *** intro. destruct Hdeinv. foo. reflexivity. destruct Hpcinv.
+      **** foo. reflexivity.
+      **** foo. simpl. reflexivity.
+
 Admitted.
 End DecExecSepOk.
