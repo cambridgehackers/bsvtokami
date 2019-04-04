@@ -292,7 +292,7 @@ typedef enum {
 
 typedef union tagged {
    a Valid;
-   Void Invalid;
+   Bit#(1) Invalid;
    } Maybe#(type a) deriving (Bits,Eq);
 
 function Bool isValid(Maybe#(data_t) val);
@@ -333,7 +333,6 @@ typedef struct {
 		t2 tpl_2;
    } Tuple2#(type t1, type t2) deriving (Bits);
 
-(* nogen *)
 function Tuple2#(t1, t2) tuple2(t1 x1, t2 x2);
    return Tuple2 { tpl_1: x1, tpl_2: x2 };
 endfunction
