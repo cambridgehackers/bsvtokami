@@ -84,33 +84,33 @@ Notation "'LOOP' { s1 'with' .. 'with' sN } SL" :=
 
 Notation "'RegisterN' name : type <- init" :=
   (BKRegister (name%string, existT RegInitValT type (Some init)))
-    (at level 12, name at level 99) : bk_scope.
+    (at level 13, name at level 99) : bk_scope.
 
 Notation "'Register' name : type <- init" :=
   (BKRegister (name%string, existT RegInitValT (SyntaxKind type) (Some (makeConst init))))
-    (at level 12, name at level 99) : bk_scope.
+    (at level 13, name at level 99) : bk_scope.
 
 Notation "'RegisterU' name : type" :=
   (BKRegister (name%string, existT RegInitValT (SyntaxKind type) None))
-    (at level 12, name at level 99) : bk_scope.
+    (at level 13, name at level 99) : bk_scope.
 
 Notation "'Method' name () : retT := c" :=
   (BKMeth (name%string, existT MethodT (Void, retT)
                                (fun ty (_: ty Void) => c%kami_action : ActionT ty retT)))
-    (at level 12, name at level 9) : bk_scope.
+    (at level 13, name at level 9) : bk_scope.
 
 Notation "'Method' name ( param : dom ) : retT := c" :=
   (BKMeth (name%string, existT MethodT ( dom%kami, retT )
                                (fun ty ( param : ty dom%kami ) => c%kami_action : ActionT ty retT)))
-    (at level 12, name at level 9, param at level 99) : bk_scope.
+    (at level 13, name at level 9, param at level 99) : bk_scope.
 Notation "'Method1' name ( param : dom ) : retT := c" :=
   (BKMeth (name%string, existT MethodT ( dom%kami, retT )
                                (fun ty ( param : ty dom%kami ) => c%kami_action : ActionT ty retT)))
-    (at level 12, name at level 9, param at level 99) : bk_scope.
+    (at level 13, name at level 9, param at level 99) : bk_scope.
 
 Notation "'Rule' name := c" :=
   (BKRule (name%string, fun ty => (c)%kami_action : ActionT ty Void))
-    (at level 12) : bk_scope.
+    (at level 13) : bk_scope.
 
 Notation "'BKMODULE' { s1 'with' .. 'with' sN }" :=
   (makeBKModule (ConsInBKModule s1%bk .. (ConsInBKModule sN%bk NilInBKModule) ..))
@@ -118,11 +118,11 @@ Notation "'BKMODULE' { s1 'with' .. 'with' sN }" :=
 
 Notation "'BKCall' name : retT <- meth () ; cont " :=
   (MCall meth%string (Void, retT) (Const _ Default) (fun name => cont))
-    (at level 12, right associativity, name at level 0, meth at level 0) : kami_action_scope.
+    (at level 13, right associativity, name at level 0, meth at level 0) : kami_action_scope.
 
 Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ; cont " :=
   (MCall meth%string (a1T, retT) a1%kami_expr (fun name => cont))
-    (at level 12, right associativity, name at level 0, meth at level 0, a1 at level 99) : kami_action_scope.
+    (at level 13, right associativity, name at level 0, meth at level 0, a1 at level 99) : kami_action_scope.
 
 Notation "'BKCall1' name : retT <- meth ( a1 : a1T ) ; cont " :=
   (MCall meth%string (a1T, retT) a1%kami_expr (fun name => cont))
@@ -132,7 +132,7 @@ Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ; cont " :=
   (let argT := STRUCT { "_1" :: a1T ; "_2" :: a2T } in
    let args := (STRUCT { "_1" ::= a1 ; "_2" ::= a2 })%kami_expr in
   (MCall meth%string (argT, retT) args%kami_expr (fun name => cont)))
-    (at level 12, right associativity, name at level 0, meth at level 0, a1 at level 99, a2 at level 99) : kami_action_scope.
+    (at level 13, right associativity, name at level 0, meth at level 0, a1 at level 99, a2 at level 99) : kami_action_scope.
 
 Notation "'BKCall2' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ; cont " :=
   (let argT := (STRUCT { "_1" :: a1T ; "_2" :: a2T })%kami_struct in
@@ -153,7 +153,7 @@ Notation "'Method2' name ( p1 : d1 ) ( p2 : d2 ) : retT := c" :=
 				(LET p1 : d1g <- (#param @% "_1");
 				 LET p2 : d2g <- (#param @% "_2");
 				c%kami_action : ActionT ty retT)))))%kami_action
-    (at level 12, name at level 9,
+    (at level 13, name at level 9,
      p1 at level 99, p2 at level 99) : bk_scope.
 
 
@@ -161,7 +161,7 @@ Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ( a3 : a3T ) ; 
   (let argT := STRUCT { "_1" :: a1T ; "_2" :: a2T ; "_3" :: a3T } in
    let args := (STRUCT { "_1" ::= a1 ; "_2" ::= a2 ; "_3" ::= a3 })%kami_expr in
   (MCall meth%string (argT, retT) args%kami_expr (fun name => cont)))
-    (at level 12, right associativity, name at level 0, meth at level 0,
+    (at level 13, right associativity, name at level 0, meth at level 0,
      a1 at level 99, a2 at level 99, a3 at level 99) : kami_action_scope.
 
 
@@ -169,7 +169,7 @@ Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ( a3 : a3T ) ( 
   (let argT := STRUCT { "_1" :: a1T ; "_2" :: a2T ; "_3" :: a3T; "_4" :: a4T } in
    let args := (STRUCT { "_1" ::= a1 ; "_2" ::= a2 ; "_3" ::= a3 ; "_4" ::= a4 })%kami_expr in
   (MCall meth%string (argT, retT) args%kami_expr (fun name => cont)))
-    (at level 12, right associativity, name at level 0, meth at level 0,
+    (at level 13, right associativity, name at level 0, meth at level 0,
      a1 at level 99, a2 at level 99, a3 at level 99, a4 at level 99) : kami_action_scope.
 
 
@@ -177,7 +177,7 @@ Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ( a3 : a3T ) ( 
   (let argT := STRUCT { "_1" :: a1T ; "_2" :: a2T ; "_3" :: a3T; "_4" :: a4T; "_5" :: a5T } in
    let args := (STRUCT { "_1" ::= a1 ; "_2" ::= a2 ; "_3" ::= a3 ; "_4" ::= a4 ; "_5" ::= a5 })%kami_expr in
   (MCall meth%string (argT, retT) args%kami_expr (fun name => cont)))
-    (at level 12, right associativity, name at level 0, meth at level 0,
+    (at level 13, right associativity, name at level 0, meth at level 0,
      a1 at level 99, a2 at level 99, a3 at level 99, a4 at level 99, a5 at level 99) : kami_action_scope.
 
 
@@ -185,7 +185,7 @@ Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ( a3 : a3T ) ( 
   (let argT := STRUCT { "_1" :: a1T ; "_2" :: a2T ; "_3" :: a3T; "_4" :: a4T; "_5" :: a5T; "_6" :: a6T } in
    let args := (STRUCT { "_1" ::= a1 ; "_2" ::= a2 ; "_3" ::= a3 ; "_4" ::= a4 ; "_5" ::= a5; "_6" ::= a6 })%kami_expr in
   (MCall meth%string (argT, retT) args%kami_expr (fun name => cont)))
-    (at level 12, right associativity, name at level 0, meth at level 0,
+    (at level 13, right associativity, name at level 0, meth at level 0,
      a1 at level 99, a2 at level 99, a3 at level 99, a4 at level 99, a5 at level 99, a6 at level 99) : kami_action_scope.
 
 
