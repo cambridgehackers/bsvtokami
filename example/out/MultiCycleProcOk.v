@@ -249,7 +249,17 @@ Theorem pipelined_multicycle_ok:
     TraceInclusion decexecSepWf
                    decexecWf.
   Proof.
-  discharge_appendage.
+  discharge_simulationGeneral mySimRel.
+  + admit.
+  + reflexivity.
+  + (* decode rule *)
+    right. exists "spec-decode". eexists. split.
+    * (* simRel oImp' oSpec *)
+      left. trivial.
+    *  eexists. eexists. split.
+     ** foo. discharge_SemAction. 
+
+(*
   bk_discharge_simulationZero mySimRel.
   + 
     repeat (match goal with
@@ -365,7 +375,7 @@ Theorem pipelined_multicycle_ok:
     ** discharge_init_forall2.
     ** discharge_init_forall2.
     ** foo.
-    ** foo. (* val12 = $0 = wzero PgmSz *) admit.
+    ** foo. (* val12 = $0 = wzero PgmSz *)
     ** econstructor. foo. discharge_init_forall2. foo. foo. foo. foo. foo. foo.
     ** foo.
     ** foo.
@@ -407,7 +417,7 @@ econstructor 1 with (impl_d2efifo_validv := impl_d2efifo_validv0).
      *** reflexivity.
      *** intro; reflexivity.
      *** intro. destruct Hdeinv. foo.
-      **** foo. simpl. destruct Hpcinv. reflexivity. rewrite H1. reflexivity.
+      **** foo. simpl. destruct Hpcinv. reflexivity. rewrite H1. reflexivity. *)
 
 Qed.
 End DecExecSepOk.

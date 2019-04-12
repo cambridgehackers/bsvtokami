@@ -268,7 +268,6 @@ Theorem decexecSep_ok:
     TraceInclusion decexecSepWf
                    decexecWf.
   Proof.
-  discharge_appendage.
   discharge_simulationZero (mySimRel decoder).
   + destruct H. rewrite Hsregs. unfold getKindAttr. simpl. reflexivity.
   + destruct H. rewrite Hiregs. unfold getKindAttr. simpl. reflexivity.

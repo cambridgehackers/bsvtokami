@@ -17,10 +17,10 @@ Definition AddrSz := 32.
 Definition InstrSz := 32.
 
 Notation NumRegs := 32 (only parsing).
-Notation RegFileSz := (Nat.log2_up 32) (only parsing).
+Notation RegFileSz := (Nat.log2_up NumRegs) (only parsing).
 
 Definition NumInstrs := 8.
-Definition PgmSz := Nat.log2_up NumInstrs.
+Definition PgmSz := (Nat.log2_up NumInstrs).
 
 Definition opArith : ConstT (Bit 2) := ( (* intwidth *) (natToWord 2 0))%kami.
 
@@ -104,21 +104,19 @@ Module module'mkMemory.
         If ((#req @% "isLoad") == $$ (* intwidth *) (natToWord 1 1)) then (
         
         LET addr : Bit AddrSz (* non-call varbinding *) <- (#req @% "addr") ;
-        BKCall ldval : Bit DataSz (* varbinding *) <-  (* translateCall *) mem'sub ((#addr) : Bit AddrSz) ;
+        BKCall ldval : Bit DataSz (* varbinding *) <-  (* translateCall *) mem'sub ((#addr) : Bit AddrSz)  ;
                 Ret #ldval
         ) else (
         
         LET addr : Bit AddrSz (* non-call varbinding *) <- (#req @% "addr") ;
                 LET newval : Bit DataSz (* non-call varbinding *) <- (#req @% "data") ;
-                BKCall unused : Void (* actionBinding *) <- mem'upd ((#addr) : Bit AddrSz) ((#newval) : Bit DataSz) ;
-        BKCall placeholder : Bit DataSz (* varbinding *) <-  (* translateCall *) mem'sub ((#addr) : Bit AddrSz) ;
+        (* call expr ./ProcMemSpec.bsv:60 *) BKCall call0 : Void <-  (* translateCall *) mem'upd ((#addr) : Bit AddrSz) ((#newval) : Bit DataSz)  ;
+        BKCall placeholder : Bit DataSz (* varbinding *) <-  (* translateCall *) mem'sub ((#addr) : Bit AddrSz)  ;
                 Ret #placeholder) as retval
  ;
         Ret #retval    )
 
     }). (* mkMemory *)
-
-    Close Scope kami_expr.
 
     Hint Unfold mkMemoryModule : ModuleDefs.
 (* Module mkMemory type Module#(Memory) return type Memory *)
@@ -177,69 +175,67 @@ Module module'procSpec.
     with Rule instancePrefix--"doArith" :=
     (
         Read pc_v : Bit PgmSz <- pc ;
-       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
-       BKCall call1 : Bit InstrSz <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
-       BKCall call0 : Bool <-  (* translateCall *) dec'isOp ((#call1) : Bit InstrSz) (($$ (* isConstT *)opArith) : OpK) ;
+       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz)  ;
+       (* call expr ./ProcMemSpec.bsv:82 *) BKCall call2 : Bit InstrSz <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz)  ;
+       (* call expr ./ProcMemSpec.bsv:82 *) BKCall call1 : Bool <-  (* translateCall *) dec'isOp ((#call2) : Bit InstrSz) (($$ (* isConstT *)opArith) : OpK)  ;
 
-        Assert(#call0) ;
-       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
-       BKCall op : OpK (* varbinding *) <-  (* translateCall *) dec'getOp ((#inst) : Bit InstrSz) ;
-       BKCall src1 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getSrc1 ((#inst) : Bit InstrSz) ;
-       BKCall src2 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getSrc2 ((#inst) : Bit InstrSz) ;
-       BKCall dst : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getDst ((#inst) : Bit InstrSz) ;
-       BKCall val1 : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'sub ((#src1) : Bit RegFileSz) ;
-       BKCall val2 : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'sub ((#src2) : Bit RegFileSz) ;
-       BKCall dval : Bit DataSz (* varbinding *) <-  (* translateCall *) exec'execArith ((#op) : OpArithK) ((#val1) : Bit DataSz) ((#val2) : Bit DataSz) ;
-               BKCall unused : Void (* actionBinding *) <- rf'upd ((#dst) : Bit RegFileSz) ((#dval) : Bit DataSz) ;
-               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1)) ;
+        Assert(#call1) ;
+       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz)  ;
+       BKCall op : OpK (* varbinding *) <-  (* translateCall *) dec'getOp ((#inst) : Bit InstrSz)  ;
+       BKCall src1 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getSrc1 ((#inst) : Bit InstrSz)  ;
+       BKCall src2 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getSrc2 ((#inst) : Bit InstrSz)  ;
+       BKCall dst : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getDst ((#inst) : Bit InstrSz)  ;
+       BKCall val1 : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'sub ((#src1) : Bit RegFileSz)  ;
+       BKCall val2 : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'sub ((#src2) : Bit RegFileSz)  ;
+       BKCall dval : Bit DataSz (* varbinding *) <-  (* translateCall *) exec'execArith ((#op) : OpArithK) ((#val1) : Bit DataSz) ((#val2) : Bit DataSz)  ;
+       (* call expr ./ProcMemSpec.bsv:91 *) BKCall call3 : Void <-  (* translateCall *) rf'upd ((#dst) : Bit RegFileSz) ((#dval) : Bit DataSz)  ;
+               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1))  ;
         Retv ) (* rule doArith *)
     with Rule instancePrefix--"doLoad" :=
     (
         Read pc_v : Bit PgmSz <- pc ;
-       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
-       BKCall call3 : Bit InstrSz <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
-       BKCall call2 : Bool <-  (* translateCall *) dec'isOp ((#call3) : Bit InstrSz) (($$ (* isConstT *)opLd) : OpK) ;
+       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz)  ;
+       (* call expr ./ProcMemSpec.bsv:95 *) BKCall call5 : Bit InstrSz <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz)  ;
+       (* call expr ./ProcMemSpec.bsv:95 *) BKCall call4 : Bool <-  (* translateCall *) dec'isOp ((#call5) : Bit InstrSz) (($$ (* isConstT *)opLd) : OpK)  ;
 
-        Assert(#call2) ;
-       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
-       BKCall addr : Bit AddrSz (* varbinding *) <-  (* translateCall *) dec'getAddr ((#inst) : Bit InstrSz) ;
-       BKCall dst : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getDst ((#inst) : Bit InstrSz) ;
-               BKCall val : Bit DataSz (* actionBinding *) <- mem'doMem ((STRUCT { "addr" ::= (#addr) ; "data" ::= ($$ (* intwidth *) (natToWord 32 0)) ; "isLoad" ::= ($$ (* intwidth *) (natToWord 1 1))  }%kami_expr) : MemRq) ;
-       BKCall call4 : Void <-  (* translateCall *) rf'upd ((#dst) : Bit RegFileSz) ((#val) : Bit DataSz) ;
-               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1)) ;
+        Assert(#call4) ;
+       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz)  ;
+       BKCall addr : Bit AddrSz (* varbinding *) <-  (* translateCall *) dec'getAddr ((#inst) : Bit InstrSz)  ;
+       BKCall dst : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getDst ((#inst) : Bit InstrSz)  ;
+               BKCall val : Bit DataSz (* actionBinding *) <- mem'doMem ((STRUCT { "addr" ::= (#addr) ; "data" ::= ($$ (* intwidth *) (natToWord 32 0)) ; "isLoad" ::= ($$ (* intwidth *) (natToWord 1 1))  }%kami_expr) : MemRq)  ;
+       (* call expr ./ProcMemSpec.bsv:100 *) BKCall call6 : Void <-  (* translateCall *) rf'upd ((#dst) : Bit RegFileSz) ((#val) : Bit DataSz)  ;
+               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1))  ;
         Retv ) (* rule doLoad *)
     with Rule instancePrefix--"doStore" :=
     (
         Read pc_v : Bit PgmSz <- pc ;
-       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
-       BKCall call6 : Bit InstrSz <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
-       BKCall call5 : Bool <-  (* translateCall *) dec'isOp ((#call6) : Bit InstrSz) (($$ (* isConstT *)opSt) : OpK) ;
+       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz)  ;
+       (* call expr ./ProcMemSpec.bsv:104 *) BKCall call8 : Bit InstrSz <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz)  ;
+       (* call expr ./ProcMemSpec.bsv:104 *) BKCall call7 : Bool <-  (* translateCall *) dec'isOp ((#call8) : Bit InstrSz) (($$ (* isConstT *)opSt) : OpK)  ;
 
-        Assert(#call5) ;
-       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
-       BKCall addr : Bit AddrSz (* varbinding *) <-  (* translateCall *) dec'getAddr ((#inst) : Bit InstrSz) ;
-       BKCall src : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getSrc1 ((#inst) : Bit InstrSz) ;
-       BKCall val : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'sub ((#src) : Bit RegFileSz) ;
-               BKCall unused : Bit DataSz (* actionBinding *) <- mem'doMem ((STRUCT { "addr" ::= (#addr) ; "data" ::= (#val) ; "isLoad" ::= ($$ (* intwidth *) (natToWord 1 0))  }%kami_expr) : MemRq) ;
-               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1)) ;
+        Assert(#call7) ;
+       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz)  ;
+       BKCall addr : Bit AddrSz (* varbinding *) <-  (* translateCall *) dec'getAddr ((#inst) : Bit InstrSz)  ;
+       BKCall src : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getSrc1 ((#inst) : Bit InstrSz)  ;
+       BKCall val : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'sub ((#src) : Bit RegFileSz)  ;
+               BKCall unused : Bit DataSz (* actionBinding *) <- mem'doMem ((STRUCT { "addr" ::= (#addr) ; "data" ::= (#val) ; "isLoad" ::= ($$ (* intwidth *) (natToWord 1 0))  }%kami_expr) : MemRq)  ;
+               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1))  ;
         Retv ) (* rule doStore *)
     with Rule instancePrefix--"doHost" :=
     (
         Read pc_v : Bit PgmSz <- pc ;
-       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
-       BKCall call8 : Bit InstrSz <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
-       BKCall call7 : Bool <-  (* translateCall *) dec'isOp ((#call8) : Bit InstrSz) (($$ (* isConstT *)opTh) : OpK) ;
+       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz)  ;
+       (* call expr ./ProcMemSpec.bsv:113 *) BKCall call10 : Bit InstrSz <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz)  ;
+       (* call expr ./ProcMemSpec.bsv:113 *) BKCall call9 : Bool <-  (* translateCall *) dec'isOp ((#call10) : Bit InstrSz) (($$ (* isConstT *)opTh) : OpK)  ;
 
-        Assert(#call7) ;
-       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz) ;
-       BKCall src1 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getSrc1 ((#inst) : Bit InstrSz) ;
-       BKCall val1 : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'sub ((#src1) : Bit RegFileSz) ;
-               BKCall unused : Void (* actionBinding *) <- tohost'toHost ((#val1) : Bit DataSz) ;
-               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1)) ;
+        Assert(#call9) ;
+       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz)  ;
+       BKCall src1 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) dec'getSrc1 ((#inst) : Bit InstrSz)  ;
+       BKCall val1 : Bit DataSz (* varbinding *) <-  (* translateCall *) rf'sub ((#src1) : Bit RegFileSz)  ;
+       (* call expr ./ProcMemSpec.bsv:118 *) BKCall call11 : Void <-  (* translateCall *) tohost'toHost ((#val1) : Bit DataSz)  ;
+               Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1))  ;
         Retv ) (* rule doHost *)
     }). (* procSpec *)
-
-    Close Scope kami_expr.
 
     Hint Unfold procSpecModule : ModuleDefs.
 (* Module procSpec type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> ToHost -> Module#(Empty) return type Decoder *)
