@@ -13,3 +13,6 @@ connectal
 .*.aux
 *.vo
 *.stamp
+Makefile.coq.all
+Makefile.coq.all.conf
+Makefile.conf
