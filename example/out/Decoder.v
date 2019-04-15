@@ -48,8 +48,8 @@ Module module'decoder.
     Variable instancePrefix: string.
     Definition paramT := STRUCT {"_1" :: (Bit InstrSz)%kami_expr; "_2" :: OpK }%kami.
     Local Open Scope kami_expr.
-    Definition decoderModule: Mod :=
-         (BKMODULE {
+    Definition decoderModule: ModWf :=
+         (MOD_WF {
               Method (instancePrefix--"getOp") ( instr : Bit InstrSz ) : OpK :=
                 (
                   LET instr_v : Bit InstrSz <- (Var _ (SyntaxKind _) instr) ;
@@ -106,6 +106,7 @@ End module'decoder.
 Definition mkDecoder := module'decoder.mkDecoder.
 Hint Unfold module'decoder.decoderModule : ModuleDefs.
 Hint Unfold module'decoder.mkDecoder : ModuleDefs.
+Hint Unfold module'decoder.paramT : ModuleDefs.
 Hint Unfold mkDecoder : ModuleDefs.
 Check mkDecoder.
 
@@ -118,8 +119,8 @@ Module module'executer.
                              "_2" :: (Bit DataSz) ;
                              "_3" :: (Bit DataSz)}%kami.
     Local Open Scope kami_expr.
-    Definition executerModule: Mod :=
-         (BKMODULE {
+    Definition executerModule: ModWf :=
+         (MOD_WF {
               Method (instancePrefix--"execArith") ( param : paramT ) : (Bit DataSz) :=
                 (
                   LET op : OpArithK <- #param @% "_1" ;
@@ -138,5 +139,6 @@ End module'executer.
 Definition mkExecuter := module'executer.mkExecuter.
 Hint Unfold module'executer.executerModule : ModuleDefs.
 Hint Unfold module'executer.mkExecuter : ModuleDefs.
+Hint Unfold module'executer.paramT : ModuleDefs.
 Hint Unfold mkExecuter : ModuleDefs.
 Check mkExecuter.
