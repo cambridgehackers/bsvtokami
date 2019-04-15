@@ -105,8 +105,8 @@ End module'decoder.
 
 Definition mkDecoder := module'decoder.mkDecoder.
 Hint Unfold module'decoder.decoderModule : ModuleDefs.
-Hint Unfold module'decoder.mkDecoder.
-Hint Unfold mkDecoder.
+Hint Unfold module'decoder.mkDecoder : ModuleDefs.
+Hint Unfold mkDecoder : ModuleDefs.
 Check mkDecoder.
 
 Module module'executer.
@@ -137,6 +137,6 @@ End module'executer.
 
 Definition mkExecuter := module'executer.mkExecuter.
 Hint Unfold module'executer.executerModule : ModuleDefs.
-Hint Unfold module'executer.mkExecuter.
-Hint Unfold mkExecuter.
+Hint Unfold module'executer.mkExecuter : ModuleDefs.
+Hint Unfold mkExecuter : ModuleDefs.
 Check mkExecuter.

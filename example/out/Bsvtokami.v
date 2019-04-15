@@ -345,6 +345,7 @@ End module'mkRegFileFull.
 
 Definition mkRegFileFull := module'mkRegFileFull.mkRegFileFull.
 Hint Unfold mkRegFileFull : ModuleDefs.
+Hint Unfold module'mkRegFileFull.rf : ModuleDefs.
 Hint Unfold module'mkRegFileFull.mkRegFileFull : ModuleDefs.
 Hint Unfold module'mkRegFileFull.mkRegFileFullModule : ModuleDefs.
 
