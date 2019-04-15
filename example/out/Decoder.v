@@ -16,6 +16,13 @@ Record Decoder :=
     getAddr: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind (Bit AddrSz))
   }.
 
+Hint Unfold Decoder'getAddr : ModuleDefs.
+Hint Unfold Decoder'getOp : ModuleDefs.
+Hint Unfold Decoder'getArithOp : ModuleDefs.
+Hint Unfold Decoder'getDst : ModuleDefs.
+Hint Unfold Decoder'getSrc1 : ModuleDefs.
+Hint Unfold Decoder'getSrc2 : ModuleDefs.
+
 Definition decStub := Build_Decoder
 			  (fun ty (instr: ty (Bit InstrSz)) => ($$opLd)%kami_expr)
 			  (fun ty (instr: ty (Bit InstrSz)) => ($$opArithAdd)%kami_expr)
@@ -29,6 +36,8 @@ Record Executer :=
   {
     execArith: forall ty, ty OpArithK -> ty (Bit DataSz) -> ty (Bit DataSz) -> Expr ty (SyntaxKind (Bit DataSz))
   }.
+
+Hint Unfold Executer'execArith : ModuleDefs.
 
 Definition execStub := Build_Executer
 			  (fun ty (op: ty OpArithK) (val1 val2: ty (Bit DataSz)) => ($$(natToWord DataSz 22))%kami_expr).

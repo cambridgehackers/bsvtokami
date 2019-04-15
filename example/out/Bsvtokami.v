@@ -315,6 +315,9 @@ Record RegFile := {
     RegFile'upd : string;
     RegFile'sub : string;
 }.
+Hint Unfold RegFile'mod : ModuleDefs.
+Hint Unfold RegFile'sub : ModuleDefs.
+Hint Unfold RegFile'upd : ModuleDefs.
 
 Module module'mkRegFileFull.
     Section Section'mkRegFileFull.
@@ -343,6 +346,7 @@ End module'mkRegFileFull.
 Definition mkRegFileFull := module'mkRegFileFull.mkRegFileFull.
 Hint Unfold mkRegFileFull : ModuleDefs.
 Hint Unfold module'mkRegFileFull.mkRegFileFull : ModuleDefs.
+Hint Unfold module'mkRegFileFull.mkRegFileFullModule : ModuleDefs.
 
 (* more stuff *)
 
