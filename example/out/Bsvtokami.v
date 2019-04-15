@@ -219,14 +219,14 @@ Module module'mkReg.
     Variable v: ConstT a.
     Definition reg : string := instancePrefix--"reg".
     Local Open Scope kami_expr.
-    Definition mkRegModule: Mod :=
-      (BKMODULE {
+    Definition mkRegModule: ModWf :=
+      (MOD_WF {
            Register reg : a <- v
            with Method (instancePrefix--"_read") () : a :=
              Read v : a <- reg ;
            Ret #v
 
-           with Method1 (instancePrefix--"_write") ( v : a ) : Void :=
+           with Method (instancePrefix--"_write") ( v : a ) : Void :=
              Write reg : a <- #v;
            Retv
 
@@ -253,14 +253,14 @@ Module module'mkReadOnlyReg.
     Variable instancePrefix: string.
     Variable v: ConstT a.
     Definition reg : string := instancePrefix--"reg".
-    Definition mkReadOnlyRegModule: Mod :=
-      (BKMODULE {
+    Definition mkReadOnlyRegModule: ModWf :=
+      (MOD_WF {
            Register reg : a <- v
            with Method (instancePrefix--"_read") () : a :=
              Read v : a <- reg ;
            Ret #v
 
-           with Method1 (instancePrefix--"_write") (v : a) : Void :=
+           with Method (instancePrefix--"_write") (v : a) : Void :=
              Retv
 
          }). (* mkReadOnlyReg *)
@@ -285,14 +285,14 @@ Module module'mkRegU.
     Variable instancePrefix: string.
     Variable v: ConstT a.
     Definition reg : string := instancePrefix--"reg".
-    Definition mkRegUModule: Mod :=
-        (BKMODULE {
+    Definition mkRegUModule: ModWf :=
+        (MOD_WF {
            Register reg : a <- Default
            with Method (instancePrefix--"_read") () : a :=
              Read v : a <- reg ;
              Ret #v
 
-           with Method1 (instancePrefix--"_write") ( v : a ) : Void :=
+           with Method (instancePrefix--"_write") ( v : a ) : Void :=
              Write reg : a <- #v;
              Retv
 
@@ -325,7 +325,7 @@ Module module'mkRegFileFull.
     Variable index_t : Kind.
     Variable instancePrefix: string.
     Definition rf : string := instancePrefix--"rf".
-    Definition mkRegFileFullModule: Mod := (BKMODULE {
+    Definition mkRegFileFullModule: ModWf := (MOD_WF {
            Register rf : data_t <- Default
            with Method instancePrefix--"sub" (idx : index_t) : data_t :=
              (Read regs : data_t <- rf;
@@ -394,9 +394,9 @@ Module module'isValid.
     Variable data_t : Kind.
     Variable instancePrefix: string.
     Local Open Scope kami_expr.
-    Definition Modules'isValid: Mod.
-        refine (BKMODULE {
-        Method1 (instancePrefix--"isValid") (m: (Maybe data_t)) : Bool := 
+    Definition Modules'isValid: ModWf.
+        refine (MOD_WF {
+        Method (instancePrefix--"isValid") (m: (Maybe data_t)) : Bool := 
 			  (
 			   LET tag : (Bit 1) <- #m @% "$tag";
 			   If (#tag == $0) then (
@@ -434,8 +434,8 @@ Module module'fromMaybe.
     Definition paramT := STRUCT {"_1" :: data_t; "_2" :: (Maybe data_t) }.
     Local Open Scope kami_expr.
 
-    Definition Modules'fromMaybe: Mod := (BKMODULE {
-        Method1 (instancePrefix--"fromMaybe") (param : paramT ) : data_t := 
+    Definition Modules'fromMaybe: ModWf := (MOD_WF {
+        Method (instancePrefix--"fromMaybe") (param : paramT ) : data_t := 
 						    (
 						     LET defaultval: data_t <- #param @% "_1" ;
 						     LET val: (Maybe data_t) <- #param @% "_2" ;
