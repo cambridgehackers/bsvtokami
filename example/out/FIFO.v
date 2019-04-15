@@ -39,29 +39,30 @@ Module module'mkFIFO.
     with Register valid : Bit 1 <-  (* intwidth *) (natToWord 1 0)
     with Method (instancePrefix--"first") () : element_type :=
     (
-        Read v_v : element_type <- "v" ;        Read valid_v : Bit 1 <- "valid" ;
+        Read v_v : element_type <- v ;
+        Read valid_v : Bit 1 <- valid ;
         Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
         LET result : element_type (* non-call varbinding *) <- #v_v ;
         Ret #result    )
 
     with Method (instancePrefix--"enq") (new_v : element_type) : Void :=
     (
-        Read valid_v : Bit 1 <- "valid" ;
+        Read valid_v : Bit 1 <- valid ;
         Assert((#valid_v == $$ (* intwidth *) (natToWord 1 0))) ;
-        Write v : element_type <- #new_v ;
-        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 1) ;
+        Write v : element_type <- #new_v  ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 1)  ;
         Retv    )
 
     with Method (instancePrefix--"deq") () : Void :=
     (
-        Read valid_v : Bit 1 <- "valid" ;
+        Read valid_v : Bit 1 <- valid ;
         Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
-        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0) ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0)  ;
         Retv    )
 
     with Method (instancePrefix--"clear") () : Void :=
     (
-        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0) ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0)  ;
         Retv    )
 
     }). (* mkFIFO *)
@@ -96,29 +97,29 @@ Module module'mkLFIFO.
     with Register valid : Bit 1 <-  (* intwidth *) (natToWord 1 0)
     with Method (instancePrefix--"first") () : element_type :=
     (
-        Read v_v : element_type <- "v" ;        Read valid_v : Bit 1 <- "valid" ;
+        Read v_v : element_type <- v ;        Read valid_v : Bit 1 <- valid ;
         Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
         LET result : element_type (* non-call varbinding *) <- #v_v ;
         Ret #result    )
 
     with Method (instancePrefix--"enq") (new_v : element_type) : Void :=
     (
-        Read valid_v : Bit 1 <- "valid" ;
+        Read valid_v : Bit 1 <- valid ;
         Assert((#valid_v == $$ (* intwidth *) (natToWord 1 0))) ;
-        Write v : element_type <- #new_v ;
-        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 1) ;
+        Write v : element_type <- #new_v  ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 1)  ;
         Retv    )
 
     with Method (instancePrefix--"deq") () : Void :=
     (
-        Read valid_v : Bit 1 <- "valid" ;
+        Read valid_v : Bit 1 <- valid ;
         Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
-        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0) ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0)  ;
         Retv    )
 
     with Method (instancePrefix--"clear") () : Void :=
     (
-        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0) ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0)  ;
         Retv    )
 
     }). (* mkLFIFO *)
@@ -152,28 +153,28 @@ Module module'mkFIFO1.
     with Register valid : Bit 1 <-  (* intwidth *) (natToWord 1 0)
     with Method (instancePrefix--"first") () : element_type :=
     (
-        Read v_v : element_type <- "v" ;        Read valid_v : Bit 1 <- "valid" ;
+        Read v_v : element_type <- v ;        Read valid_v : Bit 1 <- valid ;
         Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
         Ret #v_v    )
 
     with Method (instancePrefix--"enq") (new_v : element_type) : Void :=
     (
-        Read valid_v : Bit 1 <- "valid" ;
+        Read valid_v : Bit 1 <- valid ;
         Assert((#valid_v == $$ (* intwidth *) (natToWord 1 0))) ;
-        Write v : element_type <- #new_v ;
-        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 1) ;
+        Write v : element_type <- #new_v  ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 1)  ;
         Retv    )
 
     with Method (instancePrefix--"deq") () : Void :=
     (
-        Read valid_v : Bit 1 <- "valid" ;
+        Read valid_v : Bit 1 <- valid ;
         Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
-        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0) ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0)  ;
         Retv    )
 
     with Method (instancePrefix--"clear") () : Void :=
     (
-        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0) ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0)  ;
         Retv    )
 
     }). (* mkFIFO1 *)
@@ -208,28 +209,28 @@ Module module'mkSizedFIFO.
     with Register valid : Bit 1 <-  (* intwidth *) (natToWord 1 0)
     with Method (instancePrefix--"first") () : element_type :=
     (
-        Read v_v : element_type <- "v" ;        Read valid_v : Bit 1 <- "valid" ;
+        Read v_v : element_type <- v ;        Read valid_v : Bit 1 <- valid ;
         Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
         Ret #v_v    )
 
     with Method (instancePrefix--"enq") (new_v : element_type) : Void :=
     (
-        Read valid_v : Bit 1 <- "valid" ;
+        Read valid_v : Bit 1 <- valid ;
         Assert((#valid_v == $$ (* intwidth *) (natToWord 1 0))) ;
-        Write v : element_type <- #new_v ;
-        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 1) ;
+        Write v : element_type <- #new_v  ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 1)  ;
         Retv    )
 
     with Method (instancePrefix--"deq") () : Void :=
     (
-        Read valid_v : Bit 1 <- "valid" ;
+        Read valid_v : Bit 1 <- valid ;
         Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
-        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0) ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0)  ;
         Retv    )
 
     with Method (instancePrefix--"clear") () : Void :=
     (
-        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0) ;
+        Write valid : Bit 1 <- $$ (* intwidth *) (natToWord 1 0)  ;
         Retv    )
 
     }). (* mkSizedFIFO *)
