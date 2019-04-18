@@ -126,7 +126,7 @@ Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ; cont " :=
 
 Notation "'BKCall1' name : retT <- meth ( a1 : a1T ) ; cont " :=
   (MCall meth%string (a1T, retT) a1%kami_expr (fun name => cont))
-    (at level 12, right associativity, name at level 0, meth at level 0, a1 at level 99) : kami_action_scope.
+    (at level 13, right associativity, name at level 0, meth at level 0, a1 at level 99) : kami_action_scope.
 
 Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ; cont " :=
   (let argT := STRUCT { "_1" :: a1T ; "_2" :: a2T } in
@@ -140,7 +140,7 @@ Notation "'BKCall2' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ; cont " :=
    let retT1 := retT in
    let retT2 := retT in
   (MCall meth%string (argT, retT1) args%kami_expr (fun (name : retT2) => cont)))
-    (at level 12, right associativity, name at level 0, meth at level 0, a1 at level 99, a2 at level 99) : kami_action_scope.
+    (at level 13, right associativity, name at level 0, meth at level 0, a1 at level 99, a2 at level 99) : kami_action_scope.
 
 Notation "'Method2' name ( p1 : d1 ) ( p2 : d2 ) : retT := c" :=
   (let d1f := d1 in
