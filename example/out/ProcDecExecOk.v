@@ -55,20 +55,14 @@ Section DecExec.
 
   Local Definition decexecSep : Mod := (ConcatMod
   	                           (ConcatMod
-(*  	                           (ConcatMod
- *)
+  	                           (ConcatMod
                                     (NoMethods'mod (ProcDecExec.mkDecExecSep "impl" "pgm" "dec" kamiexec "e2wfifo"))
 				     (RegFile'mod pgm))
 				    (ProcMemSpec.Decoder'mod dec))
-(*                                    (FIFO'mod e2wfifo)
-) *)
-.
+                                    (FIFO'mod e2wfifo)).
 
 
   Local Definition decexecSepInl := (flatten_inline_remove decexecSep).
-
-Compute (getAllRegisters decexec).
-
 
   (* What would be good invariants to prove the correctness of stage merging?
    * For two given stages, we usually need to provide relations among states in
@@ -117,9 +111,10 @@ End DecExec.
 
 Hint Unfold dec : ModuleDefs.
 Hint Unfold pgm : ModuleDefs.
+Hint Unfold e2wfifo: ModuleDefs.
 Hint Unfold decexec: ModuleDefs.
-(* Hint Unfold decexecSep: ModuleDefs.
-Hint Unfold decexecSepInl: ModuleDefs. *)
+Hint Unfold decexecSep: ModuleDefs.
+Hint Unfold decexecSepInl: ModuleDefs.
 
 
 Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
@@ -235,23 +230,10 @@ Section DecExecSepOk.
     discharge_wf.
   Qed.
 
-Compute (flatten_inline_remove (decexec decoder executer)).
 
-Theorem decexec_inl_wf:
-  WfMod (flatten_inline_remove (decexec decoder executer)).
-Proof.
-    unfold decexec. unfold e2wfifo.
-    repeat autounfold with ModuleDefs.
-    discharge_append.
-  bk_discharge_wf.
-Qed.
+  Definition decexecInlWf := flatten_inline_remove_ModWf (decexec decoder executer).
 
-  Definition decexecWf := {| baseModule := (flatten_inline_remove (decexec decoder executer)) ;
-			     wfBaseModule := ltac:(repeat autounfold with ModuleDefs; bk_discharge_wf)  |}.
-
-
-  Definition decexecSepWf := {| baseModule := (flatten_inline_remove (decexecSep decoder executer)) ;
-			        wfBaseModule := ltac:(repeat autounfold with ModuleDefs; discharge_wf)  |}.
+  Definition decexecSepWf := flatten_inline_remove_ModWf (decexecSep decoder executer).
 
 
 Ltac unfold_mySimRel :=
@@ -349,10 +331,9 @@ Ltac discharge_whatever :=
 
 (* repeat apply Forall2_cons. simpl; try (split; [try congruence | exists eq_refl; reflexivity; eauto]). *)
 Theorem decexecSep_ok:
-    TraceInclusion decexecSepWf
-                   decexecWf.
+    TraceInclusion decexecSepWf decexecWf.
   Proof.
-  discharge_simulationZero (mySimRel decoder).
+  discharge_simulationGeneral (mySimRel decoder).
   + destruct H. rewrite Hsregs. unfold getKindAttr. simpl. reflexivity.
   + destruct H. rewrite Hiregs. unfold getKindAttr. simpl. reflexivity.
   + 
