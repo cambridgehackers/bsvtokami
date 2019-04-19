@@ -12,7 +12,6 @@ Set Implicit Arguments.
 Require Import FIFO.
 Require Import RegFile.
 Require Import ProcMemSpec.
-Require Import PipelinedProc.
 Require Import Vector.
 
 

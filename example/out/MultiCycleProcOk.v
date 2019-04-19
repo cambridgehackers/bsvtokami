@@ -2,7 +2,7 @@ Require Import Kami.All.
 Require Import Kami.Tactics.
 Require Import Bsvtokami.
 Require Import FIFO.
-Require Import ProcMemSpec PipelinedProc MultiCycleProc ProcDecExec.
+Require Import ProcMemSpec MultiCycleProc ProcDecExec.
 Require Import FinNotations.
 Require Import BKTactics.
 Require Import Decoder.
