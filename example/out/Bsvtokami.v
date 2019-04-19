@@ -47,7 +47,6 @@ Definition makeBKModule (im : InBKModule) :=
 Hint Unfold concatModules : ModuleDefs.
 Hint Unfold makeBKModule' : ModuleDefs.
 Hint Unfold makeBKModule : ModuleDefs.
-Hint Unfold app : ModuleDefs.
 
 Fixpoint getOrderBK (im : InBKModule) :=
   match im with
@@ -197,12 +196,12 @@ Definition castBits ty ni no (pf: ni = no) (e: Expr ty (SyntaxKind (Bit ni))) :=
   end.
 
 Record Empty := {
-    Empty'mod: Mod;
+    Empty'mod: ModWf;
 }.
 
 
 Record Reg := {
-    Reg'mod: Mod;
+    Reg'mod: ModWf;
     Reg'_read : string;
     Reg'_write : string;
 }.
@@ -311,7 +310,7 @@ Hint Unfold module'mkRegU.mkRegUModule : ModuleDefs.
 
 (* * interface RegFile#(index_t, data_t) *)
 Record RegFile := {
-    RegFile'mod: Mod;
+    RegFile'mod: ModWf;
     RegFile'upd : string;
     RegFile'sub : string;
 }.
@@ -324,16 +323,15 @@ Module module'mkRegFileFull.
     Variable data_t : Kind.
     Variable index_t : Kind.
     Variable instancePrefix: string.
-    Definition rf : string := instancePrefix--"rf".
     Definition mkRegFileFullModule: ModWf := (MOD_WF {
-           Register rf : data_t <- Default
+           Register (instancePrefix--"rfreg") : data_t <- Default
            with Method instancePrefix--"sub" (idx : index_t) : data_t :=
-             (Read regs : data_t <- rf;
+             (Read regs : data_t <- (instancePrefix--"rfreg") ;
                 Ret #regs)
                (* fixme:
              with Method instancePrefix--"upd" (idx : index_t) (v : data_t) : Void :=
-               (Read regs : data_t <- rf;
-                  Write rf : data_t <- #v;
+               (Read regs : data_t <- (instancePrefix--"rfreg") ;
+                  Write (instancePrefix--"rfreg") : data_t <- #v;
                Retv)
                *)
     }). (* mkRegFileFull *)
@@ -345,7 +343,6 @@ End module'mkRegFileFull.
 
 Definition mkRegFileFull := module'mkRegFileFull.mkRegFileFull.
 Hint Unfold mkRegFileFull : ModuleDefs.
-Hint Unfold module'mkRegFileFull.rf : ModuleDefs.
 Hint Unfold module'mkRegFileFull.mkRegFileFull : ModuleDefs.
 Hint Unfold module'mkRegFileFull.mkRegFileFullModule : ModuleDefs.
 
@@ -377,13 +374,13 @@ Check bitlt.
 
 (* interface for module wrapper for myTruncate *)
 Record Interface'myTruncate := {
-    Interface'myTruncate'mod: Mod;
+    Interface'myTruncate'mod: ModWf;
     Interface'myTruncate'myTruncate: string;
 }.
 
 (* interface for module wrapper for isValid *)
 Record Interface'isValid := {
-    Interface'isValid'mod: Mod;
+    Interface'isValid'mod: ModWf;
     Interface'isValid'isValid: string;
 }.
 Hint Unfold Interface'isValid'mod : ModuleDefs.
@@ -421,7 +418,7 @@ Hint Unfold module'isValid.isValid : ModuleDefs.
 
 (* interface for module wrapper for fromMaybe *)
 Record Interface'fromMaybe := {
-    Interface'fromMaybe'mod: Mod;
+    Interface'fromMaybe'mod: ModWf;
     Interface'fromMaybe'fromMaybe: string;
 }.
 Hint Unfold Interface'fromMaybe'mod : ModuleDefs.
