@@ -25,7 +25,7 @@ Hint Unfold Empty'mod : ModuleDefs.
 Hint Unfold NoMethods'mod : ModuleDefs.
 
 (* Here we prove that merging the first two stages ([decoder] and [executer])
- * is correct by providing a refinement from [decexecSep] to [decexec]. *)
+ * is correct by providing a refinement from [impl] to [spec]. *)
 Section DecExec.
 
   Local Definition dataK := Bit ProcMemSpec.DataSz.
@@ -33,7 +33,6 @@ Section DecExec.
 
   Variables (kamidec: Decoder.Decoder)
             (kamiexec: Decoder.Executer)
-            (spec impl: BaseModule)
             (pcInit : ConstT (Bit ProcMemSpec.PgmSz)).
 
   Local Definition dec: ProcMemSpec.Decoder := mkDecoder kamidec "dec".
@@ -43,26 +42,35 @@ Section DecExec.
 
   Local Definition e2wfifo := mkFIFO (Bit DataSz) "e2wfifo".
 
-  Local Definition decexec : Mod := (ConcatMod
+  Fixpoint hideMethods m meths :=
+    match meths with
+    | meth :: meths' => hideMethods (HideMeth m meth) meths'
+    | nil => m
+    end.
+
+  Local Definition spec : Mod := 
+              hideMethods (ConcatMod
   	                           (ConcatMod
   	                           (ConcatMod
                                     (NoMethods'mod (ProcDecExec.mkDecExec "spec" "pgm" "dec" kamiexec "e2wfifo"))
 				     (RegFile'mod pgm))
 				     (ProcMemSpec.Decoder'mod dec))
 
-				     (HideMeth (HideMeth (HideMeth (FIFO'mod e2wfifo) "e2wfifo-first") "e2wfifo-deq") "e2wfifo-clear")).
+				     (FIFO'mod e2wfifo))
+             ("e2wfifo-first" :: "e2wfifo-deq" :: "e2wfifo-clear" :: "e2wfifo-enq"
+             :: "pgm-sub" :: "dec-getOp" :: "dec-getArithOp" :: "dec-getSrc1" :: "dec-getSrc2" :: "dec-getDst" :: "dec-getAddr" :: nil).
 
 
-  Local Definition decexecSep : Mod := (ConcatMod
+  Local Definition impl : Mod := 
+             hideMethods (ConcatMod
   	                           (ConcatMod
   	                           (ConcatMod
                                     (NoMethods'mod (ProcDecExec.mkDecExecSep "impl" "pgm" "dec" kamiexec "e2wfifo"))
 				     (RegFile'mod pgm))
 				    (ProcMemSpec.Decoder'mod dec))
-                                    (FIFO'mod e2wfifo)).
-
-
-  Local Definition decexecSepInl := (flatten_inline_remove decexecSep).
+                                    (FIFO'mod e2wfifo))
+             ("e2wfifo-first" :: "e2wfifo-deq" :: "e2wfifo-clear" :: "e2wfifo-enq"
+             :: "pgm-sub" :: "dec-getOp" :: "dec-getArithOp" :: "dec-getSrc1" :: "dec-getSrc2" :: "dec-getDst" :: "dec-getAddr" :: nil).
 
   (* What would be good invariants to prove the correctness of stage merging?
    * For two given stages, we usually need to provide relations among states in
@@ -112,9 +120,8 @@ End DecExec.
 Hint Unfold dec : ModuleDefs.
 Hint Unfold pgm : ModuleDefs.
 Hint Unfold e2wfifo: ModuleDefs.
-Hint Unfold decexec: ModuleDefs.
-Hint Unfold decexecSep: ModuleDefs.
-Hint Unfold decexecSepInl: ModuleDefs.
+Hint Unfold spec: ModuleDefs.
+Hint Unfold impl: ModuleDefs.
 
 
 Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
@@ -200,7 +207,7 @@ Ltac bk_discharge_wf :=
          end;
   discharge_DisjKey.
 
-Section DecExecSepOk.
+Section ImplOk.
   Variable decoder: Decoder.Decoder.
   Variable executer: Decoder.Executer.
   Check dec.
@@ -223,22 +230,25 @@ Section DecExecSepOk.
     repeat autounfold with ModuleDefs.
     bk_discharge_wf.
   Qed.
-  Theorem decexec_wfmod:
-     WfMod (decexec decoder executer).
+  Theorem spec_wfmod:
+     WfMod (spec decoder executer).
   Proof.
     repeat autounfold with ModuleDefs.
     discharge_wf.
   Qed.
 
 
-  Definition decexecMod := (decexec decoder executer).
-  Hint Unfold decexecMod : ModuleDefs.
+  Definition specMod := (spec decoder executer).
+  Hint Unfold specMod : ModuleDefs.
+  Definition implMod := (impl decoder executer).
+  Hint Unfold implMod : ModuleDefs.
 
-  Definition decexecWf := @Build_ModWf decexecMod ltac:(repeat autounfold with ModuleDefs; bk_discharge_wf).
 
-  Definition decexecInlWf := flatten_inline_remove_ModWf (decexec decoder executer).
+  Definition specWf := @Build_ModWf specMod ltac:(repeat autounfold with ModuleDefs; bk_discharge_wf).
+  Definition implWf := @Build_ModWf implMod ltac:(repeat autounfold with ModuleDefs; bk_discharge_wf).
 
-  Definition decexecSepWf := flatten_inline_remove_ModWf (decexecSep decoder executer).
+  Definition specInlWf := flatten_inline_remove_ModWf specWf.
+  Definition implInlWf := flatten_inline_remove_ModWf implWf.
 
 
 Ltac unfold_mySimRel :=
@@ -246,7 +256,7 @@ Ltac unfold_mySimRel :=
    | [ |- ?goal ] => idtac "mySimRel" ; simple refine goal
    end.
 
-Ltac discharge_simulationZero mySimRel :=
+Ltac bk_discharge_simulationZero mySimRel :=
   apply simulationZeroAction with (simRel := mySimRel) ; auto; simpl; intros;
   (repeat match goal with
           | H: _ \/ _ |- _ => destruct H
@@ -335,10 +345,14 @@ Ltac discharge_whatever :=
 
 
 (* repeat apply Forall2_cons. simpl; try (split; [try congruence | exists eq_refl; reflexivity; eauto]). *)
-Theorem decexecSep_ok:
-    TraceInclusion decexecSepWf decexecWf.
+Theorem impl_ok:
+    TraceInclusion implInlWf specInlWf.
   Proof.
+  unfold implInlWf.
+  unfold specInlWf.
+  unfold flatten_inline_remove_ModWf.
   discharge_simulationGeneral (mySimRel decoder).
+   
   + destruct H. rewrite Hsregs. unfold getKindAttr. simpl. reflexivity.
   + destruct H. rewrite Hiregs. unfold getKindAttr. simpl. reflexivity.
   + 
@@ -431,4 +445,4 @@ econstructor 1 with (impl_d2e_validv := impl_d2e_validv0).
       **** foo. simpl. destruct Hpcinv. reflexivity. rewrite H1. reflexivity.
 
 Qed.
-End DecExecSepOk.
+End ImplOk.
