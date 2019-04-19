@@ -10,7 +10,7 @@ Set Implicit Arguments.
 
 (* * interface FIFO#(element_type) *)
 Record FIFO := {
-    FIFO'mod: Mod;
+    FIFO'mod: ModWf;
     FIFO'first : string;
     FIFO'enq : string;
     FIFO'deq : string;

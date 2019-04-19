@@ -2,7 +2,7 @@ Require Import Kami.All.
 Require Import Kami.Tactics.
 Require Import Bsvtokami.
 Require Import FIFO.
-Require Import ProcMemSpec PipelinedProc ProcDecExec.
+Require Import ProcMemSpec ProcDecExec.
 Require Import FinNotations.
 Require Import BKTactics.
 Require Import Decoder.
@@ -22,6 +22,7 @@ Set Implicit Arguments.
  *)
 
 Hint Unfold Empty'mod : ModuleDefs.
+Hint Unfold NoMethods'mod : ModuleDefs.
 
 (* Here we prove that merging the first two stages ([decoder] and [executer])
  * is correct by providing a refinement from [decexecSep] to [decexec]. *)
@@ -32,19 +33,42 @@ Section DecExec.
 
   Variables (kamidec: Decoder.Decoder)
             (kamiexec: Decoder.Executer)
-(spec impl: BaseModule)
+            (spec impl: BaseModule)
             (pcInit : ConstT (Bit ProcMemSpec.PgmSz)).
 
   Local Definition dec: ProcMemSpec.Decoder := mkDecoder kamidec "dec".
-  Local Definition exec: ProcMemSpec.Executer := mkExecuter kamiexec "exec".
+  (* Local Definition exec: ProcMemSpec.Executer := mkExecuter kamiexec "exec". *)
 
-  Local Definition decexec : Mod := (Empty'mod (ProcDecExec.mkDecExec "spec" kamidec kamiexec)).
-  Hint Unfold decexec: ModuleDefs.
+  Local Definition pgm := mkRegFileFull (Bit PgmSz) (Bit InstrSz) "pgm".
 
-  Local Definition decexecSep : Mod := (Empty'mod (ProcDecExec.mkDecExecSep  "impl" kamidec kamiexec)).
-  Hint Unfold decexecSep: ModuleDefs.
+  Local Definition e2wfifo := mkFIFO (Bit DataSz) "e2wfifo".
+
+  Local Definition decexec : Mod := (ConcatMod
+  	                           (ConcatMod
+  	                           (ConcatMod
+                                    (NoMethods'mod (ProcDecExec.mkDecExec "spec" "pgm" "dec" kamiexec "e2wfifo"))
+				     (RegFile'mod pgm))
+				     (ProcMemSpec.Decoder'mod dec))
+
+				     (HideMeth (HideMeth (HideMeth (FIFO'mod e2wfifo) "e2wfifo-first") "e2wfifo-deq") "e2wfifo-clear")).
+
+
+  Local Definition decexecSep : Mod := (ConcatMod
+  	                           (ConcatMod
+(*  	                           (ConcatMod
+ *)
+                                    (NoMethods'mod (ProcDecExec.mkDecExecSep "impl" "pgm" "dec" kamiexec "e2wfifo"))
+				     (RegFile'mod pgm))
+				    (ProcMemSpec.Decoder'mod dec))
+(*                                    (FIFO'mod e2wfifo)
+) *)
+.
+
 
   Local Definition decexecSepInl := (flatten_inline_remove decexecSep).
+
+Compute (getAllRegisters decexec).
+
 
   (* What would be good invariants to prove the correctness of stage merging?
    * For two given stages, we usually need to provide relations among states in
@@ -91,84 +115,143 @@ Section DecExec.
 
 End DecExec.
 
+Hint Unfold dec : ModuleDefs.
+Hint Unfold pgm : ModuleDefs.
+Hint Unfold decexec: ModuleDefs.
+(* Hint Unfold decexecSep: ModuleDefs.
+Hint Unfold decexecSepInl: ModuleDefs. *)
+
+
 Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
  {
    pgmv: (Fin.t NumInstrs -> word DataSz) ;
 
-   impl_d2efifo_validv: bool ;
+   impl_d2e_validv: bool ;
    impl_pcv: word PgmSz ;
-   impl_e2wfifo_validv: bool ;
-   impl_e2wfifo_idxv: fullType type (SyntaxKind (Bit RegFileSz)) ;
-   impl_e2wfifo_valv: fullType type (SyntaxKind (Bit DataSz)) ;
+   impl_e2w_validv: fullType type (SyntaxKind (Bit 1)) ;
+   impl_e2w_valv: fullType type (SyntaxKind (Bit DataSz)) ;
    impl_rf_v: fullType type (SyntaxKind (Array 32 (Bit DataSz))) ;
 
    spec_pcv: word PgmSz ;
-   spec_e2wfifo_validv: bool ;
-   spec_e2wfifo_idxv: fullType type (SyntaxKind (Bit RegFileSz)) ;
-   spec_e2wfifo_valv: fullType type (SyntaxKind (Bit DataSz)) ;
+   spec_e2w_validv: fullType type (SyntaxKind (Bit 1)) ;
+   spec_e2w_valv: fullType type (SyntaxKind (Bit DataSz)) ;
    spec_rf_v: (Fin.t 32 -> word DataSz) ;
 
-   impl_d2efifo_addrv    : word AddrSz ;
-   impl_d2efifo_arithopv : fullType type (SyntaxKind OpArithK) ;
-   impl_d2efifo_opv      : fullType type (SyntaxKind OpK) ;
-   impl_d2efifo_pcv      : word PgmSz ;
-   impl_d2efifo_dstv     : word RegFileSz ;
-   impl_d2efifo_src1v    : word RegFileSz ;
-   impl_d2efifo_src2v    : word RegFileSz ;
+   impl_d2e_addrv    : word AddrSz ;
+   impl_d2e_arithopv : fullType type (SyntaxKind OpArithK) ;
+   impl_d2e_opv      : fullType type (SyntaxKind OpK) ;
+   impl_d2e_pcv      : word PgmSz ;
+   impl_d2e_dstv     : word RegFileSz ;
+   impl_d2e_src1v    : word RegFileSz ;
+   impl_d2e_src2v    : word RegFileSz ;
 
    Hiregs: iregs =
    ("impl-pc", existT _ (SyntaxKind (Bit PgmSz)) impl_pcv)
-   :: ("impl-d2eFifo_valid", existT _ (SyntaxKind Bool) impl_d2efifo_validv)
-   :: ("impl-d2eFifo_addr", existT _ (SyntaxKind (Bit AddrSz)) impl_d2efifo_addrv)
-   :: ("impl-d2eFifo_arithOp", existT _ (SyntaxKind OpArithK) impl_d2efifo_arithopv)
-   :: ("impl-d2eFifo_op", existT _ (SyntaxKind OpK) impl_d2efifo_opv)
-   :: ("impl-d2eFifo_pc", existT _ (SyntaxKind (Bit PgmSz)) impl_d2efifo_pcv)
-   :: ("impl-d2eFifo_dst", existT _ (SyntaxKind (Bit RegFileSz)) impl_d2efifo_dstv)
-   :: ("impl-d2eFifo_src1", existT _ (SyntaxKind (Bit RegFileSz)) impl_d2efifo_src1v)
-   :: ("impl-d2eFifo_src2", existT _ (SyntaxKind (Bit RegFileSz)) impl_d2efifo_src2v)
-   :: ("impl-e2wFifo_idx", existT _ (SyntaxKind (Bit RegFileSz)) impl_e2wfifo_idxv)
-   :: ("impl-e2wFifo_val", existT _ (SyntaxKind (Bit DataSz)) impl_e2wfifo_valv)
-   :: ("impl-e2wFifo_valid", existT _ (SyntaxKind Bool) impl_e2wfifo_validv )
-   :: ("pgm", existT _ (SyntaxKind (Array NumInstrs (Bit InstrSz))) pgmv)
+   :: ("impl-d2e_valid", existT _ (SyntaxKind Bool) impl_d2e_validv)
+   :: ("impl-d2e_pc", existT _ (SyntaxKind (Bit PgmSz)) impl_d2e_pcv)
+   :: ("impl-d2e_op", existT _ (SyntaxKind OpK) impl_d2e_opv)
+   :: ("impl-d2e_arithOp", existT _ (SyntaxKind OpArithK) impl_d2e_arithopv)
+   :: ("impl-d2e_src1", existT _ (SyntaxKind (Bit RegFileSz)) impl_d2e_src1v)
+   :: ("impl-d2e_src2", existT _ (SyntaxKind (Bit RegFileSz)) impl_d2e_src2v)
+   :: ("impl-d2e_dst", existT _ (SyntaxKind (Bit RegFileSz)) impl_d2e_dstv)
    :: ("impl-rf", existT _ (SyntaxKind (Array 32 (Bit DataSz))) impl_rf_v)
+   :: ("pgm-rfreg", existT _ (SyntaxKind (Array NumInstrs (Bit InstrSz))) pgmv)
+   :: ("e2wfifo-valid", existT (fullType type) (SyntaxKind (Bit 1)) impl_e2w_validv)
+   :: ("e2wfifo-v", existT (fullType type) (SyntaxKind (Bit DataSz)) impl_e2w_valv)
    :: nil ;
 
    Hsregs: sregs =
-   ("spec-e2wFifo_idx", existT (fullType type) (SyntaxKind (Bit RegFileSz)) spec_e2wfifo_idxv)
-    :: ("spec-e2wFifo_val", existT (fullType type) (SyntaxKind (Bit DataSz)) spec_e2wfifo_valv)
-    :: ("spec-e2wFifo_valid", existT (fullType type) (SyntaxKind Bool) spec_e2wfifo_validv )
-    :: ("spec-pc", existT (fullType type) (SyntaxKind (Bit PgmSz)) spec_pcv)
-    :: ("pgm", existT (fullType type) (SyntaxKind (Array NumInstrs (Bit InstrSz))) pgmv)
+    ("spec-pc", existT (fullType type) (SyntaxKind (Bit PgmSz)) spec_pcv)
     :: ("spec-rf", existT (fullType type) (SyntaxKind (Array 32 (Bit DataSz))) spec_rf_v)
+    :: ("pgm-rfreg", existT (fullType type) (SyntaxKind (Array NumInstrs (Bit InstrSz))) pgmv)
+    :: ("e2wfifo-valid", existT (fullType type) (SyntaxKind (Bit 1)) spec_e2w_validv)
+    :: ("e2wfifo-v", existT (fullType type) (SyntaxKind (Bit DataSz)) spec_e2w_valv)
     :: nil ;
 
-   Hpcinv: (impl_d2efifo_validv = true ) -> (impl_pcv = impl_d2efifo_pcv ^+ $1 /\ spec_pcv = impl_d2efifo_pcv) ;
-   Hpcinv_decode: (impl_d2efifo_validv = false ) -> (impl_pcv = spec_pcv) ;
+   Hpcinv: (impl_d2e_validv = true ) -> (impl_pcv = impl_d2e_pcv ^+ $1 /\ spec_pcv = impl_d2e_pcv) ;
+   Hpcinv_decode: (impl_d2e_validv = false ) -> (impl_pcv = spec_pcv) ;
    Hdeinv: decexec_d2e_inv dec pgmv impl_pcv
-               impl_d2efifo_pcv
-               impl_d2efifo_validv
-               impl_d2efifo_addrv
-               impl_d2efifo_arithopv
-               impl_d2efifo_opv
-               impl_d2efifo_pcv
-               impl_d2efifo_dstv 
-               impl_d2efifo_src1v
-               impl_d2efifo_src2v ;
+               impl_d2e_pcv
+               impl_d2e_validv
+               impl_d2e_addrv
+               impl_d2e_arithopv
+               impl_d2e_opv
+               impl_d2e_pcv
+               impl_d2e_dstv 
+               impl_d2e_src1v
+               impl_d2e_src2v ;
 
-   He2w_valid: impl_e2wfifo_validv = spec_e2wfifo_validv ;
-   He2w_val:   impl_e2wfifo_validv = true ->  impl_e2wfifo_validv = spec_e2wfifo_validv ;
-   He2w_idx:   impl_e2wfifo_validv = true ->  impl_e2wfifo_idxv = spec_e2wfifo_idxv
+   He2w_valid: impl_e2w_validv = spec_e2w_validv ;
+   He2w_val:   impl_e2w_validv = (natToWord 1 1) ->  impl_e2w_valv = spec_e2w_valv ;
+
  }.
 
 
+Local Ltac constructor_simpl :=
+  econstructor; eauto; simpl; unfold not; intros.
+
+Ltac bk_discharge_wf :=
+  repeat match goal with
+         | |- @WfMod _ => constructor_simpl
+         | |- @WfConcat _ _ => constructor_simpl
+         | |- _ /\ _ => constructor_simpl
+         | |- @WfConcatActionT _ _ _ => constructor_simpl
+         | |- @WfBaseModule _ => idtac "WBM"; constructor_simpl
+         | |- @WfActionT _ _ (convertLetExprSyntax_ActionT ?e) => apply WfLetExprSyntax
+         | |- @WfActionT _ _ _ => constructor_simpl
+         | |- NoDup _ => constructor_simpl
+         | H: _ \/ _ |- _ => destruct H; subst; simpl
+         (* | |- DisjKey _ _ => discharge_DisjKey *)
+         end;
+  discharge_DisjKey.
+
 Section DecExecSepOk.
   Variable decoder: Decoder.Decoder.
-  
-  Definition decexecSepWf := {| baseModule := (getFlat (decexecSep decoder execStub)) ;
-			        wfBaseModule := ltac:(discharge_wf)  |}.
+  Variable executer: Decoder.Executer.
+  Check dec.
+  Theorem dec_wf:
+    WfMod (ProcMemSpec.Decoder'mod (dec decoder)).
+  Proof.
+    repeat autounfold with ModuleDefs.
+    bk_discharge_wf.
+  Qed.
 
-  Definition decexecWf := {| baseModule := (getFlat (decexec decoder execStub)) ;
-			     wfBaseModule := ltac:(discharge_wf)  |}.
+  Theorem pgm_wf:
+    WfMod (RegFile'mod pgm).
+  Proof.
+    repeat autounfold with ModuleDefs.
+    bk_discharge_wf.
+  Qed.
+  Theorem e2wfifo_wf:
+    WfMod (FIFO'mod e2wfifo).
+  Proof.
+    repeat autounfold with ModuleDefs.
+    bk_discharge_wf.
+  Qed.
+  Theorem decexec_wfmod:
+     WfMod (decexec decoder executer).
+  Proof.
+    repeat autounfold with ModuleDefs.
+    discharge_wf.
+  Qed.
+
+Compute (flatten_inline_remove (decexec decoder executer)).
+
+Theorem decexec_inl_wf:
+  WfMod (flatten_inline_remove (decexec decoder executer)).
+Proof.
+    unfold decexec. unfold e2wfifo.
+    repeat autounfold with ModuleDefs.
+    discharge_append.
+  bk_discharge_wf.
+Qed.
+
+  Definition decexecWf := {| baseModule := (flatten_inline_remove (decexec decoder executer)) ;
+			     wfBaseModule := ltac:(repeat autounfold with ModuleDefs; bk_discharge_wf)  |}.
+
+
+  Definition decexecSepWf := {| baseModule := (flatten_inline_remove (decexecSep decoder executer)) ;
+			        wfBaseModule := ltac:(repeat autounfold with ModuleDefs; discharge_wf)  |}.
 
 
 Ltac unfold_mySimRel :=
@@ -263,6 +346,7 @@ Ltac discharge_whatever :=
           | H: _ |- exists _, _ => exists eq_refl
           end).
 
+
 (* repeat apply Forall2_cons. simpl; try (split; [try congruence | exists eq_refl; reflexivity; eauto]). *)
 Theorem decexecSep_ok:
     TraceInclusion decexecSepWf
@@ -304,18 +388,18 @@ Theorem decexecSep_ok:
       destruct H1.
       rewrite Hiregs. rewrite Hsregs. simpl.
 
-      evar (impl_d2efifo_validv0 : bool).
+      evar (impl_d2e_validv0 : bool).
       evar (impl_pcv0 : word PgmSz).
 
 
       econstructor 1 with (pgmv := pgmv)
-          (impl_d2efifo_validv := impl_d2efifo_validv0)
+          (impl_d2e_validv := impl_d2e_validv0)
 
 
           (impl_pcv := impl_pcv0).
       ** repeat f_equal.
        *** instantiate (impl_pcv0 := wzero PgmSz ^+ x1 ^+ $1). eauto.
-       *** instantiate (impl_d2efifo_validv0 := true). eauto.
+       *** instantiate (impl_d2e_validv0 := true). eauto.
 
 
 
@@ -324,7 +408,7 @@ Theorem decexecSep_ok:
          *** rewrite wzero_wplus with (w := x1) ; reflexivity.
          *** foo. (* spec_pcv = x1 *)
              destruct Hpcinv_decode. reflexivity. reflexivity.
-      ** intro. unfold impl_d2efifo_validv0 in H1. inv H1.
+      ** intro. unfold impl_d2e_validv0 in H1. inv H1.
       ** constructor. foo.
          *** simpl. trivial.
          *** simpl. foo. repeat split.
@@ -346,12 +430,12 @@ rewrite andb_true_iff. split.
       *** rewrite negb_true_iff. reflexivity.
 
      ** rewrite Hsregs. rewrite Hiregs. simpl.
-evar (impl_d2efifo_validv0 : bool).
-econstructor 1 with (impl_d2efifo_validv := impl_d2efifo_validv0).
-     *** repeat f_equal. unfold impl_d2efifo_validv0. trivial.
+evar (impl_d2e_validv0 : bool).
+econstructor 1 with (impl_d2e_validv := impl_d2e_validv0).
+     *** repeat f_equal. unfold impl_d2e_validv0. trivial.
      *** repeat f_equal.
      *** intro. inv H1.
-     *** unfold impl_d2efifo_validv0. intro. foo. destruct Hpcinv.
+     *** unfold impl_d2e_validv0. intro. foo. destruct Hpcinv.
          **** reflexivity.
          **** rewrite H1. rewrite H0. rewrite wzero_wplus. reflexivity.
      *** econstructor. foo. foo.
