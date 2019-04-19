@@ -231,6 +231,11 @@ Section DecExecSepOk.
   Qed.
 
 
+  Definition decexecMod := (decexec decoder executer).
+  Hint Unfold decexecMod : ModuleDefs.
+
+  Definition decexecWf := @Build_ModWf decexecMod ltac:(repeat autounfold with ModuleDefs; bk_discharge_wf).
+
   Definition decexecInlWf := flatten_inline_remove_ModWf (decexec decoder executer).
 
   Definition decexecSepWf := flatten_inline_remove_ModWf (decexecSep decoder executer).
