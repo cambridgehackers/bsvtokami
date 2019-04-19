@@ -44,7 +44,7 @@ Definition OpArithK := Bit 2.
 
 (* * interface Decoder *)
 Record Decoder := {
-    Decoder'mod: Mod;
+    Decoder'mod: ModWf;
     Decoder'isOp : string;
     Decoder'getOp : string;
     Decoder'getArithOp : string;
@@ -65,7 +65,7 @@ Hint Unfold Decoder'getAddr : ModuleDefs.
 
 (* * interface Executer *)
 Record Executer := {
-    Executer'mod: Mod;
+    Executer'mod: ModWf;
     Executer'execArith : string;
 }.
 
@@ -98,8 +98,7 @@ Module module'mkMemory.
 
     Definition mkMemoryModule: Mod :=
          (BKMODULE {
-        (BKMod (RegFile'mod mem :: nil))
-    with Method (instancePrefix--"doMem") (req : MemRq) : (Bit DataSz) :=
+         Method (instancePrefix--"doMem") (req : MemRq) : (Bit DataSz) :=
     (
         If ((#req @% "isLoad") == $$ (* intwidth *) (natToWord 1 1)) then (
         
@@ -134,7 +133,7 @@ Hint Unfold module'mkMemory.mkMemoryModule : ModuleDefs.
 
 (* * interface ToHost *)
 Record ToHost := {
-    ToHost'mod: Mod;
+    ToHost'mod: ModWf;
     ToHost'toHost : string;
 }.
 
@@ -170,8 +169,6 @@ Module module'procSpec.
     Definition procSpecModule: Mod :=
          (BKMODULE {
         Register pc : Bit PgmSz <-  (* intwidth *) (natToWord PgmSz 0)
-    with (BKMod (RegFile'mod rf :: nil))
-    with (BKMod (Memory'mod mem :: nil))
     with Rule instancePrefix--"doArith" :=
     (
         Read pc_v : Bit PgmSz <- pc ;
@@ -239,15 +236,17 @@ Module module'procSpec.
 
     Hint Unfold procSpecModule : ModuleDefs.
 (* Module procSpec type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> ToHost -> Module#(Empty) return type Decoder *)
-    Definition procSpec := Build_Empty procSpecModule.
-    Hint Unfold procSpec : ModuleDefs.
+(*    Definition procSpec := Build_Empty procSpecModule.
+    Hint Unfold procSpec : ModuleDefs. *)
     Hint Unfold procSpecModule : ModuleDefs.
 
     End Section'procSpec.
 End module'procSpec.
 
+(*
 Definition procSpec := module'procSpec.procSpec.
 Hint Unfold procSpec : ModuleDefs.
 Hint Unfold module'procSpec.procSpec : ModuleDefs.
 Hint Unfold module'procSpec.procSpecModule : ModuleDefs.
+*)
 
