@@ -8,8 +8,8 @@ Require Import FunctionalExtensionality.
 Set Implicit Arguments.
 
 Record Decoder :=
-  { getOp: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind OpK) ;
-    getArithOp: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind OpArithK) ;
+  { getOp: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind (Bit 2)) ;
+    getArithOp: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind (Bit 2)) ;
     getSrc1: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind (Bit RegFileSz)) ;
     getSrc2: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind (Bit RegFileSz)) ;
     getDst: forall ty, ty (Bit InstrSz) -> Expr ty (SyntaxKind (Bit RegFileSz)) ;
@@ -34,13 +34,13 @@ Definition decStub := Build_Decoder
 
 Record Executer :=
   {
-    execArith: forall ty, ty OpArithK -> ty (Bit DataSz) -> ty (Bit DataSz) -> Expr ty (SyntaxKind (Bit DataSz))
+    execArith: forall ty, ty (Bit 2) -> ty (Bit DataSz) -> ty (Bit DataSz) -> Expr ty (SyntaxKind (Bit DataSz))
   }.
 
 Hint Unfold Executer'execArith : ModuleDefs.
 
 Definition execStub := Build_Executer
-			  (fun ty (op: ty OpArithK) (val1 val2: ty (Bit DataSz)) => ($$(natToWord DataSz 22))%kami_expr).
+			  (fun ty (op: ty (Bit 2)) (val1 val2: ty (Bit DataSz)) => ($$(natToWord DataSz 22))%kami_expr).
 
 Module module'decoder.
     Section Section'decoder.
@@ -55,14 +55,7 @@ Module module'decoder.
                   LET instr_v : Bit InstrSz <- (Var _ (SyntaxKind _) instr) ;
                     Ret (getOp dec _ instr_v)
                 )
-              with Method (instancePrefix--"isOp") ( param : paramT ) : Bool :=
-                (
-                  LET instr_v : Bit InstrSz <- #param @% "_1" ;
-                  LET op1 : OpK <- #param @% "_2" ;
-                    LET op2 : OpK <- (getOp dec _ instr_v) ;
-                    Ret (#op1 == #op2)
-                )
-              with Method (instancePrefix--"getArithOp") ( instr : Bit InstrSz ) : OpArithK :=
+              with Method (instancePrefix--"getArithOp") ( instr : Bit InstrSz ) : Bit 2 :=
                 (
                   LET instr_v : Bit InstrSz <- (Var _ (SyntaxKind _) instr) ;
                     Ret (getArithOp dec _ instr_v)
@@ -115,7 +108,7 @@ Module module'executer.
     Variable exec : Executer.
     Variable instancePrefix: string.
     Definition paramT := STRUCT {
-                             "_1" :: OpArithK ;
+                             "_1" :: Bit 2 ;
                              "_2" :: (Bit DataSz) ;
                              "_3" :: (Bit DataSz)}%kami.
     Local Open Scope kami_expr.
@@ -123,7 +116,7 @@ Module module'executer.
          (MOD_WF {
               Method (instancePrefix--"execArith") ( param : paramT ) : (Bit DataSz) :=
                 (
-                  LET op : OpArithK <- #param @% "_1" ;
+                  LET op : Bit 2 <- #param @% "_1" ;
                   LET val1 : Bit DataSz <- #param @% "_2" ;
                   LET val2 : Bit DataSz <- #param @% "_3" ;
                   LET val : Bit DataSz <- (execArith exec _ op val1 val2) ;
