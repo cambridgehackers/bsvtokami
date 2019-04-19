@@ -243,13 +243,18 @@ Section ImplOk.
   Definition implMod := (impl decoder executer).
   Hint Unfold implMod : ModuleDefs.
 
-
+(*
   Definition specWf := @Build_ModWf specMod ltac:(repeat autounfold with ModuleDefs; bk_discharge_wf).
   Definition implWf := @Build_ModWf implMod ltac:(repeat autounfold with ModuleDefs; bk_discharge_wf).
 
   Definition specInlWf := flatten_inline_remove_ModWf specWf.
-  Definition implInlWf := flatten_inline_remove_ModWf implWf.
+  Definition implInlWf := flatten_inline_remove_ModWf implWf. *)
 
+  Definition specInl := flatten_inline_remove specMod.
+  Definition implInl := flatten_inline_remove implMod.
+
+  Hint Unfold specInl : ModuleDefs.
+  Hint Unfold implInl : ModuleDefs.
 
 Ltac unfold_mySimRel :=
   match goal with
@@ -343,14 +348,20 @@ Ltac discharge_whatever :=
           | H: _ |- exists _, _ => exists eq_refl
           end).
 
+Ltac discharge_simulationGeneralWf mySimRel :=
+  match goal with
+  | |- (TraceInclusion ?wfm1 ?wfm2) =>
+       apply simulationGeneral with (simRel := mySimRel)
+               (imp := (Syntax.module wfm1)) (spec := (Syntax.module wfm2))
+  end.
 
-(* repeat apply Forall2_cons. simpl; try (split; [try congruence | exists eq_refl; reflexivity; eauto]). *)
+
+
+Check implInl.
+
 Theorem impl_ok:
-    TraceInclusion implInlWf specInlWf.
+    TraceInclusion (Base implInl) (Base specInl).
   Proof.
-  unfold implInlWf.
-  unfold specInlWf.
-  unfold flatten_inline_remove_ModWf.
   discharge_simulationGeneral (mySimRel decoder).
    
   + destruct H. rewrite Hsregs. unfold getKindAttr. simpl. reflexivity.
