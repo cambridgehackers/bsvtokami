@@ -4,6 +4,7 @@ Require Import Bsvtokami.
 Require Import FIFO.
 Require Import ProcMemSpec ProcDecExec.
 Require Import FinNotations.
+Require Import BKProperties.
 Require Import BKTactics.
 Require Import Decoder.
 
@@ -356,65 +357,152 @@ Ltac discharge_simulationGeneralWf mySimRel :=
   end.
 
 
+Ltac discharge_flatten_inline_remove1 :=
+  repeat autounfold with ModuleDefs ;
+  idtac "unfolded moduledeefs" ;
+  unfold hideMethods ; unfold flatten_inline_remove ;
+  unfold inlineAll_All_mod ; simpl ;
+  unfold getAllRegisters ; simpl ;
+  unfold inlineAll_All ; simpl ;
+  unfold inlineAll_Meths ; simpl ;
+  idtac "unfolding inlineSingle_Meths_pos" ;
+  try (unfold inlineSingle_Meths_pos at 11 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 10 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 9 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 8 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 7 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 6 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 5 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 4 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 3 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 2 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 1 ; simpl) ;
+  idtac "unfolding inlineSingle_Meths_pos" ;
+  try (unfold inlineSingle_Meths_pos at 11 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 10 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 9 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 8 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 7 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 6 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 5 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 4 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 3 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 2 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 1 ; simpl) ;
+  idtac "unfolding inlineSingle_Meths_pos" ;
+  try (unfold inlineSingle_Meths_pos at 11 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 10 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 9 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 8 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 7 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 6 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 5 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 4 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 3 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 2 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 1 ; simpl) ;
+  idtac "unfolding inlineSingle_Meths_pos" ;
+  try (unfold inlineSingle_Meths_pos at 11 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 10 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 9 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 8 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 7 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 6 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 5 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 4 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 3 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 2 ; simpl) ;
+  try (unfold inlineSingle_Meths_pos at 1 ; simpl) ;
+  idtac "unfolding inlineAll_Rules" ;
+  unfold inlineAll_Rules ; unfold Datatypes.length ; unfold range ; simpl ;
+  unfold inlineSingle_Rules_pos ; simpl ;
+  unfold removeHides ;
+  unfold getRegisters ; unfold getRules ; unfold getMethods ;
+  unfold in_dec ; unfold getBool ; unfold negb ; unfold filter ; simpl ;
+  idtac "flatten_inline_remove".
+
+Ltac discharge_flatten_inline_remove2 :=
+  repeat autounfold with ModuleDefs ;
+  idtac "unfolded moduledeefs" ;
+  unfold hideMethods ; unfold flatten_inline_remove ;
+  unfold inlineAll_All_mod ; simpl ;
+  unfold getAllRegisters ; simpl ;
+  unfold inlineAll_All ; simpl ;
+  unfold inlineAll_Meths ; simpl ;
+  unfold inlineSingle_Meths_pos at 11 ; simpl ;
+  unfold inlineSingle_Meths_pos at 10 ; simpl ;
+  unfold inlineSingle_Meths_pos at 9 ; simpl ;
+  unfold inlineSingle_Meths_pos at 8 ; simpl ;
+  unfold inlineSingle_Meths_pos at 7 ; simpl ;
+  unfold inlineSingle_Meths_pos at 6 ; simpl ;
+  unfold inlineSingle_Meths_pos at 5 ; simpl ;
+  unfold inlineSingle_Meths_pos at 4 ; simpl ;
+  unfold inlineSingle_Meths_pos at 3 ; simpl ;
+  unfold inlineSingle_Meths_pos at 2 ; simpl ;
+  unfold inlineSingle_Meths_pos at 1 ; simpl ;
+  unfold inlineSingle_Meths_pos at 11 ; simpl ;
+  unfold inlineSingle_Meths_pos at 10 ; simpl ;
+  unfold inlineSingle_Meths_pos at 9 ; simpl ;
+  unfold inlineSingle_Meths_pos at 8 ; simpl ;
+  unfold inlineSingle_Meths_pos at 7 ; simpl ;
+  unfold inlineSingle_Meths_pos at 6 ; simpl ;
+  unfold inlineSingle_Meths_pos at 5 ; simpl ;
+  unfold inlineSingle_Meths_pos at 4 ; simpl ;
+  unfold inlineSingle_Meths_pos at 3 ; simpl ;
+  unfold inlineSingle_Meths_pos at 2 ; simpl ;
+  unfold inlineSingle_Meths_pos at 1 ; simpl ;
+  unfold inlineSingle_Meths_pos at 11 ; simpl ;
+  unfold inlineSingle_Meths_pos at 10 ; simpl ;
+  unfold inlineSingle_Meths_pos at 9 ; simpl ;
+  unfold inlineSingle_Meths_pos at 8 ; simpl ;
+  unfold inlineSingle_Meths_pos at 7 ; simpl ;
+  unfold inlineSingle_Meths_pos at 6 ; simpl ;
+  unfold inlineSingle_Meths_pos at 5 ; simpl ;
+  unfold inlineSingle_Meths_pos at 4 ; simpl ;
+  unfold inlineSingle_Meths_pos at 3 ; simpl ;
+  unfold inlineSingle_Meths_pos at 2 ; simpl ;
+  unfold inlineSingle_Meths_pos at 1 ; simpl ;
+  unfold inlineSingle_Meths_pos at 11 ; simpl ;
+  unfold inlineSingle_Meths_pos at 10 ; simpl ;
+  unfold inlineSingle_Meths_pos at 9 ; simpl ;
+  unfold inlineSingle_Meths_pos at 8 ; simpl ;
+  unfold inlineSingle_Meths_pos at 7 ; simpl ;
+  unfold inlineSingle_Meths_pos at 6 ; simpl ;
+  unfold inlineSingle_Meths_pos at 5 ; simpl ;
+  unfold inlineSingle_Meths_pos at 4 ; simpl ;
+  unfold inlineSingle_Meths_pos at 3 ; simpl ;
+  unfold inlineSingle_Meths_pos at 2 ; simpl ;
+  unfold inlineSingle_Meths_pos at 1 ; simpl ;
+  unfold inlineAll_Rules ; unfold Datatypes.length ; unfold range ; simpl ;
+  unfold inlineSingle_Rules_pos ; simpl ;
+  unfold removeHides ;
+  unfold getRegisters ; unfold getRules ; unfold getMethods ;
+  unfold in_dec ; unfold getBool ; unfold negb ; unfold filter ; simpl ;
+  idtac "flatten_inline_remove".
+
+Theorem implInlWf:
+  WfBaseModule implInl.
+Proof.
+  idtac "implInlWf".
+  discharge_flatten_inline_remove1.
+  discharge_wf.
+Qed.
+ 
+Theorem specInlWf:
+  WfBaseModule specInl.
+Proof.
+  idtac "specInlWf".
+  discharge_flatten_inline_remove1.
+  discharge_wf.
+Qed.
 
 Theorem impl_ok:
-    TraceInclusion (Base implInl) (Base specInl).
+    TraceInclusion (getModWf {| baseModule := implInl ; wfBaseModule := ltac:(apply implInlWf) |})
+                   (getModWf {| baseModule := specInl ; wfBaseModule := ltac:(apply specInlWf) |}).
   Proof.
-  repeat autounfold with ModuleDefs.
-  unfold hideMethods. unfold flatten_inline_remove.
-  unfold inlineAll_All_mod. simpl.
-  unfold getAllRegisters. simpl.
-  unfold inlineAll_All. simpl.
-  unfold inlineAll_Meths. simpl.
-  unfold inlineSingle_Meths_pos at 11. simpl.
-  unfold inlineSingle_Meths_pos at 10. simpl.
-  unfold inlineSingle_Meths_pos at 9. simpl.
-  unfold inlineSingle_Meths_pos at 8. simpl.
-  unfold inlineSingle_Meths_pos at 7. simpl.
-  unfold inlineSingle_Meths_pos at 6. simpl.
-  unfold inlineSingle_Meths_pos at 5. simpl.
-  unfold inlineSingle_Meths_pos at 4. simpl.
-  unfold inlineSingle_Meths_pos at 3. simpl.
-  unfold inlineSingle_Meths_pos at 2. simpl.
-  unfold inlineSingle_Meths_pos at 1. simpl.
-  unfold inlineSingle_Meths_pos at 11. simpl.
-  unfold inlineSingle_Meths_pos at 10. simpl.
-  unfold inlineSingle_Meths_pos at 9. simpl.
-  unfold inlineSingle_Meths_pos at 8. simpl.
-  unfold inlineSingle_Meths_pos at 7. simpl.
-  unfold inlineSingle_Meths_pos at 6. simpl.
-  unfold inlineSingle_Meths_pos at 5. simpl.
-  unfold inlineSingle_Meths_pos at 4. simpl.
-  unfold inlineSingle_Meths_pos at 3. simpl.
-  unfold inlineSingle_Meths_pos at 2. simpl.
-  unfold inlineSingle_Meths_pos at 1. simpl.
-  unfold inlineSingle_Meths_pos at 11. simpl.
-  unfold inlineSingle_Meths_pos at 10. simpl.
-  unfold inlineSingle_Meths_pos at 9. simpl.
-  unfold inlineSingle_Meths_pos at 8. simpl.
-  unfold inlineSingle_Meths_pos at 7. simpl.
-  unfold inlineSingle_Meths_pos at 6. simpl.
-  unfold inlineSingle_Meths_pos at 5. simpl.
-  unfold inlineSingle_Meths_pos at 4. simpl.
-  unfold inlineSingle_Meths_pos at 3. simpl.
-  unfold inlineSingle_Meths_pos at 2. simpl.
-  unfold inlineSingle_Meths_pos at 1. simpl.
-  unfold inlineSingle_Meths_pos at 11. simpl.
-  unfold inlineSingle_Meths_pos at 10. simpl.
-  unfold inlineSingle_Meths_pos at 9. simpl.
-  unfold inlineSingle_Meths_pos at 8. simpl.
-  unfold inlineSingle_Meths_pos at 7. simpl.
-  unfold inlineSingle_Meths_pos at 6. simpl.
-  unfold inlineSingle_Meths_pos at 5. simpl.
-  unfold inlineSingle_Meths_pos at 4. simpl.
-  unfold inlineSingle_Meths_pos at 3. simpl.
-  unfold inlineSingle_Meths_pos at 2. simpl.
-  unfold inlineSingle_Meths_pos at 1. simpl.
-  unfold inlineAll_Rules. unfold Datatypes.length. unfold range. simpl.
-  unfold inlineSingle_Rules_pos. simpl.
-  unfold removeHides.
-  unfold getRegisters. unfold getRules. unfold getMethods.
-  unfold in_dec. unfold getBool. unfold negb. unfold filter. simpl.
+  idtac "impl_ok".
+  discharge_flatten_inline_remove2.
+  apply BKProperties.simulationGeneral with (simRel := (mySimRel decoder)).
   discharge_simulationGeneral (mySimRel decoder).
    
   + destruct H. rewrite Hsregs. unfold getKindAttr. simpl. reflexivity.

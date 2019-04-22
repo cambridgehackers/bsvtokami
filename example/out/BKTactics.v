@@ -1,5 +1,6 @@
 Require Import Bool String.
 Require Import Kami.All.
+Require Import BKProperties.
 
 Ltac do_inlining :=
   repeat autounfold with ModuleDefs;
@@ -126,3 +127,4 @@ Ltac bk_discharge_simulationZero mySimRel :=
             | H': P = _ |- _ => rewrite ?H' in *; simpl in *; try discriminate
             end
           end) ; dest; simpl in *; repeat subst; simpl in *.
+
