@@ -357,11 +357,64 @@ Ltac discharge_simulationGeneralWf mySimRel :=
 
 
 
-Check implInl.
-
 Theorem impl_ok:
     TraceInclusion (Base implInl) (Base specInl).
   Proof.
+  repeat autounfold with ModuleDefs.
+  unfold hideMethods. unfold flatten_inline_remove.
+  unfold inlineAll_All_mod. simpl.
+  unfold getAllRegisters. simpl.
+  unfold inlineAll_All. simpl.
+  unfold inlineAll_Meths. simpl.
+  unfold inlineSingle_Meths_pos at 11. simpl.
+  unfold inlineSingle_Meths_pos at 10. simpl.
+  unfold inlineSingle_Meths_pos at 9. simpl.
+  unfold inlineSingle_Meths_pos at 8. simpl.
+  unfold inlineSingle_Meths_pos at 7. simpl.
+  unfold inlineSingle_Meths_pos at 6. simpl.
+  unfold inlineSingle_Meths_pos at 5. simpl.
+  unfold inlineSingle_Meths_pos at 4. simpl.
+  unfold inlineSingle_Meths_pos at 3. simpl.
+  unfold inlineSingle_Meths_pos at 2. simpl.
+  unfold inlineSingle_Meths_pos at 1. simpl.
+  unfold inlineSingle_Meths_pos at 11. simpl.
+  unfold inlineSingle_Meths_pos at 10. simpl.
+  unfold inlineSingle_Meths_pos at 9. simpl.
+  unfold inlineSingle_Meths_pos at 8. simpl.
+  unfold inlineSingle_Meths_pos at 7. simpl.
+  unfold inlineSingle_Meths_pos at 6. simpl.
+  unfold inlineSingle_Meths_pos at 5. simpl.
+  unfold inlineSingle_Meths_pos at 4. simpl.
+  unfold inlineSingle_Meths_pos at 3. simpl.
+  unfold inlineSingle_Meths_pos at 2. simpl.
+  unfold inlineSingle_Meths_pos at 1. simpl.
+  unfold inlineSingle_Meths_pos at 11. simpl.
+  unfold inlineSingle_Meths_pos at 10. simpl.
+  unfold inlineSingle_Meths_pos at 9. simpl.
+  unfold inlineSingle_Meths_pos at 8. simpl.
+  unfold inlineSingle_Meths_pos at 7. simpl.
+  unfold inlineSingle_Meths_pos at 6. simpl.
+  unfold inlineSingle_Meths_pos at 5. simpl.
+  unfold inlineSingle_Meths_pos at 4. simpl.
+  unfold inlineSingle_Meths_pos at 3. simpl.
+  unfold inlineSingle_Meths_pos at 2. simpl.
+  unfold inlineSingle_Meths_pos at 1. simpl.
+  unfold inlineSingle_Meths_pos at 11. simpl.
+  unfold inlineSingle_Meths_pos at 10. simpl.
+  unfold inlineSingle_Meths_pos at 9. simpl.
+  unfold inlineSingle_Meths_pos at 8. simpl.
+  unfold inlineSingle_Meths_pos at 7. simpl.
+  unfold inlineSingle_Meths_pos at 6. simpl.
+  unfold inlineSingle_Meths_pos at 5. simpl.
+  unfold inlineSingle_Meths_pos at 4. simpl.
+  unfold inlineSingle_Meths_pos at 3. simpl.
+  unfold inlineSingle_Meths_pos at 2. simpl.
+  unfold inlineSingle_Meths_pos at 1. simpl.
+  unfold inlineAll_Rules. unfold Datatypes.length. unfold range. simpl.
+  unfold inlineSingle_Rules_pos. simpl.
+  unfold removeHides.
+  unfold getRegisters. unfold getRules. unfold getMethods.
+  unfold in_dec. unfold getBool. unfold negb. unfold filter. simpl.
   discharge_simulationGeneral (mySimRel decoder).
    
   + destruct H. rewrite Hsregs. unfold getKindAttr. simpl. reflexivity.
