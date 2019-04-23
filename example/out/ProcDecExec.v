@@ -38,11 +38,10 @@ Module module'mkDecExec.
     (
         Read pc_v : Bit PgmSz <- (instancePrefix--"pc") ;
         Read rf_v : Array NumRegs (Bit DataSz) <- (instancePrefix--"rf") ;
-       (* call expr ProcDecExec.bsv:18 *) BKCall call19 : Bit InstrSz <-  (* translateCall *) (pgm--"sub") ((#pc_v) : Bit PgmSz)  ;
-       (* call expr ProcDecExec.bsv:18 *) BKCall call18 : Bit 2 <-  (* translateCall *) (dec--"getOp") ((#call19) : Bit InstrSz)  ;
+       BKCall inst : Bit InstrSz <-  (* translateCall *) (pgm--"sub") ((#pc_v) : Bit PgmSz)  ;
+       BKCall op : Bit 2 <-  (* translateCall *) (dec--"getOp") ((#inst) : Bit InstrSz)  ;
 
-        Assert(#call18 == ($$ (* isConstT *)opArith)) ;
-       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) (pgm--"sub") ((#pc_v) : Bit PgmSz)  ;
+        Assert(#op == ($$ (* isConstT *)opArith)) ;
        BKCall src1 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) (dec--"getSrc1") ((#inst) : Bit InstrSz)  ;
        BKCall src2 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) (dec--"getSrc2") ((#inst) : Bit InstrSz)  ;
        BKCall dst : Bit RegFileSz (* varbinding *) <-  (* translateCall *) (dec--"getDst") ((#inst) : Bit InstrSz)  ;
@@ -57,7 +56,7 @@ Module module'mkDecExec.
     }). (* mkDecExec *)
 
     Hint Unfold mkDecExecModule : ModuleDefs.
-(* Module mkDecExec type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> Module#(NoMethods) return type Decoder *)
+
     Definition mkDecExec := Build_NoMethods mkDecExecModule.
     Hint Unfold mkDecExec : ModuleDefs.
     Hint Unfold mkDecExecModule : ModuleDefs.
@@ -129,7 +128,7 @@ Module module'mkDecExecSep.
     }). (* mkDecExecSep *)
 
     Hint Unfold mkDecExecSepModule : ModuleDefs.
-(* Module mkDecExecSep type RegFile#(Bit#(PgmSz), Bit#(InstrSz)) -> Decoder -> Executer -> Memory -> Reg#(Vector#(NumRegs, Bit#(DataSz))) -> ToHost -> Module#(NoMethods) return type Decoder *)
+
     Definition mkDecExecSep := Build_NoMethods mkDecExecSepModule.
     Hint Unfold mkDecExecSep : ModuleDefs.
     Hint Unfold mkDecExecSepModule : ModuleDefs.
