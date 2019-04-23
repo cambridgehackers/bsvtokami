@@ -185,9 +185,11 @@ Section ImplOk.
   Hint Unfold implInl : ModuleDefs.
 
 
-Ltac discharge_flatten_inline_remove1 :=
+Local Ltac repeat_autounfold_moduledefs := 
   repeat autounfold with ModuleDefs ;
-  idtac "unfolded moduledeefs" ;
+  idtac "unfolded moduledefs".
+
+Ltac unfold_flatten_inline_remove :=
   unfold hideMethods ; unfold flatten_inline_remove ;
   unfold inlineAll_All_mod ; simpl ;
   unfold getAllRegisters ; simpl ;
@@ -249,81 +251,30 @@ Ltac discharge_flatten_inline_remove1 :=
   unfold in_dec ; unfold getBool ; unfold negb ; unfold filter ; simpl ;
   idtac "flatten_inline_remove".
 
-Ltac discharge_flatten_inline_remove2 :=
-  repeat autounfold with ModuleDefs ;
-  idtac "unfolded moduledeefs" ;
-  unfold hideMethods ; unfold flatten_inline_remove ;
-  unfold inlineAll_All_mod ; simpl ;
-  unfold getAllRegisters ; simpl ;
-  unfold inlineAll_All ; simpl ;
-  unfold inlineAll_Meths ; simpl ;
-  unfold inlineSingle_Meths_pos at 11 ; simpl ;
-  unfold inlineSingle_Meths_pos at 10 ; simpl ;
-  unfold inlineSingle_Meths_pos at 9 ; simpl ;
-  unfold inlineSingle_Meths_pos at 8 ; simpl ;
-  unfold inlineSingle_Meths_pos at 7 ; simpl ;
-  unfold inlineSingle_Meths_pos at 6 ; simpl ;
-  unfold inlineSingle_Meths_pos at 5 ; simpl ;
-  unfold inlineSingle_Meths_pos at 4 ; simpl ;
-  unfold inlineSingle_Meths_pos at 3 ; simpl ;
-  unfold inlineSingle_Meths_pos at 2 ; simpl ;
-  unfold inlineSingle_Meths_pos at 1 ; simpl ;
-  unfold inlineSingle_Meths_pos at 11 ; simpl ;
-  unfold inlineSingle_Meths_pos at 10 ; simpl ;
-  unfold inlineSingle_Meths_pos at 9 ; simpl ;
-  unfold inlineSingle_Meths_pos at 8 ; simpl ;
-  unfold inlineSingle_Meths_pos at 7 ; simpl ;
-  unfold inlineSingle_Meths_pos at 6 ; simpl ;
-  unfold inlineSingle_Meths_pos at 5 ; simpl ;
-  unfold inlineSingle_Meths_pos at 4 ; simpl ;
-  unfold inlineSingle_Meths_pos at 3 ; simpl ;
-  unfold inlineSingle_Meths_pos at 2 ; simpl ;
-  unfold inlineSingle_Meths_pos at 1 ; simpl ;
-  unfold inlineSingle_Meths_pos at 11 ; simpl ;
-  unfold inlineSingle_Meths_pos at 10 ; simpl ;
-  unfold inlineSingle_Meths_pos at 9 ; simpl ;
-  unfold inlineSingle_Meths_pos at 8 ; simpl ;
-  unfold inlineSingle_Meths_pos at 7 ; simpl ;
-  unfold inlineSingle_Meths_pos at 6 ; simpl ;
-  unfold inlineSingle_Meths_pos at 5 ; simpl ;
-  unfold inlineSingle_Meths_pos at 4 ; simpl ;
-  unfold inlineSingle_Meths_pos at 3 ; simpl ;
-  unfold inlineSingle_Meths_pos at 2 ; simpl ;
-  unfold inlineSingle_Meths_pos at 1 ; simpl ;
-  unfold inlineSingle_Meths_pos at 11 ; simpl ;
-  unfold inlineSingle_Meths_pos at 10 ; simpl ;
-  unfold inlineSingle_Meths_pos at 9 ; simpl ;
-  unfold inlineSingle_Meths_pos at 8 ; simpl ;
-  unfold inlineSingle_Meths_pos at 7 ; simpl ;
-  unfold inlineSingle_Meths_pos at 6 ; simpl ;
-  unfold inlineSingle_Meths_pos at 5 ; simpl ;
-  unfold inlineSingle_Meths_pos at 4 ; simpl ;
-  unfold inlineSingle_Meths_pos at 3 ; simpl ;
-  unfold inlineSingle_Meths_pos at 2 ; simpl ;
-  unfold inlineSingle_Meths_pos at 1 ; simpl ;
-  unfold inlineAll_Rules ; unfold Datatypes.length ; unfold range ; simpl ;
-  unfold inlineSingle_Rules_pos ; simpl ;
-  unfold removeHides ;
-  unfold getRegisters ; unfold getRules ; unfold getMethods ;
-  unfold in_dec ; unfold getBool ; unfold negb ; unfold filter ; simpl ;
-  idtac "flatten_inline_remove".
+Ltac discharge_flatten_inline_remove :=
+  time repeat_autounfold_moduledefs ;
+  time unfold_flatten_inline_remove.  
 
+(*
 Theorem implInlWf:
   WfBaseModule implInl.
 Proof.
   idtac "implInlWf".
-  discharge_flatten_inline_remove1.
-  discharge_wf.
+  discharge_flatten_inline_remove.
+  idtac "discharging wf"
+  time discharge_wf.
 Qed.
  
 Theorem specInlWf:
   WfBaseModule specInl.
 Proof.
   idtac "specInlWf".
-  discharge_flatten_inline_remove1.
-  discharge_wf.
+  discharge_flatten_inline_remove.
+  idtac "discharging wf"
+  time discharge_wf.
 Qed.
 
+*)
 
 Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
  {
@@ -496,13 +447,16 @@ Ltac bk_discharge_simulationGeneral mySimRel :=
   clean_hyp; auto; clean_hyp.
 
 Theorem impl_ok:
-    TraceInclusion (getModWf {| baseModule := implInl ; wfBaseModule := ltac:(apply implInlWf) |})
-                   (getModWf {| baseModule := specInl ; wfBaseModule := ltac:(apply specInlWf) |}).
+    TraceInclusion implInl specInl 
+(*
+                   (getModWf {| baseModule := implInl ; wfBaseModule := ltac:(apply implInlWf) |})
+                   (getModWf {| baseModule := specInl ; wfBaseModule := ltac:(apply specInlWf) |})
+*).
   Proof.
   idtac "impl_ok".
-  discharge_flatten_inline_remove2.
+  discharge_flatten_inline_remove.
   idtac "apply simulationGeneral".
-  bk_discharge_simulationGeneral (mySimRel decoder).
+  time bk_discharge_simulationGeneral (mySimRel decoder).
   + reflexivity.
 
   + (* decode rule *)
