@@ -39,7 +39,7 @@ Section DecExec.
   Local Definition dec: ProcMemSpec.Decoder := mkDecoder kamidec "dec".
   (* Local Definition exec: ProcMemSpec.Executer := mkExecuter kamiexec "exec". *)
 
-  Local Definition pgm := mkRegFileFull (Bit PgmSz) (Bit InstrSz) "pgm".
+  Local Definition pgm := mkRegFileFull1 NumInstrs (Bit InstrSz) "pgm".
 
   Local Definition e2wfifo := mkFIFO (Bit DataSz) "e2wfifo".
 
@@ -124,76 +124,10 @@ Hint Unfold e2wfifo: ModuleDefs.
 Hint Unfold spec: ModuleDefs.
 Hint Unfold impl: ModuleDefs.
 
-
-Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
- {
-   pgmv: (Fin.t NumInstrs -> word DataSz) ;
-
-   impl_d2e_validv: bool ;
-   impl_pcv: word PgmSz ;
-   impl_e2w_validv: fullType type (SyntaxKind (Bit 1)) ;
-   impl_e2w_valv: fullType type (SyntaxKind (Bit DataSz)) ;
-   impl_rf_v: fullType type (SyntaxKind (Array 32 (Bit DataSz))) ;
-
-   spec_pcv: word PgmSz ;
-   spec_e2w_validv: fullType type (SyntaxKind (Bit 1)) ;
-   spec_e2w_valv: fullType type (SyntaxKind (Bit DataSz)) ;
-   spec_rf_v: (Fin.t 32 -> word DataSz) ;
-
-   impl_d2e_addrv    : word AddrSz ;
-   impl_d2e_arithopv : fullType type (SyntaxKind OpArithK) ;
-   impl_d2e_opv      : fullType type (SyntaxKind OpK) ;
-   impl_d2e_pcv      : word PgmSz ;
-   impl_d2e_dstv     : word RegFileSz ;
-   impl_d2e_src1v    : word RegFileSz ;
-   impl_d2e_src2v    : word RegFileSz ;
-
-   Hiregs: iregs =
-   ("impl-pc", existT _ (SyntaxKind (Bit PgmSz)) impl_pcv)
-   :: ("impl-d2e_valid", existT _ (SyntaxKind Bool) impl_d2e_validv)
-   :: ("impl-d2e_pc", existT _ (SyntaxKind (Bit PgmSz)) impl_d2e_pcv)
-   :: ("impl-d2e_op", existT _ (SyntaxKind OpK) impl_d2e_opv)
-   :: ("impl-d2e_arithOp", existT _ (SyntaxKind OpArithK) impl_d2e_arithopv)
-   :: ("impl-d2e_src1", existT _ (SyntaxKind (Bit RegFileSz)) impl_d2e_src1v)
-   :: ("impl-d2e_src2", existT _ (SyntaxKind (Bit RegFileSz)) impl_d2e_src2v)
-   :: ("impl-d2e_dst", existT _ (SyntaxKind (Bit RegFileSz)) impl_d2e_dstv)
-   :: ("impl-rf", existT _ (SyntaxKind (Array 32 (Bit DataSz))) impl_rf_v)
-   :: ("pgm-rfreg", existT _ (SyntaxKind (Array NumInstrs (Bit InstrSz))) pgmv)
-   :: ("e2wfifo-valid", existT (fullType type) (SyntaxKind (Bit 1)) impl_e2w_validv)
-   :: ("e2wfifo-v", existT (fullType type) (SyntaxKind (Bit DataSz)) impl_e2w_valv)
-   :: nil ;
-
-   Hsregs: sregs =
-    ("spec-pc", existT (fullType type) (SyntaxKind (Bit PgmSz)) spec_pcv)
-    :: ("spec-rf", existT (fullType type) (SyntaxKind (Array 32 (Bit DataSz))) spec_rf_v)
-    :: ("pgm-rfreg", existT (fullType type) (SyntaxKind (Array NumInstrs (Bit InstrSz))) pgmv)
-    :: ("e2wfifo-valid", existT (fullType type) (SyntaxKind (Bit 1)) spec_e2w_validv)
-    :: ("e2wfifo-v", existT (fullType type) (SyntaxKind (Bit DataSz)) spec_e2w_valv)
-    :: nil ;
-
-   Hpcinv: (impl_d2e_validv = true ) -> (impl_pcv = impl_d2e_pcv ^+ $1 /\ spec_pcv = impl_d2e_pcv) ;
-   Hpcinv_decode: (impl_d2e_validv = false ) -> (impl_pcv = spec_pcv) ;
-   Hdeinv: decexec_d2e_inv dec pgmv impl_pcv
-               impl_d2e_pcv
-               impl_d2e_validv
-               impl_d2e_addrv
-               impl_d2e_arithopv
-               impl_d2e_opv
-               impl_d2e_pcv
-               impl_d2e_dstv 
-               impl_d2e_src1v
-               impl_d2e_src2v ;
-
-   He2w_valid: impl_e2w_validv = spec_e2w_validv ;
-   He2w_val:   impl_e2w_validv = (natToWord 1 1) ->  impl_e2w_valv = spec_e2w_valv ;
-
- }.
-
-
 Local Ltac constructor_simpl :=
   econstructor; eauto; simpl; unfold not; intros.
 
-Ltac bk_discharge_wf :=
+Local Ltac bk_discharge_wf :=
   repeat match goal with
          | |- @WfMod _ => constructor_simpl
          | |- @WfConcat _ _ => constructor_simpl
@@ -244,117 +178,11 @@ Section ImplOk.
   Definition implMod := (impl decoder executer).
   Hint Unfold implMod : ModuleDefs.
 
-(*
-  Definition specWf := @Build_ModWf specMod ltac:(repeat autounfold with ModuleDefs; bk_discharge_wf).
-  Definition implWf := @Build_ModWf implMod ltac:(repeat autounfold with ModuleDefs; bk_discharge_wf).
-
-  Definition specInlWf := flatten_inline_remove_ModWf specWf.
-  Definition implInlWf := flatten_inline_remove_ModWf implWf. *)
-
   Definition specInl := flatten_inline_remove specMod.
   Definition implInl := flatten_inline_remove implMod.
 
   Hint Unfold specInl : ModuleDefs.
   Hint Unfold implInl : ModuleDefs.
-
-Ltac unfold_mySimRel :=
-  match goal with
-   | [ |- ?goal ] => idtac "mySimRel" ; simple refine goal
-   end.
-
-Ltac bk_discharge_simulationZero mySimRel :=
-  apply simulationZeroAction with (simRel := mySimRel) ; auto; simpl; intros;
-  (repeat match goal with
-          | H: _ \/ _ |- _ => destruct H
-          | H: False |- _ => exfalso; apply H
-          | H: (?a, ?b) = (?c, ?d) |- _ =>
-            let H2 := fresh in
-            inversion H;
-            pose proof (f_equal snd H) as H2 ;
-            simpl in H2; subst; clear H; EqDep_subst
-         | H: SemAction _ (convertLetExprSyntax_ActionT ?e) _ _ _ _ |- _ =>
-           apply convertLetExprSyntax_ActionT_full in H; dest; subst
-          | H: SemAction _ _ _ _ _ _ |- _ =>
-            apply inversionSemAction in H; dest; subst
-          | H: if ?P then _ else _ |- _ => case_eq P; let i := fresh in intros i; rewrite ?i in *; dest
-          | H: Forall2 _ _ _ |- _ => inv H
-          | H: ?a = ?a |- _ => clear H
-          | H: match convertLetExprSyntax_ActionT ?P with
-               | _ => _
-               end |- _ =>
-            case_eq P; intros;
-            match goal with
-            | H': P = _ |- _ => rewrite ?H' in *; simpl in *; try discriminate
-            end
-          end) ; dest; simpl in *; repeat subst; simpl in *.
-
-Ltac andb_true_intro_split := apply andb_true_intro; split.
-
-Lemma findStr A B (dec: forall a1 a2, {a1 = a2} + {a1 <> a2}):
-  forall (ls: list (A * B)),
-  forall x, In x ls <->
-            In x (filter (fun t => getBool (dec (fst x) (fst t))) ls).
-Proof.
-  induction ls; simpl; split; auto; intros.
-  - destruct H; [subst|]; auto.
-    + destruct (dec (fst x) (fst x)) ; simpl in *; tauto.
-    + apply IHls in H.
-      destruct (dec (fst x) (fst a)) ; simpl in *; auto.
-  - destruct (dec (fst x) (fst a)) ; simpl in *.
-    + destruct H; auto.
-      apply IHls in H; auto.
-    + eapply IHls in H; eauto.
-Qed.
-
-Ltac foo :=
-    subst;
-    repeat
-      (match goal with
-       | H:DisjKey _ _
-         |- _ =>
-         apply DisjKeyWeak_same in H;
-           [ unfold DisjKeyWeak in H; simpl in H | apply string_dec ]
-       | H: In ?x ?ls |- _ =>
-         apply (findStr string_dec) in H; simpl in H; destruct H; [|exfalso; auto]
-       | H:False |- _ => exfalso; apply H
-       | H:(?A, ?B) = (?P, ?Q)
-         |- _ =>
-         let H1 := fresh in
-         let H2 := fresh in
-         pose proof (f_equal fst H) as H1; pose proof (f_equal snd H) as H2; simpl in H1, H2;
-           clear H
-       | H:?A = ?A |- _ => clear H
-       | H:(?a ++ ?b)%string = (?a ++ ?c)%string |- _ => rewrite append_remove_prefix in H; subst
-       | H:(?a ++ ?b)%string = (?c ++ ?b)%string |- _ => rewrite append_remove_suffix in H; subst
-       | H:existT ?a ?b ?c1 = existT ?a ?b ?c2
-         |- _ => apply Eqdep.EqdepTheory.inj_pair2 in H
-       | H:?A = ?B |- _ => discriminate
-       | H: ?x && ?y = true |- _ => rewrite andb_true_iff in H
-       | H: negb ?x = true |- _ => apply negb_true_iff in H
-       | H: negb ?x = false |- _ => apply negb_false_iff in H
-       | H: ?x /\ ?y |- _ => destruct H
-       | H:SemAction _ (convertLetExprSyntax_ActionT ?e) _ _ _ _
-         |- _ => apply convertLetExprSyntax_ActionT_full in H; dest
-       | |- _ -> _ => intro
-       | |- ?a = ?a => reflexivity
-       end; subst).
-
-Ltac discharge_whatever :=
-  repeat (match goal with
-          | H: _ |- Forall2 ?p ?l1 ?l2 => apply Forall2_cons; simpl
-          | H: _ |- Forall2 ?p nil nil => apply Forall2_nil
-          | H: _ |- ?a /\ ?b => split
-          | H: _ |- _ :: _ = _ :: _ => repeat f_equal
-          | H: _ |- ?a = ?a => reflexivity
-          | H: _ |- exists _, _ => exists eq_refl
-          end).
-
-Ltac discharge_simulationGeneralWf mySimRel :=
-  match goal with
-  | |- (TraceInclusion ?wfm1 ?wfm2) =>
-       apply simulationGeneral with (simRel := mySimRel)
-               (imp := (Syntax.module wfm1)) (spec := (Syntax.module wfm2))
-  end.
 
 
 Ltac discharge_flatten_inline_remove1 :=
@@ -496,97 +324,220 @@ Proof.
   discharge_wf.
 Qed.
 
+
+Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
+ {
+   pgmv: (Fin.t NumInstrs -> word DataSz) ;
+
+   impl_d2e_validv: bool ;
+   impl_pcv: word PgmSz ;
+   impl_e2w_validv: fullType type (SyntaxKind (Bit 1)) ;
+   impl_e2w_valv: fullType type (SyntaxKind (Bit DataSz)) ;
+   impl_rf_v: fullType type (SyntaxKind (Array NumRegs (Bit DataSz))) ;
+
+   spec_pcv: word PgmSz ;
+   spec_e2w_validv: fullType type (SyntaxKind (Bit 1)) ;
+   spec_e2w_valv: fullType type (SyntaxKind (Bit DataSz)) ;
+   spec_rf_v: (Fin.t NumRegs -> word DataSz) ;
+
+   impl_d2e_addrv    : word AddrSz ;
+   impl_d2e_arithopv : fullType type (SyntaxKind OpArithK) ;
+   impl_d2e_opv      : fullType type (SyntaxKind OpK) ;
+   impl_d2e_pcv      : word PgmSz ;
+   impl_d2e_dstv     : word RegFileSz ;
+   impl_d2e_src1v    : word RegFileSz ;
+   impl_d2e_src2v    : word RegFileSz ;
+
+   Hiregs: iregs =
+   ("impl-pc", existT _ (SyntaxKind (Bit PgmSz)) impl_pcv)
+   :: ("impl-d2e_valid", existT _ (SyntaxKind Bool) impl_d2e_validv)
+   :: ("impl-d2e_pc", existT _ (SyntaxKind (Bit PgmSz)) impl_d2e_pcv)
+   :: ("impl-d2e_op", existT _ (SyntaxKind OpK) impl_d2e_opv)
+   :: ("impl-d2e_arithOp", existT _ (SyntaxKind OpArithK) impl_d2e_arithopv)
+   :: ("impl-d2e_src1", existT _ (SyntaxKind (Bit RegFileSz)) impl_d2e_src1v)
+   :: ("impl-d2e_src2", existT _ (SyntaxKind (Bit RegFileSz)) impl_d2e_src2v)
+   :: ("impl-d2e_dst", existT _ (SyntaxKind (Bit RegFileSz)) impl_d2e_dstv)
+   :: ("impl-rf", existT _ (SyntaxKind (Array NumRegs (Bit DataSz))) impl_rf_v)
+   :: ("pgm-rfreg", existT _ (SyntaxKind (Array NumInstrs (Bit InstrSz))) pgmv)
+   :: ("e2wfifo-valid", existT (fullType type) (SyntaxKind (Bit 1)) impl_e2w_validv)
+   :: ("e2wfifo-v", existT (fullType type) (SyntaxKind (Bit DataSz)) impl_e2w_valv)
+   :: nil ;
+
+   Hsregs: sregs =
+    ("spec-pc", existT (fullType type) (SyntaxKind (Bit PgmSz)) spec_pcv)
+    :: ("spec-rf", existT (fullType type) (SyntaxKind (Array NumRegs (Bit DataSz))) spec_rf_v)
+    :: ("pgm-rfreg", existT (fullType type) (SyntaxKind (Array NumInstrs (Bit InstrSz))) pgmv)
+    :: ("e2wfifo-valid", existT (fullType type) (SyntaxKind (Bit 1)) spec_e2w_validv)
+    :: ("e2wfifo-v", existT (fullType type) (SyntaxKind (Bit DataSz)) spec_e2w_valv)
+    :: nil ;
+
+   Hpcinv: (impl_d2e_validv = true ) -> (impl_pcv = impl_d2e_pcv ^+ $1 /\ spec_pcv = impl_d2e_pcv) ;
+   Hpcinv_decode: (impl_d2e_validv = false ) -> (impl_pcv = spec_pcv) ;
+   Hdeinv: decexec_d2e_inv dec pgmv impl_pcv
+               impl_d2e_pcv
+               impl_d2e_validv
+               impl_d2e_addrv
+               impl_d2e_arithopv
+               impl_d2e_opv
+               impl_d2e_pcv
+               impl_d2e_dstv 
+               impl_d2e_src1v
+               impl_d2e_src2v ;
+
+   He2w_valid: impl_e2w_validv = spec_e2w_validv ;
+   He2w_val:   impl_e2w_validv = (natToWord 1 1) ->  impl_e2w_valv = spec_e2w_valv ;
+
+ }.
+
+Ltac unfold_mySimRel :=
+  match goal with
+   | [ |- ?goal ] => idtac "mySimRel" ; simple refine goal
+   end.
+
+Ltac bk_discharge_simulationZero mySimRel :=
+  apply simulationZeroAction with (simRel := mySimRel) ; auto; simpl; intros;
+  (repeat match goal with
+          | H: _ \/ _ |- _ => destruct H
+          | H: False |- _ => exfalso; apply H
+          | H: (?a, ?b) = (?c, ?d) |- _ =>
+            let H2 := fresh in
+            inversion H;
+            pose proof (f_equal snd H) as H2 ;
+            simpl in H2; subst; clear H; EqDep_subst
+         | H: SemAction _ (convertLetExprSyntax_ActionT ?e) _ _ _ _ |- _ =>
+           apply convertLetExprSyntax_ActionT_full in H; dest; subst
+          | H: SemAction _ _ _ _ _ _ |- _ =>
+            apply inversionSemAction in H; dest; subst
+          | H: if ?P then _ else _ |- _ => case_eq P; let i := fresh in intros i; rewrite ?i in *; dest
+          | H: Forall2 _ _ _ |- _ => inv H
+          | H: ?a = ?a |- _ => clear H
+          | H: match convertLetExprSyntax_ActionT ?P with
+               | _ => _
+               end |- _ =>
+            case_eq P; intros;
+            match goal with
+            | H': P = _ |- _ => rewrite ?H' in *; simpl in *; try discriminate
+            end
+          end) ; dest; simpl in *; repeat subst; simpl in *.
+
+Ltac andb_true_intro_split := apply andb_true_intro; split.
+
+Lemma findStr A B (dec: forall a1 a2, {a1 = a2} + {a1 <> a2}):
+  forall (ls: list (A * B)),
+  forall x, In x ls <->
+            In x (filter (fun t => getBool (dec (fst x) (fst t))) ls).
+Proof.
+  induction ls; simpl; split; auto; intros.
+  - destruct H; [subst|]; auto.
+    + destruct (dec (fst x) (fst x)) ; simpl in *; tauto.
+    + apply IHls in H.
+      destruct (dec (fst x) (fst a)) ; simpl in *; auto.
+  - destruct (dec (fst x) (fst a)) ; simpl in *.
+    + destruct H; auto.
+      apply IHls in H; auto.
+    + eapply IHls in H; eauto.
+Qed.
+
+Ltac foo :=
+    subst;
+    repeat
+      (match goal with
+       | H:DisjKey _ _
+         |- _ =>
+         apply DisjKeyWeak_same in H;
+           [ unfold DisjKeyWeak in H; simpl in H | apply string_dec ]
+       | H: In ?x ?ls |- _ =>
+         apply (findStr string_dec) in H; simpl in H; destruct H; [|exfalso; auto]
+       | H:False |- _ => exfalso; apply H
+       | H:(?A, ?B) = (?P, ?Q)
+         |- _ =>
+         let H1 := fresh in
+         let H2 := fresh in
+         pose proof (f_equal fst H) as H1; pose proof (f_equal snd H) as H2; simpl in H1, H2;
+           clear H
+       | H:?A = ?A |- _ => clear H
+       | H:(?a ++ ?b)%string = (?a ++ ?c)%string |- _ => rewrite append_remove_prefix in H; subst
+       | H:(?a ++ ?b)%string = (?c ++ ?b)%string |- _ => rewrite append_remove_suffix in H; subst
+       | H:existT ?a ?b ?c1 = existT ?a ?b ?c2
+         |- _ => apply Eqdep.EqdepTheory.inj_pair2 in H
+       | H:?A = ?B |- _ => discriminate
+       | H: ?x && ?y = true |- _ => rewrite andb_true_iff in H
+       | H: negb ?x = true |- _ => apply negb_true_iff in H
+       | H: negb ?x = false |- _ => apply negb_false_iff in H
+       | H: ?x /\ ?y |- _ => destruct H
+       | H:SemAction _ (convertLetExprSyntax_ActionT ?e) _ _ _ _
+         |- _ => apply convertLetExprSyntax_ActionT_full in H; dest
+       | |- _ -> _ => intro
+       | |- ?a = ?a => reflexivity
+       end; subst).
+
+Ltac discharge_whatever :=
+  repeat (match goal with
+          | H: _ |- Forall2 ?p ?l1 ?l2 => apply Forall2_cons; simpl
+          | H: _ |- Forall2 ?p nil nil => apply Forall2_nil
+          | H: _ |- ?a /\ ?b => split
+          | H: _ |- _ :: _ = _ :: _ => repeat f_equal
+          | H: _ |- ?a = ?a => reflexivity
+          | H: _ |- exists _, _ => exists eq_refl
+          end).
+
+Ltac discharge_simulationGeneralWf mySimRel :=
+  match goal with
+  | |- (TraceInclusion ?wfm1 ?wfm2) =>
+       apply simulationGeneral with (simRel := mySimRel)
+               (imp := (Syntax.module wfm1)) (spec := (Syntax.module wfm2))
+  end.
+
+Ltac bk_discharge_simulationGeneral mySimRel :=
+  apply BKProperties.simulationGeneral with (simRel := mySimRel) ; auto; simpl; intros;
+  try match goal with
+      | H: mySimRel _ _ |- _ => inv H
+      end;
+  clean_hyp; auto; clean_hyp.
+
 Theorem impl_ok:
     TraceInclusion (getModWf {| baseModule := implInl ; wfBaseModule := ltac:(apply implInlWf) |})
                    (getModWf {| baseModule := specInl ; wfBaseModule := ltac:(apply specInlWf) |}).
   Proof.
   idtac "impl_ok".
   discharge_flatten_inline_remove2.
-  apply BKProperties.simulationGeneral with (simRel := (mySimRel decoder)).
-  discharge_simulationGeneral (mySimRel decoder).
-   
-  + destruct H. rewrite Hsregs. unfold getKindAttr. simpl. reflexivity.
-  + destruct H. rewrite Hiregs. unfold getKindAttr. simpl. reflexivity.
-  + 
-    repeat (match goal with
-           | H: RegT |- _ => let nm := fresh "nm" in
-                             let k := fresh "k" in
-                             let val := fresh "val" in
-                             destruct H as [nm [k val]]
-           end).
-    simpl in *. subst.
-    exists (("spec-e2wFifo_idx", existT (fullType type) (SyntaxKind (Bit (Nat.log2_up 32))) (wzero (Nat.log2_up 32)))
-          :: ("spec-e2wFifo_val", existT (fullType type) (SyntaxKind (Bit DataSz)) (wzero DataSz))
-          :: ("spec-e2wFifo_valid", existT (fullType type) (SyntaxKind Bool) false)
-          :: ("spec-pc", existT (fullType type) (SyntaxKind (Bit PgmSz)) (natToWord PgmSz 0))
-          :: ("pgm", existT (fullType type) (SyntaxKind (Array NumInstrs (Bit InstrSz))) val0)
-          :: ("spec-rf", existT (fullType type) (SyntaxKind (Array 32 (Bit DataSz))) val)
-          :: nil).
-   rewrite H14. rewrite H0.
-   simpl. split.
-   * discharge_whatever.
-   * econstructor. 
-    ** discharge_whatever.
-    ** discharge_whatever.
-    ** foo.
-    ** foo.
-    ** econstructor. foo. discharge_whatever. foo. foo. foo. foo. foo. foo.
-    ** foo.
-    ** foo.
-    ** foo.
+  idtac "apply simulationGeneral".
+  bk_discharge_simulationGeneral (mySimRel decoder).
+  + reflexivity.
+
   + (* decode rule *)
     left. split.
     * (* simRel oImp' oSpec *)
-      destruct H1.
-      rewrite Hiregs. rewrite Hsregs. simpl.
-
-      evar (impl_d2e_validv0 : bool).
-      evar (impl_pcv0 : word PgmSz).
-
-
-      econstructor 1 with (pgmv := pgmv)
-          (impl_d2e_validv := impl_d2e_validv0)
-
-
-          (impl_pcv := impl_pcv0).
-      ** repeat f_equal.
-       *** instantiate (impl_pcv0 := wzero PgmSz ^+ x1 ^+ $1). eauto.
-       *** instantiate (impl_d2e_validv0 := true). eauto.
-
-
-
-      ** repeat f_equal.
-      ** intro. unfold impl_pcv0. split.
-         *** rewrite wzero_wplus with (w := x1) ; reflexivity.
-         *** foo. (* spec_pcv = x1 *)
-             destruct Hpcinv_decode. reflexivity. reflexivity.
-      ** intro. unfold impl_d2e_validv0 in H1. inv H1.
-      ** constructor. foo.
-         *** simpl. trivial.
-         *** simpl. foo. repeat split.
-      ** subst. trivial.
-      ** intro. subst. trivial.
-      ** intro. subst.  destruct He2w_idx. reflexivity. reflexivity.
+     evar (impl_d2e_validv0 : bool).
+     evar (impl_pcv0 : word PgmSz).
+     econstructor 1 with (impl_d2e_validv := impl_d2e_validv0) (pgmv := x5) (impl_pcv := impl_pcv0) (spec_pcv := x).
+     ** repeat (f_equal; foo). instantiate (impl_d2e_validv0 := true). unfold impl_d2e_validv0.
+        rewrite wzero_wplus. unfold impl_pcv0; reflexivity. unfold impl_d2e_validv0; reflexivity.
+     ** repeat f_equal. admit.
+     ** foo. unfold impl_pcv0; split; reflexivity; reflexivity.
+     ** unfold impl_d2e_validv0. foo.
+     ** econstructor. simpl.
+      *** reflexivity.
+      *** simpl. repeat split. unfold impl_pcv0. rewrite wzero_wplus; reflexivity.
+     ** reflexivity.
+     ** admit.
     * reflexivity.
+
   + (* arith rule *)
-    destruct H1.
     right. exists "spec-decexecArith". eexists. split.
     * left. trivial.
     * (* reads spec *) eexists. (* updates spec *) eexists. split.
-     **
+     ** discharge_SemAction.
+        destruct Hdeinv. admit. simpl in H.
+          destruct Hpcinv. admit. rewrite H2. (* rewrite <- H. simpl in H. apply H.
+      *** rewrite negb_true_iff. reflexivity. *) admit.
 
- rewrite Hsregs. discharge_SemAction. foo.
-rewrite andb_true_iff. split.
-      *** destruct Hdeinv. reflexivity. 
-          destruct Hpcinv. reflexivity. rewrite H3. foo. simpl in H. apply H.
-      *** rewrite negb_true_iff. reflexivity.
-
-     ** rewrite Hsregs. rewrite Hiregs. simpl.
+     ** 
 evar (impl_d2e_validv0 : bool).
 econstructor 1 with (impl_d2e_validv := impl_d2e_validv0).
      *** repeat f_equal. unfold impl_d2e_validv0. trivial.
-     *** repeat f_equal.
-     *** intro. inv H1.
+     *** simpl. repeat f_equal.
+     *** intro. inv H.
      *** unfold impl_d2e_validv0. intro. foo. destruct Hpcinv.
          **** reflexivity.
          **** rewrite H1. rewrite H0. rewrite wzero_wplus. reflexivity.
@@ -595,6 +546,9 @@ econstructor 1 with (impl_d2e_validv := impl_d2e_validv0).
      *** intro; reflexivity.
      *** intro. destruct Hdeinv. foo.
       **** foo. simpl. destruct Hpcinv. reflexivity. rewrite H1. reflexivity.
+
+  + discharge_wf.
+  + discharge_wf.
 
 Qed.
 End ImplOk.
