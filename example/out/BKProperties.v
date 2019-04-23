@@ -329,7 +329,7 @@ Section SimulationZeroA.
 End SimulationZeroA.
 
 Section SimulationGeneral.
-  Variable imp spec: BaseModuleWf.
+  Variable imp spec: BaseModule.
   Variable NoSelfCalls: NoSelfCallBaseModule spec.
   
   Variable simRel: RegsT -> RegsT -> Prop.
@@ -380,11 +380,17 @@ Section SimulationGeneral.
       SemAction oImp (aImp2 type arg2) rImpl2 uImpl2 csImp2 ret2 ->
       exists k, In k (map fst uImpl1) /\ In k (map fst uImpl2).
 
+  Variable implWf : WfBaseModule imp.
+  Variable specWf : WfBaseModule spec.
+
   Theorem simulationGeneral:
     TraceInclusion (Base imp) (Base spec).
   Proof.
     idtac "simulationGeneral".
-    eapply simulationGeneralEx; eauto; intros.
+    eapply simulationGeneralEx with
+          (imp := {| baseModule := imp; wfBaseModule := implWf |})
+          (spec := {| baseModule := spec; wfBaseModule := specWf |}) ;
+      eauto; intros.
     - specialize (@simulationRule _ _ _ _ _ _ H H0 oSpec H1).
       destruct simulationRule; auto.
       dest.
@@ -394,7 +400,7 @@ Section SimulationGeneral.
       exists (doUpdRegs x2 oSpec); split; auto.
       
       pose proof (SemAction_NoDup_u H3) as sth.
-      destruct (wfBaseModule spec); dest.
+      destruct specWf; dest.
       pose proof (simRelGood H1) as sth2.
       apply (f_equal (map fst)) in sth2.
       rewrite ?map_map in *; simpl in *.
@@ -411,7 +417,7 @@ Section SimulationGeneral.
       exists x, x0, x1; repeat split; auto.
       exists (doUpdRegs x1 oSpec); split; auto.
       pose proof (SemAction_NoDup_u H3) as sth.
-      destruct (wfBaseModule spec); dest.
+      destruct specWf; dest.
       pose proof (simRelGood H1) as sth2.
       apply (f_equal (map fst)) in sth2.
       rewrite ?map_map in *; simpl in *.
