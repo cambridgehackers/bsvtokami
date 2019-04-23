@@ -318,6 +318,36 @@ Hint Unfold RegFile'mod : ModuleDefs.
 Hint Unfold RegFile'sub : ModuleDefs.
 Hint Unfold RegFile'upd : ModuleDefs.
 
+Module module'mkRegFile.
+    Section Section'mkRegFile.
+    Variable lo_index : nat.
+    Variable hi_index : nat.
+    Variable data_t : Kind.
+    Variable index_t : Kind.
+    Variable instancePrefix: string.
+    Definition mkRegFileModule: ModWf := (MOD_WF {
+           Register (instancePrefix--"rfreg") : data_t <- Default
+           with Method instancePrefix--"sub" (idx : index_t) : data_t :=
+             (Read regs : data_t <- (instancePrefix--"rfreg") ;
+                Ret #regs)
+               (* fixme:
+             with Method instancePrefix--"upd" (idx : index_t) (v : data_t) : Void :=
+               (Read regs : data_t <- (instancePrefix--"rfreg") ;
+                  Write (instancePrefix--"rfreg") : data_t <- #v;
+               Retv)
+               *)
+    }). (* mkRegFile *)
+
+(* Module mkRegFile type Module#(RegFile#(index_t, data_t)) return type RegFile#(index_t, data_t) *)
+    Definition mkRegFile := Build_RegFile mkRegFileModule%kami (instancePrefix--"sub") (instancePrefix--"upd").
+    End Section'mkRegFile.
+End module'mkRegFile.
+
+Definition mkRegFile := module'mkRegFile.mkRegFile.
+Hint Unfold mkRegFile : ModuleDefs.
+Hint Unfold module'mkRegFile.mkRegFile : ModuleDefs.
+Hint Unfold module'mkRegFile.mkRegFileModule : ModuleDefs.
+
 Module module'mkRegFileFull.
     Section Section'mkRegFileFull.
     Variable data_t : Kind.
@@ -345,6 +375,35 @@ Definition mkRegFileFull := module'mkRegFileFull.mkRegFileFull.
 Hint Unfold mkRegFileFull : ModuleDefs.
 Hint Unfold module'mkRegFileFull.mkRegFileFull : ModuleDefs.
 Hint Unfold module'mkRegFileFull.mkRegFileFullModule : ModuleDefs.
+
+Module module'mkRegFileFull1.
+    Section Section'mkRegFileFull1.
+    Variable numEntries : nat.
+    Variable data_t : Kind.
+    Variable instancePrefix: string.
+    Definition mkRegFileFull1Module: ModWf := (MOD_WF {
+           Register (instancePrefix--"rfreg") : (Array numEntries data_t) <- Default
+           with Method instancePrefix--"sub" (idx : Bit (Nat.log2_up numEntries)) : data_t :=
+             (Read regs : Array numEntries data_t <- (instancePrefix--"rfreg") ;
+              LET val : data_t <- #regs @[ #idx ] ;
+                Ret #val)
+               (* fixme:
+             with Method instancePrefix--"upd" (idx : (Nat.log2_up numEntries)) (v : data_t) : Void :=
+               (Read regs : Array numEntries data_t <- (instancePrefix--"rfreg") ;
+                LET regs <- #regs @[ #idx <- #v ] ;
+                  Write (instancePrefix--"rfreg") : Array numEntries data_t <- #regs;
+               Retv)
+               *)
+    }). (* mkRegFileFull1 *)
+
+    Definition mkRegFileFull1 := Build_RegFile mkRegFileFull1Module (instancePrefix--"sub") (instancePrefix--"upd").
+    End Section'mkRegFileFull1.
+End module'mkRegFileFull1.
+
+Definition mkRegFileFull1 := module'mkRegFileFull1.mkRegFileFull1.
+Hint Unfold mkRegFileFull1 : ModuleDefs.
+Hint Unfold module'mkRegFileFull1.mkRegFileFull1 : ModuleDefs.
+Hint Unfold module'mkRegFileFull1.mkRegFileFull1Module : ModuleDefs.
 
 (* more stuff *)
 
