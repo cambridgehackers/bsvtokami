@@ -4,7 +4,6 @@ Require Import Bsvtokami.
 Require Import FIFO.
 Require Import ProcMemSpec ProcDecExec.
 Require Import FinNotations.
-Require Import BKProperties.
 Require Import BKTactics.
 Require Import Decoder.
 
@@ -432,20 +431,6 @@ Ltac discharge_whatever :=
           | H: _ |- exists _, _ => exists eq_refl
           end).
 
-Ltac discharge_simulationGeneralWf mySimRel :=
-  match goal with
-  | |- (TraceInclusion ?wfm1 ?wfm2) =>
-       apply simulationGeneral with (simRel := mySimRel)
-               (imp := (Syntax.module wfm1)) (spec := (Syntax.module wfm2))
-  end.
-
-Ltac bk_discharge_simulationGeneral mySimRel :=
-  apply BKProperties.simulationGeneral with (simRel := mySimRel) ; auto; simpl; intros;
-  try match goal with
-      | H: mySimRel _ _ |- _ => inv H
-      end;
-  clean_hyp; auto; clean_hyp.
-
 Theorem impl_ok:
     TraceInclusion implInl specInl 
 (*
@@ -456,7 +441,7 @@ Theorem impl_ok:
   idtac "impl_ok".
   discharge_flatten_inline_remove.
   idtac "apply simulationGeneral".
-  time bk_discharge_simulationGeneral (mySimRel decoder).
+  time discharge_simulation (mySimRel decoder).
   + reflexivity.
 
   + (* decode rule *)
@@ -501,8 +486,6 @@ econstructor 1 with (impl_d2e_validv := impl_d2e_validv0).
      *** intro. destruct Hdeinv. foo.
       **** foo. simpl. destruct Hpcinv. reflexivity. rewrite H1. reflexivity.
 
-  + discharge_wf.
-  + discharge_wf.
 
 Qed.
 End ImplOk.
