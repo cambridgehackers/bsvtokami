@@ -1,6 +1,5 @@
 Require Import Bool String.
 Require Import Kami.All.
-Require Import BKProperties.
 
 Ltac do_inlining :=
   repeat autounfold with ModuleDefs;
