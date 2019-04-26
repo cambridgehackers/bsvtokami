@@ -249,7 +249,7 @@ Theorem pipelined_multicycle_ok:
     TraceInclusion decexecSepWf
                    decexecWf.
   Proof.
-  discharge_simulationGeneral mySimRel.
+  discharge_simulation mySimRel.
   + admit.
   + reflexivity.
   + (* decode rule *)
