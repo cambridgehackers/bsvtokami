@@ -1,8 +1,11 @@
 
-all: gradlebuild kamibuild examplebuild
+all: kamibuild examplebuild gradlebuild 
 
 gradlebuild:
 	gradle build
+
+bbv/Makefile:
+	git submodule update --init
 
 kamibuild:
 	cd bbv; make
@@ -10,7 +13,8 @@ kamibuild:
 	cd kami; make
 
 examplebuild:
-	cd example/out; make
+	cd kami-example; make
+	#cd example/out; make
 
 installdist:
 	gradle installDist
