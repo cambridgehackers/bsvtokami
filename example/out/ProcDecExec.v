@@ -40,6 +40,7 @@ Module module'mkDecExec.
         Read rf_v : Array NumRegs (Bit DataSz) <- (instancePrefix--"rf") ;
        BKCall inst : Bit InstrSz <-  (* translateCall *) (pgm--"sub") ((#pc_v) : Bit PgmSz)  ;
        BKCall op : Bit 2 <-  (* translateCall *) (dec--"getOp") ((#inst) : Bit InstrSz)  ;
+       BKCall arithop : Bit 2 <-  (* translateCall *) (dec--"getOpArith") ((#inst) : Bit InstrSz)  ;
 
         Assert(#op == ($$ (* isConstT *)opArith)) ;
        BKCall src1 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) (dec--"getSrc1") ((#inst) : Bit InstrSz)  ;
@@ -49,7 +50,7 @@ Module module'mkDecExec.
       LET arithOp : Bit 2 <- #retval ;
       LET val1 : Bit DataSz (* non-call varbinding *) <- (#rf_v @[ #src1 ]) ;
       LET val2 : Bit DataSz (* non-call varbinding *) <- (#rf_v @[ #src2 ]) ;
-      LET execVal : Bit DataSz <- (execArith exec _ arithOp val1 val2)  ;
+      LET execVal : Bit DataSz <- (execArith exec _ op val1 val2)  ;
       BKCall enq : Void (* actionBinding *) <- (e2wfifo--"enq") ((#execVal) : Bit DataSz)  ;
       Write (instancePrefix--"pc") : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1))  ;
       Retv ) (* rule decexecArith *)

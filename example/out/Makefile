@@ -1,6 +1,12 @@
 VS:=$(shell find . -type f -name '*.v')
 
-.PHONY: coq clean force
+.PHONY: coq html clean force
+
+html: Makefile.coq.all $(VS)
+	$(MAKE) -f Makefile.coq.all html
+
+pdf: Makefile.coq.all $(VS)
+	$(MAKE) -f Makefile.coq.all pdf
 
 coq: Makefile.coq.all $(VS)
 	$(MAKE) -f Makefile.coq.all

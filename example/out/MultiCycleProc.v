@@ -24,6 +24,7 @@ Module module'mkMultiCycleProc.
     (* instance methods *)
     Let dec'getDst : string := (dec--"getDst").
     Let dec'getOp : string := (dec--"getOp").
+    Let dec'getArithOp : string := (dec--"getArithOp").
     Let dec'getSrc1 : string := (dec--"getSrc1").
     Let dec'getSrc2 : string := (dec--"getSrc2").
     Let pgm'sub : string := (pgm--"sub").
@@ -42,6 +43,7 @@ Module module'mkMultiCycleProc.
     with Register (instancePrefix--"d2e_addr") : Bit AddrSz <- Default
     with Register (instancePrefix--"e2w_dst") : Bit RegFileSz <- Default
     with Register (instancePrefix--"e2w_val") : Bit DataSz <- Default
+
     with Rule instancePrefix--"doDecode" :=
     (
         Read pc_v : Bit PgmSz <- pc ;
@@ -51,6 +53,8 @@ Module module'mkMultiCycleProc.
        Call inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz)  ;
        (* call expr ./ProcMemSpec.bsv:95 *) Call call1 : OpK <-  (* translateCall *) dec'getOp ((#inst) : Bit InstrSz)  ;
                Write d2e_op : OpK <- #call1  ;
+       (* call expr ./ProcMemSpec.bsv:95 *) Call calloak : OpArithK <-  (* translateCall *) dec'getArithOp ((#inst) : Bit InstrSz)  ;
+               Write d2e_arithOp : OpArithK <- #calloak  ;
        (* call expr ./ProcMemSpec.bsv:96 *) Call call2 : Bit RegFileSz <-  (* translateCall *) dec'getSrc1 ((#inst) : Bit InstrSz)  ;
                Write d2e_src1 <- #call2  ;
        (* call expr ./ProcMemSpec.bsv:97 *) Call call3 : Bit RegFileSz <-  (* translateCall *) dec'getSrc2 ((#inst) : Bit InstrSz)  ;
@@ -63,6 +67,7 @@ Module module'mkMultiCycleProc.
     with Rule instancePrefix--"doExec" :=
     (
         Read d2e_dst_v : Bit RegFileSz <- d2e_dst ;
+        Read d2e_arithop_v : OpArithK <- d2e_arithOp ;
         Read d2e_op_v : OpK <- d2e_op ;
         Read d2e_src1_v : Bit RegFileSz <- d2e_src1 ;
         Read d2e_src2_v : Bit RegFileSz <- d2e_src2 ;
@@ -72,7 +77,7 @@ Module module'mkMultiCycleProc.
        Read rf_v : Array NumRegs (Bit DataSz) <- (instancePrefix--"rf") ;
        LET val1 : Bit DataSz (* varbinding *) <-  #rf_v @[#d2e_src1_v]  ;
        LET val2 : Bit DataSz (* varbinding *) <-  #rf_v @[#d2e_src2_v]  ;
-       LET dval : Bit DataSz (* varbinding *) <-  (execArith exec _ d2e_op_v val1 val2)  ;
+       LET dval : Bit DataSz (* varbinding *) <-  (execArith exec _ d2e_arithop_v val1 val2)  ;
                Write instancePrefix--"e2w_dst" : Bit RegFileSz <- #d2e_dst_v  ;
                Write instancePrefix--"e2w_val" : Bit DataSz <- #dval  ;
                Write stage : Bit 2 <- $$ (* intwidth *) (natToWord 2 2)  ;
