@@ -32,33 +32,33 @@ Module module'mkFIFO.
 
     Definition mkFIFOModule: ModWf :=
          (MOD_WF {
-    Register (instancePrefix--"valid") : Bit 1 <- Default
+    Register (instancePrefix--"valid") : Bool <- Default
     with Register (instancePrefix--"v") : element_type <- Default
     with Method (instancePrefix--"first") () : element_type :=
     (
         Read v_v : element_type <- (instancePrefix--"v") ;
-        Read valid_v : Bit 1 <- (instancePrefix--"valid") ;
-        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
+        Read valid_v : Bool <- (instancePrefix--"valid") ;
+        Assert((#valid_v)) ;
         Ret #v_v    )
 
     with Method (instancePrefix--"enq") (new_v : element_type) : Void :=
     (
-        Read valid_v : Bit 1 <- (instancePrefix--"valid") ;
-        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 0))) ;
+        Read valid_v : Bool <- (instancePrefix--"valid") ;
+        Assert((!#valid_v)) ;
         Write (instancePrefix--"v") : element_type <- #new_v  ;
-        Write (instancePrefix--"valid") : Bit 1 <- $$ (* intwidth *) (natToWord 1 1)  ;
+        Write (instancePrefix--"valid") : Bool <- $$ true  ;
         Retv    )
 
     with Method (instancePrefix--"deq") () : Void :=
     (
-        Read valid_v : Bit 1 <- (instancePrefix--"valid") ;
-        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
-        Write (instancePrefix--"valid") : Bit 1 <- $$ (* intwidth *) (natToWord 1 0)  ;
+        Read valid_v : Bool <- (instancePrefix--"valid") ;
+        Assert((#valid_v)) ;
+        Write (instancePrefix--"valid") : Bool <- $$false  ;
         Retv    )
 
     with Method (instancePrefix--"clear") () : Void :=
     (
-        Write (instancePrefix--"valid") : Bit 1 <- $$ (* intwidth *) (natToWord 1 0)  ;
+        Write (instancePrefix--"valid") : Bool <- $$false  ;
         Retv    ) 
 
     }). (* mkFIFO *)
