@@ -25,6 +25,7 @@ Module module'mkMultiCycleProc.
     Let dec'getDst : string := (dec--"getDst").
     Let dec'getOp : string := (dec--"getOp").
     Let dec'getArithOp : string := (dec--"getArithOp").
+    Let dec'getAddr : string := (dec--"getAddr").
     Let dec'getSrc1 : string := (dec--"getSrc1").
     Let dec'getSrc2 : string := (dec--"getSrc2").
     Let pgm'sub : string := (pgm--"sub").
@@ -55,6 +56,8 @@ Module module'mkMultiCycleProc.
                Write d2e_op : OpK <- #call1  ;
        (* call expr ./ProcMemSpec.bsv:95 *) Call calloak : OpArithK <-  (* translateCall *) dec'getArithOp ((#inst) : Bit InstrSz)  ;
                Write d2e_arithOp : OpArithK <- #calloak  ;
+       (* call expr ./ProcMemSpec.bsv:95 *) Call calladdr : Bit AddrSz <-  (* translateCall *) dec'getAddr ((#inst) : Bit InstrSz)  ;
+               Write d2e_addr : Bit AddrSz <- #calladdr  ;
        (* call expr ./ProcMemSpec.bsv:96 *) Call call2 : Bit RegFileSz <-  (* translateCall *) dec'getSrc1 ((#inst) : Bit InstrSz)  ;
                Write d2e_src1 <- #call2  ;
        (* call expr ./ProcMemSpec.bsv:97 *) Call call3 : Bit RegFileSz <-  (* translateCall *) dec'getSrc2 ((#inst) : Bit InstrSz)  ;
@@ -68,6 +71,7 @@ Module module'mkMultiCycleProc.
     (
         Read d2e_dst_v : Bit RegFileSz <- d2e_dst ;
         Read d2e_arithop_v : OpArithK <- d2e_arithOp ;
+        Read d2e_addr_v : Bit AddrSz <- d2e_addr ;
         Read d2e_op_v : OpK <- d2e_op ;
         Read d2e_src1_v : Bit RegFileSz <- d2e_src1 ;
         Read d2e_src2_v : Bit RegFileSz <- d2e_src2 ;

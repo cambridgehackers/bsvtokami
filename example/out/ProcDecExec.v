@@ -40,14 +40,13 @@ Module module'mkDecExec.
         Read rf_v : Array NumRegs (Bit DataSz) <- (instancePrefix--"rf") ;
        BKCall inst : Bit InstrSz <-  (* translateCall *) (pgm--"sub") ((#pc_v) : Bit PgmSz)  ;
        BKCall op : Bit 2 <-  (* translateCall *) (dec--"getOp") ((#inst) : Bit InstrSz)  ;
-       BKCall arithop : Bit 2 <-  (* translateCall *) (dec--"getOpArith") ((#inst) : Bit InstrSz)  ;
+       BKCall addr : Bit AddrSz <-  (dec--"getAddr") ((#inst) : Bit InstrSz)  ;
 
         Assert(#op == ($$ (* isConstT *)opArith)) ;
        BKCall src1 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) (dec--"getSrc1") ((#inst) : Bit InstrSz)  ;
        BKCall src2 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) (dec--"getSrc2") ((#inst) : Bit InstrSz)  ;
        BKCall dst : Bit RegFileSz (* varbinding *) <-  (* translateCall *) (dec--"getDst") ((#inst) : Bit InstrSz)  ;
-       BKCall retval : Bit 2 <- (dec--"getArithOp") ((#inst) : Bit InstrSz)  ;
-      LET arithOp : Bit 2 <- #retval ;
+       BKCall arithOp : Bit 2 <- (dec--"getArithOp") ((#inst) : Bit InstrSz)  ;
       LET val1 : Bit DataSz (* non-call varbinding *) <- (#rf_v @[ #src1 ]) ;
       LET val2 : Bit DataSz (* non-call varbinding *) <- (#rf_v @[ #src2 ]) ;
       LET execVal : Bit DataSz <- (execArith exec _ op val1 val2)  ;
@@ -86,9 +85,11 @@ Module module'mkDecExecSep.
     with Register (instancePrefix--"d2e_pc")      : Bit PgmSz <- Default
     with Register (instancePrefix--"d2e_op")      : Bit 2 <- Default
     with Register (instancePrefix--"d2e_arithOp") : Bit 2 <- Default
+    with Register (instancePrefix--"d2e_addr")    : Bit AddrSz <- Default
     with Register (instancePrefix--"d2e_src1")    : Bit RegFileSz <- Default
     with Register (instancePrefix--"d2e_src2")    : Bit RegFileSz <- Default
     with Register (instancePrefix--"d2e_dst")     : Bit RegFileSz <- Default
+    with Register (instancePrefix--"e2w_dst")     : Bit RegFileSz <- Default
     with Register (instancePrefix--"rf") : Array NumRegs (Bit DataSz) <- Default
     with Rule instancePrefix--"decode" :=
     (
@@ -99,12 +100,14 @@ Module module'mkDecExecSep.
        BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) (pgm--"sub") ((#pc_v) : Bit PgmSz)  ;
        BKCall op : Bit 2 (* varbinding *) <-  (* translateCall *) (dec--"getOp") ((#inst) : Bit InstrSz)  ;
        BKCall arithOp : Bit 2 (* varbinding *) <-  (* translateCall *) (dec--"getArithOp") ((#inst) : Bit InstrSz)  ;
+       BKCall addr : Bit AddrSz <-  (dec--"getAddr") ((#inst) : Bit InstrSz)  ;
        BKCall src1 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) (dec--"getSrc1") ((#inst) : Bit InstrSz)  ;
        BKCall src2 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) (dec--"getSrc2") ((#inst) : Bit InstrSz)  ;
        BKCall dst  : Bit RegFileSz (* varbinding *) <-  (* translateCall *) (dec--"getDst") ((#inst) : Bit InstrSz)  ;
        Write (instancePrefix--"d2e_valid") : Bool <- $$true ;
        Write (instancePrefix--"d2e_pc") : Bit PgmSz <- #pc_v ;
        Write (instancePrefix--"d2e_arithOp") : Bit 2 <- #arithOp ;
+       Write (instancePrefix--"d2e_addr") : Bit AddrSz <- #addr ;
        Write (instancePrefix--"d2e_op") : Bit 2 <- #op ;
        Write (instancePrefix--"d2e_src1") : Bit RegFileSz <- #src1 ;
        Write (instancePrefix--"d2e_src2") : Bit RegFileSz <- #src2 ;
@@ -120,6 +123,7 @@ Module module'mkDecExecSep.
 	Read src2    : Bit RegFileSz <- (instancePrefix--"d2e_src2") ;
 	Read dst     : Bit RegFileSz <- (instancePrefix--"d2e_dst") ;
 	Read arithOp : Bit 2 <- (instancePrefix--"d2e_arithOp") ;
+	Read addr    : Bit AddrSz <- (instancePrefix--"d2e_addr") ;
 	Read op      : Bit 2 <- (instancePrefix--"d2e_op") ;
 	Read valid   : Bool <- (instancePrefix--"d2e_valid") ;
         Assert (#op == $$ (* isConstT *)opArith && #valid) ;
@@ -128,13 +132,14 @@ Module module'mkDecExecSep.
 	LET val2 : Bit DataSz (* non-call varbinding *) <- (#rf_v @[ #src2 ]) ;
         LET execVal : Bit DataSz <- (execArith exec _ arithOp val1 val2)  ;
 	BKCall enq : Void (* actionBinding *) <- (e2wfifo--"enq") ((#execVal) : Bit DataSz)  ;
+        Write (instancePrefix--"e2w_dst") : Bit RegFileSz <- #dst ;
         Retv ) (* rule executeArith *)
 
     with Rule instancePrefix--"writeBack" :=
     (
         BKCall v : Bit DataSz <- (e2wfifo--"first") ();
         Read rf_v : Array NumRegs (Bit DataSz) <- (instancePrefix--"rf") ;
-	LET dst_v : Bit RegFileSz <- $$(natToWord RegFileSz 0) ;
+	Read dst_v : Bit RegFileSz <- (instancePrefix--"e2w_dst") ;
 	LET rf_v : Array NumRegs (Bit DataSz) <- (#rf_v @[ #dst_v <- #v ]) ;
         Write (instancePrefix--"rf") : Array NumRegs (Bit DataSz) <- #rf_v ;
         Retv ) (* rule executeArith *)
