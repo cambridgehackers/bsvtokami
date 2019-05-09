@@ -90,6 +90,7 @@ Module module'mkDecExecSep.
     with Register (instancePrefix--"d2e_src2")    : Bit RegFileSz <- Default
     with Register (instancePrefix--"d2e_dst")     : Bit RegFileSz <- Default
     with Register (instancePrefix--"e2w_dst")     : Bit RegFileSz <- Default
+    with Register (instancePrefix--"sbflags")     : Array NumRegs Bool <- Default
     with Register (instancePrefix--"rf") : Array NumRegs (Bit DataSz) <- Default
     with Rule instancePrefix--"decode" :=
     (
@@ -126,11 +127,17 @@ Module module'mkDecExecSep.
 	Read addr    : Bit AddrSz <- (instancePrefix--"d2e_addr") ;
 	Read op      : Bit 2 <- (instancePrefix--"d2e_op") ;
 	Read valid   : Bool <- (instancePrefix--"d2e_valid") ;
+	Read sbflags : Array NumRegs Bool <- (instancePrefix--"sbflags") ;
+	LET  sbflag1 : Bool <- #sbflags @[ #src1 ] ;
+	LET  sbflag2 : Bool <- #sbflags @[ #src2 ] ;
         Assert (#op == $$ (* isConstT *)opArith && #valid) ;
+        Assert (!#sbflag1) ;
+        Assert (!#sbflag2) ;
 
 	LET val1 : Bit DataSz (* non-call varbinding *) <- (#rf_v @[ #src1 ]) ;
 	LET val2 : Bit DataSz (* non-call varbinding *) <- (#rf_v @[ #src2 ]) ;
         LET execVal : Bit DataSz <- (execArith exec _ arithOp val1 val2)  ;
+        LET sbflags : Array NumRegs Bool <- #sbflags @[ #dst <- $$true ] ;
 	BKCall enq : Void (* actionBinding *) <- (e2wfifo--"enq") ((#execVal) : Bit DataSz)  ;
         Write (instancePrefix--"e2w_dst") : Bit RegFileSz <- #dst ;
         Retv ) (* rule executeArith *)
@@ -138,10 +145,14 @@ Module module'mkDecExecSep.
     with Rule instancePrefix--"writeBack" :=
     (
         BKCall v : Bit DataSz <- (e2wfifo--"first") ();
+        BKCall unused1 : Void <- (e2wfifo--"deq") ();
         Read rf_v : Array NumRegs (Bit DataSz) <- (instancePrefix--"rf") ;
 	Read dst_v : Bit RegFileSz <- (instancePrefix--"e2w_dst") ;
+	Read sbflags : Array NumRegs Bool <- (instancePrefix--"sbflags") ;
 	LET rf_v : Array NumRegs (Bit DataSz) <- (#rf_v @[ #dst_v <- #v ]) ;
+        LET sbflags : Array NumRegs Bool <- #sbflags @[ #dst_v <- $$false ] ;
         Write (instancePrefix--"rf") : Array NumRegs (Bit DataSz) <- #rf_v ;
+        Write (instancePrefix--"d2e_valid") : Bool <- $$false ;
         Retv ) (* rule executeArith *)
     }). (* mkDecExecSep *)
 

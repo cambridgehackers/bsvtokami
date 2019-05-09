@@ -282,7 +282,7 @@ Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
 
 
    spec_pcv: word PgmSz ;
-   spec_stagev: word 2 ;
+   spec_d2e_validv: bool ;
    spec_d2e_opv: fullType type (SyntaxKind OpK) ;
    spec_d2e_arithopv: fullType type (SyntaxKind OpArithK) ;
    spec_d2e_src1v: word RegFileSz ;
@@ -290,6 +290,7 @@ Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
    spec_d2e_dstv: word RegFileSz ;
    spec_d2e_addrv: word AddrSz ;
    spec_d2e_valv: word DataSz ;
+   spec_e2w_validv: bool ;
    spec_e2w_dstv: word RegFileSz ;
    spec_e2w_valv: word DataSz ;
 
@@ -301,6 +302,7 @@ Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
    impl_d2e_src1v    : word RegFileSz ;
    impl_d2e_src2v    : word RegFileSz ;
    impl_e2w_dstv     : word RegFileSz ;
+   impl_sbflagsv: fullType type (SyntaxKind (Array NumRegs Bool)) ;
 
    Hiregs: iregs =
    ("impl-pc", existT _ (SyntaxKind (Bit PgmSz)) impl_pcv)
@@ -313,6 +315,7 @@ Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
    :: ("impl-d2e_src2", existT _ (SyntaxKind (Bit RegFileSz)) impl_d2e_src2v)
    :: ("impl-d2e_dst", existT _ (SyntaxKind (Bit RegFileSz)) impl_d2e_dstv)
    :: ("impl-e2w_dst", existT _ (SyntaxKind (Bit RegFileSz)) impl_e2w_dstv)
+   :: ("impl-sbflags", existT _ (SyntaxKind (Array NumRegs Bool)) impl_sbflagsv)
    :: ("impl-rf", existT _ (SyntaxKind (Array NumRegs (Bit DataSz))) rf_v)
    :: ("pgm-rfreg", existT _ (SyntaxKind (Array NumInstrs (Bit InstrSz))) pgmv)
    :: ("e2wfifo-valid", existT (fullType type) (SyntaxKind Bool) impl_e2w_validv)
@@ -322,17 +325,18 @@ Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
    Hsregs: sregs =
    ("spec-pc", existT _ (SyntaxKind (Bit PgmSz)) spec_pcv)
   :: ("spec-rf", existT _ (SyntaxKind (Array NumRegs (Bit DataSz))) rf_v)
-     :: ("spec-stage", existT _ (SyntaxKind (Bit 2)) spec_stagev)
+     :: ("spec-d2e_valid", existT _ (SyntaxKind (Bool)) spec_d2e_validv)
         :: ("spec-d2e_op", existT _ (SyntaxKind OpK) spec_d2e_opv)
            :: ("spec-d2e_arithOp", existT _ (SyntaxKind OpArithK) spec_d2e_arithopv)
               :: ("spec-d2e_src1", existT _ (SyntaxKind (Bit RegFileSz)) spec_d2e_src1v)
                  :: ("spec-d2e_src2", existT _ (SyntaxKind (Bit RegFileSz)) spec_d2e_src2v)
                     :: ("spec-d2e_dst", existT _ (SyntaxKind (Bit RegFileSz)) spec_d2e_dstv)
                        :: ("spec-d2e_addr", existT _ (SyntaxKind (Bit AddrSz)) spec_d2e_addrv)
-                          :: ("spec-e2w_dst", existT _ (SyntaxKind (Bit RegFileSz)) spec_e2w_dstv)
-                             :: ("spec-e2w_val", existT _ (SyntaxKind (Bit DataSz)) spec_e2w_valv)
-                                :: ("pgm-rfreg", existT _ (SyntaxKind (Array NumInstrs (Bit InstrSz))) pgmv)
-				   :: nil ;
+                          :: ("spec-e2w_valid", existT _ (SyntaxKind (Bool)) spec_e2w_validv)
+                            :: ("spec-e2w_dst", existT _ (SyntaxKind (Bit RegFileSz)) spec_e2w_dstv)
+                               :: ("spec-e2w_val", existT _ (SyntaxKind (Bit DataSz)) spec_e2w_valv)
+                                  :: ("pgm-rfreg", existT _ (SyntaxKind (Array NumInstrs (Bit InstrSz))) pgmv)
+				     :: nil ;
 
    Hpcinv: (impl_d2e_validv = true ) -> (impl_pcv = impl_d2e_pcv ^+ $1 /\ spec_pcv = impl_d2e_pcv) ;
    Hpcinv_decode: (impl_d2e_validv = false ) -> (impl_pcv = spec_pcv) ;
@@ -348,8 +352,9 @@ Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
                impl_d2e_src1v
                impl_d2e_src2v ; *)
 
-   Hstageinv_decode: (impl_d2e_validv = false ) -> 
-       (spec_stagev = wzero 2) ;
+   Hd2e_inv: impl_d2e_validv = false -> spec_d2e_validv = false ;
+   He2w_inv: impl_e2w_validv = spec_e2w_validv ;
+
    Hdeinv_decode: (impl_d2e_validv = true ) ->
         (impl_d2e_addrv = spec_d2e_addrv /\
         impl_d2e_arithopv = spec_d2e_arithopv /\
@@ -358,14 +363,15 @@ Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
         impl_d2e_dstv = spec_d2e_dstv  /\
         impl_d2e_src1v = spec_d2e_src1v /\
         impl_d2e_src2v = spec_d2e_src2v ) ;
-
-   Hstageinv_exec: (impl_d2e_validv = true ) -> spec_stagev = (natToWord 2 1) ;
-   Hstageinv_wb: (impl_e2w_validv = true ) -> spec_stagev = (natToWord 2 2) ;
+ 
    Hpcinv_wb: (impl_e2w_validv = true ) -> impl_d2e_pcv ^+ $1 = spec_pcv ;
    He2w_val:   impl_e2w_validv = true ->
       (impl_e2w_valv = spec_e2w_valv /\
        impl_e2w_dstv = spec_e2w_dstv /\
        impl_pcv = spec_pcv ) ;
+
+   He2w_sbflags: impl_e2w_validv = true -> (evalExpr (ReadArray (Var type (SyntaxKind _) impl_sbflagsv)
+                                                     (Var type (SyntaxKind (Bit RegFileSz)) impl_e2w_dstv )) = true) ;
 
  }.
 
@@ -439,18 +445,13 @@ Theorem impl_ok:
   idtac "apply simulationGeneral".
   time discharge_simulation (mySimRel decoder).
   + intro. inv H.
-  + intro. inv H.
-  + intro. inv H.
 
   + (* decode rule *)
     right. exists "spec-doDecode". eexists. split.
     * left. trivial.
     * (* reads spec *) eexists. (* updates spec *) eexists. split.
-     ** discharge_SemAction.
-     apply negb_true_iff in H1. simpl.
-     rewrite H1 in Hstageinv_decode.
-     specialize (Hstageinv_decode eq_refl). rewrite Hstageinv_decode.
-     simpl. reflexivity.
+     ** discharge_SemAction. foo.
+     apply negb_true_iff. specialize (Hd2e_inv eq_refl). foo.
      ** simpl.
      evar (impl_d2e_validv0 : bool).
      evar (impl_pcv0 : word PgmSz).
@@ -472,12 +473,9 @@ Theorem impl_ok:
         rewrite Hpcinv_decode. reflexivity.
      *** foo.
      *** unfold decexec_d2e_inv. unfold impl_d2e_validv0. foo.
-     *** unfold impl_d2e_validv0. intro.
-         foo.
-         specialize (Hpcinv_decode eq_refl). rewrite Hpcinv_decode.
-         repeat split.
-     *** unfold impl_d2e_validv0. intro. foo.
-     *** intro. f_equal. f_equal. admit.
+     *** reflexivity.
+     *** unfold impl_d2e_validv0. intro. admit. (* more work needed here *)
+     *** intro. admit.
      *** foo. admit.
      *** admit.
 
@@ -485,55 +483,48 @@ Theorem impl_ok:
     right. exists "spec-doExec". eexists. split.
   * right. left. trivial.
     * (* reads spec *) eexists. (* updates spec *) eexists. split.
-     **  discharge_SemAction. 
-        foo. specialize (Hstageinv_exec eq_refl). rewrite Hstageinv_exec. simpl. reflexivity.
+     **  discharge_SemAction. admit.
+        foo. simpl. admit.
      ** simpl.
 evar (impl_d2e_validv0 : bool).
-evar (spec_stagev0 : word 2).
-econstructor 1 with (impl_d2e_validv := impl_d2e_validv0) (spec_stagev := spec_stagev0)
+
+econstructor 1 with (impl_d2e_validv := impl_d2e_validv0)
                     (impl_d2e_src1v := x1)
                     (impl_d2e_src2v := x0).
      *** trivial.
      *** repeat f_equal. unfold impl_d2e_validv0. trivial.
      *** repeat f_equal.
-         instantiate (spec_stagev0 := (natToWord 2 2)).
-         unfold spec_stagev0. reflexivity.
      *** unfold impl_d2e_validv0. foo.
          specialize (Hpcinv eq_refl). apply Hpcinv.
      *** foo.
      *** unfold decexec_d2e_inv. foo.
+     *** reflexivity.
      *** foo. specialize (Hdeinv_decode eq_refl). destruct Hdeinv_decode, H2, H3, H4, H5. foo. repeat split.
      *** foo. admit. (* wrong *)
-     *** unfold spec_stagev0. foo.
+     *** foo. admit.
      *** foo. specialize (Hdeinv_decode eq_refl). destruct Hdeinv_decode, H1, H2, H3, H4. foo.
 repeat f_equal. admit.
-     *** admit.
 
   + (* wb rule *)
     right. exists "spec-doWriteBack". eexists. split.
   * right. right. left. trivial.
     * (* reads spec *) eexists. (* updates spec *) eexists. split.
-     **  discharge_SemAction. foo.
-         specialize (Hstageinv_wb eq_refl). foo.
-         simpl. reflexivity.
+     **  discharge_SemAction.
      ** simpl.
-        evar (spec_stagev0 : word 2).
         evar (spec_pcv0 : word PgmSz).
-        econstructor 1 with (spec_stagev := spec_stagev0) (spec_pcv := spec_pcv0).
-        instantiate (spec_stagev0 := wzero 2).
+        econstructor 1 with (spec_pcv := spec_pcv0).
         instantiate (spec_pcv0 := spec_pcv ^+ $1).
       *** trivial.
      *** repeat f_equal.
-     *** repeat f_equal. unfold spec_pcv0. rewrite wzero_wplus. reflexivity.
-         rewrite H6 in *.
+     *** repeat f_equal. unfold spec_pcv0. rewrite wzero_wplus. reflexivity. foo.
          specialize (He2w_val eq_refl). destruct He2w_val. foo.
      *** admit.
      *** admit.
-     *** unfold spec_stagev0. intro. reflexivity.
+     *** intro. reflexivity.
      *** admit.
      *** admit.
-     *** foo. unfold spec_stagev0.  admit. (* wrong *)
-     *** foo. unfold spec_pcv0. admit.
+     *** foo. admit. (* wrong *)
      *** foo. specialize (He2w_val eq_refl). foo. unfold spec_pcv0. admit. (* wrong *)
+     *** foo.
 Admitted.
 End ImplOk.
