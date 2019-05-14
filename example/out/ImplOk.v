@@ -51,7 +51,7 @@ Section DecExec.
   Local Definition spec : Mod := 
               hideMethods (ConcatMod
   	                           (ConcatMod
-                                    (Empty'mod (MultiCycleProc.mkMultiCycleProc "spec" "pgm" "dec" kamiexec))
+                                    (Empty'mod (MultiCycleProc.mkMultiCycleProc "spec" "pgm" "dec" kamiexec "mem"))
 				     (RegFile'mod pgm))
 				     (ProcMemSpec.Decoder'mod dec))
              ("pgm-sub" :: "dec-getOp" :: "dec-getArithOp" :: "dec-getSrc1" :: "dec-getSrc2" :: "dec-getDst" :: "dec-getAddr" :: nil).
@@ -61,7 +61,7 @@ Section DecExec.
              hideMethods (ConcatMod
   	                           (ConcatMod
   	                           (ConcatMod
-                                    (NoMethods'mod (ProcDecExec.mkDecExecSep "impl" "pgm" "dec" kamiexec "e2wfifo"))
+                                    (NoMethods'mod (ProcDecExec.mkDecExecSep "impl" "pgm" "dec" kamiexec "e2wfifo" "mem"))
 				     (RegFile'mod pgm))
 				    (ProcMemSpec.Decoder'mod dec))
                                     (FIFO'mod e2wfifo))
@@ -324,7 +324,7 @@ Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
 
    Hsregs: sregs =
    ("spec-pc", existT _ (SyntaxKind (Bit PgmSz)) spec_pcv)
-  :: ("spec-rf", existT _ (SyntaxKind (Array NumRegs (Bit DataSz))) rf_v)
+   :: ("spec-rf", existT _ (SyntaxKind (Array NumRegs (Bit DataSz))) rf_v)
      :: ("spec-d2e_valid", existT _ (SyntaxKind (Bool)) spec_d2e_validv)
         :: ("spec-d2e_op", existT _ (SyntaxKind OpK) spec_d2e_opv)
            :: ("spec-d2e_arithOp", existT _ (SyntaxKind OpArithK) spec_d2e_arithopv)
@@ -362,7 +362,8 @@ Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
         impl_d2e_pcv = spec_pcv /\
         impl_d2e_dstv = spec_d2e_dstv  /\
         impl_d2e_src1v = spec_d2e_src1v /\
-        impl_d2e_src2v = spec_d2e_src2v ) ;
+        impl_d2e_src2v = spec_d2e_src2v /\
+        spec_d2e_validv = true) ;
  
    Hpcinv_wb: (impl_e2w_validv = true ) -> impl_d2e_pcv ^+ $1 = spec_pcv ;
    He2w_val:   impl_e2w_validv = true ->
@@ -425,6 +426,8 @@ Ltac foo :=
          |- _ => apply convertLetExprSyntax_ActionT_full in H; dest
        | |- _ -> _ => intro
        | |- ?a = ?a => reflexivity
+       | H: (true = false -> _) |- _ => clear H
+       | H: (true = true -> _) |- _ => specialize (H eq_refl)
        end; subst).
 
 Ltac discharge_whatever :=
@@ -483,8 +486,12 @@ Theorem impl_ok:
     right. exists "spec-doExec". eexists. split.
   * right. left. trivial.
     * (* reads spec *) eexists. (* updates spec *) eexists. split.
-     **  discharge_SemAction. admit.
-        foo. simpl. admit.
+     **  discharge_SemAction.
+        *** admit. (* what happened to spec-pc? *)
+        *** foo. 
+        *** repeat f_equal.
+            intro. foo. reflexivity.
+        (* x8: word 0 = wzero 0 *) admit.
      ** simpl.
 evar (impl_d2e_validv0 : bool).
 
@@ -494,16 +501,14 @@ econstructor 1 with (impl_d2e_validv := impl_d2e_validv0)
      *** trivial.
      *** repeat f_equal. unfold impl_d2e_validv0. trivial.
      *** repeat f_equal.
-     *** unfold impl_d2e_validv0. foo.
-         specialize (Hpcinv eq_refl). apply Hpcinv.
+     *** unfold impl_d2e_validv0. foo. split. reflexivity. reflexivity.
      *** foo.
      *** unfold decexec_d2e_inv. foo.
      *** reflexivity.
-     *** foo. specialize (Hdeinv_decode eq_refl). destruct Hdeinv_decode, H2, H3, H4, H5. foo. repeat split.
+     *** foo. repeat split.
      *** foo. admit. (* wrong *)
-     *** foo. admit.
-     *** foo. specialize (Hdeinv_decode eq_refl). destruct Hdeinv_decode, H1, H2, H3, H4. foo.
-repeat f_equal. admit.
+     *** foo. repeat split. admit. admit.
+     *** simpl. foo. admit.
 
   + (* wb rule *)
     right. exists "spec-doWriteBack". eexists. split.
@@ -517,14 +522,13 @@ repeat f_equal. admit.
       *** trivial.
      *** repeat f_equal.
      *** repeat f_equal. unfold spec_pcv0. rewrite wzero_wplus. reflexivity. foo.
-         specialize (He2w_val eq_refl). destruct He2w_val. foo.
-     *** admit.
-     *** admit.
-     *** intro. reflexivity.
-     *** admit.
-     *** admit.
+     *** split. intros. inv H. foo.
      *** foo. admit. (* wrong *)
-     *** foo. specialize (He2w_val eq_refl). foo. unfold spec_pcv0. admit. (* wrong *)
-     *** foo.
+     *** intro. reflexivity.
+     *** reflexivity.
+     *** intros. inv H.
+     *** intros. inv H.
+     *** intros. inv H.
+     *** intros. inv H.
 Admitted.
 End ImplOk.

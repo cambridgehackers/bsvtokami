@@ -11,6 +11,7 @@ Module module'mkMultiCycleProc.
     Variable pgm: string.
     Variable dec: string.
     Variable exec: Decoder.Executer.
+    Variable mem: string.
         (* method bindings *)
     Let pc : string := instancePrefix--"pc".
     Let d2e_valid : string := instancePrefix--"d2e_valid".
@@ -37,8 +38,8 @@ Module module'mkMultiCycleProc.
         Register (instancePrefix--"pc") : Bit PgmSz <- Default
     with Register (instancePrefix--"rf") : Array NumRegs (Bit DataSz) <- Default
     with Register (instancePrefix--"d2e_valid") : Bool <- Default
-    with Register (instancePrefix--"d2e_op") : OpK <- Default
-    with Register (instancePrefix--"d2e_arithOp") : OpArithK <- Default
+    with Register (instancePrefix--"d2e_op") : Bit 2 <- Default
+    with Register (instancePrefix--"d2e_arithOp") : Bit 2 <- Default
     with Register (instancePrefix--"d2e_src1") : Bit RegFileSz <- Default
     with Register (instancePrefix--"d2e_src2") : Bit RegFileSz <- Default
     with Register (instancePrefix--"d2e_dst") : Bit RegFileSz <- Default
@@ -54,10 +55,10 @@ Module module'mkMultiCycleProc.
 
         Assert(!#d2e_valid_v) ;
        Call inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz)  ;
-       (* call expr ./ProcMemSpec.bsv:95 *) Call call1 : OpK <-  (* translateCall *) dec'getOp ((#inst) : Bit InstrSz)  ;
-               Write d2e_op : OpK <- #call1  ;
-       (* call expr ./ProcMemSpec.bsv:95 *) Call calloak : OpArithK <-  (* translateCall *) dec'getArithOp ((#inst) : Bit InstrSz)  ;
-               Write d2e_arithOp : OpArithK <- #calloak  ;
+       (* call expr ./ProcMemSpec.bsv:95 *) Call call1 : Bit 2 <-  (* translateCall *) dec'getOp ((#inst) : Bit InstrSz)  ;
+               Write d2e_op : Bit 2 <- #call1  ;
+       (* call expr ./ProcMemSpec.bsv:95 *) Call calloak : Bit 2 <-  (* translateCall *) dec'getArithOp ((#inst) : Bit InstrSz)  ;
+               Write d2e_arithOp : Bit 2 <- #calloak  ;
        (* call expr ./ProcMemSpec.bsv:95 *) Call calladdr : Bit AddrSz <-  (* translateCall *) dec'getAddr ((#inst) : Bit InstrSz)  ;
                Write d2e_addr : Bit AddrSz <- #calladdr  ;
        (* call expr ./ProcMemSpec.bsv:96 *) Call call2 : Bit RegFileSz <-  (* translateCall *) dec'getSrc1 ((#inst) : Bit InstrSz)  ;
@@ -71,10 +72,11 @@ Module module'mkMultiCycleProc.
 
     with Rule instancePrefix--"doExec" :=
     (
+        Read pc_v : Bit PgmSz <- pc ;
         Read d2e_dst_v : Bit RegFileSz <- d2e_dst ;
-        Read d2e_arithop_v : OpArithK <- d2e_arithOp ;
+        Read d2e_arithop_v : Bit 2 <- d2e_arithOp ;
         Read d2e_addr_v : Bit AddrSz <- d2e_addr ;
-        Read d2e_op_v : OpK <- d2e_op ;
+        Read d2e_op_v : Bit 2 <- d2e_op ;
         Read d2e_src1_v : Bit RegFileSz <- d2e_src1 ;
         Read d2e_src2_v : Bit RegFileSz <- d2e_src2 ;
         Read d2e_valid_v : Bool <- d2e_valid ;
@@ -82,13 +84,19 @@ Module module'mkMultiCycleProc.
 
         Assert(#d2e_valid_v) ;
         Assert(!#e2w_valid_v) ;
+
        Read rf_v : Array NumRegs (Bit DataSz) <- (instancePrefix--"rf") ;
        LET val1 : Bit DataSz (* varbinding *) <-  #rf_v @[#d2e_src1_v]  ;
        LET val2 : Bit DataSz (* varbinding *) <-  #rf_v @[#d2e_src2_v]  ;
+
        LET dval : Bit DataSz (* varbinding *) <-  (execArith exec _ d2e_arithop_v val1 val2)  ;
+
                Write instancePrefix--"e2w_dst" : Bit RegFileSz <- #d2e_dst_v  ;
                Write instancePrefix--"e2w_val" : Bit DataSz <- #dval  ;
                Write e2w_valid : Bool <- $$ true  ;
+
+        BKCall unused : Void <- (mem--"req") (#val1 : Bit DataSz) ;
+
         Retv ) (* rule doExec *)
 
     with Rule instancePrefix--"doWriteBack" :=
@@ -103,6 +111,8 @@ Module module'mkMultiCycleProc.
 	LET rf_v : Array NumRegs (Bit DataSz) <- #rf_v @[#e2w_dst_v <- #e2w_val_v ]  ;
         Write (instancePrefix--"rf") : Array NumRegs (Bit DataSz) <-  #rf_v ;
         Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1))  ;
+
+        BKCall unused : Bit DataSz <- (mem--"resp") () ;
 
         Write d2e_valid : Bool <- $$ false  ;
         Write e2w_valid : Bool <- $$ false  ;

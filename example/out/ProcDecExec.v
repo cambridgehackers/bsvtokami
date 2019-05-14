@@ -76,6 +76,7 @@ Module module'mkDecExecSep.
     Variable dec: string.
     Variable exec: Decoder.Executer.
     Variable e2wfifo: string.
+    Variable mem: string.
     Local Open Scope kami_expr.
 
     Definition mkDecExecSepModule: ModWf :=
@@ -137,6 +138,9 @@ Module module'mkDecExecSep.
 	LET val1 : Bit DataSz (* non-call varbinding *) <- (#rf_v @[ #src1 ]) ;
 	LET val2 : Bit DataSz (* non-call varbinding *) <- (#rf_v @[ #src2 ]) ;
         LET execVal : Bit DataSz <- (execArith exec _ arithOp val1 val2)  ;
+
+        BKCall unused : Void <- (mem--"req") (#val1 : Bit DataSz) ;
+
         LET sbflags : Array NumRegs Bool <- #sbflags @[ #dst <- $$true ] ;
 	BKCall enq : Void (* actionBinding *) <- (e2wfifo--"enq") ((#execVal) : Bit DataSz)  ;
         Write (instancePrefix--"e2w_dst") : Bit RegFileSz <- #dst ;
@@ -153,6 +157,9 @@ Module module'mkDecExecSep.
         LET sbflags : Array NumRegs Bool <- #sbflags @[ #dst_v <- $$false ] ;
         Write (instancePrefix--"rf") : Array NumRegs (Bit DataSz) <- #rf_v ;
         Write (instancePrefix--"d2e_valid") : Bool <- $$false ;
+
+        BKCall unused : Bit DataSz <- (mem--"resp") () ;
+
         Retv ) (* rule executeArith *)
     }). (* mkDecExecSep *)
 
