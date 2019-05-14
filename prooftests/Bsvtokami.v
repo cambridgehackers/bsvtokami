@@ -125,7 +125,7 @@ Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ; cont " :=
     (at level 12, right associativity, name at level 0, meth at level 0, a1 at level 99) : kami_action_scope.
 
 Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ; cont " :=
-  (let argT := STRUCT { "_1" :: a1T ; "_2" :: a2T } in
+  (let argT := STRUCT_TYPE { "_1" :: a1T ; "_2" :: a2T } in
    let args := (STRUCT { "_1" ::= a1 ; "_2" ::= a2 })%kami_expr in
   (MCall meth%string (argT, retT) args%kami_expr (fun name => cont)))
     (at level 12, right associativity, name at level 0, meth at level 0, a1 at level 99, a2 at level 99) : kami_action_scope.
@@ -135,7 +135,7 @@ Notation "'Method2' name ( p1 : d1 ) ( p2 : d2 ) : retT := c" :=
    let d1g := d1 in
    let d2f := d2 in
    let d2g := d2 in
-   let dom := STRUCT  { "_1" :: d1f ; "_2" :: d2f } in
+   let dom := STRUCT_TYPE  { "_1" :: d1f ; "_2" :: d2f } in
   (BKMeth (name%string, existT MethodT (dom, retT)
                                (fun ty (param : ty dom) => 
 				(LET p1 : d1g <- (#param @% "_1");
@@ -146,7 +146,7 @@ Notation "'Method2' name ( p1 : d1 ) ( p2 : d2 ) : retT := c" :=
 
 
 Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ( a3 : a3T ) ; cont " :=
-  (let argT := STRUCT { "_1" :: a1T ; "_2" :: a2T ; "_3" :: a3T } in
+  (let argT := STRUCT_TYPE { "_1" :: a1T ; "_2" :: a2T ; "_3" :: a3T } in
    let args := (STRUCT { "_1" ::= a1 ; "_2" ::= a2 ; "_3" ::= a3 })%kami_expr in
   (MCall meth%string (argT, retT) args%kami_expr (fun name => cont)))
     (at level 12, right associativity, name at level 0, meth at level 0,
@@ -154,7 +154,7 @@ Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ( a3 : a3T ) ; 
 
 
 Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ( a3 : a3T ) ( a4 : a4T ); cont " :=
-  (let argT := STRUCT { "_1" :: a1T ; "_2" :: a2T ; "_3" :: a3T; "_4" :: a4T } in
+  (let argT := STRUCT_TYPE { "_1" :: a1T ; "_2" :: a2T ; "_3" :: a3T; "_4" :: a4T } in
    let args := (STRUCT { "_1" ::= a1 ; "_2" ::= a2 ; "_3" ::= a3 ; "_4" ::= a4 })%kami_expr in
   (MCall meth%string (argT, retT) args%kami_expr (fun name => cont)))
     (at level 12, right associativity, name at level 0, meth at level 0,
@@ -162,7 +162,7 @@ Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ( a3 : a3T ) ( 
 
 
 Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ( a3 : a3T ) ( a4 : a4T ) ( a5 : a5T ); cont " :=
-  (let argT := STRUCT { "_1" :: a1T ; "_2" :: a2T ; "_3" :: a3T; "_4" :: a4T; "_5" :: a5T } in
+  (let argT := STRUCT_TYPE { "_1" :: a1T ; "_2" :: a2T ; "_3" :: a3T; "_4" :: a4T; "_5" :: a5T } in
    let args := (STRUCT { "_1" ::= a1 ; "_2" ::= a2 ; "_3" ::= a3 ; "_4" ::= a4 ; "_5" ::= a5 })%kami_expr in
   (MCall meth%string (argT, retT) args%kami_expr (fun name => cont)))
     (at level 12, right associativity, name at level 0, meth at level 0,
@@ -170,14 +170,14 @@ Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ( a3 : a3T ) ( 
 
 
 Notation "'BKCall' name : retT <- meth ( a1 : a1T ) ( a2 : a2T ) ( a3 : a3T ) ( a4 : a4T ) ( a5 : a5T ) ( a6 : a6T ); cont " :=
-  (let argT := STRUCT { "_1" :: a1T ; "_2" :: a2T ; "_3" :: a3T; "_4" :: a4T; "_5" :: a5T; "_6" :: a6T } in
+  (let argT := STRUCT_TYPE { "_1" :: a1T ; "_2" :: a2T ; "_3" :: a3T; "_4" :: a4T; "_5" :: a5T; "_6" :: a6T } in
    let args := (STRUCT { "_1" ::= a1 ; "_2" ::= a2 ; "_3" ::= a3 ; "_4" ::= a4 ; "_5" ::= a5; "_6" ::= a6 })%kami_expr in
   (MCall meth%string (argT, retT) args%kami_expr (fun name => cont)))
     (at level 12, right associativity, name at level 0, meth at level 0,
      a1 at level 99, a2 at level 99, a3 at level 99, a4 at level 99, a5 at level 99, a6 at level 99) : kami_action_scope.
 
 
-Definition Maybe a := (STRUCT { "$tag" :: (Bit 1) ; "Invalid" :: (Bit 1) ; "Valid" :: a }).
+Definition Maybe a := (STRUCT_TYPE { "$tag" :: (Bit 1) ; "Invalid" :: (Bit 1) ; "Valid" :: a }).
 
 Definition castBits ty ni no (pf: ni = no) (e: Expr ty (SyntaxKind (Bit ni))) :=
   match pf in _ = Y return Expr ty (SyntaxKind (Bit Y)) with
@@ -189,7 +189,7 @@ Record Empty := {
 }.
 
 
-Definition Tuple2 t1 t2 := (STRUCT {
+Definition Tuple2 t1 t2 := (STRUCT_TYPE {
     "tpl_1" :: t1;
     "tpl_2" :: t2
 }).
@@ -306,6 +306,9 @@ Record RegFile := {
     RegFile'upd : string;
     RegFile'sub : string;
 }.
+Hint Unfold RegFile'mod : ModuleDefs.
+Hint Unfold RegFile'upd : ModuleDefs.
+Hint Unfold RegFile'sub : ModuleDefs.
 
 Module module'mkRegFileFull.
     Section Section'mkRegFileFull.
@@ -334,6 +337,7 @@ End module'mkRegFileFull.
 Definition mkRegFileFull := module'mkRegFileFull.mkRegFileFull.
 Hint Unfold mkRegFileFull : ModuleDefs.
 Hint Unfold module'mkRegFileFull.mkRegFileFull : ModuleDefs.
+Hint Unfold module'mkRegFileFull.mkRegFileFullModule : ModuleDefs.
 
 (* more stuff *)
 
@@ -414,7 +418,7 @@ Module module'fromMaybe.
     Section Section'fromMaybe.
     Variable data_t : Kind.
     Variable instancePrefix: string.
-    Definition paramT := STRUCT {"_1" :: data_t; "_2" :: (Maybe data_t) }.
+    Definition paramT := STRUCT_TYPE {"_1" :: data_t; "_2" :: (Maybe data_t) }.
     Local Open Scope kami_expr.
 
     Definition Modules'fromMaybe: Mod := (BKMODULE {

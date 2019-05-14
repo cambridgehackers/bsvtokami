@@ -173,23 +173,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	printstream.println(String.format("}."));
 	printstream.println("");
 	printstream.println(hintBuilder.toString());
-	// for (BSVParser.InterfacememberdeclContext decl: ctx.interfacememberdecl()) {
-	//     if (decl.methodproto() != null) {
-	// 	BSVParser.MethodprotoformalsContext formals = decl.methodproto().methodprotoformals();
-	// 	if (formals != null && formals.methodprotoformal().size() > 1) {
-	// 	    ArrayList<String> fields = new ArrayList<>();
-	// 	    for (BSVParser.MethodprotoformalContext formal: formals.methodprotoformal()) {
-	// 		String formalName = formal.name.getText();
-	// 		assert formal.bsvtype() != null;
-	// 		String kamiType = bsvTypeToKami(formal.bsvtype());
-	// 		fields.add(String.format("    \"%s\" :: %s", formalName, kamiType));
-	// 	    }
-	// 	    printstream.println(String.format("Notation %s'%s'args := STRUCT {", interfaceName, decl.methodproto().name.getText()));
-	// 	    printstream.println(String.join(";" + newline, fields));
-	// 	    printstream.println(String.format("}."));
-	// 	}
-	//     }
-	// }
 	return null;
     }
 
@@ -259,7 +242,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             params = paramsBuilder.toString();
         }
 
-        printstream.println(String.format("Definition %s%s := (STRUCT {", typeName, constructorParams));
+        printstream.println(String.format("Definition %s%s := (STRUCT_TYPE {", typeName, constructorParams));
         ArrayList<String> members = new ArrayList<>();
 	SymbolTableEntry structTypeEntry = scope.lookupType(typeName);
 	assert structTypeEntry != null : "No entry for type name " + typeName;;
@@ -364,7 +347,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	maxValue += 1;
 	int tagSize = (int)java.lang.Math.ceil(java.lang.Math.log(maxValue) / java.lang.Math.log(2.0));
 	// emit type declaration
-        printstream.println(String.format("Definition %s : Kind := (STRUCT { \"$tag\" :: (Bit %d) }).", typeName, tagSize));
+        printstream.println(String.format("Definition %s : Kind := (STRUCT_TYPE { \"$tag\" :: (Bit %d) }).", typeName, tagSize));
 
 	for (TagValue pair: tagsAndValues) {
 	    if (pair.value < 128)
@@ -402,7 +385,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         System.err.println(String.format("BSVTOKAMI typedef tagged union %s\n", typeName));
 
-        printstream.println(String.format("Definition %s%s := (STRUCT {", typeName, constructorParams));
+        printstream.println(String.format("Definition %s%s := (STRUCT_TYPE {", typeName, constructorParams));
         ArrayList<String> members = new ArrayList<>();
         members.add(String.format("    \"$tag\" :: (Bit 8)"));
 	SymbolTableEntry typeEntry = scope.lookupType(typeName);
@@ -1332,7 +1315,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    StringBuilder paramsT = new StringBuilder();
 	    statement.append(String.format(" ( params : %1$s'paramsT ) ", methodName));
 	    paramsT.append(String.format("Definition %1$s'paramsT := ", methodName));
-	    paramsT.append(" ( STRUCT { ");
+	    paramsT.append(" ( STRUCT_TYPE { ");
 	    int paramNumber = 1;
             for (BSVParser.MethodformalContext formal: ctx.methodformals().methodformal()) {
                 BSVType bsvtype = typeVisitor.visit(formal.bsvtype());

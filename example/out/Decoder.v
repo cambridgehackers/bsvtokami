@@ -46,7 +46,7 @@ Module module'decoder.
     Section Section'decoder.
     Variable dec : Decoder.
     Variable instancePrefix: string.
-    Definition paramT := STRUCT {"_1" :: (Bit InstrSz)%kami_expr; "_2" :: OpK }%kami.
+    Definition paramT := STRUCT_TYPE {"_1" :: (Bit InstrSz)%kami_expr; "_2" :: OpK }%kami.
     Local Open Scope kami_expr.
     Definition decoderModule: ModWf :=
          (MOD_WF {
@@ -107,7 +107,7 @@ Module module'executer.
     Section Section'executer.
     Variable exec : Executer.
     Variable instancePrefix: string.
-    Definition paramT := STRUCT {
+    Definition paramT := STRUCT_TYPE {
                              "_1" :: Bit 2 ;
                              "_2" :: (Bit DataSz) ;
                              "_3" :: (Bit DataSz)}%kami.

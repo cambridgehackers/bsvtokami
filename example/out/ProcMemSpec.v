@@ -74,7 +74,7 @@ Record Executer := {
 Hint Unfold Executer'mod : ModuleDefs.
 Hint Unfold Executer'execArith : ModuleDefs.
 
-Definition MemRq := (STRUCT {
+Definition MemRq := (STRUCT_TYPE {
     "addr" :: Bit AddrSz;
     "data" :: Bit DataSz;
     "isLoad" :: Bit 1}).
