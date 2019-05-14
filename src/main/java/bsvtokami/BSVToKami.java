@@ -493,7 +493,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    BSVType freeType = entry.getValue();
 	    boolean isNumeric = freeType.numeric;
 	    // FIXME: heuristic
-	    if (freeType.name.endsWith("sz") || freeType.name.endsWith("Sz") || freeType.name.equals("xlen"))
+	    if (freeType.name.startsWith("Num") || freeType.name.endsWith("sz") || freeType.name.endsWith("Sz") || freeType.name.equals("xlen"))
 		isNumeric = true;
 	    logger.fine("Module def: Free type variable " + freeType + (isNumeric ? " numeric" : " interface type"));
 
@@ -2196,7 +2196,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	if (bsvType.name.equals("Bit")) {
 	    BSVType typeWidth = bsvType.params.get(0).prune();
 	    assert !typeWidth.isVar : String.format("Unknown width for type %s at %s", bsvType, StaticAnalysis.sourceLocation(ctx));
-	    long widthFromType = typeWidth.asLong();
+	    long widthFromType = 0;
+	    try {
+		widthFromType = typeWidth.asLong();
+	    } catch (NumberFormatException ex) {
+		System.err.println("Cannot compute bit width of " + typeWidth + " at " + StaticAnalysis.sourceLocation(ctx));
+	    }
 	    assert intWidth == 0 || intWidth == widthFromType;
 	    intWidth = widthFromType;
 	}

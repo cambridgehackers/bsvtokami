@@ -778,6 +778,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 if (entry == null) {
                     BSVType bsvtype = new BSVType();
 		    types.put(ctx, bsvtype);
+		    return bsvtype;
 		}
                 return entry.type;
             }
