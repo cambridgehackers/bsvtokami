@@ -1,5 +1,5 @@
 
-all: gradlebuild kamibuild examplebuild
+all: gradlebuild kamibuild
 
 gradlebuild:
 	gradle build
@@ -8,8 +8,6 @@ kamibuild:
 	cd bbv; make
 	cd coq-record-update; make
 	cd kami; make
-
-examplebuild:
 	cd example/out; make
 
 installdist:
