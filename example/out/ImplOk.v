@@ -466,7 +466,7 @@ Theorem impl_ok:
      *** repeat (f_equal).
         instantiate (impl_d2e_validv0 := true).
 
-        instantiate (impl_pcv0 := wzero PgmSz ^+ x1 ^+ $1).
+        instantiate (impl_pcv0 := wzero PgmSz ^+ x1 ^+ $1). (* looks wrong below *)
         unfold impl_pcv0. reflexivity. 
         unfold impl_d2e_validv0. reflexivity.
      *** repeat f_equal.
@@ -477,17 +477,37 @@ Theorem impl_ok:
      *** foo.
      *** unfold decexec_d2e_inv. unfold impl_d2e_validv0. foo.
      *** reflexivity.
-     *** unfold impl_d2e_validv0. intro. admit. (* more work needed here *)
-     *** intro. admit.
-     *** foo. admit.
-     *** admit.
+     *** unfold impl_d2e_validv0. intro.
+         repeat split.
+       ++ foo. specialize (Hpcinv_decode eq_refl). foo.
+          (* why was evalExpr unfolded here? *)
+          unfold evalExpr. reflexivity.
+       ++ foo. specialize (Hpcinv_decode eq_refl). foo.
+          (* why was evalExpr unfolded here? *)
+          unfold evalExpr. reflexivity.
+       ++ foo. specialize (Hpcinv_decode eq_refl). foo.
+          (* why was evalExpr unfolded here? *)
+          unfold evalExpr. reflexivity.
+       ++ foo. specialize (Hpcinv_decode eq_refl). foo.
+       ++ foo. specialize (Hpcinv_decode eq_refl). foo.
+          (* why was evalExpr unfolded here? *)
+          unfold evalExpr. reflexivity.
+       ++ foo. specialize (Hpcinv_decode eq_refl). foo.
+          (* why was evalExpr unfolded here? *)
+          unfold evalExpr. reflexivity.
+       ++ foo. specialize (Hpcinv_decode eq_refl). foo.
+          (* why was evalExpr unfolded here? *)
+          unfold evalExpr. reflexivity.
+     *** intro. foo. (* wrong *) admit.
+     *** foo. unfold impl_pcv0. repeat split. (* wrong *) admit.
+     *** simpl. apply He2w_sbflags.
 
   + (* arith rule *)
     right. exists "spec-doExec". eexists. split.
   * right. left. trivial.
     * (* reads spec *) eexists. (* updates spec *) eexists. split.
      **  discharge_SemAction.
-        *** admit. (* what happened to spec-pc? *)
+        *** (* what happened to spec-pc? *) admit.
         *** foo. 
         *** repeat f_equal.
             intro. foo. reflexivity.
@@ -497,7 +517,8 @@ evar (impl_d2e_validv0 : bool).
 
 econstructor 1 with (impl_d2e_validv := impl_d2e_validv0)
                     (impl_d2e_src1v := x1)
-                    (impl_d2e_src2v := x0).
+                    (impl_d2e_src2v := x0)
+                    (impl_e2w_validv := true).
      *** trivial.
      *** repeat f_equal. unfold impl_d2e_validv0. trivial.
      *** repeat f_equal.
@@ -506,22 +527,24 @@ econstructor 1 with (impl_d2e_validv := impl_d2e_validv0)
      *** unfold decexec_d2e_inv. foo.
      *** reflexivity.
      *** foo. repeat split.
-     *** foo. admit. (* wrong *)
-     *** foo. repeat split. admit. admit.
-     *** simpl. foo. admit.
+     *** foo. (* wrong: spec_pcv ^+ 1 = spec_pcv *) admit.
+     *** foo. repeat split.
+       ++ foo. (* something wrong with spec_d2e_arithopv *) admit.
+       ++ (* wrong *) admit.
+     *** simpl. foo. (* hmm *) admit.
 
   + (* wb rule *)
     right. exists "spec-doWriteBack". eexists. split.
   * right. right. left. trivial.
     * (* reads spec *) eexists. (* updates spec *) eexists. split.
-     **  discharge_SemAction.
+     **  discharge_SemAction. (* what happened to spec-pc? *) admit.
      ** simpl.
         evar (spec_pcv0 : word PgmSz).
         econstructor 1 with (spec_pcv := spec_pcv0).
-        instantiate (spec_pcv0 := spec_pcv ^+ $1).
+        (* instantiate (spec_pcv0 := impl_d2e_pcv). *)
       *** trivial.
      *** repeat f_equal.
-     *** repeat f_equal. unfold spec_pcv0. rewrite wzero_wplus. reflexivity. foo.
+     *** repeat f_equal. unfold spec_pcv0. rewrite wzero_wplus. trivial. admit.
      *** split. intros. inv H. foo.
      *** foo. admit. (* wrong *)
      *** intro. reflexivity.

@@ -139,11 +139,13 @@ Module module'mkDecExecSep.
 	LET val2 : Bit DataSz (* non-call varbinding *) <- (#rf_v @[ #src2 ]) ;
         LET execVal : Bit DataSz <- (execArith exec _ arithOp val1 val2)  ;
 
-        BKCall unused : Void <- (mem--"req") (#val1 : Bit DataSz) ;
-
         LET sbflags : Array NumRegs Bool <- #sbflags @[ #dst <- $$true ] ;
+
+        BKCall unused : Void <- (mem--"req") (#val1 : Bit DataSz) ;
 	BKCall enq : Void (* actionBinding *) <- (e2wfifo--"enq") ((#execVal) : Bit DataSz)  ;
+        Write (instancePrefix--"sbflags") : Array NumRegs Bool <- #sbflags ;
         Write (instancePrefix--"e2w_dst") : Bit RegFileSz <- #dst ;
+
         Retv ) (* rule executeArith *)
 
     with Rule instancePrefix--"writeBack" :=
@@ -153,10 +155,16 @@ Module module'mkDecExecSep.
         Read rf_v : Array NumRegs (Bit DataSz) <- (instancePrefix--"rf") ;
 	Read dst_v : Bit RegFileSz <- (instancePrefix--"e2w_dst") ;
 	Read sbflags : Array NumRegs Bool <- (instancePrefix--"sbflags") ;
+	LET sbflag1 : Bool <- #sbflags @[ #dst_v ] ;
+
+	Assert( #sbflag1 ) ;
+
 	LET rf_v : Array NumRegs (Bit DataSz) <- (#rf_v @[ #dst_v <- #v ]) ;
+
         LET sbflags : Array NumRegs Bool <- #sbflags @[ #dst_v <- $$false ] ;
         Write (instancePrefix--"rf") : Array NumRegs (Bit DataSz) <- #rf_v ;
         Write (instancePrefix--"d2e_valid") : Bool <- $$false ;
+        Write (instancePrefix--"sbflags") : Array NumRegs Bool <- #sbflags ;
 
         BKCall unused : Bit DataSz <- (mem--"resp") () ;
 
