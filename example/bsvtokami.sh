@@ -9,9 +9,12 @@ BBVDIR=$PWD/../../bbv
     JAVA_OPTS=-ea $BKDIR/build/install/bsvtokami/bin/bsvtokami \
 	     -I . \
 	     -I $BKDIR/lib \
-	     -K out PipelinedProc.bsv; \
+	     -K out ProcMemSpec.bsv; \
+    JAVA_OPTS=-ea $BKDIR/build/install/bsvtokami/bin/bsvtokami \
+	     -I . \
+	     -I $BKDIR/lib \
+	     -K out ProcDecExec.bsv; \
 
 mkdir -p out
-cp -f $BKDIR/prooftests/Bsvtokami.v out
-(cd out; coq_makefile -R $KAMIDIR Kami -R $BBVDIR/theories bbv -R $PWD BK -o Makefile *.v)
+# cp -f $BKDIR/prooftests/Bsvtokami.v out
 grep Assertion bsvtokami.log
