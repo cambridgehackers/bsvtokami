@@ -7,8 +7,8 @@ interface GCD#(type a);
 endinterface: GCD
 
 module mkGCD(GCD#(Bit#(32)));
-   Reg#(Bit#(32)) n <- mkReg(0);
-   Reg #(Bit#(32)) m <- mkReg(0);
+   Reg#(Bit#(32)) n <- mkRegU();
+   Reg #(Bit#(32)) m <- mkRegU();
 
    rule swap (n > m && m != 0);
       n <= m;
@@ -35,11 +35,11 @@ endmodule: mkGCD
 
 module mkMain(Empty);
    GCD#(Bit#(32)) gcd <- mkGCD();
-   Reg#(Bit#(1)) started <- mkReg(0);
-   Reg#(Bit#(32)) dv <- mkReg(0);
+   Reg#(Bit#(1)) started <- mkRegU();
+   Reg#(Bit#(32)) dv <- mkRegU();
    rule rl_start if (started == 0);
-      let _ <- gcd.set_n(100);
-      let _ <- gcd.set_m(20);
+      Void unused1 <- gcd.set_n(32'd100);
+      Void unused2 <- gcd.set_m(32'd20);
       started <= 1;
    endrule
    rule rl_display;
