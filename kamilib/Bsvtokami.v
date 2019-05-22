@@ -196,12 +196,12 @@ Definition castBits ty ni no (pf: ni = no) (e: Expr ty (SyntaxKind (Bit ni))) :=
   end.
 
 Record Empty := {
-    Empty'mod: ModWf;
+    Empty'mod: Mod;
 }.
 
 
 Record Reg := {
-    Reg'mod: ModWf;
+    Reg'mod: Mod;
     Reg'_read : string;
     Reg'_write : string;
 }.
@@ -218,8 +218,8 @@ Module module'mkReg.
     Variable v: ConstT a.
     Definition reg : string := instancePrefix--"reg".
     Local Open Scope kami_expr.
-    Definition mkRegModule: ModWf :=
-      (MOD_WF {
+    Definition mkRegModule: Mod :=
+      (BKMODULE {
            Register reg : a <- v
            with Method (instancePrefix--"_read") () : a :=
              Read v : a <- reg ;
@@ -252,8 +252,8 @@ Module module'mkReadOnlyReg.
     Variable instancePrefix: string.
     Variable v: ConstT a.
     Definition reg : string := instancePrefix--"reg".
-    Definition mkReadOnlyRegModule: ModWf :=
-      (MOD_WF {
+    Definition mkReadOnlyRegModule: Mod :=
+      (BKMODULE {
            Register reg : a <- v
            with Method (instancePrefix--"_read") () : a :=
              Read v : a <- reg ;
@@ -284,8 +284,8 @@ Module module'mkRegU.
     Variable instancePrefix: string.
     Variable v: ConstT a.
     Definition reg : string := instancePrefix--"reg".
-    Definition mkRegUModule: ModWf :=
-        (MOD_WF {
+    Definition mkRegUModule: Mod :=
+        (BKMODULE {
            Register reg : a <- Default
            with Method (instancePrefix--"_read") () : a :=
              Read v : a <- reg ;
@@ -310,7 +310,7 @@ Hint Unfold module'mkRegU.mkRegUModule : ModuleDefs.
 
 (* * interface RegFile#(index_t, data_t) *)
 Record RegFile := {
-    RegFile'mod: ModWf;
+    RegFile'mod: Mod;
     RegFile'upd : string;
     RegFile'sub : string;
 }.
@@ -325,7 +325,7 @@ Module module'mkRegFile.
     Variable data_t : Kind.
     Variable index_t : Kind.
     Variable instancePrefix: string.
-    Definition mkRegFileModule: ModWf := (MOD_WF {
+    Definition mkRegFileModule: Mod := (BKMODULE {
            Register (instancePrefix--"rfreg") : data_t <- Default
            with Method instancePrefix--"sub" (idx : index_t) : data_t :=
              (Read regs : data_t <- (instancePrefix--"rfreg") ;
@@ -353,7 +353,7 @@ Module module'mkRegFileFull.
     Variable data_t : Kind.
     Variable index_t : Kind.
     Variable instancePrefix: string.
-    Definition mkRegFileFullModule: ModWf := (MOD_WF {
+    Definition mkRegFileFullModule: Mod := (BKMODULE {
            Register (instancePrefix--"rfreg") : data_t <- Default
            with Method instancePrefix--"sub" (idx : index_t) : data_t :=
              (Read regs : data_t <- (instancePrefix--"rfreg") ;
@@ -381,7 +381,7 @@ Module module'mkRegFileFull1.
     Variable numEntries : nat.
     Variable data_t : Kind.
     Variable instancePrefix: string.
-    Definition mkRegFileFull1Module: ModWf := (MOD_WF {
+    Definition mkRegFileFull1Module: Mod := (BKMODULE {
            Register (instancePrefix--"rfreg") : (Array numEntries data_t) <- Default
            with Method instancePrefix--"sub" (idx : Bit (Nat.log2_up numEntries)) : data_t :=
              (Read regs : Array numEntries data_t <- (instancePrefix--"rfreg") ;
@@ -433,13 +433,13 @@ Check bitlt.
 
 (* interface for module wrapper for myTruncate *)
 Record Interface'myTruncate := {
-    Interface'myTruncate'mod: ModWf;
+    Interface'myTruncate'mod: Mod;
     Interface'myTruncate'myTruncate: string;
 }.
 
 (* interface for module wrapper for isValid *)
 Record Interface'isValid := {
-    Interface'isValid'mod: ModWf;
+    Interface'isValid'mod: Mod;
     Interface'isValid'isValid: string;
 }.
 Hint Unfold Interface'isValid'mod : ModuleDefs.
@@ -450,8 +450,8 @@ Module module'isValid.
     Variable data_t : Kind.
     Variable instancePrefix: string.
     Local Open Scope kami_expr.
-    Definition Modules'isValid: ModWf.
-        refine (MOD_WF {
+    Definition Modules'isValid: Mod.
+        refine (BKMODULE {
         Method (instancePrefix--"isValid") (m: (Maybe data_t)) : Bool := 
 			  (
 			   LET tag : (Bit 1) <- #m @% "$tag";
@@ -477,7 +477,7 @@ Hint Unfold module'isValid.isValid : ModuleDefs.
 
 (* interface for module wrapper for fromMaybe *)
 Record Interface'fromMaybe := {
-    Interface'fromMaybe'mod: ModWf;
+    Interface'fromMaybe'mod: Mod;
     Interface'fromMaybe'fromMaybe: string;
 }.
 Hint Unfold Interface'fromMaybe'mod : ModuleDefs.
@@ -490,7 +490,7 @@ Module module'fromMaybe.
     Definition paramT := STRUCT_TYPE {"_1" :: data_t; "_2" :: (Maybe data_t) }.
     Local Open Scope kami_expr.
 
-    Definition Modules'fromMaybe: ModWf := (MOD_WF {
+    Definition Modules'fromMaybe: Mod := (BKMODULE {
         Method (instancePrefix--"fromMaybe") (param : paramT ) : data_t := 
 						    (
 						     LET defaultval: data_t <- #param @% "_1" ;

@@ -10,7 +10,7 @@ Set Implicit Arguments.
 
 (* * interface GCD#(a) *)
 Record GCD := {
-    GCD'mod: ModWf;
+    GCD'mod: Mod;
     GCD'set_n : string;
     GCD'set_m : string;
     GCD'result : string;
@@ -27,8 +27,8 @@ Module module'mkGCD.
         (* method bindings *)
     Local Open Scope kami_expr.
 
-    Definition mkGCDModule: ModWf :=
-         (MOD_WF {
+    Definition mkGCDModule: Mod :=
+         (BKMODULE {
         Register (instancePrefix--"n") : Bit 32 <- Default
     with Register (instancePrefix--"m") : Bit 32 <- Default
     with Rule instancePrefix--"swap" :=
@@ -85,8 +85,6 @@ Hint Unfold mkGCD : ModuleDefs.
 Hint Unfold module'mkGCD.mkGCD : ModuleDefs.
 Hint Unfold module'mkGCD.mkGCDModule : ModuleDefs.
 
-(* Module composition needs fixing: Jamey 5/22/2019
-
 Module module'mkMain.
     Section Section'mkMain.
     Variable instancePrefix: string.
@@ -130,5 +128,3 @@ Definition mkMain := module'mkMain.mkMain.
 Hint Unfold mkMain : ModuleDefs.
 Hint Unfold module'mkMain.mkMain : ModuleDefs.
 Hint Unfold module'mkMain.mkMainModule : ModuleDefs.
-
-*)
