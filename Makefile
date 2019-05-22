@@ -4,7 +4,10 @@ all: gradlebuild kamibuild
 gradlebuild:
 	gradle build
 
-kamibuild:
+bbv/Makefile:
+	git submodule update --init
+
+kamibuild: bbv/Makefile
 	cd bbv; make
 	cd coq-record-update; make
 	cd kami; make
