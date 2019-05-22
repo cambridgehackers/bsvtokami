@@ -11,6 +11,8 @@ kamibuild: bbv/Makefile
 	cd bbv; make
 	cd coq-record-update; make
 	cd kami; make
+	cd kamilib; make
+	cd tests/out; make
 	cd example/out; make
 
 installdist:
