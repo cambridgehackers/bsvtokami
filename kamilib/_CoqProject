@@ -1,0 +1,4 @@
+-R ../kami Kami
+-R ../bbv/theories bbv
+-R ../coq-record-update/src RecordUpdate
+-R ../kamilib BK
