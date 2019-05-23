@@ -20,18 +20,30 @@ public class BSVType {
 	params = new ArrayList<BSVType>();
 	if (name == null) {
 	    name = "tvar" + count;
+	    params.add(new BSVType("332")); // HACKKKKKK
 	    count++;
 	}
-	if (name.equals("void"))
+	else if (name.equals("void")) {
 	    name = "Void";
-	if (name.equals("int")) {
-	    name  = "Int";
+	    params.add(new BSVType("999"));
+        }
+	else if (name.equals("int")) {
+	    name  = "INTEGER";
 	    params.add(new BSVType("32"));
 	}
-	if (name.equals("bit")) {
-	    name  = "Bit";
+	else if (name.equals("bit")) {
+	    name  = "INTEGER";
 	    params.add(new BSVType("1"));
 	}
+	else if (name.equals("Bit")) {
+	    name  = "INTEGER";
+	    params.add(new BSVType("199"));
+	}
+        else {
+	    //name  = "INTEGER";
+	    //params.add(new BSVType(name + "666"));
+	//System.err.println("    JJJTYPE " + name);
+        }
 	this.numeric = numeric || name.matches("[0-9]+") || name.endsWith("sz") || name.endsWith("Sz");
 	isVar = name.matches("[a-z].*");
 	this.name = name;
@@ -254,8 +266,8 @@ public class BSVType {
 	System.out.println("testing type inference\n");
 	BSVType tp1 = new BSVType("Function",
 				  new BSVType("Int"), new BSVType("Int"));
-	BSVType tp2 = new BSVType("Bit", new BSVType("3"));
-	BSVType tp3 = new BSVType("Bit", new BSVType());
+	BSVType tp2 = new BSVType("INTEGER", new BSVType("3"));
+	BSVType tp3 = new BSVType("INTEGER", new BSVType());
 	try {
 	    tp1.unify(tp1);
 	    tp2.unify(tp3);

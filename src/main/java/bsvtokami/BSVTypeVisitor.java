@@ -765,7 +765,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                     if (lvaluetype.name.equals("Vector")) {
                         return lvaluetype.params.get(1);
                     } else {
-			BSVType bsvtype = new BSVType("Bit", new BSVType("1"));
+			BSVType bsvtype = new BSVType("INTEGER", new BSVType("1"));
 			types.put(ctx, bsvtype);
 			return bsvtype;
                     }
@@ -1025,11 +1025,11 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 || op.equals("^") || op.equals("^~") || op.equals("~^")) {
                 try {
 		    if (callUnify)
-			bsvtype.unify(new BSVType("Bit", new BSVType(null, true)));
+			bsvtype.unify(new BSVType("INTEGER", new BSVType("99"))); //null, true)));
                 } catch (InferenceError e) {
                     logger.fine(e.toString());
                 }
-                return new BSVType("Bit", new BSVType(1));
+                return new BSVType("INTEGER", new BSVType(1));
             }
 	    types.put(ctx, bsvtype);
             return bsvtype;
@@ -1070,8 +1070,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             logger.fine(String.format("bitconcat %s width %d known %s at %s",
                                              ctx.getText(), width, widthKnown, StaticAnalysis.sourceLocation(ctx)));
 	    BSVType bsvtype = (widthKnown)
-		? new BSVType("Bit", new BSVType(width))
-		: new BSVType("Bit", new BSVType(null, true));
+		? new BSVType("INTEGER", new BSVType(width))
+		: new BSVType("INTEGER", new BSVType("101")); //null, true));
 	    types.put(ctx, bsvtype);
 	    return bsvtype;
         }
@@ -1190,8 +1190,8 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             String literal = ctx.getText();
             IntValue value = new IntValue(literal);
 	    BSVType bsvtype = (value.width != 0)
-		? new BSVType("Bit", new BSVType(value.width))
-		: new BSVType("Bit", new BSVType(null, true));
+		? new BSVType("INTEGER", new BSVType(value.width))
+		: new BSVType("INTEGER", new BSVType("1")); //null, true));
 	    if (value.width == 0)
 		System.err.println("Integer type at " + StaticAnalysis.sourceLocation(ctx));
 	    types.put(ctx, bsvtype);
@@ -1405,7 +1405,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 return arraytype.params.get(1);
             else {
                 if (ctx.expression().size() == 1) {
-                    BSVType bsvtype = new BSVType("Bit", new BSVType("1"));
+                    BSVType bsvtype = new BSVType("INTEGER", new BSVType("1"));
 		    types.put(ctx, bsvtype);
 		    return bsvtype;
 		}
@@ -1415,11 +1415,11 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 // try {
                 //     IntValue msbValue = (IntValue)eval.evaluate(ctx.expression(0), scope);
                 //     IntValue lsbValue = (IntValue)eval.evaluate(ctx.expression(1), scope);
-                //     return new BSVType("Bit", new BSVType(msbValue.value - lsbValue.value + 1));
+                //     return new BSVType("INTEGER", new BSVType(msbValue.value - lsbValue.value + 1));
                 // } catch (Exception e) {
                 //     logger.fine("Failed to evaluate msb or lsb " + e);
                 // }
-                BSVType bsvtype = new BSVType("Bit", new BSVType());
+                BSVType bsvtype = new BSVType("INTEGER", new BSVType("103"));
 		types.put(ctx, bsvtype);
 		return bsvtype;
             }
