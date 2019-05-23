@@ -141,22 +141,16 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
 	String paramsString = paramsStringBuilder.toString();
 
-	//StringBuilder hintBuilder = new StringBuilder();
 	printstream.println(String.format("INTERFACE %s {", interfaceName));
-	printstream.println(String.format("    %s'mod: Mod;", interfaceName));
-	//hintBuilder.append(String.format("Hint Unfold %s'mod : ModuleDefs.\n", interfaceName));
 	for (BSVParser.InterfacememberdeclContext decl: ctx.interfacememberdecl()) {
 	    if (decl.methodproto() != null) {
-		printstream.println(String.format("    %s'%s : string;", interfaceName, decl.methodproto().name.getText()));
-		//hintBuilder.append(String.format("Hint Unfold %s'%s : ModuleDefs.\n", interfaceName, decl.methodproto().name.getText()));
+		printstream.println(String.format("    METHOD %s : string;", decl.methodproto().name.getText()));
 	    } else {
 		BSVType subinterfacetype = StaticAnalysis.getBsvType(decl.subinterfacedecl().bsvtype());
 		String kamiType = bsvTypeToKami(subinterfacetype);
 		assert kamiType != null;
-		printstream.println(String.format("    %s'%s : %s;",
-						  interfaceName, decl.subinterfacedecl().lowerCaseIdentifier().getText(), subinterfacetype.name));
-		//hintBuilder.append(String.format("Hint Unfold %s'%s : ModuleDefs.\n",
-						 //interfaceName, decl.subinterfacedecl().lowerCaseIdentifier().getText()));
+		printstream.println(String.format("    METHOD %s %s;",
+			  decl.subinterfacedecl().lowerCaseIdentifier().getText(), subinterfacetype.name));
 	    }
 	}
 	printstream.println(String.format("}"));
@@ -774,8 +768,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
         InstanceNameVisitor inv = new InstanceNameVisitor(scopes);
 	inv.pushScope(scope);
         String calleeInstanceName = inv.visit(ctx.rhs);
-        if (calleeInstanceName != null && actionContext)
-            calleeInstanceName = calleeInstanceName.replace(".", "");
+        //if (calleeInstanceName != null && actionContext)
+            //calleeInstanceName = calleeInstanceName.replace(".", "");
 
 	StringBuilder statement = new StringBuilder();
 
@@ -964,8 +958,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
 	if (statements.size() > 0) {
 	    for (String ruleStatement: statements) {
-		statement.append(String.format("       %s ;", ruleStatement));
-		statement.append(newline);
+		statement.append("       " + ruleStatement + newline);
 	    }
 	}
         statement.append("        }");
@@ -1291,10 +1284,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    String regName = regwrite.lhs.getText();
 	    SymbolTableEntry entry = scope.lookup(regName);
 	    statement.append("        STORE ");
-	    //if (entry != null) {
-		//statement.append(" : ");
-		//statement.append(bsvTypeToKami(entry.type.params.get(0)));
-	    //}
 	    statement.append(visit(regwrite.lhs));
 	    statement.append(" = ");
 	    statement.append(visit(regwrite.rhs));
@@ -2065,7 +2054,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             logger.fine("var " + varName + " scope " + scope);
             if (scope.containsKey(varName)) {
                 SymbolTableEntry entry = scope.lookup(varName);
-		String prefix = "#";
+		String prefix = "";//#";
 		char firstChar = varName.charAt(0);
 		if (entry.symbolType == SymbolType.ModuleParam
 		    && entry.type.isVar)
@@ -2255,7 +2244,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         if (methodName == null)
             methodName = "FIXME$" + ctx.fcn.getText();
         assert methodName != null : "No methodName for " + ctx.fcn.getText();
-        methodName = methodName.replace(".", "");
+        //methodName = methodName.replace(".", "");
 	StringBuilder statement = new StringBuilder();
         if (methodName != null) {
             // "Call" is up where the binding is, hopefully
@@ -2380,7 +2369,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	if (value < 128 && width == 0) {
 	    return String.format("%d", value);
 	} else if (value < 128 && width != 0) {
-	    return String.format("%d %d", width, value);
+	    //return String.format("%d %d", width, value);
+	    //return String.format("PAR %d", value);
+	    return String.format("%d", value);
 	} else {
 	    StringBuilder woNotation = new StringBuilder();
 	    woNotation.append(String.format("( (* %d'h%x *) WO", width, value));
@@ -2460,7 +2451,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	} else if (t.name.equals("TExp")) {
 	    kamitype = String.format("exp2 %s", convertedParams.get(0));
 	} else if (convertedParams.size() > 0) {
-	    kamitype = String.format("%s %s", t.name, String.join(" ", convertedParams));
+	    kamitype = String.format("%s_%s", t.name, String.join(" ", convertedParams));
 	} else {
 	    level = 0;
 	    kamitype = t.name;
