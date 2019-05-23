@@ -249,16 +249,27 @@ public class BSVType {
 	}
 
 	String result = name;
-	if (params.size() > 0) {
-	    result = name + (numeric ? "'numeric" : "" ) + "#(";
-	    String sep = "";
-	    for (BSVType p: params) {
-		result += sep;
-		result += p.toString();
-		sep = ", ";
+        //if (name.equals("INTEGER")) {
+	    if (params.size() > 0) {
+	        result = name + (numeric ? "'numeric" : "" ) + "_";
+	        String sep = "";
+	        for (BSVType p: params) {
+		    result += sep;
+		    result += p.toString();
+		    sep = "__";
+	        }
 	    }
-	    result += ")";
-	}
+        //}
+	//else if (params.size() > 0) {
+	    //result = name + (numeric ? "'numeric" : "" ) + "_";
+	    //String sep = "";
+	    //for (BSVType p: params) {
+		//result += sep;
+		//result += p.toString();
+		//sep = ", ";
+	    //}
+	    //result += ")";
+	//}
 	return result;
     }
 
