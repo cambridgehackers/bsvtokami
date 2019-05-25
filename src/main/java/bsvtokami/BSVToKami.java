@@ -454,8 +454,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
         interfaceType = typeVisitor.dereferenceTypedef(interfaceType);
 	interfaceName = interfaceType.name;
         String iname = interfaceType.toString();
-        if (!iname.equals("Empty"))
+        if (!iname.equals("Empty")) {
             moduleName = iname;
+            //dumpInterfacedecl(interfaceType);
+        }
 
 	moduleDef = new ModuleDef(moduleName);
         pkg.addStatement(moduleDef);
