@@ -475,6 +475,33 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         logger.fine("module " + moduleName);
 	printstream.println("MODULE " + moduleName + "{");
+{
+            SymbolTableEntry interfaceEntry = scope.lookupType(interfaceName);
+          if (interfaceEntry.symbolType != SymbolType.Interface) {
+                System.err.println(String.format("    %s is not an interface (%s)", interfaceType.name, interfaceEntry.symbolType));
+                return null;
+            }
+
+            assert interfaceEntry.mappings != null: "No interface mappings for " + interfaceName;
+printstream.println("JJJ" + interfaceEntry.mappings);
+        for (Map.Entry<String,SymbolTableEntry> iterator: interfaceEntry.mappings.bindings.entrySet()) {
+	    String fieldName = iterator.getKey();
+printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
+            if (iterator.getValue().symbolType != SymbolType.Method) {
+                printstream.println(String.format("    %s is not an Method (%s)", fieldName, iterator.getValue().symbolType));
+                //return null;
+            }
+        }
+/*
+            SymbolTableEntry methodEntry = interfaceEntry.mappings.lookup(fieldName);
+            if (methodEntry == null) {
+                for (Map.Entry<String,SymbolTableEntry> mapping: interfaceEntry.mappings.bindings.entrySet()) {
+                    System.err.println(String.format("ifc %s method %s type %s", interfaceType.name, mapping.getKey(), mapping.getValue().type));
+                }
+                return null;
+            }
+*/
+}
         if (!iname.equals("Empty"))
 	    printstream.println("        INTERFACE " + interfaceType.toString() + "ifc");
         for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {

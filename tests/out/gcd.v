@@ -6,6 +6,13 @@ INTERFACE GCDifc {
 }
 
 MODULE GCD_INTEGER_32{
+JJJbsvtokami.SymbolTable@408a247c
+JJKKJresult LLL a
+    result is not an Method (Unspecified)
+JJKKJset_m LLL a -> Action
+    set_m is not an Method (Unspecified)
+JJKKJset_n LLL a -> Action
+    set_n is not an Method (Unspecified)
         INTERFACE GCD_INTEGER_32ifc
         FIELD INTEGER_32 n
         FIELD INTEGER_32 m
@@ -27,6 +34,7 @@ MODULE GCD_INTEGER_32{
         }
 }
 MODULE mkMain{
+JJJbsvtokami.SymbolTable@2b491fee
         FIELD GCD_INTEGER_32 gcd
         FIELD INTEGER_1 started
         FIELD INTEGER_32 dv
