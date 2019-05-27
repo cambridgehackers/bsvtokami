@@ -140,7 +140,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
 	String paramsString = paramsStringBuilder.toString();
 
-	printstream.println(String.format("INTERFACE %sifc {", interfaceName));
+	printstream.println(String.format("INTERFACE %sifc = '%s'{", interfaceName, interfaceType.toString()));
 	for (BSVParser.InterfacememberdeclContext decl: ctx.interfacememberdecl()) {
 	    if (decl.methodproto() != null) {
                 BSVParser.MethodprotoContext mproto = decl.methodproto();
@@ -149,7 +149,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		printstream.print("    METHOD");
                 if (returntype == "Void")
 		    printstream.print("/Action");
-		printstream.print(mproto.name.getText());
+		printstream.print(" " + mproto.name.getText());
                 if (mproto.methodprotoformals() != null) {
                     printstream.print(" (");
                     String sep = "";
@@ -483,14 +483,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
             }
 
             assert interfaceEntry.mappings != null: "No interface mappings for " + interfaceName;
-printstream.println("JJJ" + interfaceEntry.mappings);
         for (Map.Entry<String,SymbolTableEntry> iterator: interfaceEntry.mappings.bindings.entrySet()) {
 	    String fieldName = iterator.getKey();
 printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
-            if (iterator.getValue().symbolType != SymbolType.Method) {
-                printstream.println(String.format("    %s is not an Method (%s)", fieldName, iterator.getValue().symbolType));
-                //return null;
-            }
         }
 /*
             SymbolTableEntry methodEntry = interfaceEntry.mappings.lookup(fieldName);
