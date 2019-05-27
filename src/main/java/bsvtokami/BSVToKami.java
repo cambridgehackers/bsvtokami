@@ -123,11 +123,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     @Override public String visitInterfacedecl(BSVParser.InterfacedeclContext ctx) {
 	// modules are represented by a string: the name of the instance
-	String interfaceName = ctx.typedeftype().typeide().getText();
 
 	typeVisitor.pushScope(scope);
 	BSVType interfaceType = typeVisitor.visit(ctx.typedeftype());
 	typeVisitor.popScope();
+	String interfaceName = interfaceType.toString();
 
 	TreeMap<String,BSVType> freeTypeVariables = interfaceType.getFreeVariables();
 
@@ -140,7 +140,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
 	String paramsString = paramsStringBuilder.toString();
 
-	printstream.println(String.format("INTERFACE %sifc = '%s'{", interfaceName, interfaceType.toString()));
+	printstream.println(String.format("INTERFACE %s{", interfaceName));
 	for (BSVParser.InterfacememberdeclContext decl: ctx.interfacememberdecl()) {
 	    if (decl.methodproto() != null) {
                 BSVParser.MethodprotoContext mproto = decl.methodproto();
@@ -475,30 +475,22 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         logger.fine("module " + moduleName);
 	printstream.println("MODULE " + moduleName + "{");
+/*
 {
             SymbolTableEntry interfaceEntry = scope.lookupType(interfaceName);
           if (interfaceEntry.symbolType != SymbolType.Interface) {
                 System.err.println(String.format("    %s is not an interface (%s)", interfaceType.name, interfaceEntry.symbolType));
                 return null;
             }
-
             assert interfaceEntry.mappings != null: "No interface mappings for " + interfaceName;
         for (Map.Entry<String,SymbolTableEntry> iterator: interfaceEntry.mappings.bindings.entrySet()) {
 	    String fieldName = iterator.getKey();
 printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
         }
-/*
-            SymbolTableEntry methodEntry = interfaceEntry.mappings.lookup(fieldName);
-            if (methodEntry == null) {
-                for (Map.Entry<String,SymbolTableEntry> mapping: interfaceEntry.mappings.bindings.entrySet()) {
-                    System.err.println(String.format("ifc %s method %s type %s", interfaceType.name, mapping.getKey(), mapping.getValue().type));
-                }
-                return null;
-            }
-*/
 }
+*/
         if (!iname.equals("Empty"))
-	    printstream.println("        INTERFACE " + interfaceType.toString() + "ifc");
+	    printstream.println("        INTERFACE " + interfaceType.toString());
         for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
 	    BSVType freeType = entry.getValue();
 	    boolean isNumeric = freeType.numeric;
@@ -811,7 +803,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 
 	StringBuilder statement = new StringBuilder();
 
-        if (false && !typeName.equals("INTEGER")) {
+        if (false && !typeName.equals("Bit")) {
             BSVType paramtype = bsvtype.params.get(0);
 	    methodBindings.add(String.format("%s STRING", varName, varName));
             statement.append("FIELD " + bsvTypeToKami(paramtype) + varName
@@ -2013,9 +2005,9 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 	IntValue intValue = new IntValue(ctx.IntLiteral().getText());
 	long intWidth = intValue.width;
 	BSVType bsvType = typeVisitor.visit(ctx).prune();
-	if (bsvType.name.equals("INTEGER")) {
+	if (bsvType.name.equals("Bit")) {
 	    BSVType typeWidth = bsvType.params.get(0).prune();
-	    assert !typeWidth.isVar : String.format("Unknown width for type %s at %s", bsvType, StaticAnalysis.sourceLocation(ctx));
+	    //assert !typeWidth.isVar : String.format("Unknown width for type %s at %s", bsvType, StaticAnalysis.sourceLocation(ctx));
 	    long widthFromType = 0;
 	    try {
 		widthFromType = typeWidth.asLong();
@@ -2345,8 +2337,6 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 	if (value < 128 && width == 0) {
 	    return String.format("%d", value);
 	} else if (value < 128 && width != 0) {
-	    //return String.format("%d %d", width, value);
-	    //return String.format("PAR %d", value);
 	    return String.format("%d", value);
 	} else {
 	    StringBuilder woNotation = new StringBuilder();
@@ -2359,7 +2349,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
     }
 
     public static boolean isKamiKind(BSVType t) {
-	if (t.name.equals("INTEGER")
+	if (t.name.equals("Bit")
 	    || t.name.equals("Bool")
 	    || t.name.equals("UInt")
 	    || t.name.equals("Function")
@@ -2381,8 +2371,8 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
             kamitype = "Void";
         if (kamitype.equals("Integer"))
             kamitype = "nat";
-	if (kamitype.equals("INTEGER") && !inModule)
-	    kamitype = "INTEGER";
+	if (kamitype.equals("Bit") && !inModule)
+	    kamitype = "Bit";
 	else if (kamitype.equals("Bool") && !inModule)
 	    kamitype = "Bool";
 	else if (kamitype.equals("Integer"))
@@ -2409,7 +2399,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 	    kamitype = "Void";
 	} else if (t.name.equals("Integer")) {
 	    if (actionContext)
-		kamitype = "INTEGER _";
+		kamitype = "Bit _";
 	    else
 		kamitype = "nat";
 	} else if (t.name.equals("ActionValue")) {
@@ -2485,7 +2475,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 	} else if (bsvtype.name.equals("TLog")) {
 	    result = String.format("(Nat.log2 %s)",
 				   bsvTypeSize(bsvtype.params.get(0), ctx));
-	} else if (bsvtype.name.equals("INTEGER") || bsvtype.name.equals("Int") || bsvtype.name.equals("UInt")) {
+	} else if (bsvtype.name.equals("Bit") || bsvtype.name.equals("Int") || bsvtype.name.equals("UInt")) {
 	    result = bsvTypeSize(bsvtype.params.get(0), ctx);
 	} else if (bsvtype.name.equals("Vector")) {
 	    result = String.format("(%s * %s)",

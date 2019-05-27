@@ -20,30 +20,18 @@ public class BSVType {
 	params = new ArrayList<BSVType>();
 	if (name == null) {
 	    name = "tvar" + count;
-	    params.add(new BSVType("332")); // HACKKKKKK
 	    count++;
 	}
-	else if (name.equals("void")) {
+	if (name.equals("void"))
 	    name = "Void";
-	    params.add(new BSVType("999"));
-        }
-	else if (name.equals("int")) {
-	    name  = "INTEGER";
+	if (name.equals("int")) {
+	    name  = "Int";
 	    params.add(new BSVType("32"));
 	}
-	else if (name.equals("bit")) {
-	    name  = "INTEGER";
+	if (name.equals("bit")) {
+	    name  = "Bit";
 	    params.add(new BSVType("1"));
 	}
-	else if (name.equals("Bit")) {
-	    name  = "INTEGER";
-	    params.add(new BSVType("199"));
-	}
-        else {
-	    //name  = "INTEGER";
-	    //params.add(new BSVType(name + "666"));
-	//System.err.println("    JJJTYPE " + name);
-        }
 	this.numeric = numeric || name.matches("[0-9]+") || name.endsWith("sz") || name.endsWith("Sz");
 	isVar = name.matches("[a-z].*");
 	this.name = name;
@@ -249,27 +237,16 @@ public class BSVType {
 	}
 
 	String result = name;
-        //if (name.equals("INTEGER")) {
-	    if (params.size() > 0) {
-	        result = name + (numeric ? "'numeric" : "" ) + "_";
-	        String sep = "";
-	        for (BSVType p: params) {
-		    result += sep;
-		    result += p.toString();
-		    sep = "__";
-	        }
+	if (params.size() > 0) {
+	    result = name + (numeric ? "'numeric" : "" ) + "(";
+	    String sep = "";
+	    for (BSVType p: params) {
+		result += sep;
+		result += p.toString();
+		sep = ", ";
 	    }
-        //}
-	//else if (params.size() > 0) {
-	    //result = name + (numeric ? "'numeric" : "" ) + "_";
-	    //String sep = "";
-	    //for (BSVType p: params) {
-		//result += sep;
-		//result += p.toString();
-		//sep = ", ";
-	    //}
-	    //result += ")";
-	//}
+	    result += ")";
+	}
 	return result;
     }
 
@@ -277,8 +254,8 @@ public class BSVType {
 	System.out.println("testing type inference\n");
 	BSVType tp1 = new BSVType("Function",
 				  new BSVType("Int"), new BSVType("Int"));
-	BSVType tp2 = new BSVType("INTEGER", new BSVType("3"));
-	BSVType tp3 = new BSVType("INTEGER", new BSVType());
+	BSVType tp2 = new BSVType("Bit", new BSVType("3"));
+	BSVType tp3 = new BSVType("Bit", new BSVType());
 	try {
 	    tp1.unify(tp1);
 	    tp2.unify(tp3);
