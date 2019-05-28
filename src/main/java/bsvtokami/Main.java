@@ -321,11 +321,18 @@ class Main {
 	    if (!dir.exists()) {
 		dir.mkdirs();
 	    }
+	    File irfile = new File(dirname, pkgName + ".IR");
 	    File ofile = new File(dirname, pkgName + ".v");
 	    try {
-		BSVToKami bsvToKami = new BSVToKami(pkgName, ofile, staticAnalyzer);
+		BSVToKami bsvToKami = new BSVToKami(pkgName, irfile, staticAnalyzer);
 
 		bsvToKami.visit(packagedef);
+                String fname = irfile.getPath();
+                bsvToKami.close();
+                BufferedReader rirfile = new BufferedReader(new FileReader(fname));
+		IRToKami irToKami = new IRToKami(pkgName, rirfile, ofile);
+
+		irToKami.run(); //visit(packagedef);
 	    } catch (Exception e) {
 		String msg = String.format("Exception while translating file %s: %s", filename, e.toString());
 		logger.severe(msg);

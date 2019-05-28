@@ -6,7 +6,7 @@ import org.antlr.v4.runtime.tree.*;
 import java.io.*;
 import java.util.*;
 import java.util.logging.Logger;
-
+/*
 class LetBindings implements Iterable<String>
 {
     private ArrayList<String> bindings;
@@ -479,20 +479,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         logger.fine("module " + moduleName);
 	printstream.println("MODULE " + moduleName + "{");
-/*
-{
-            SymbolTableEntry interfaceEntry = scope.lookupType(interfaceName);
-          if (interfaceEntry.symbolType != SymbolType.Interface) {
-                System.err.println(String.format("    %s is not an interface (%s)", interfaceType.name, interfaceEntry.symbolType));
-                return null;
-            }
-            assert interfaceEntry.mappings != null: "No interface mappings for " + interfaceName;
-        for (Map.Entry<String,SymbolTableEntry> iterator: interfaceEntry.mappings.bindings.entrySet()) {
-	    String fieldName = iterator.getKey();
-printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
-        }
-}
-*/
         if (!iname.equals("Empty"))
 	    printstream.println("        INTERFACE " + interfaceType.toString());
         for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
@@ -2544,5 +2530,40 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 	if (nextResult == null)
 	    return aggregate;
 	return aggregate + nextResult;
+    }
+}
+*/
+public class IRToKami
+{
+    private static Logger logger = Logger.getGlobal();
+    public static String newline = System.getProperty("line.separator");
+    private final BufferedReader irfile;
+    private final File ofile;
+    private String pkgName;
+    private PrintStream printstream;
+
+    IRToKami(String pkgName, BufferedReader irfile, File ofile) {
+        this.pkgName = pkgName;
+        this.irfile = irfile;
+        this.ofile = ofile;
+        try {
+            printstream = new PrintStream(ofile);
+        } catch (FileNotFoundException ex) {
+            logger.severe(ex.toString());
+            printstream = null;
+        }
+    }
+    void run() {
+        while (true) {
+            try {
+                String item = irfile.readLine();
+                if (item == null)
+                    break;
+                printstream.println (item);
+            } catch (IOException ex) {
+                logger.severe(ex.toString());
+                break;
+            }
+        }
     }
 }
