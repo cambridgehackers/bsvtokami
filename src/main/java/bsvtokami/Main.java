@@ -327,12 +327,6 @@ class Main {
 		BSVToKami bsvToKami = new BSVToKami(pkgName, irfile, staticAnalyzer);
 
 		bsvToKami.visit(packagedef);
-                String fname = irfile.getPath();
-                bsvToKami.close();
-                BufferedReader rirfile = new BufferedReader(new FileReader(fname));
-		IRToKami irToKami = new IRToKami(pkgName, rirfile, ofile);
-
-		irToKami.run(); //visit(packagedef);
 	    } catch (Exception e) {
 		String msg = String.format("Exception while translating file %s: %s", filename, e.toString());
 		logger.severe(msg);
