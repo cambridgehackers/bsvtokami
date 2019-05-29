@@ -1183,7 +1183,12 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 
         String methodName = ctx.name.getText();
 	assert ctx.bsvtype() != null : "Method return type required at " + StaticAnalysis.sourceLocation(ctx);
-        String returntype = (ctx.bsvtype() != null) ? bsvTypeToKami(StaticAnalysis.getBsvType(ctx.bsvtype())) : "";
+        String returntype = "Void";
+        if (ctx.bsvtype() != null) {
+            BSVType ty = StaticAnalysis.getBsvType(ctx.bsvtype());
+            if (ty != null && !ty.toString().equals("Action"))
+                returntype = ty.toString();
+        }
         statement.append("METHOD");
         if (returntype == "Void")
             statement.append("/Action");

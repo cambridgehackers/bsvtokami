@@ -22,7 +22,7 @@ MODULE GCD(Bit(32)) {
         METHOD/Action set_m ( Bit(32) in_m ) if ((m ==  0)) {
         STORE : m = in_m 
         }
-        METHOD result Bit_32 = (n) if ((m ==  0)) {
+        METHOD result Bit(32) = (n) if ((m ==  0)) {
 
         }
 }
