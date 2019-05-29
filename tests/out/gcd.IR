@@ -16,10 +16,10 @@ MODULE GCD(Bit(32)) {
         METHOD/Rule/Action sub if (((n <= m) && (m !=  0))) {
                STORE : m = (m - n) 
         }
-        METHOD/Action set_n ( Bit_32 in_n ) if ((m ==  0)) {
+        METHOD/Action set_n ( Bit(32) in_n ) if ((m ==  0)) {
         STORE : n = in_n 
         }
-        METHOD/Action set_m ( Bit_32 in_m ) if ((m ==  0)) {
+        METHOD/Action set_m ( Bit(32) in_m ) if ((m ==  0)) {
         STORE : m = in_m 
         }
         METHOD result Bit_32 = (n) if ((m ==  0)) {

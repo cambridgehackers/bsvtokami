@@ -1196,7 +1196,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
             for (BSVParser.MethodformalContext formal: ctx.methodformals().methodformal()) {
                 BSVType bsvtype = typeVisitor.visit(formal.bsvtype());
                 String varName = formal.name.getText();
-                statement.append(String.format("%s%s %s", sep, bsvTypeToKami(bsvtype, 1), varName));
+                statement.append(String.format("%s%s %s", sep, bsvtype.toString(), varName));
                 sep = ",";
             }
             statement.append(" )");
