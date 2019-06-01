@@ -737,12 +737,12 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 			System.err.println(String.format("Call varbinding %s fcn %s", varName, functionName));
 			boolean wasActionContext = actionContext;
 			actionContext = true;
-			statement.append(String.format("CALL %s : %s (* varbinding *) <- %s ", varName, bsvTypeToKami(t), translateCall(call)));
+			statement.append(String.format("LET %s : %s = %s ", bsvTypeToKami(t), varName, translateCall(call)));
 			actionContext = wasActionContext;
 		    }
                 } else {
                     if (inModule) {
-                        statement.append(String.format("        LET %s : %s (* non-call varbinding *) <- ", varName, bsvTypeToKami(t)));
+                        statement.append(String.format("        LET %s : %s = ", bsvTypeToKami(t), varName));
 			boolean wasActionContext = actionContext;
 			actionContext = true;
                         statement.append(visit(rhs));
@@ -1249,7 +1249,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
         for (BSVParser.StmtContext stmt: ctx.stmt())
             visit(stmt);
 	boolean hasStatements = statements.size() > 0;
-	statement.append(String.join(newline + "QQ9       ", statements));
+	statement.append(String.join(newline + "       ", statements)); // QQ9
         if (ctx.expression() != null) {
             statement.append("QQZ" + visit(ctx.expression()));
 	    hasStatements = true;
@@ -2186,6 +2186,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
     }
 
     String translateCall(BSVParser.CallexprContext ctx) {
+System.err.println("ZZZYY" + ctx.getText());
 	assert ctx != null;
 	assert ctx.fcn != null : "Expecting a function call " + ctx.getText() + " at " + StaticAnalysis.sourceLocation(ctx);
         InstanceNameVisitor inv = new InstanceNameVisitor(scopes);
@@ -2204,6 +2205,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 		resultType = methodType.params.get(1);
 	    }
 	} else {
+System.err.println("ZZW no method");
 	    assert methodName != null : "No method name at " + StaticAnalysis.sourceLocation(ctx);
 	    assert scope != null;
 	    SymbolTableEntry functionEntry = scope.lookup(methodName);

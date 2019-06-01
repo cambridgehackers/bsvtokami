@@ -1332,6 +1332,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             assert fcntype != null : String.format("Null type for %s at %s", ctx.fcn.getText(), StaticAnalysis.sourceLocation(ctx));
 	    BSVType fcntype_i = fcntype;
 	    int i = 0;
+System.err.println("ZZZ1" + ctx.fcn.getText());
             for (BSVParser.ExpressionContext expr: ctx.expression()) {
                 BSVType resulttype = new BSVType();
                 try {
@@ -1347,6 +1348,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 } catch (InferenceError e) {
                     logger.fine("Apply InferenceError " + e);
                 }
+System.err.println("ZZZZZ" + fcntype_i.prune() + "EEE" + fcntype_i.prune().params + "PPP");
                 fcntype_i = fcntype_i.prune().params.get(1);
 		i++;
             }
