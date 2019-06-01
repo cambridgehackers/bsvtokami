@@ -91,7 +91,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
     }
 
     @Override public String visitImportitem(BSVParser.ImportitemContext ctx) {
-	printstream.println(String.format("Require Import %s.", ctx.pkgname.getText()));
 	return null;
     }
 
@@ -138,7 +137,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	StringBuilder paramsStringBuilder = new StringBuilder();
         for (BSVType freeType: interfaceType.params) {
 	    logger.fine("Ifc decl: Free type variable " + freeType + (freeType.numeric ? " nat" : " interface type"));
-	    paramsStringBuilder.append(String.format(" (%s : %s)",
+	    paramsStringBuilder.append(String.format(" (%s ZZIZ: %s)",
 						     freeType.name,
 						     (freeType.numeric ? "nat" : "Kind")));
 	}
@@ -213,7 +212,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         for (BSVParser.StructmemberContext member: substruct.structmember()) {
             assert member.subunion() == null;
             if (member.bsvtype() != null) {
-                members.add(String.format("    \"%s$%s\" :: %s",
+                members.add(String.format("    \"%s$%s\" JJ1:: %s",
                                           fieldPrefix,
                                           member.lowerCaseIdentifier().getText(),
                                           bsvTypeToKami(StaticAnalysis.getBsvType(member.bsvtype()))));
@@ -237,7 +236,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             for (BSVParser.TypeformalContext formal: ctx.typedeftype().typeformals().typeformal()) {
                 String name = formal.typeide().getText();
                 //assert formal.numeric != null : "Expecting numeric type parameter at " + StaticAnalysis.sourceLocation(formal);
-                constructorParamsBuilder.append(String.format(" (%s : %s)", name,
+                constructorParamsBuilder.append(String.format(" (%s EZZE: %s)", name,
 							      ((formal.numeric != null)? "nat" : "Type")));
                 paramsBuilder.append(String.format(" %s", name));
             }
@@ -246,7 +245,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             params = paramsBuilder.toString();
         }
 
-        printstream.println(String.format("3Definition %s%s := (STRUCT_TYPE {", typeName, constructorParams));
+        printstream.println(String.format("STRUCT %s%s {", typeName, constructorParams));
         ArrayList<String> members = new ArrayList<>();
 	SymbolTableEntry structTypeEntry = scope.lookupType(typeName);
 	assert structTypeEntry != null : "No entry for type name " + typeName;;
@@ -259,15 +258,15 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		    continue;
 		assert member.subunion() == null;
 		if (member.bsvtype() != null) {
-		    members.add(String.format("    \"%s\" :: %s",
-					      memberName,
-					      bsvTypeToKami(StaticAnalysis.getBsvType(member.bsvtype()))));
+		    members.add(String.format("    %s %s", //jca
+					      bsvTypeToKami(StaticAnalysis.getBsvType(member.bsvtype())),
+					      memberName));
 		} else {
 		}
 	    }
 	}
         printstream.print(String.join(";\n", members));
-        printstream.println("}).");
+        printstream.println(";\n}");
         printstream.println("");
 
         //scope = scopes.popScope();
@@ -351,7 +350,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	maxValue += 1;
 	int tagSize = (int)java.lang.Math.ceil(java.lang.Math.log(maxValue) / java.lang.Math.log(2.0));
 	// emit type declaration
-        printstream.println(String.format("4Definition %s : Kind := (STRUCT_TYPE { \"$tag\" :: (Bit %d) }).", typeName, tagSize));
+        printstream.println(String.format("4Definition %s : Kind := (STRUCT_TYPE { \"$tag\" JJ3:: (Bit %d) }).", typeName, tagSize));
 
 	for (TagValue pair: tagsAndValues) {
 	    if (pair.value < 128)
@@ -403,7 +402,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		    continue;
 		assert member.subunion() == null;
 		if (member.bsvtype() != null) {
-		    members.add(String.format("    \"%s\" :: %s",
+		    members.add(String.format("    \"%s\" JJ5:: %s",
 					      memberName,
 					      bsvTypeToKami(StaticAnalysis.getBsvType(member.bsvtype()))));
 		} else if (member.substruct() != null) {
@@ -718,7 +717,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 						       struct.toString()));
 		    } else if (functionName.startsWith("tpl_")) {
 			BSVType arg0Type = typeVisitor.visit(args.get(0));
-			statement.append(String.format("LET %1$s : %2$s <-  %3$s @%% \"tpl_%4$s\"",
+			statement.append(String.format("LET %1$s : %2$s <-  %3$s . tpl_%4$s",
 						       varName,
 						       bsvTypeToKami(varType, 1),
 						       visit(args.get(0)),
@@ -824,11 +823,11 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 	    assert call != null && call.fcn != null: "Something wrong with action context " + ctx.rhs.getText() + " at " + StaticAnalysis.sourceLocation(ctx.rhs);
 
 	    statement.append(String.format("        CALL/Action : %s(", calleeInstanceName));
+            String sep = "";
 	    for (BSVParser.ExpressionContext arg: call.expression()) {
 		BSVType argType = typeVisitor.visit(arg);
-		if (argType.name.equals("Reg"))
-		    argType = argType.params.get(0);
-		statement.append(String.format(" %s", visit(arg)));
+		statement.append(String.format("%s %s", sep, visit(arg)));
+                sep = ", ";
 	    }
 	    statement.append(")");
 
@@ -1404,7 +1403,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
             if (pat != null) {
 		if (pat.var != null) {
 		    String fieldName = pat.var.getText();
-		    return String.format("            LET %1$s <- (#%2$s @%% \"%5$s\") ;",
+		    return String.format("            LET %1$s <- (#%2$s . %5$s) ;",
 					 fieldName,
 					 match,
 					 tagType.name,
@@ -1431,7 +1430,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
             for (int i = 0; i < structpattern.pattern().size(); i++) {
                 String fieldName = structpattern.lowerCaseIdentifier(i).getText();
                 BSVParser.PatternContext fieldPattern = structpattern.pattern(i);
-                patternString.append(destructurePattern(fieldPattern, String.format("(#%1$s @%% \"%3$s%4$s%5$s\")", match,
+                patternString.append(destructurePattern(fieldPattern, String.format("(#%1$s . %3$s%4$s%5$s)", match,
                                                                                     bsvTypeToKami(tagType),
                                                                                     ((tagName != null) ? tagName : ""), // unused in Kami2
                                                                                     ((tagName != null) ? "$" : ""),
@@ -1483,7 +1482,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 		assert expritem.patterncond().size() == 0 : "pattern cond at " + StaticAnalysis.sourceLocation(expritem);
 		assert expritem.pattern().taggedunionpattern().pattern() == null
 		    : "Case expr cannot handle tagged union pattern destructuring at " + StaticAnalysis.sourceLocation(expritem.pattern());
-		statement.append(String.format("(%1$s @%% \"$tag\")",
+		statement.append(String.format("(%1$s . $tag)",
 					       visit(ctx.expression()),
 					       exprType.name,  // unused in Kami2
 					       ((exprType.params.size() > 0) ? bsvTypeToKami(exprType.params.get(0)) : "")  // unused in Kami2
@@ -1578,7 +1577,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
             statement.append("    If (");
             statement.append(visit(ctx.expression()));
 	    if (tagName != null)
-		statement.append(String.format(" @%% \"$tag\"",
+		statement.append(String.format(" . $tag",
 				tagType.name,
 				((matchType.params.size() > 0) ? bsvTypeToKami(matchType.params.get(0)) : "") // unused in kami2
 		));
@@ -2089,7 +2088,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 
 	BSVType exprType = typeVisitor.visit(ctx.exprprimary());
 	typeVisitor.popScope();
-	return String.format("(%1$s @%% \"%3$s\")",
+	return String.format("(%1$s . %3$s)",
 			     visit(ctx.exprprimary()),
 			     exprType.name, // unused in Kami2
 			     ctx.field.getText());
@@ -2239,14 +2238,11 @@ System.err.println("ZZW no method");
             // "Call" is up where the binding is, hopefully
             statement.append(methodName);
 	    int argNumber = 0;
+	    statement.append(" (");
+            String sep = "";
             for (BSVParser.ExpressionContext expr: ctx.expression()) {
-		statement.append(" ((");
+		statement.append(sep);
                 statement.append(visit(expr));
-		statement.append(") : ");
-		if (argType.name.equals("Reg"))
-		    argType = argType.params.get(0);
-		statement.append(bsvTypeToKami(argType));
-		statement.append(")");
 		System.err.println(String.format("callm %s arg %d type %s", methodName, argNumber, argType));
 		argNumber++;
 		if (argNumber < ctx.expression().size()) {
@@ -2254,10 +2250,9 @@ System.err.println("ZZW no method");
 		    argType = resultType.params.get(0);
 		    resultType = resultType.params.get(1);
 		}
+                sep = ", ";
             }
-	    // zero argument call still needs ()
-	    if (argNumber == 0)
-		statement.append(" ()");
+	    statement.append(" )");
         return statement.toString();
     }
 
