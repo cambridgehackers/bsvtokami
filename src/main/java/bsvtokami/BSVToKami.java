@@ -1112,7 +1112,6 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 
 	boolean hasProvisos = functionproto.provisos() != null;
 	useAbstractOmega = hasProvisos;
-	printstream.println(String.format("    Local Open Scope kami_expr.\n"));
 	printstream.println(String.format("    13Definition Mod'%s: Mod%s",
 					  functionName,
 					  (useAbstractOmega ? "." : " :=")
@@ -1911,9 +1910,9 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 
     @Override public String visitStructexpr(BSVParser.StructexprContext ctx) {
 	StringBuilder expression = new StringBuilder();
-        expression.append("STRUCT { ");
-        int i = 0;
 	String tagName = ctx.tag.getText();
+        expression.append(tagName + " { ");
+        int i = 0;
 	SymbolTableEntry structTypeEntry = scope.lookupType(tagName);
 	assert structTypeEntry != null : String.format("No symbol table entry for type %s at %s",
 						       tagName, StaticAnalysis.sourceLocation(ctx.tag));
@@ -1937,7 +1936,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 	StringBuilder expression = new StringBuilder();
         String tagName = ctx.tag.getText();
 	String sourceLocation = StaticAnalysis.sourceLocation(ctx);
-        expression.append(String.format("(* tagged union %s %s *) STRUCT { ", tagName, sourceLocation));
+        expression.append(String.format("(* tagged union *) STRUCT %s { ", tagName));
         SymbolTableEntry tagEntry = scope.lookup(tagName);
         assert tagEntry != null;
         BSVType tagtype = tagEntry.type.fresh();
@@ -2060,16 +2059,16 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
                 if (entry.type.name.equals("Reg")) {
                     expression.append(varName);
 		} else if (varName.equals("True")) {
-		    expression.append("($$true)%kami_expr");
+		    expression.append("true");
 		} else if (varName.equals("False")) {
-		    expression.append("($$false)%kami_expr");
+		    expression.append("false");
 		} else {
                     expression.append(prefix + varName);
 		}
             } else if (varName.equals("True")) {
-		expression.append("($$true)%kami_expr");
+		expression.append("true");
             } else if (varName.equals("False")) {
-		expression.append("($$false)%kami_expr");
+		expression.append("false");
 	    } else {
 		char firstChar = varName.charAt(0);
 		if (firstChar >= 'A' && firstChar <= 'Z') {
@@ -2177,7 +2176,6 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
     }
 
     String translateCall(BSVParser.CallexprContext ctx) {
-System.err.println("ZZZYY" + ctx.getText());
 	assert ctx != null;
 	assert ctx.fcn != null : "Expecting a function call " + ctx.getText() + " at " + StaticAnalysis.sourceLocation(ctx);
         InstanceNameVisitor inv = new InstanceNameVisitor(scopes);
@@ -2196,7 +2194,6 @@ System.err.println("ZZZYY" + ctx.getText());
 		resultType = methodType.params.get(1);
 	    }
 	} else {
-System.err.println("ZZW no method");
 	    assert methodName != null : "No method name at " + StaticAnalysis.sourceLocation(ctx);
 	    assert scope != null;
 	    SymbolTableEntry functionEntry = scope.lookup(methodName);
