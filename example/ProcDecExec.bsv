@@ -1,5 +1,6 @@
 
 import FIFO::*;
+import FIFOF::*;
 import RegFile::*;
 import ProcMemSpec::*;
 import PipelinedProc::*;
@@ -77,7 +78,7 @@ module mkDecExecSep#(RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm,
 		     Memory mem,
                      Reg#(Vector#(NumRegs, Bit#(DataSz))) rf,
 		     ToHost toHost)(NoMethods);
-   FIFO#(D2E) d2eFifo <- mkFIFO();
+   FIFOF#(D2E) d2eFifo <- mkFIFOF();
    FIFO#(E2W) e2wFifo <- mkFIFO();
 
    Reg#(Bit#(PgmSz)) decoder_pc <- mkReg(16'h0);
