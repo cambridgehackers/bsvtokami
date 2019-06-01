@@ -503,10 +503,6 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 	    if (freeType.name.startsWith("Num") || freeType.name.endsWith("sz") || freeType.name.endsWith("Sz") || freeType.name.equals("xlen"))
 		isNumeric = true;
 	    logger.fine("Module def: Free type variable " + freeType + (isNumeric ? " numeric" : " interface type"));
-
-	    printstream.println(String.format("    Variable %s : %s.",
-					      entry.getKey(),
-					      (isNumeric ? "nat" : "Kind")));
 	}
 
         boolean wasInModule = inModule;
@@ -519,11 +515,6 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
                 if (formal.name != null) {
                     String formalName = formal.name.getText();
                     formalNames.add(formalName);
-                    printstream.println(String.format("    Variable %s: %s.",
-                                                      formalName,
-                                                      ((isKamiKind(bsvType) || bsvType.isVar)
-                                                       ? String.format("ConstT %s", bsvTypeToKami(bsvType, 1))
-                                                       : bsvType.name)));
                 }
             }
         }
@@ -538,7 +529,6 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 		    if (typeVariable.matches("[0-9]+"))
 			continue;
 		    if (!freeTypeVariables.containsKey(typeVariable)) {
-			printstream.println(String.format("    Variable %s: %s.", typeVariable, "nat"));
 			freeTypeVariables.put(typeVariable, typeVisitor.visit(bsvtype));
 		    }
 		}
@@ -1052,7 +1042,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
                 isNumeric = true;
             logger.fine("Function def: Free type variable " + freeType + (isNumeric ? " numeric" : " interface type"));
 
-            printstream.println(String.format("    Variable %s : %s.",
+            printstream.println(String.format("    JJ4Variable %s : %s.",
                                               entry.getKey(),
                                               (isNumeric ? "nat" : "Kind")));
         }
@@ -1305,7 +1295,9 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 		// call is performed for side effect, so visit it but ignore the expression it returns
 		String unusedValue = visit(ctx.expression());
 	    } else {
-		statements.add(visit(ctx.expression()));
+                String ret = visit(ctx.expression());
+                if (!ret.equals(""))
+		    statements.add(ret);
 	    }
 	} else {
 	    visitChildren(ctx);
@@ -2042,7 +2034,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 	return "Default";
     }
     @Override public String visitReturnexpr(BSVParser.ReturnexprContext ctx) {
-        return ""; // why can't I just return 'null'??
+        return ""; // jca
     }
     @Override public String visitVarexpr(BSVParser.VarexprContext ctx) {
 	StringBuilder expression = new StringBuilder();

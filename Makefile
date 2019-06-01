@@ -3,6 +3,7 @@ all: gradlebuild kamibuild
 
 gradlebuild:
 	gradle build
+	gradle installDist
 
 bbv/Makefile:
 	git submodule update --init
