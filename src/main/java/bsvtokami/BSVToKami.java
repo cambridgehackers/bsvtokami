@@ -1199,7 +1199,8 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
             for (BSVParser.StmtContext stmt: ctx.stmt())
                 returnVisitor.visit(stmt);
 	    StringBuilder expression = new StringBuilder();
-            expression.append(visit(returnVisitor.returnExpr.expression()));
+            if (returnVisitor.returnExpr != null)
+                expression.append(visit(returnVisitor.returnExpr.expression()));
             statement.append(" " + returntype + " = (" + expression.toString() + ")");
         }
 	if (methodcond != null) {

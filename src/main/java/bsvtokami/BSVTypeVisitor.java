@@ -427,10 +427,13 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         @Override public BSVType visitActionBinding(BSVParser.ActionBindingContext ctx) {
 	    if (types.containsKey(ctx))
 		return types.get(ctx);
-	    assert ctx.arraydims().expression().size() == 0;
             BSVType bsvtype = visit(ctx.t);
-            logger.fine("actiondecl " + ctx.var.getText() + " <- " + bsvtype);
 	    BSVType rhstype = visit(ctx.rhs);
+	    if(ctx.arraydims().expression().size() != 0) {
+System.err.println("AAAZZZ" + ctx.var.getText() + "ZZ1" + bsvtype + "ZZ2" + rhstype);
+            }
+	    assert ctx.arraydims().expression().size() == 0;
+            logger.fine("actiondecl " + ctx.var.getText() + " <- " + bsvtype);
             try {
 		BSVType actiontype = new BSVType("ActionValue", bsvtype);
 		System.err.println(String.format("actiontype %1$s rhstype %2$s", actiontype, rhstype));
