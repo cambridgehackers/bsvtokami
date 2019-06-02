@@ -854,7 +854,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 	    int argNum = 0;
 	    for (BSVParser.ExpressionContext arg: call.expression()) {
 		BSVType argType = typeVisitor.visit(arg);
-		System.err.println(String.format("    arg %s type %s", arg.getText(), argType));
+		System.err.println(String.format("    arg %s type %s name %s", arg.getText(), argType, t.name));
 		assert t.name.equals("Function");
 		try {
 		    t.params.get(0).unify(argType);

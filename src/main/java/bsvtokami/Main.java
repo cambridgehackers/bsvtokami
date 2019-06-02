@@ -321,8 +321,8 @@ class Main {
 	    if (!dir.exists()) {
 		dir.mkdirs();
 	    }
-	    File irfile = new File(dirname, pkgName + ".IR");
-	    File ofile = new File(dirname, pkgName + ".v");
+	    File irfile = new File(dirname, pkgName + ".generated.IR");
+	    //File ofile = new File(dirname, pkgName + ".v");
 	    try {
 		BSVToKami bsvToKami = new BSVToKami(pkgName, irfile, staticAnalyzer);
 

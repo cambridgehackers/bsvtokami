@@ -1349,6 +1349,10 @@ System.err.println("ZZZ1" + ctx.fcn.getText());
                     logger.fine("Apply InferenceError " + e);
                 }
 System.err.println("ZZZZZ" + fcntype_i.prune() + "EEE" + fcntype_i.prune().params + "PPP");
+if (fcntype_i.prune().params.size() < 2) {
+    System.err.println("ZZ no items");
+    break;
+}
                 fcntype_i = fcntype_i.prune().params.get(1);
 		i++;
             }
