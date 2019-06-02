@@ -54,7 +54,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
     private boolean actionContext;
     private boolean useAbstractOmega;
     private boolean stmtEmitted;
-    private String returnPending;
     private boolean inModule;
     // for modules and rules
     private LetBindings letBindings;
@@ -481,20 +480,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         logger.fine("module " + moduleName);
 	printstream.println("MODULE " + moduleName + " {");
-/*
-{
-            SymbolTableEntry interfaceEntry = scope.lookupType(interfaceName);
-          if (interfaceEntry.symbolType != SymbolType.Interface) {
-                System.err.println(String.format("    %s is not an interface (%s)", interfaceType.name, interfaceEntry.symbolType));
-                return null;
-            }
-            assert interfaceEntry.mappings != null: "No interface mappings for " + interfaceName;
-        for (Map.Entry<String,SymbolTableEntry> iterator: interfaceEntry.mappings.bindings.entrySet()) {
-	    String fieldName = iterator.getKey();
-printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
-        }
-}
-*/
         if (!iname.equals("Empty"))
 	    printstream.println("        INTERFACE " + interfaceType.toString());
         for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
@@ -921,7 +906,6 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 	ArrayList<String> parentStatements = statements;
 	letBindings = new LetBindings();
 	statements = new ArrayList<>();
-	returnPending = "";
 
         boolean outerContext = actionContext;
         actionContext = true;
@@ -1007,7 +991,6 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
         statements = new ArrayList<>();
         modulevarbindings = new ArrayList<>();
         scope = scopes.pushScope(ctx);
-	returnPending = "";
 
         for (BSVParser.AttributeinstanceContext attrinstance: ctx.attributeinstance()) {
             for (BSVParser.AttrspecContext attr: attrinstance.attrspec()) {
@@ -1070,16 +1053,6 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 	    if (statements.size() > 0) {
 		functionBody.append("        ");
 		functionBody.append(String.join(" ;\n        ", statements));
-	    }
-	    if (returnPending != null) {
-		if (statements.size() > 0) {
-		    functionBody.append(newline);
-		}
-		functionBody.append("        ");
-		functionBody.append(returnPending);
-		functionBody.append(newline);
-		System.err.println("end of functiondef clearing returnPending at " + StaticAnalysis.sourceLocation(ctx));
-		returnPending = null;
 	    }
         }
 
@@ -1169,7 +1142,6 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 
 	StringBuilder statement = new StringBuilder();
 	StringBuilder paramunpack = new StringBuilder();
-	returnPending = "";
 
         String methodName = ctx.name.getText();
 	assert ctx.bsvtype() != null : "Method return type required at " + StaticAnalysis.sourceLocation(ctx);
@@ -1203,6 +1175,10 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 	    StringBuilder expression = new StringBuilder();
             if (returnVisitor.returnExpr != null)
                 expression.append(visit(returnVisitor.returnExpr.expression()));
+            else if (ctx.expression() != null)
+                expression.append(visit(ctx.expression()));
+            else
+                expression.append("0");
             statement.append(" " + returntype + " = (" + expression.toString() + ")");
         }
 	if (methodcond != null) {
@@ -1241,23 +1217,11 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
             visit(stmt);
 	boolean hasStatements = statements.size() > 0;
 	statement.append(String.join(newline + "       ", statements)); // QQ9
-        if (ctx.expression() != null) {
-            statement.append("QQZ" + visit(ctx.expression()));
-	    hasStatements = true;
-	}
-
-        if (returnPending != null) {
-	    if (hasStatements) {
-		statement.append(newline);
-	    }
-            statement.append("        ");
-	    statement.append(returnPending);
-	    returnPending = null;
-	}
-	statement.append("}");
+        if (hasStatements)
+	    statement.append("\n");
+	statement.append("        }");
 
         actionContext = outerContext;
-
 	statements  = parentStatements;
 	statements.add(statement.toString());
 	typeVisitor.popScope();
@@ -1339,7 +1303,6 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 
 	String predicate = "( " + visit(ctx.expression()) + " )";
 
-        returnPending = "";
         assert(letBindings.size() == 0) : "Unexpected let bindings at " + StaticAnalysis.sourceLocation(ctx) + "\n" + String.join("\n", letBindings);
 
         StringBuilder statement = new StringBuilder();
@@ -1351,16 +1314,9 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 					 statements.size(), letBindings.size(), StaticAnalysis.sourceLocation(ctx)));
         visit(ctx.stmt(0));
         statement.append(String.join(";\n        ", statements));
-        if (returnPending != null) {
-            if (statements.size() > 0)
-                statement.append(";\n        ");
-            statement.append("ZZRETURNPENDING        ");
-	    statement.append(returnPending);
-        }
         if (ctx.stmt(1) != null) {
             letBindings = new LetBindings();
             statements = new ArrayList<>();
-            returnPending = "";
             predicate = "( !" + predicate + " )";
             if (previousCondition.equals(""))
                 blockCondition = predicate;
@@ -1369,12 +1325,6 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
             visit(ctx.stmt(1));
             assert(letBindings.size() == 0);
             statement.append(String.join(";\n        ", statements));
-            if (returnPending != null) {
-                if (statements.size() > 0)
-                    statement.append(";\n        ");
-                statement.append("ZZERETURNPENDING        ");
-		statement.append(returnPending);
-            }
 	}
 
         letBindings = parentLetBindings;
@@ -1655,7 +1605,6 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 		statement.append(newline);
 	    }
 	}
-	returnPending = "Ret #retval";
 
 	typeVisitor.popScope();
 	letBindings = parentLetBindings;
@@ -2271,8 +2220,6 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 
 	letBindings = new LetBindings();
 	statements = new ArrayList<>();
-	String wasReturnPending = returnPending;
-	returnPending = "";
         for (BSVParser.StmtContext stmt: ctx.stmt()) {
             stmtEmitted = true;
             visit(stmt);
@@ -2294,15 +2241,6 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 	statement.append(newline);
 	String separator = (actionContext) ? (newline + "        ") : (newline);
 	statement.append(String.join(separator, statements));
-
-	if (returnPending != null) {
-	    if (statements.size() > 0) {
-		statement.append(";\n");
-	    }
-	    statement.append("        ");
-	    statement.append(returnPending);
-	    returnPending = null;
-	}
 
 	if (letBindings.size() != 0) {
 	    statement.append("        }");
