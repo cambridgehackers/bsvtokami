@@ -173,8 +173,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		BSVType subinterfacetype = StaticAnalysis.getBsvType(decl.subinterfacedecl().bsvtype());
 		String kamiType = bsvTypeToKami(subinterfacetype);
 		assert kamiType != null;
-		printstream.println(String.format("    METHOD %s %s;",
-			  decl.subinterfacedecl().lowerCaseIdentifier().getText(), subinterfacetype.name));
+		printstream.println(String.format("    INTERFACE %s %s",
+                          kamiType, decl.subinterfacedecl().lowerCaseIdentifier().getText()));
 	    }
 	}
 	printstream.println(String.format("}"));
@@ -1016,7 +1016,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	printstream.println(String.format("    Interface'%1$s'%1$s: string;", functionName));
 	printstream.println(String.format("}."));
 	printstream.println(String.format(""));
-	printstream.println(String.format("MODULE %s.", functionName));
+	printstream.println(String.format("MODULE %s {", functionName));
 
         for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
             BSVType freeType = entry.getValue();
@@ -1025,10 +1025,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
             if (freeType.name.endsWith("sz") || freeType.name.endsWith("Sz") || freeType.name.equals("xlen"))
                 isNumeric = true;
             logger.fine("Function def: Free type variable " + freeType + (isNumeric ? " numeric" : " interface type"));
-
-            printstream.println(String.format("    JJ4Variable %s : %s.",
-                                              entry.getKey(),
-                                              (isNumeric ? "nat" : "Kind")));
+            printstream.println(String.format("    %s %s",
+                       (isNumeric ? "nat" : "Kind"), entry.getKey()));
         }
 
 	boolean wasActionContext = actionContext;
@@ -1097,21 +1095,24 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	int numArguments = (functionproto.methodprotoformals() != null)
 	    ? functionproto.methodprotoformals().methodprotoformal().size()
 	    : 0;
-	printstream.print(String.format("        METHOD %s {", functionName));
+	printstream.print(String.format("    METHOD %s ", functionName));
 
         if (functionproto.methodprotoformals() != null) {
+            String sep = "";
+            printstream.print("( ");
             for (BSVParser.MethodprotoformalContext formal: functionproto.methodprotoformals().methodprotoformal()) {
                 BSVType bsvType = StaticAnalysis.getBsvType(formal);
                 String formalName = StaticAnalysis.getFormalName(formal);
-                printstream.print(String.format(" (%s: %s)", formalName, bsvTypeToKami(bsvType, 1)));
+                printstream.print(String.format("%s%s %s", sep, bsvTypeToKami(bsvType, 1), formalName));
+                sep = ", ";
             }
+            printstream.print(" ) ");
         }
         String returntype = (functionproto.bsvtype() != null) ? bsvTypeToKami(StaticAnalysis.getBsvType(functionproto.bsvtype())) : "";
-        printstream.println(String.format(": %s := ", returntype));
-
+        printstream.print(String.format(" %s = ", returntype));
+	printstream.println(" {");
 	printstream.println(functionBody.toString());
-
-        printstream.println(String.format("    }")); // functionName));
+        printstream.println(String.format("    }"));
         printstream.println(String.format("    14Definition %1$s := Build_Interface'%1$s Mod'%1$s %1$s.", functionName));
 	printstream.println(String.format("}")); // functionName));
 	printstream.println("");
@@ -2302,10 +2303,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
             kamitype = "Void";
         if (kamitype.equals("Integer"))
             kamitype = "nat";
-	if (kamitype.equals("Bit") && !inModule)
-	    kamitype = "Bit";
-	else if (kamitype.equals("Bool") && !inModule)
-	    kamitype = "Bool";
+	else if (kamitype.equals("Bool"))
+	    kamitype = "Bit(1)";
 	else if (kamitype.equals("Integer"))
 	    kamitype = "nat";
 	else if (kamitype.equals("Action"))
@@ -2348,10 +2347,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	} else if (t.name.equals("TExp")) {
 	    kamitype = String.format("exp2 %s", convertedParams.get(0));
 	} else if (convertedParams.size() > 0) {
-	    kamitype = String.format("%s_%s", t.name, String.join(" ", convertedParams));
-	} else {
-	    level = 0;
-	    kamitype = t.name;
+	    kamitype = String.format("%s(%s)", t.name, String.join(",", convertedParams));
 	}
         return kamitype;
     }

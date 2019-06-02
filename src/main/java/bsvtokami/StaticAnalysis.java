@@ -1013,7 +1013,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
                 p.add(functiontype);
                 functiontype = new BSVType("Function", p);
             }
-            System.err.println("functionproto " + ctx.name.getText() + " : " + functiontype);
+            //noisy System.err.println("functionproto " + ctx.name.getText() + " : " + functiontype);
             return functiontype;
     }
 
