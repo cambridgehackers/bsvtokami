@@ -62,6 +62,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     private ArrayList<String> statements;
     private ArrayList<String> modulevarbindings;
     private TreeMap<String,String> mSizeRelationshipProvisos;
+    private String blockCondition;
 
     BSVToKami(String pkgName, File ofile, StaticAnalysis scopes) {
         this.scopes = scopes;
@@ -71,6 +72,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         pkg = new Package(pkgName);
         actionContext = false;
         inModule = false;
+        blockCondition = "";
         try {
             printstream = new PrintStream(ofile);
         } catch (FileNotFoundException ex) {
@@ -731,7 +733,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 		    }
                 } else {
                     if (inModule) {
-                        statement.append(String.format("        LET %s : %s = ", bsvTypeToKami(t), varName));
+                        statement.append(String.format("        LET %s %s : %s = ", bsvTypeToKami(t), blockCondition, varName));
 			boolean wasActionContext = actionContext;
 			actionContext = true;
                         statement.append(visit(rhs));
@@ -744,7 +746,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
                 }
             } else {
                 System.err.println("No rhs for " + ctx.getText() + " at " + StaticAnalysis.sourceLocation(ctx));
-                statement.append(String.format("        LET %s : %s", varName, bsvTypeToKami(t)));
+                statement.append(String.format("        LET %s %s : %s", bsvTypeToKami(t), blockCondition, varName));
             }
             if (actionContext) {
                 statements.add(statement.toString());
@@ -769,7 +771,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
             SymbolTableEntry entry = scope.lookup(varName);
             assert entry != null : String.format("No entry for %s at %s",
                                                  varName, StaticAnalysis.sourceLocation(ctx));
-            statement.append(String.format("%s : %s", bsvTypeToKami(entry.type), varName));
+            statement.append(String.format("%s %s : %s", bsvTypeToKami(entry.type), blockCondition, varName));
         }
 
         if (ctx.op != null) {
@@ -822,7 +824,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
             BSVParser.CallexprContext call = getCall(ctx.rhs);
 	    assert call != null && call.fcn != null: "Something wrong with action context " + ctx.rhs.getText() + " at " + StaticAnalysis.sourceLocation(ctx.rhs);
 
-	    statement.append(String.format("        CALL/Action : %s(", calleeInstanceName));
+	    statement.append(String.format("        CALL/Action %s : %s(", blockCondition, calleeInstanceName));
             String sep = "";
 	    for (BSVParser.ExpressionContext arg: call.expression()) {
 		BSVType argType = typeVisitor.visit(arg);
@@ -1273,7 +1275,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 
 	    String regName = regwrite.lhs.getText();
 	    SymbolTableEntry entry = scope.lookup(regName);
-	    statement.append("        STORE : ");
+	    statement.append("        STORE " + blockCondition + " : ");
 	    statement.append(visit(regwrite.lhs));
 	    statement.append(" = ");
 	    statement.append(visit(regwrite.rhs));
@@ -1329,25 +1331,22 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
         ArrayList<String> parentStatements = statements;
         letBindings = new LetBindings();
         statements = new ArrayList<>();
+        String previousCondition = blockCondition;
 
 	typeVisitor.pushScope(scope);
 	typeVisitor.visit(ctx.expression());
 	typeVisitor.popScope();
 
-	String predicate = visit(ctx.expression());
+	String predicate = "( " + visit(ctx.expression()) + " )";
 
         returnPending = "";
         assert(letBindings.size() == 0) : "Unexpected let bindings at " + StaticAnalysis.sourceLocation(ctx) + "\n" + String.join("\n", letBindings);
 
         StringBuilder statement = new StringBuilder();
-        statement.append(String.join(";\n        ", statements));
-	if (statements.size() > 0)
-	    statement.append(";\n        ");
-	statements.clear();
-
-        statement.append("        If ");
-        statement.append(predicate);
-        statement.append(" then (\n        ");
+        if (previousCondition.equals(""))
+            blockCondition = predicate;
+        else
+            blockCondition = "( " + previousCondition + " & " + predicate + " )";
 	System.err.println(String.format("if stmts %d bindings %d at %s",
 					 statements.size(), letBindings.size(), StaticAnalysis.sourceLocation(ctx)));
         visit(ctx.stmt(0));
@@ -1355,31 +1354,28 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
         if (returnPending != null) {
             if (statements.size() > 0)
                 statement.append(";\n        ");
-            statement.append("        ");
+            statement.append("ZZRETURNPENDING        ");
 	    statement.append(returnPending);
         }
         if (ctx.stmt(1) != null) {
-            statement.append(newline);
-            statement.append("        ) else (\n        ");
             letBindings = new LetBindings();
             statements = new ArrayList<>();
             returnPending = "";
+            predicate = "( !" + predicate + " )";
+            if (previousCondition.equals(""))
+                blockCondition = predicate;
+            else
+                blockCondition = "( " + previousCondition + " & " + predicate + " )";
             visit(ctx.stmt(1));
             assert(letBindings.size() == 0);
             statement.append(String.join(";\n        ", statements));
             if (returnPending != null) {
                 if (statements.size() > 0)
                     statement.append(";\n        ");
-                statement.append("        ");
+                statement.append("ZZERETURNPENDING        ");
 		statement.append(returnPending);
             }
-	    statement.append(") as retval\n");
-        } else {
-	    statement.append(") else (\n");
-	    statement.append("            Retv\n");
-	    statement.append("        ) as retval\n");
 	}
-	returnPending = "Ret #retval";
 
         letBindings = parentLetBindings;
         statements  = parentStatements;
@@ -1387,6 +1383,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
             System.err.println("Not gathering statements at " + StaticAnalysis.sourceLocation(ctx));
 
         statements.add(statement.toString());
+        blockCondition = previousCondition;
         return null;
     }
 
@@ -1574,7 +1571,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 		assert tagEntry.value != null : String.format("Missing value for tag %s", tagName);
 		tagValue = (IntValue)tagEntry.value;
 	    }
-            statement.append("    If (");
+            statement.append("   CASEIf (");
             statement.append(visit(ctx.expression()));
 	    if (tagName != null)
 		statement.append(String.format(" . $tag",
@@ -1605,7 +1602,7 @@ printstream.println("JJKKJ" + fieldName + " LLL " + iterator.getValue().type);
 
 	for (BSVParser.CasestmtitemContext item: ctx.casestmtitem()) {
 	    boolean multivalue = item.expression().size() > 0;
-            statement.append("    If (");
+            statement.append("    CASE2If (");
 	    if (multivalue)
 		statement.append("(");
 	    statement.append(visit(item.expression(0)));
