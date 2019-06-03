@@ -481,7 +481,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         logger.fine("module " + moduleName);
 	printstream.println("MODULE " + moduleName + " {");
         if (!iname.equals("Empty"))
-	    printstream.println("        INTERFACE " + interfaceType.toString());
+	    printstream.println("    INTERFACE " + interfaceType.toString());
         for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
 	    BSVType freeType = entry.getValue();
 	    boolean isNumeric = freeType.numeric;
@@ -490,10 +490,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		isNumeric = true;
 	    logger.fine("Module def: Free type variable " + freeType + (isNumeric ? " numeric" : " interface type"));
 	}
-
         boolean wasInModule = inModule;
         inModule = true;
-
 	ArrayList<String> formalNames = new ArrayList<>();
         if (moduleproto.methodprotoformals() != null) {
             for (BSVParser.MethodprotoformalContext formal : moduleproto.methodprotoformals().methodprotoformal()) {
@@ -524,7 +522,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		// emit hypothesis for proviso
 	    }
 	}
-        String stmtPrefix = "    ";
+        String stmtPrefix = "";
         for (BSVParser.ModulestmtContext modulestmt: ctx.modulestmt()) {
             visit(modulestmt);
         }
@@ -1217,10 +1215,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
         for (BSVParser.StmtContext stmt: ctx.stmt())
             visit(stmt);
 	boolean hasStatements = statements.size() > 0;
-	statement.append(String.join(newline + "       ", statements)); // QQ9
         if (hasStatements)
-	    statement.append("\n");
-	statement.append("        }");
+	    statement.append("   " + String.join(newline + "   ", statements) + "\n"); // QQ9
+	statement.append("    }");
 
         actionContext = outerContext;
 	statements  = parentStatements;
