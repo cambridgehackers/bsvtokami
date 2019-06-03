@@ -165,9 +165,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
                     }
                     printstream.print(" )");
                 }
-                if (returntype != "Void") {
+                if (returntype != "Void")
                     printstream.print(" " + returntype);
-                }
 		printstream.println("");
 	    } else {
 		BSVType subinterfacetype = StaticAnalysis.getBsvType(decl.subinterfacedecl().bsvtype());
@@ -1148,7 +1147,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         if (ctx.bsvtype() != null) {
             BSVType ty = StaticAnalysis.getBsvType(ctx.bsvtype());
             if (ty != null && !ty.toString().equals("Action"))
-                returntype = ty.toString();
+                returntype = bsvTypeToKami(ty);
         }
         statement.append("METHOD");
         if (returntype == "Void")
