@@ -14,6 +14,7 @@ Module module'mkMultiCycleProc.
     Variable mem: string.
         (* method bindings *)
     Let pc : string := instancePrefix--"pc".
+    Let pc_valid : string := instancePrefix--"pc_valid".
     Let d2e_valid : string := instancePrefix--"d2e_valid".
     Let d2e_op : string := instancePrefix--"d2e_op".
     Let d2e_arithOp : string := instancePrefix--"d2e_arithOp".
@@ -31,11 +32,13 @@ Module module'mkMultiCycleProc.
     Let dec'getSrc1 : string := (dec--"getSrc1").
     Let dec'getSrc2 : string := (dec--"getSrc2").
     Let pgm'sub : string := (pgm--"sub").
+    Let init_pc_valid : bool := true.
     Local Open Scope kami_expr.
 
     Definition mkMultiCycleProcModule: ModWf :=
          (MOD_WF {
         Register (instancePrefix--"pc") : Bit PgmSz <- Default
+    with Register (instancePrefix--"pc_valid") : Bool <- true
     with Register (instancePrefix--"rf") : Array NumRegs (Bit DataSz) <- Default
     with Register (instancePrefix--"d2e_valid") : Bool <- Default
     with Register (instancePrefix--"d2e_op") : Bit 2 <- Default
@@ -50,9 +53,11 @@ Module module'mkMultiCycleProc.
 
     with Rule instancePrefix--"doDecode" :=
     (
+        Read pc_valid_v : Bool <- pc_valid ;
         Read pc_v : Bit PgmSz <- pc ;
         Read d2e_valid_v : Bool <- d2e_valid ;
 
+        Assert(#pc_valid_v) ;
         Assert(!#d2e_valid_v) ;
        Call inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz)  ;
        (* call expr ./ProcMemSpec.bsv:95 *) Call call1 : Bit 2 <-  (* translateCall *) dec'getOp ((#inst) : Bit InstrSz)  ;
@@ -68,6 +73,7 @@ Module module'mkMultiCycleProc.
        (* call expr ./ProcMemSpec.bsv:98 *) Call call4 : Bit RegFileSz <-  (* translateCall *) dec'getDst ((#inst) : Bit InstrSz)  ;
                Write d2e_dst : Bit RegFileSz <- #call4  ;
                Write d2e_valid : Bool <- $$ true  ;
+               Write pc_valid : Bool <- $$ false  ;
         Retv ) (* rule doDecode *)
 
     with Rule instancePrefix--"doExec" :=
@@ -116,6 +122,7 @@ Module module'mkMultiCycleProc.
 
         Write d2e_valid : Bool <- $$ false  ;
         Write e2w_valid : Bool <- $$ false  ;
+        Write pc_valid : Bool <- $$ true  ;
 
         Retv ) (* rule doWriteBack *)
     }). (* mkMultiCycleProc *)

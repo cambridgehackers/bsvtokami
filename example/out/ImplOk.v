@@ -282,6 +282,7 @@ Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
 
 
    spec_pcv: word PgmSz ;
+   spec_pc_validv: bool ;
    spec_d2e_validv: bool ;
    spec_d2e_opv: fullType type (SyntaxKind (Bit 2)) ;
    spec_d2e_arithopv: fullType type (SyntaxKind (Bit 2)) ;
@@ -324,20 +325,22 @@ Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
 
    Hsregs: sregs =
    ("spec-pc", existT _ (SyntaxKind (Bit PgmSz)) spec_pcv)
-   :: ("spec-rf", existT _ (SyntaxKind (Array NumRegs (Bit DataSz))) rf_v)
-     :: ("spec-d2e_valid", existT _ (SyntaxKind (Bool)) spec_d2e_validv)
-        :: ("spec-d2e_op", existT _ (SyntaxKind (Bit 2)) spec_d2e_opv)
-           :: ("spec-d2e_arithOp", existT _ (SyntaxKind (Bit 2)) spec_d2e_arithopv)
-              :: ("spec-d2e_src1", existT _ (SyntaxKind (Bit RegFileSz)) spec_d2e_src1v)
-                 :: ("spec-d2e_src2", existT _ (SyntaxKind (Bit RegFileSz)) spec_d2e_src2v)
-                    :: ("spec-d2e_dst", existT _ (SyntaxKind (Bit RegFileSz)) spec_d2e_dstv)
-                       :: ("spec-d2e_addr", existT _ (SyntaxKind (Bit AddrSz)) spec_d2e_addrv)
-                          :: ("spec-e2w_valid", existT _ (SyntaxKind (Bool)) spec_e2w_validv)
-                            :: ("spec-e2w_dst", existT _ (SyntaxKind (Bit RegFileSz)) spec_e2w_dstv)
-                               :: ("spec-e2w_val", existT _ (SyntaxKind (Bit DataSz)) spec_e2w_valv)
-                                  :: ("pgm-rfreg", existT _ (SyntaxKind (Array NumInstrs (Bit InstrSz))) pgmv)
-				     :: nil ;
+   :: ("spec-pc_valid", existT _ (SyntaxKind Bool) spec_pc_validv)
+      :: ("spec-rf", existT _ (SyntaxKind (Array NumRegs (Bit DataSz))) rf_v)
+	:: ("spec-d2e_valid", existT _ (SyntaxKind (Bool)) spec_d2e_validv)
+	   :: ("spec-d2e_op", existT _ (SyntaxKind (Bit 2)) spec_d2e_opv)
+	      :: ("spec-d2e_arithOp", existT _ (SyntaxKind (Bit 2)) spec_d2e_arithopv)
+		 :: ("spec-d2e_src1", existT _ (SyntaxKind (Bit RegFileSz)) spec_d2e_src1v)
+		    :: ("spec-d2e_src2", existT _ (SyntaxKind (Bit RegFileSz)) spec_d2e_src2v)
+		       :: ("spec-d2e_dst", existT _ (SyntaxKind (Bit RegFileSz)) spec_d2e_dstv)
+			  :: ("spec-d2e_addr", existT _ (SyntaxKind (Bit AddrSz)) spec_d2e_addrv)
+			     :: ("spec-e2w_valid", existT _ (SyntaxKind (Bool)) spec_e2w_validv)
+			       :: ("spec-e2w_dst", existT _ (SyntaxKind (Bit RegFileSz)) spec_e2w_dstv)
+				  :: ("spec-e2w_val", existT _ (SyntaxKind (Bit DataSz)) spec_e2w_valv)
+				     :: ("pgm-rfreg", existT _ (SyntaxKind (Array NumInstrs (Bit InstrSz))) pgmv)
+					:: nil ;
 
+   Hpc_validv: (impl_d2e_validv = false ) -> (spec_pc_validv = true) ;
    Hpcinv: (impl_d2e_validv = true ) -> (impl_pcv = impl_d2e_pcv ^+ $1 /\ spec_pcv = impl_d2e_pcv) ;
    Hpcinv_decode: (impl_d2e_validv = false ) -> (impl_pcv = spec_pcv) ;
 
@@ -414,20 +417,12 @@ Ltac go :=
        | H:SemAction _ (convertLetExprSyntax_ActionT ?e) _ _ _ _
          |- _ => apply convertLetExprSyntax_ActionT_full in H; dest
        | |- _ -> _ => intro
+       | |- _ /\ _ => split
        | |- ?a = ?a => reflexivity
        | H: (true = false -> _) |- _ => clear H
        | H: (true = true -> _) |- _ => specialize (H eq_refl)
+       | H: (false = false -> _) |- _ => specialize (H eq_refl)
        end; subst).
-
-Ltac discharge_whatever :=
-  repeat (match goal with
-          | H: _ |- Forall2 ?p ?l1 ?l2 => apply Forall2_cons; simpl
-          | H: _ |- Forall2 ?p nil nil => apply Forall2_nil
-          | H: _ |- ?a /\ ?b => split
-          | H: _ |- _ :: _ = _ :: _ => repeat f_equal
-          | H: _ |- ?a = ?a => reflexivity
-          | H: _ |- exists _, _ => exists eq_refl
-          end).
 
 Theorem impl_ok:
     TraceInclusion implInl specInl.
@@ -442,7 +437,7 @@ Theorem impl_ok:
     * left. trivial.
     * (* reads spec *) eexists. (* updates spec *) eexists. split.
      ** discharge_SemAction. go.
-     apply negb_true_iff. specialize (Hd2e_inv eq_refl). go.
+      apply negb_true_iff. go.
      ** simpl.
      evar (impl_d2e_validv0 : bool).
      evar (impl_pcv0 : word PgmSz).
@@ -458,6 +453,7 @@ Theorem impl_ok:
         unfold impl_pcv0. reflexivity. 
         unfold impl_d2e_validv0. reflexivity.
      *** repeat f_equal.
+     *** unfold impl_d2e_validv0. intro. inv H.
      *** unfold impl_d2e_validv0. intro. unfold impl_pcv0. rewrite wzero_wplus.
         split. reflexivity.
         apply negb_true_iff in H1. rewrite H1 in Hpcinv_decode. specialize (Hpcinv_decode eq_refl).
@@ -467,26 +463,26 @@ Theorem impl_ok:
      *** reflexivity.
      *** unfold impl_d2e_validv0. intro.
          repeat split.
-       ++ go. specialize (Hpcinv_decode eq_refl). go.
+       ++ go.
           (* why was evalExpr unfolded here? *)
           unfold evalExpr. reflexivity.
-       ++ go. specialize (Hpcinv_decode eq_refl). go.
+       ++ go.
           (* why was evalExpr unfolded here? *)
           unfold evalExpr. reflexivity.
-       ++ go. specialize (Hpcinv_decode eq_refl). go.
+       ++ go. 
           (* why was evalExpr unfolded here? *)
           unfold evalExpr. reflexivity.
-       ++ go. specialize (Hpcinv_decode eq_refl). go.
-       ++ go. specialize (Hpcinv_decode eq_refl). go.
+       ++ go.
+       ++ go.
           (* why was evalExpr unfolded here? *)
           unfold evalExpr. reflexivity.
-       ++ go. specialize (Hpcinv_decode eq_refl). go.
+       ++ go.
           (* why was evalExpr unfolded here? *)
           unfold evalExpr. reflexivity.
-       ++ go. specialize (Hpcinv_decode eq_refl). go.
+       ++ go.
           (* why was evalExpr unfolded here? *)
           unfold evalExpr. reflexivity.
-     *** intro. go. split. reflexivity. reflexivity.
+     *** intro. go. 
 
   + (* arith rule *)
     right. exists "spec-doExec". eexists. split.
@@ -496,6 +492,7 @@ Theorem impl_ok:
         *** right. right. right.
 right. right. right.
 right. right. right.
+right.
 left. go. rewrite H10. (* sbflags *) reflexivity.
         *** go. 
         *** repeat f_equal.
@@ -510,14 +507,13 @@ econstructor 1 with (impl_d2e_validv := impl_d2e_validv0)
      *** trivial.
      *** repeat f_equal. unfold impl_d2e_validv0. trivial.
      *** repeat f_equal.
-     *** unfold impl_d2e_validv0. go. split. reflexivity. reflexivity.
+     *** unfold impl_d2e_validv0. go.
      *** go.
      *** unfold decexec_d2e_inv. go.
+     *** go.
      *** reflexivity.
-     *** go. repeat split.
-     *** go. unfold evalExpr. split. go.
-      ++ reflexivity.
-      ++ reflexivity.
+     *** go.
+     *** go. unfold evalExpr. simpl. reflexivity.
 
   + (* wb rule *)
     right. exists "spec-doWriteBack". eexists. split.
@@ -526,19 +522,22 @@ econstructor 1 with (impl_d2e_validv := impl_d2e_validv0)
      **  discharge_SemAction.
          right. right. right.
 right. right. right.
-right. right. right. left. rewrite H5. rewrite H13. reflexivity.
+right. right. right.
+right.
+left. rewrite H6. rewrite H12. reflexivity.
 
      ** simpl.
         (* evar (impl_pcv0 : word PgmSz). *)
         econstructor (* 1 with (spec_pcv := spec_pcv0) (impl_pcv := spec_pcv0) (impl_d2e_validv := impl_d2e_validv0) *).
-      *** trivial.
+     *** trivial.
      *** repeat f_equal.
      *** repeat f_equal. go.
+     *** intro. reflexivity.
      *** intro. inv H.
-     *** go. admit.
+     *** go. rewrite wzero_wplus. reflexivity.
      *** intro. reflexivity.
      *** reflexivity.
      *** intros. inv H.
      *** intros. inv H.
-Admitted.
+Qed.
 End ImplOk.

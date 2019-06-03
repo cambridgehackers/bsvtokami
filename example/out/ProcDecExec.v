@@ -155,9 +155,11 @@ Module module'mkDecExecSep.
         Read rf_v : Array NumRegs (Bit DataSz) <- (instancePrefix--"rf") ;
 	Read dst_v : Bit RegFileSz <- (instancePrefix--"e2w_dst") ;
 	Read sbflags : Array NumRegs Bool <- (instancePrefix--"sbflags") ;
+	Read d2e_valid_v : Bool <- (instancePrefix--"d2e_valid") ;
 	LET sbflag1 : Bool <- #sbflags @[ #dst_v ] ;
 
 	Assert( #sbflag1 ) ;
+	Assert( #d2e_valid_v ) ;
 
 	LET rf_v : Array NumRegs (Bit DataSz) <- (#rf_v @[ #dst_v <- #v ]) ;
 
