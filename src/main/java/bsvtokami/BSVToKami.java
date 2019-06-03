@@ -267,7 +267,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
         printstream.print(String.join(";\n", members));
         printstream.println(";\n}");
-        printstream.println("");
 
         //scope = scopes.popScope();
         inModule = wasInModule;
@@ -350,11 +349,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	maxValue += 1;
 	int tagSize = (int)java.lang.Math.ceil(java.lang.Math.log(maxValue) / java.lang.Math.log(2.0));
 	// emit type declaration
-        printstream.println(String.format("4Definition %s : Kind := (STRUCT_TYPE { \"$tag\" JJ3:: (Bit %d) }).", typeName, tagSize));
+        printstream.println(String.format("4STRUCT %s { \"$tag\" JJ3:: (Bit %d) }).", typeName, tagSize));
 
 	for (TagValue pair: tagsAndValues) {
 	    if (pair.value < 128)
-		printstream.println(String.format("5Definition  %s {ty} : %s @# ty := (STRUCT { \"$tag\" ::= $$(%s) })%%kami_expr.",
+		printstream.println(String.format("5STRUCT  %s {ty} : %s @# ty := { \"$tag\" ::= $$(%s) }",
 						  pair.tag, typeName, intToWord(tagSize, pair.value)));
 
 	}
@@ -388,7 +387,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         System.err.println(String.format("BSVTOKAMI typedef tagged union %s\n", typeName));
 
-        printstream.println(String.format("6Definition %s%s := (STRUCT_TYPE {", typeName, constructorParams));
+        printstream.println(String.format("6STRUCT %s%s {", typeName, constructorParams));
         ArrayList<String> members = new ArrayList<>();
         members.add(String.format("    \"$tag\" :: (Bit 8)"));
 	SymbolTableEntry typeEntry = scope.lookupType(typeName);
@@ -786,9 +785,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         if (false && !typeName.equals("Bit")) {
             BSVType paramtype = bsvtype.params.get(0);
 	    methodBindings.add(String.format("%s STRING", varName, varName));
-            statement.append("FIELD " + bsvTypeToKami(paramtype) + varName
-                             + " <- ");
-
+            statement.append("FIELD " + bsvTypeToKami(paramtype) + varName + " <- ");
             BSVParser.CallexprContext call = getCall(ctx.rhs);
 	    if (call != null)
 		logger.fine("Register " + call.getText() + " fcn " + ((call.fcn != null) ? call.fcn.getText() : "")
@@ -891,10 +888,7 @@ break;
             BSVParser.CallexprContext call = getCall(ctx.rhs);
             String sep = "";
             for (BSVParser.ExpressionContext expr: call.expression()) {
-                statement.append(sep);
-		statement.append("(");
-                statement.append(visit(expr));
-		statement.append(")");
+                statement.append(sep + "(" + visit(expr) + ")");
                 sep = ", ";
             }
             statement.append(")");
@@ -943,16 +937,12 @@ break;
 	    }
 	    if (modulevarbindings.size() > 0) {
                 for (String s: modulevarbindings) {
-                    statement.append("       ");
-                    statement.append(s);
-                    statement.append(newline);
+                    statement.append("       " + s + newline);
                 }
 	    }
             if (statements.size() > 0) {
                 for (String s: statements) {
-                    statement.append("    ");
-                    statement.append(s);
-                    statement.append(newline);
+                    statement.append("    " + s + newline);
                 }
                 statements.clear();
             }
@@ -1879,7 +1869,7 @@ break;
 		i++;
 	    }
 	}
-        expression.append(" }%kami_expr");
+        expression.append(" }");
         return expression.toString();
     }
     @Override public String visitTaggedunionexpr(BSVParser.TaggedunionexprContext ctx) {
@@ -1947,7 +1937,7 @@ break;
 						bsvTypeToKami(fieldTypeInstance, 1)));
             }
         }
-        expression.append(" }%kami_expr");
+        expression.append(" }");
         return expression.toString();
     }
     @Override public String visitIntliteral(BSVParser.IntliteralContext ctx) {
