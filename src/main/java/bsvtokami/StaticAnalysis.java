@@ -712,6 +712,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
             boolean arrowBinding = ctx.op.getText().equals("<-");
             if (arrowBinding) {
                 lhstype = new BSVType();
+System.err.println("ARROWBINDING " + varName + " : " + rhstype + " " + ctx.op.getText() + " " + ctx.rhs.getText() + " BECOMES " + lhstype.toString());
                 handleArrowBinding(varName, lhstype, rhstype, ident, ctx.rhs);
             }
             SymbolTableEntry entry = new SymbolTableEntry(varName, lhstype.prune());
