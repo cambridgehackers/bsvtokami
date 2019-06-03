@@ -19,56 +19,6 @@ Record NoMethods := {
 
 Hint Unfold NoMethods'mod : ModuleDefs.
 
-Module module'mkDecExec.
-    Section Section'mkDecExec.
-    Variable instancePrefix: string.
-    Variable pgm: string.
-    Variable dec: string.
-    Variable exec: Decoder.Executer.
-    Variable e2wfifo: string.
-        (* method bindings *)
-    (* instance methods *)
-    Local Open Scope kami_expr.
-
-    Definition mkDecExecModule: ModWf :=
-         (MOD_WF {
-        Register (instancePrefix--"pc") : Bit PgmSz <- Default
-    with Register (instancePrefix--"rf") : Array NumRegs (Bit DataSz) <- Default
-    with Rule instancePrefix--"decexecArith" :=
-    (
-        Read pc_v : Bit PgmSz <- (instancePrefix--"pc") ;
-        Read rf_v : Array NumRegs (Bit DataSz) <- (instancePrefix--"rf") ;
-       BKCall inst : Bit InstrSz <-  (* translateCall *) (pgm--"sub") ((#pc_v) : Bit PgmSz)  ;
-       BKCall op : Bit 2 <-  (* translateCall *) (dec--"getOp") ((#inst) : Bit InstrSz)  ;
-       BKCall addr : Bit AddrSz <-  (dec--"getAddr") ((#inst) : Bit InstrSz)  ;
-
-        Assert(#op == ($$ (* isConstT *)opArith)) ;
-       BKCall src1 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) (dec--"getSrc1") ((#inst) : Bit InstrSz)  ;
-       BKCall src2 : Bit RegFileSz (* varbinding *) <-  (* translateCall *) (dec--"getSrc2") ((#inst) : Bit InstrSz)  ;
-       BKCall dst : Bit RegFileSz (* varbinding *) <-  (* translateCall *) (dec--"getDst") ((#inst) : Bit InstrSz)  ;
-       BKCall arithOp : Bit 2 <- (dec--"getArithOp") ((#inst) : Bit InstrSz)  ;
-      LET val1 : Bit DataSz (* non-call varbinding *) <- (#rf_v @[ #src1 ]) ;
-      LET val2 : Bit DataSz (* non-call varbinding *) <- (#rf_v @[ #src2 ]) ;
-      LET execVal : Bit DataSz <- (execArith exec _ op val1 val2)  ;
-      BKCall enq : Void (* actionBinding *) <- (e2wfifo--"enq") ((#execVal) : Bit DataSz)  ;
-      Write (instancePrefix--"pc") : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1))  ;
-      Retv ) (* rule decexecArith *)
-    }). (* mkDecExec *)
-
-    Hint Unfold mkDecExecModule : ModuleDefs.
-
-    Definition mkDecExec := Build_NoMethods mkDecExecModule.
-    Hint Unfold mkDecExec : ModuleDefs.
-    Hint Unfold mkDecExecModule : ModuleDefs.
-
-    End Section'mkDecExec.
-End module'mkDecExec.
-
-Definition mkDecExec := module'mkDecExec.mkDecExec.
-Hint Unfold mkDecExec : ModuleDefs.
-Hint Unfold module'mkDecExec.mkDecExec : ModuleDefs.
-Hint Unfold module'mkDecExec.mkDecExecModule : ModuleDefs.
-
 Module module'mkDecExecSep.
     Section Section'mkDecExecSep.
     Variable instancePrefix: string.
