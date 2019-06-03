@@ -841,12 +841,16 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    for (BSVParser.ExpressionContext arg: call.expression()) {
 		BSVType argType = typeVisitor.visit(arg);
 		System.err.println(String.format("    arg %s type %s name %s", arg.getText(), argType, t.name));
-		assert t.name.equals("Function");
+		//jca assert t.name.equals("Function");
 		try {
 		    t.params.get(0).unify(argType);
 		} catch (InferenceError e) {
 		    logger.fine(e.toString());
 		}
+if (t.params.size() < 2) { //jca
+System.err.println("paramsizeless2 " + t.params.size());
+break;
+}
 		t = t.params.get(1);
 	    }
 	    assert t.name.equals("Module") : String.format("Expected Module but got %s in type %s at %s",

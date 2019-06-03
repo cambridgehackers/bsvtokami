@@ -430,9 +430,9 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             BSVType bsvtype = visit(ctx.t);
 	    BSVType rhstype = visit(ctx.rhs);
 	    if(ctx.arraydims().expression().size() != 0) {
-System.err.println("AAAZZZ" + ctx.var.getText() + "ZZ1" + bsvtype + "ZZ2" + rhstype);
+System.err.println("AAAZZZ" + ctx.var.getText() + "ZZ1" + bsvtype + "ZZ2" + rhstype + "ZZDIM" + ctx.arraydims().expression().size());
             }
-	    assert ctx.arraydims().expression().size() == 0;
+	    //jca assert ctx.arraydims().expression().size() == 0;
             logger.fine("actiondecl " + ctx.var.getText() + " <- " + bsvtype);
             try {
 		BSVType actiontype = new BSVType("ActionValue", bsvtype);
@@ -1093,6 +1093,10 @@ System.err.println("AAAZZZ" + ctx.var.getText() + "ZZ1" + bsvtype + "ZZ2" + rhst
             assert (ctx.pkg == null);
 	    assert scope != null : "no scope for " + StaticAnalysis.sourceLocation(ctx);
             SymbolTableEntry entry = scope.lookup(varName);
+            if (entry == null && varName.equals("nul")) {
+                System.err.println("HACK FOR 'nul' VALUE");
+                return new BSVType("Bit", new BSVType(32));
+            }
             assert entry != null || varName.startsWith("$")
 		: String.format("No symbol table entry for %s at %s", varName, StaticAnalysis.sourceLocation(ctx));
             logger.fine("var expr " + varName + " entry " + entry + " : " + ((entry != null) ? entry.type : ""));
