@@ -459,8 +459,20 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	interfaceName = interfaceType.name;
         String iname = interfaceType.toString();
         if (!iname.equals("Empty")) {
+	    ArrayList<String> convertedParams = new ArrayList<>();
+            /* prepend module params */
+            if (moduleproto.methodprotoformals() != null) {
+                for (BSVParser.MethodprotoformalContext formal : moduleproto.methodprotoformals().methodprotoformal()) {
+                    if (formal.name != null)
+                        convertedParams.add(formal.name.getText());
+                }
+            }
+            /* now add interface params */
+	    for (BSVType p: interfaceType.params)
+	        convertedParams.add(bsvTypeToKami(p, 1));
+	    if (convertedParams.size() > 0)
+	        iname = String.format("%s(%s)", interfaceType.name, String.join(",", convertedParams));
             moduleName = iname;
-            //dumpInterfacedecl(interfaceType);
         }
 
 	moduleDef = new ModuleDef(moduleName);
@@ -491,16 +503,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
         boolean wasInModule = inModule;
         inModule = true;
-	ArrayList<String> formalNames = new ArrayList<>();
-        if (moduleproto.methodprotoformals() != null) {
-            for (BSVParser.MethodprotoformalContext formal : moduleproto.methodprotoformals().methodprotoformal()) {
-		BSVType bsvType = StaticAnalysis.getBsvType(formal.bsvtype());
-                if (formal.name != null) {
-                    String formalName = formal.name.getText();
-                    formalNames.add(formalName);
-                }
-            }
-        }
 
 	boolean hasProvisos = moduleproto.provisos() != null;
 	useAbstractOmega = false; // does not seem to work with sifive kami: hasProvisos;
