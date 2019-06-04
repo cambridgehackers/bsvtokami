@@ -61,6 +61,18 @@ Module module'mkFIFO.
         Write (instancePrefix--"valid") : Bool <- $$false  ;
         Retv    ) 
 
+    with Method (instancePrefix--"notFull") () : Bool :=
+    (
+        Read valid_v : Bool <- (instancePrefix--"valid")  ;
+        LET notFull : Bool <- ! #valid_v ;
+        Ret #notFull    ) 
+
+    with Method (instancePrefix--"notEmpty") () : Bool :=
+    (
+        Read valid_v : Bool <- (instancePrefix--"valid")  ;
+        LET notEmpty : Bool <- #valid_v ;
+        Ret #notEmpty    ) 
+
     }). (* mkFIFO *)
 
     Hint Unfold mkFIFOModule : ModuleDefs.
