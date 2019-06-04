@@ -14,15 +14,13 @@ Module module'mkMultiCycleProc.
     Variable mem: string.
         (* method bindings *)
     Let pc : string := instancePrefix--"pc".
-    Let pc_valid : string := instancePrefix--"pc_valid".
-    Let d2e_valid : string := instancePrefix--"d2e_valid".
+    Let state : string := instancePrefix--"state".
     Let d2e_op : string := instancePrefix--"d2e_op".
     Let d2e_arithOp : string := instancePrefix--"d2e_arithOp".
     Let d2e_src1 : string := instancePrefix--"d2e_src1".
     Let d2e_src2 : string := instancePrefix--"d2e_src2".
     Let d2e_dst : string := instancePrefix--"d2e_dst".
     Let d2e_addr : string := instancePrefix--"d2e_addr".
-    Let e2w_valid : string := instancePrefix--"e2w_valid".
     Let e2w_val : string := instancePrefix--"e2w_val".
     (* instance methods *)
     Let dec'getDst : string := (dec--"getDst").
@@ -38,27 +36,23 @@ Module module'mkMultiCycleProc.
     Definition mkMultiCycleProcModule: ModWf :=
          (MOD_WF {
         Register (instancePrefix--"pc") : Bit PgmSz <- Default
-    with Register (instancePrefix--"pc_valid") : Bool <- true
+    with Register (instancePrefix--"state") : Bit 2 <- Default
     with Register (instancePrefix--"rf") : Array NumRegs (Bit DataSz) <- Default
-    with Register (instancePrefix--"d2e_valid") : Bool <- Default
     with Register (instancePrefix--"d2e_op") : Bit 2 <- Default
     with Register (instancePrefix--"d2e_arithOp") : Bit 2 <- Default
     with Register (instancePrefix--"d2e_src1") : Bit RegFileSz <- Default
     with Register (instancePrefix--"d2e_src2") : Bit RegFileSz <- Default
     with Register (instancePrefix--"d2e_dst") : Bit RegFileSz <- Default
     with Register (instancePrefix--"d2e_addr") : Bit AddrSz <- Default
-    with Register (instancePrefix--"e2w_valid") : Bool <- Default
     with Register (instancePrefix--"e2w_dst") : Bit RegFileSz <- Default
     with Register (instancePrefix--"e2w_val") : Bit DataSz <- Default
 
     with Rule instancePrefix--"doDecode" :=
     (
-        Read pc_valid_v : Bool <- pc_valid ;
+        Read state_v : Bit 2 <- state ;
         Read pc_v : Bit PgmSz <- pc ;
-        Read d2e_valid_v : Bool <- d2e_valid ;
 
-        Assert(#pc_valid_v) ;
-        Assert(!#d2e_valid_v) ;
+        Assert(#state_v == $$(natToWord 2 0)) ;
        Call inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz)  ;
        (* call expr ./ProcMemSpec.bsv:95 *) Call call1 : Bit 2 <-  (* translateCall *) dec'getOp ((#inst) : Bit InstrSz)  ;
                Write d2e_op : Bit 2 <- #call1  ;
@@ -72,8 +66,7 @@ Module module'mkMultiCycleProc.
                Write d2e_src2 : Bit RegFileSz <- #call3  ;
        (* call expr ./ProcMemSpec.bsv:98 *) Call call4 : Bit RegFileSz <-  (* translateCall *) dec'getDst ((#inst) : Bit InstrSz)  ;
                Write d2e_dst : Bit RegFileSz <- #call4  ;
-               Write d2e_valid : Bool <- $$ true  ;
-               Write pc_valid : Bool <- $$ false  ;
+               Write state : Bit 2 <- $$(natToWord 2 1)  ;
         Retv ) (* rule doDecode *)
 
     with Rule instancePrefix--"doExec" :=
@@ -85,11 +78,9 @@ Module module'mkMultiCycleProc.
         Read d2e_op_v : Bit 2 <- d2e_op ;
         Read d2e_src1_v : Bit RegFileSz <- d2e_src1 ;
         Read d2e_src2_v : Bit RegFileSz <- d2e_src2 ;
-        Read d2e_valid_v : Bool <- d2e_valid ;
-        Read e2w_valid_v : Bool <- e2w_valid ;
+        Read state_v : Bit 2 <- state ;
 
-        Assert(#d2e_valid_v) ;
-        Assert(!#e2w_valid_v) ;
+        Assert(#state_v == $$(natToWord 2 1)) ;
 
        Read rf_v : Array NumRegs (Bit DataSz) <- (instancePrefix--"rf") ;
        LET val1 : Bit DataSz (* varbinding *) <-  #rf_v @[#d2e_src1_v]  ;
@@ -99,7 +90,7 @@ Module module'mkMultiCycleProc.
 
                Write instancePrefix--"e2w_dst" : Bit RegFileSz <- #d2e_dst_v  ;
                Write instancePrefix--"e2w_val" : Bit DataSz <- #dval  ;
-               Write e2w_valid : Bool <- $$ true  ;
+               Write state : Bit 2 <- $$(natToWord 2 2)  ;
 
         BKCall unused : Void <- (mem--"req") (#val1 : Bit DataSz) ;
 
@@ -110,9 +101,9 @@ Module module'mkMultiCycleProc.
         Read e2w_dst_v : Bit RegFileSz <- instancePrefix--"e2w_dst" ;
         Read e2w_val_v : Bit DataSz <- instancePrefix--"e2w_val" ;
         Read pc_v : Bit PgmSz <- pc ;
-        Read e2w_valid_v : Bool <- e2w_valid ;
+        Read state_v : Bit 2 <- state ;
 
-        Assert (#e2w_valid_v) ;
+        Assert (#state_v == $$(natToWord 2 2)) ;
         Read rf_v : Array NumRegs (Bit DataSz) <- (instancePrefix--"rf") ;
 	LET rf_v : Array NumRegs (Bit DataSz) <- #rf_v @[#e2w_dst_v <- #e2w_val_v ]  ;
         Write (instancePrefix--"rf") : Array NumRegs (Bit DataSz) <-  #rf_v ;
@@ -120,9 +111,7 @@ Module module'mkMultiCycleProc.
 
         BKCall unused : Bit DataSz <- (mem--"resp") () ;
 
-        Write d2e_valid : Bool <- $$ false  ;
-        Write e2w_valid : Bool <- $$ false  ;
-        Write pc_valid : Bool <- $$ true  ;
+        Write state : Bit 2 <- $$(natToWord 2 0)  ;
 
         Retv ) (* rule doWriteBack *)
     }). (* mkMultiCycleProc *)

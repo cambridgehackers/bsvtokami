@@ -46,10 +46,12 @@ Module module'mkDecExecSep.
     with Rule instancePrefix--"decode" :=
     (
 	Read d2e_valid_v   : Bool <- (instancePrefix--"d2e_valid") ;
+        BKCall e2wNotFull : Bool <- (e2wfifo--"notFull") ();
         Assert (! #d2e_valid_v) ;
+        Assert (#e2wNotFull) ;
 
        Read pc_v : Bit PgmSz <- (instancePrefix--"pc") ;
-       BKCall inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) (pgm--"sub") ((#pc_v) : Bit PgmSz)  ;
+       BKCall inst : Bit InstrSz <- (pgm--"sub") ((#pc_v) : Bit PgmSz)  ;
        BKCall op : Bit 2 (* varbinding *) <-  (* translateCall *) (dec--"getOp") ((#inst) : Bit InstrSz)  ;
        BKCall arithOp : Bit 2 (* varbinding *) <-  (* translateCall *) (dec--"getArithOp") ((#inst) : Bit InstrSz)  ;
        BKCall addr : Bit AddrSz <-  (dec--"getAddr") ((#inst) : Bit InstrSz)  ;
