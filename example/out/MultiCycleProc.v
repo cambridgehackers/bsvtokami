@@ -86,13 +86,17 @@ Module module'mkMultiCycleProc.
        LET val1 : Bit DataSz (* varbinding *) <-  #rf_v @[#d2e_src1_v]  ;
        LET val2 : Bit DataSz (* varbinding *) <-  #rf_v @[#d2e_src2_v]  ;
 
-       LET dval : Bit DataSz (* varbinding *) <-  (execArith exec _ d2e_arithop_v val1 val2)  ;
+       LET eval : ExecuterResult <-  (execArith exec _ d2e_arithop_v val1 val2)  ;
+
+       LET dval : Bit DataSz <- #eval @% "data" ;
+       LET addr : Bit AddrSz <- #eval @% "addr" ;
+       LET nextpc : Bit PgmSz <- #eval @% "nextpc" ;
 
                Write instancePrefix--"e2w_dst" : Bit RegFileSz <- #d2e_dst_v  ;
                Write instancePrefix--"e2w_val" : Bit DataSz <- #dval  ;
                Write state : Bit 2 <- $$(natToWord 2 2)  ;
 
-        BKCall unused : Void <- (mem--"req") (#val1 : Bit DataSz) ;
+        BKCall unused : Void <- (mem--"req") (#addr : Bit DataSz) ;
 
         Retv ) (* rule doExec *)
 

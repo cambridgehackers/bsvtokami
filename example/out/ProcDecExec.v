@@ -89,12 +89,14 @@ Module module'mkDecExecSep.
 
 	LET val1 : Bit DataSz (* non-call varbinding *) <- (#rf_v @[ #src1 ]) ;
 	LET val2 : Bit DataSz (* non-call varbinding *) <- (#rf_v @[ #src2 ]) ;
-        LET execVal : Bit DataSz <- (execArith exec _ arithOp val1 val2)  ;
+        LET eval : ExecuterResult <- (execArith exec _ arithOp val1 val2)  ;
+	LET dval : Bit DataSz <- #eval @% "data" ;
+	LET addr : Bit AddrSz <- #eval @% "addr" ;
 
         LET sbflags : Array NumRegs Bool <- #sbflags @[ #dst <- $$true ] ;
 
-        BKCall unused : Void <- (mem--"req") (#val1 : Bit DataSz) ;
-	BKCall enq : Void (* actionBinding *) <- (e2wfifo--"enq") ((#execVal) : Bit DataSz)  ;
+        BKCall unused : Void <- (mem--"req") (#addr : Bit DataSz) ;
+	BKCall enq : Void (* actionBinding *) <- (e2wfifo--"enq") ((#dval) : Bit DataSz)  ;
         Write (instancePrefix--"sbflags") : Array NumRegs Bool <- #sbflags ;
         Write (instancePrefix--"e2w_dst") : Bit RegFileSz <- #dst ;
 

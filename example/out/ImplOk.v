@@ -428,7 +428,7 @@ Theorem impl_ok:
   + intro. inv H.
   + intro. inv H.
 
-  + (* decode rule *)
+  + (* decode rule *) idtac "decode".
     right. exists "spec-doDecode". eexists. split.
     * left. trivial.
     * (* reads spec *) eexists. (* updates spec *) eexists. split.
@@ -479,7 +479,7 @@ Search (weq _ _ ). rewrite rewrite_weq with (pf := H). reflexivity.
           unfold evalExpr. reflexivity.
      *** go.
 
-  + (* arith rule *)
+  + (* arith rule *) idtac "arith".
     right. exists "spec-doExec". eexists. split.
   * right. left. trivial.
     * (* reads spec *) eexists. (* updates spec *) eexists. split.
@@ -487,7 +487,7 @@ Search (weq _ _ ). rewrite rewrite_weq with (pf := H). reflexivity.
         *** go.
 assert (natToWord 2 1 = natToWord 2 1). reflexivity. rewrite rewrite_weq with (pf := H0). reflexivity.
         *** rewrite H14. go. assert (x8 = wzero 0). ++ trivial.
-         ++ rewrite H0. reflexivity.
+         ++ rewrite H0. simpl. reflexivity.
      ** simpl.
 evar (impl_d2e_validv0 : bool).
 
@@ -506,7 +506,7 @@ econstructor 1 with (impl_d2e_validv := impl_d2e_validv0)
      *** go.
      *** go. unfold evalExpr. simpl. reflexivity.
 
-  + (* wb rule *)
+  + (* wb rule *) idtac "writeBack".
     right. exists "spec-doWriteBack". eexists. split.
     * right. right. left. trivial.
     * (* reads spec *) eexists. (* updates spec *) eexists. split.
@@ -525,6 +525,6 @@ go. assert (natToWord 2 2 = natToWord 2 2). reflexivity. rewrite rewrite_weq wit
      *** go.
      *** go. rewrite wzero_wplus. reflexivity.
      *** go.
-     *** go.
+     *** idtac "one to go". go.
 Qed.
 End ImplOk.

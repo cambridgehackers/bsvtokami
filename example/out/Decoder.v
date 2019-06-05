@@ -32,15 +32,14 @@ Definition decStub := Build_Decoder
 			  (fun ty (instr: ty (Bit InstrSz)) => ($$(natToWord AddrSz 0))%kami_expr)
 			  .
 
+Definition ExecuterResult := STRUCT_TYPE { "data" :: Bit DataSz ; "addr" :: Bit AddrSz ; "nextpc" :: Bit PgmSz }.
+
 Record Executer :=
   {
-    execArith: forall ty, ty (Bit 2) -> ty (Bit DataSz) -> ty (Bit DataSz) -> Expr ty (SyntaxKind (Bit DataSz))
+    execArith: forall ty, ty (Bit 2) -> ty (Bit DataSz) -> ty (Bit DataSz) -> Expr ty (SyntaxKind ExecuterResult )
   }.
 
 Hint Unfold Executer'execArith : ModuleDefs.
-
-Definition execStub := Build_Executer
-			  (fun ty (op: ty (Bit 2)) (val1 val2: ty (Bit DataSz)) => ($$(natToWord DataSz 22))%kami_expr).
 
 Module module'decoder.
     Section Section'decoder.
@@ -114,12 +113,12 @@ Module module'executer.
     Local Open Scope kami_expr.
     Definition executerModule: ModWf :=
          (MOD_WF {
-              Method (instancePrefix--"execArith") ( param : paramT ) : (Bit DataSz) :=
+              Method (instancePrefix--"execArith") ( param : paramT ) : ExecuterResult :=
                 (
                   LET op : Bit 2 <- #param @% "_1" ;
                   LET val1 : Bit DataSz <- #param @% "_2" ;
                   LET val2 : Bit DataSz <- #param @% "_3" ;
-                  LET val : Bit DataSz <- (execArith exec _ op val1 val2) ;
+                  LET val : ExecuterResult <- (execArith exec _ op val1 val2) ;
                   Ret #val
                 )
          }).
