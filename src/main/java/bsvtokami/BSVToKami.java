@@ -64,6 +64,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     private TreeMap<String,String> mSizeRelationshipProvisos;
     private String blockCondition;
     private static boolean traceCallm = false;
+    private static int forIndex = 1;
 
     BSVToKami(String pkgName, File ofile, StaticAnalysis scopes) {
         this.scopes = scopes;
@@ -1026,13 +1027,13 @@ break;
 					 functionName, functionType,
 					 String.join(" ", freeTypeVariables.keySet())));
 
-	printstream.println(String.format("(* interface for module wrapper for %1$s *)", functionName));
-	printstream.println(String.format("Record Interface'%1$s := {", functionName));
-	printstream.println(String.format("    Interface'%1$s'mod: Mod;", functionName));
-	printstream.println(String.format("    Interface'%1$s'%1$s: string;", functionName));
-	printstream.println(String.format("}."));
-	printstream.println(String.format(""));
-	printstream.println(String.format("MODULE %s {", functionName));
+	//printstream.println(String.format("(* interface for module wrapper for %1$s *)", functionName));
+	//printstream.println(String.format("Record Interface'%1$s := {", functionName));
+	//printstream.println(String.format("    Interface'%1$s'mod: Mod;", functionName));
+	//printstream.println(String.format("    Interface'%1$s'%1$s: string;", functionName));
+	//printstream.println(String.format("}."));
+	//printstream.println(String.format(""));
+	//printstream.println(String.format("MODULE %s {", functionName));
 
         for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
             BSVType freeType = entry.getValue();
@@ -1041,8 +1042,8 @@ break;
             if (freeType.name.endsWith("sz") || freeType.name.endsWith("Sz") || freeType.name.equals("xlen"))
                 isNumeric = true;
             logger.fine("Function def: Free type variable " + freeType + (isNumeric ? " numeric" : " interface type"));
-            printstream.println(String.format("    %s %s",
-                       (isNumeric ? "nat" : "Kind"), entry.getKey()));
+            //printstream.println(String.format("    %s %s",
+                       //(isNumeric ? "nat" : "Kind"), entry.getKey()));
         }
 
 	boolean wasActionContext = actionContext;
@@ -1051,7 +1052,7 @@ break;
 
         RegReadVisitor regReadVisitor = new RegReadVisitor(scope);
         if (ctx.expression() != null) {
-            printstream.print("    ");
+            //printstream.print("    ");
             regReadVisitor.visit(ctx.expression());
 
         if (ctx.expression() != null)
@@ -1086,21 +1087,22 @@ break;
 		BSVType argType = methodType.params.get(0);
 		BSVType returnType = methodType.params.get(1);
 		String methodInterfaceName = methodEntry.interfaceName;
-		printstream.println(String.format("    LET %1$s%2$s : string := (%3$s'%2$s %1$s).",
-						  instanceName, method, methodInterfaceName));
+		//printstream.println(String.format("    LET %1$s%2$s : string := (%3$s'%2$s %1$s).",
+						  //instanceName, method, methodInterfaceName));
 	    } else {
-		printstream.println(String.format("(* FIXME: interface %s subinterface %s *)", methodEntry.interfaceName, method));
+		//printstream.println(String.format("(* FIXME: interface %s subinterface %s *)", methodEntry.interfaceName, method));
 	    }
         }
-	for (String letBinding: letBindings) {
-	    printstream.println(String.format("       LET %s.", letBinding));
-	}
-	for (String methodBinding: methodBindings) {
-	    printstream.println(String.format("       12Definition %s.\n", methodBinding));
-	}
+	//for (String letBinding: letBindings) {
+	    //printstream.println(String.format("       LET %s.", letBinding));
+	//}
+	//for (String methodBinding: methodBindings) {
+	    //printstream.println(String.format("       12Definition %s.\n", methodBinding));
+	//}
 
 	boolean hasProvisos = functionproto.provisos() != null;
 	useAbstractOmega = hasProvisos;
+/*
 	printstream.println(String.format("    13Definition Mod'%s: Mod%s",
 					  functionName,
 					  (useAbstractOmega ? "." : " :=")
@@ -1135,6 +1137,7 @@ break;
         printstream.println(String.format("15Definition function'%1$s := module'%1$s.%1$s.", functionName));
 	printstream.println("");
 	printstream.println("");
+*/
 
 	actionContext = wasActionContext;
 	methodBindings = parentMethodBindings;
@@ -1672,8 +1675,9 @@ break;
 	StringBuilder statement = new StringBuilder();
         String instVar = "__inst$Genvar1";
         String lowerBound = "0";
-        String forBody = "FOR$0Body__ENA";
-	statement.append("        GENERATE :" + instVar + ",(" + lowerBound + ",(" + instVar + "< (" + limitVar + "), (1), " + forBody + newline);
+        String forBody = String.format("FOR$%dBody__ENA", forIndex);
+        forIndex = forIndex + 1;
+	statement.append("        GENERATE :" + instVar + ",(" + lowerBound + ",(" + instVar + "< (" + limitVar + "), (1), " + forBody);
 
 	letBindings = new LetBindings();
 	statements = new ArrayList<>();
