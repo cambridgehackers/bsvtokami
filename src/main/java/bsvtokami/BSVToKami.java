@@ -1185,6 +1185,10 @@ break;
             statement.append(" ( ");
             String sep = "";
             for (BSVParser.MethodformalContext formal: ctx.methodformals().methodformal()) {
+                if(formal.bsvtype() == null) {
+                     System.err.println("ERROR: formalparam null");
+                     break;
+                }
                 BSVType bsvtype = typeVisitor.visit(formal.bsvtype());
                 String varName = formal.name.getText();
                 statement.append(String.format("%s%s %s", sep, bsvtype.toString(), varName));
