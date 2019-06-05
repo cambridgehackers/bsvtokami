@@ -122,7 +122,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	statements = new ArrayList<>();
 	letBindings = new LetBindings();
 	visitChildren(ctx);
-	assert statements.size() == 0 : "Unexpected statements at " + StaticAnalysis.sourceLocation(ctx);
+	if(statements.size() != 0)
+            System.err.println("ERROR: Unexpected statements at " + StaticAnalysis.sourceLocation(ctx));
+	//assert statements.size() == 0 : "Unexpected statements at " + StaticAnalysis.sourceLocation(ctx);
 	for (String letBinding: letBindings) {
 	    printstream.println(String.format("1Definition %s.\n", letBinding));
 	}
