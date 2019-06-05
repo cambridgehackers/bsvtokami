@@ -1043,6 +1043,11 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
         @Override public Value visitCallexpr(BSVParser.CallexprContext ctx) {
 	    Value fcn = visit(ctx.fcn);
             FunctionValue closure = (FunctionValue)fcn;
+            if(closure == null) {
+                System.err.println("ERROR: " + ctx.fcn.getText() + " value " + fcn + " at " + StaticAnalysis.sourceLocation(ctx.fcn));
+                return new IntValue("0");
+                //return new VoidValue();
+            }
             assert closure != null : ctx.fcn.getText() + " value " + fcn + " at " + StaticAnalysis.sourceLocation(ctx.fcn);
             ArrayList<Value> argValues = new ArrayList<>();
             for (BSVParser.ExpressionContext argExpr: ctx.expression()) {

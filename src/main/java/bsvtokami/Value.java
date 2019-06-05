@@ -74,7 +74,14 @@ class IntValue extends Value {
 	    digits = digits.replace("_", "");
 	    value = Long.parseLong(digits, base);
 	} else {
-	    value = Integer.parseInt(x);
+            long tmpValue;
+            try {
+	        tmpValue = Integer.parseInt(x);
+            } catch (java.lang.NumberFormatException e) {
+                System.err.println("ERROR: value error in integer conversion " + x);
+                tmpValue = 0;
+            }
+            value = tmpValue;
 	    width = 0;
 	    this.basespec = null;
 	}

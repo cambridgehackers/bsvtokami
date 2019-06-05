@@ -985,6 +985,9 @@ System.err.println("ARROWBINDING " + varName + " : " + rhstype + " " + ctx.op.ge
 	    return getBsvType(ctx.functionproto());
 	} else if (ctx.typenat() != null) {
 	    return new BSVType(ctx.typenat().getText(), true);
+	} else if (ctx.typeide() == null) {
+            System.err.println("ERROR: getBsvType ctx.typeide == null\n");
+	    return new BSVType("BOZO", true);
 	} else {
 	    String typeide = ctx.typeide().getText();
 	    List<BSVType> typeparams = new ArrayList<BSVType>();

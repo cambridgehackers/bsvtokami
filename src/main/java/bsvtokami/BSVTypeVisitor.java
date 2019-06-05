@@ -1204,13 +1204,20 @@ System.err.println("AAAZZZ" + ctx.var.getText() + "ZZ1" + bsvtype + "ZZ2" + rhst
 	    if (types.containsKey(ctx))
 		return types.get(ctx);
             String literal = ctx.getText();
+	    BSVType bsvtype;
+            try {
             IntValue value = new IntValue(literal);
-	    BSVType bsvtype = (value.width != 0)
+	    bsvtype = (value.width != 0)
 		? new BSVType("Bit", new BSVType(value.width))
 		: new BSVType("Bit", new BSVType(null, true));
 	    if (value.width == 0)
 		System.err.println("Integer type at " + StaticAnalysis.sourceLocation(ctx));
 	    types.put(ctx, bsvtype);
+            }
+            catch (java.lang.NumberFormatException e) {
+                System.err.println("ERROR: failed integer conversion of " + literal);
+                bsvtype = new BSVType("BOZO", true);
+            }
             return bsvtype;
         }
         /**

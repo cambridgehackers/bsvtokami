@@ -1658,6 +1658,10 @@ break;
         BSVParser.BinopexprContext binop = operatorExpr.binopexpr();
         assert binop != null;
         assert binop.left != null;
+        if(!binop.left.getText().equals(iterationVar)) {
+            System.err.println("ERROR: loop condition variable does not match: " + binop.left.getText());
+            return "ERRORFOR";
+        }
         assert binop.left.getText().equals(iterationVar);
         if(!binop.op.getText().equals("<")) {
             System.err.println("ERROR: Unimplemented for loop condition " + testExpr.getText() + " at " + StaticAnalysis.sourceLocation(testExpr));
