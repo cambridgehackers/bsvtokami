@@ -1709,22 +1709,18 @@ break;
 						      name, params.size(), params,
 						      StaticAnalysis.sourceLocation(ctx));
 	    if (params.size() == 3)
-		return String.format("Hypothesis H%s: (%s = %s %s %s)%%nat.",
-				     name,
+		return String.format("REPLACE %s = %s %s %s",
 				     params.get(2),
 				     params.get(0),
 				     mSizeRelationshipProvisos.get(name),
 				     params.get(1));
 	    else
-		return String.format("Hypothesis H%s: (%s = %s %s)%%nat.",
-				     name,
+		return String.format("REPLACE %s = %s %s",
 				     params.get(1),
 				     mSizeRelationshipProvisos.get(name),
 				     params.get(0));
 	} else if (name.equals("Pos")) {
-	    return String.format("Hypothesis H%1$s: (%2$s > 0)%%nat.",
-				 name,
-				 params.get(0));
+	    return String.format("CHECK (%2$s > 0)", params.get(0));
 	}
 
 	return null;
