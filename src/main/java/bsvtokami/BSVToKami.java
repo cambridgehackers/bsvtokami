@@ -59,6 +59,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     private LetBindings letBindings;
     private LetBindings methodBindings;
     private ArrayList<String> statements;
+    private ArrayList<String> nextMethod;
     private ArrayList<String> modulevarbindings;
     private TreeMap<String,String> mSizeRelationshipProvisos;
     private String blockCondition;
@@ -85,6 +86,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	mSizeRelationshipProvisos.put("Max", "max");
 	mSizeRelationshipProvisos.put("Min", "min");
 	mSizeRelationshipProvisos.put("Log", "log");
+	nextMethod = new ArrayList<>();
     }
 
     void close() {
@@ -1161,7 +1163,7 @@ break;
         String methodName = ctx.name.getText();
 	if(ctx.bsvtype() == null) {
             System.err.println("ERROR: Method return type required at " + StaticAnalysis.sourceLocation(ctx));
-            return "ERRORMETHOD";
+            return "ERRORETHOD";
         }
 	assert ctx.bsvtype() != null : "Method return type required at " + StaticAnalysis.sourceLocation(ctx);
         String returntype = "Void";
@@ -1238,6 +1240,10 @@ break;
         if (hasStatements)
 	    statement.append("   " + String.join(newline + "   ", statements) + "\n"); // QQ9
 	statement.append("    }");
+	for (String item: nextMethod) {
+             statement.append(item);
+        }
+        nextMethod.clear();
 
         actionContext = outerContext;
 	statements  = parentStatements;
@@ -1671,41 +1677,21 @@ break;
         String limitVar = binop.right.getText();
 
 	StringBuilder statement = new StringBuilder();
-        statement.append("    (BKBlock");
-	statement.append(newline);
-        statement.append(String.format("      (let limit : nat := %s", limitVar));
-	statement.append(newline);
-        statement.append(String.format("       in let 9instancePrefix : string := %s", iterationVar));
-	statement.append(newline);
-        statement.append("      in ((fix loopM' (m: nat): InBKModule :=");
-	statement.append(newline);
-        statement.append("        match m with");
-	statement.append(newline);
-        statement.append("        | 0 => NilInBKModule");
-	statement.append(newline);
-        statement.append("        | S m' =>");
-	statement.append(newline);
-        statement.append(String.format("          let %s := limit - m", iterationVar));
-	statement.append(newline);
-        statement.append(String.format("          in let 12instancePrefix := toBinaryString %s", iterationVar));
-	statement.append(newline);
-        statement.append("          in ConsInBKModule");
-	statement.append(newline);
+        String instVar = "__inst$Genvar1";
+        String lowerBound = "0";
+        String forBody = "FOR$0Body__ENA";
+	statement.append("        GENERATE :" + instVar + ",(" + lowerBound + ",(" + instVar + "< (" + limitVar + "), (1), " + forBody + newline);
 
 	letBindings = new LetBindings();
 	statements = new ArrayList<>();
         visit(ctx.stmt());
 	assert(letBindings.size() == 0);
+        nextMethod.add("METHOD/Action " + forBody + " ( " + iterationVarType + " " + iterationVar + " ) {\n");
 	for (String substatement: statements) {
-	    statement.append(substatement);
-	    statement.append(newline);
+	    nextMethod.add(substatement + newline);
 	}
+        nextMethod.add("}\n");
 
-        statement.append("        (loopM' m')");
-	statement.append(newline);
-        statement.append("        end)");
-	statement.append(newline);
-        statement.append(String.format("        %s)))", limitVar));
 
 	letBindings = parentLetBindings;
 	statements  = parentStatements;
