@@ -63,6 +63,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     private ArrayList<String> modulevarbindings;
     private TreeMap<String,String> mSizeRelationshipProvisos;
     private String blockCondition;
+    private static boolean traceCallm = false;
 
     BSVToKami(String pkgName, File ofile, StaticAnalysis scopes) {
         this.scopes = scopes;
@@ -476,8 +477,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    for (BSVType p: interfaceType.params)
 	        convertedParams.add(bsvTypeToKami(p, 1));
 	    if (convertedParams.size() > 0)
-	        iname = String.format("%s(%s)", interfaceType.name, String.join(",", convertedParams));
-            moduleName = iname;
+	        moduleName = String.format("%s(%s)", moduleName, String.join(",", convertedParams));
         }
 
 	moduleDef = new ModuleDef(moduleName);
@@ -960,7 +960,7 @@ break;
 	    }
 	    if (modulevarbindings.size() > 0) {
                 for (String s: modulevarbindings) {
-                    statement.append("       " + s + newline);
+                    statement.append("QQ99       " + s + newline);
                 }
 	    }
             if (statements.size() > 0) {
@@ -1216,13 +1216,6 @@ break;
             regReadVisitor.visit(stmt);
         if (ctx.expression() != null)
             regReadVisitor.visit(ctx.expression());
-	if (modulevarbindings.size() > 0) {
-	    for (String s: modulevarbindings) {
-		statement.append("QQ1       ");
-		statement.append(s);
-		statement.append(newline);
-	    }
-	}
 	statements = new ArrayList<>();
 	if (methodcond != null) {
             if (statements.size() > 0) {
@@ -1709,7 +1702,7 @@ break;
 	    //FIXME: Not handling TAdd#, etc...
 	    params.add(bsvtype.getText());
 	}
-	logger.info(String.format("proviso name=%s", name));
+	logger.fine(String.format("proviso name=%s", name));
 
 	if (mSizeRelationshipProvisos.containsKey(name)) {
 	    assert params.size() >= 2 : String.format("Unexpected proviso %s %d params %s at %s",
@@ -2212,6 +2205,7 @@ break;
             for (BSVParser.ExpressionContext expr: ctx.expression()) {
 		statement.append(sep);
                 statement.append(visit(expr));
+                if(traceCallm)
 		System.err.println(String.format("callm %s arg %d type %s", methodName, argNumber, argType));
 		argNumber++;
 		if (argNumber < ctx.expression().size()) {

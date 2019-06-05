@@ -20,6 +20,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
     private HashMap<ParserRuleContext, BSVType> types;
     private static Logger logger = Logger.getGlobal();
     private static boolean callUnify = true;
+    private static boolean traceEval = false;
 
     BSVTypeVisitor(StaticAnalysis staticAnalyzer) {
         this.staticAnalyzer = staticAnalyzer;
@@ -987,6 +988,7 @@ System.err.println("AAAZZZ" + ctx.var.getText() + "ZZ1" + bsvtype + "ZZ2" + rhst
 		    try {
 			if (lhstype.prune() != rhstype.prune())
 			    lhstype.unify(rhstype);
+                        if (traceEval)
 			System.err.println(String.format("Binop lhstype %s rhstype %s at %s",
 							 lhstype.prune(), rhstype.prune(),
 							 StaticAnalysis.sourceLocation(ctx)));
@@ -1016,6 +1018,7 @@ System.err.println("AAAZZZ" + ctx.var.getText() + "ZZ1" + bsvtype + "ZZ2" + rhst
 		return types.get(ctx);
             BSVType bsvtype = visit(ctx.exprprimary());
             if (ctx.op == null) {
+                if(traceEval)
                 System.err.println("Unop expr " + ctx.exprprimary().getText() + " : " + bsvtype + " at " + StaticAnalysis.sourceLocation(ctx));
 		types.put(ctx, bsvtype);
                 return bsvtype;
@@ -1283,6 +1286,7 @@ System.err.println("AAAZZZ" + ctx.var.getText() + "ZZ1" + bsvtype + "ZZ2" + rhst
         @Override public BSVType visitFieldexpr(BSVParser.FieldexprContext ctx) {
             if (types.containsKey(ctx))
                 return types.get(ctx);
+            if(traceEval)
             System.err.println("computing type of field " + ctx.getText());
             BSVType basetype = visit(ctx.exprprimary());
             String interfaceName = basetype.name;
@@ -1297,6 +1301,7 @@ System.err.println("AAAZZZ" + ctx.var.getText() + "ZZ1" + bsvtype + "ZZ2" + rhst
                 if (subentry != null) {
                     // FIXME: instantiate interface
                     BSVType dereftype = dereferenceTypedef(subentry.type);
+                    if(traceEval)
                     System.err.println("expr field " + interfaceName + "." + subname + " : " + subentry.type
                                        + "(" + dereftype + ")" + " at " + StaticAnalysis.sourceLocation(ctx));
                     return dereftype;
@@ -1361,9 +1366,11 @@ System.err.println("AAAZZZ" + ctx.var.getText() + "ZZ1" + bsvtype + "ZZ2" + rhst
                     BSVType argtype = visit(expr);
                     assert argtype != null : String.format("Null type for %s at %s", expr.getText(), StaticAnalysis.sourceLocation(ctx));
                     BSVType ftype = new BSVType("Function", argtype, resulttype);
+                    if(traceEval)
                     System.err.println("    " + i + " Apply (" + fcntype_i + ") to (" + ftype + ")");
 		    if (true || callUnify)
 			fcntype_i.unify(ftype);
+                    if(traceEval)
                     System.err.println("    " + i + " Apply (" + fcntype_i + ") to (" + ftype + ")"
 				       + " result type " + resulttype.prune());
                     logger.fine("   -> " + resulttype.prune());
@@ -1377,8 +1384,10 @@ System.err.println("AAAZZZ" + ctx.var.getText() + "ZZ1" + bsvtype + "ZZ2" + rhst
                 fcntype_i = fcntype_i.prune().params.get(1);
 		i++;
             }
+            if(traceEval) {
 	    System.err.println("    now type " + fcntype.prune() + " resulttype " + fcntype_i + " prune " + fcntype_i.prune());
 	    System.err.println("    and fcntype_i " + fcntype_i);
+            }
 	    types.put(ctx, fcntype_i.prune());
 	    return fcntype_i.prune();
         }
@@ -1552,6 +1561,7 @@ System.err.println("AAAZZZ" + ctx.var.getText() + "ZZ1" + bsvtype + "ZZ2" + rhst
 
 	    try {
 		lhstype.unify(rhstype);
+                if(traceEval)
 		System.err.println(String.format("   regwrite lhs %1$s rhs %2$s", lhstype, rhstype));
 	    } catch (InferenceError e) {
 		logger.fine(e.toString());

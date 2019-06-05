@@ -45,14 +45,14 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
             logger.severe(String.format("Failed to import package %s", pkgname));
             return;
         }
-        logger.info(String.format("Importing package %s", pkgname));
+        logger.fine(String.format("Importing package %s", pkgname));
         for (Map.Entry<String,SymbolTableEntry> iterator: pkgscope.bindings.entrySet()) {
             String identifier = iterator.getKey();
             SymbolTableEntry entry = iterator.getValue();
             logger.fine(String.format("Importing %s::%s entry %s into %s", pkgname, identifier, entry, this.packageName));
             SymbolTableEntry oldEntry = importScope.lookup(identifier);
             if (oldEntry != null) {
-                logger.info(String.format("Overriding %s::%s", oldEntry.pkgName, identifier));
+                logger.fine(String.format("Overriding %s::%s", oldEntry.pkgName, identifier));
                 importScope.unbind(identifier);
             }
             importScope.bind(identifier, entry);

@@ -187,7 +187,7 @@ class RegValue extends Value {
     RegValue(String name, Value initValue) {
         this.name = name;
         value = initValue;
-        logger.info(String.format("New register %s with value %s", name, initValue));
+        logger.fine(String.format("New register %s with value %s", name, initValue));
     }
     void update(Value v) {
         newValue = v;
