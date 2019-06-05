@@ -376,6 +376,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
             StringBuilder paramsBuilder = new StringBuilder();
             for (BSVParser.TypeformalContext formal: ctx.typedeftype().typeformals().typeformal()) {
                 String name = formal.typeide().getText();
+                if(formal.numeric == null) {
+                    System.err.println("ERROR: Expecting numeric type parameter at " + StaticAnalysis.sourceLocation(formal));
+                    return "ERRORTAGGEDUNION";
+                }
                 assert formal.numeric != null : "Expecting numeric type parameter at " + StaticAnalysis.sourceLocation(formal);
                 constructorParamsBuilder.append(String.format(" (%s : nat)", name));
                 paramsBuilder.append(String.format(" %s", name));
@@ -545,6 +549,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
 
 	SymbolTableEntry interfaceEntry = scope.lookupType(interfaceName);
+	if(interfaceEntry == null) {
+            System.err.println("ERROR: No symbol table entry for interface " + interfaceName + " at location " + StaticAnalysis.sourceLocation(ctx));
+            return null;
+        }
 	assert interfaceEntry != null: "No symbol table entry for interface " + interfaceName + " at location " + StaticAnalysis.sourceLocation(ctx);
         assert interfaceEntry.mappings != null: "No interface mappings for " + interfaceName + " at location " + StaticAnalysis.sourceLocation(ctx);
 
@@ -803,6 +811,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         } else if (calleeInstanceName != null && actionContext) {
             BSVParser.CallexprContext call = getCall(ctx.rhs);
+	    if(call == null || call.fcn == null) {
+                System.err.println("ERROR: Something wrong with action context " + ctx.rhs.getText() + " at " + StaticAnalysis.sourceLocation(ctx.rhs));
+                return null;
+            }
 	    assert call != null && call.fcn != null: "Something wrong with action context " + ctx.rhs.getText() + " at " + StaticAnalysis.sourceLocation(ctx.rhs);
 
 	    statement.append(String.format("        CALL/Action %s : %s(", blockCondition, calleeInstanceName));
@@ -816,6 +828,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         } else if (!actionContext) {
             BSVParser.CallexprContext call = getCall(ctx.rhs);
+	    if(call == null || call.fcn == null) {
+                System.err.println( "ERROR: Something wrong with " + ctx.rhs.getText() + " at " + StaticAnalysis.sourceLocation(ctx.rhs));
+                return null;
+            }
 	    assert call != null && call.fcn != null: "Something wrong with " + ctx.rhs.getText() + " at " + StaticAnalysis.sourceLocation(ctx.rhs);
 	    String fcnName = call.fcn.getText();
 	    SymbolTableEntry fcnEntry = scope.lookup(fcnName);
@@ -850,6 +866,11 @@ break;
 }
 		t = t.params.get(1);
 	    }
+	    if (!t.name.equals("Module")) {
+                System.err.println("ERROR: NOTMOD " +  String.format("Expected Module but got %s in type %s at %s",
+							   t.name, t, StaticAnalysis.sourceLocation(call)));
+                return null;
+            }
 	    assert t.name.equals("Module") : String.format("Expected Module but got %s in type %s at %s",
 							   t.name, t, StaticAnalysis.sourceLocation(call));
 	    List<BSVType> moduleFreeTypeVars = interfaceType.getInstanceVariables();
@@ -1138,6 +1159,10 @@ break;
 	StringBuilder paramunpack = new StringBuilder();
 
         String methodName = ctx.name.getText();
+	if(ctx.bsvtype() == null) {
+            System.err.println("ERROR: Method return type required at " + StaticAnalysis.sourceLocation(ctx));
+            return "ERRORMETHOD";
+        }
 	assert ctx.bsvtype() != null : "Method return type required at " + StaticAnalysis.sourceLocation(ctx);
         String returntype = "Void";
         if (ctx.bsvtype() != null) {
@@ -1634,6 +1659,10 @@ break;
         assert binop != null;
         assert binop.left != null;
         assert binop.left.getText().equals(iterationVar);
+        if(!binop.op.getText().equals("<")) {
+            System.err.println("ERROR: Unimplemented for loop condition " + testExpr.getText() + " at " + StaticAnalysis.sourceLocation(testExpr));
+            return "ERRORFOR";
+        }
         assert binop.op.getText().equals("<"): "Unimplemented for loop condition " + testExpr.getText() + " at " + StaticAnalysis.sourceLocation(testExpr);
         String limitVar = binop.right.getText();
 
@@ -1961,6 +1990,10 @@ break;
                                  intToWord(intWidth, intValue.value));
 	} else {
 	    //FIXME width from type
+	    if(intValue.value >= 128) {
+                System.err.println("ERROR: Specify width of int literal %d at " + StaticAnalysis.sourceLocation(ctx));
+                return "ERRORINTLITERAL";
+            }
 	    assert (intValue.value < 128) : "Specify width of int literal %d at " + StaticAnalysis.sourceLocation(ctx);
 	    return (String.format("$ %d", intValue.value));
 	}
@@ -2095,6 +2128,11 @@ break;
     void instantiateParameterTypes(BSVType functionType, List<BSVParser.ExpressionContext> params, BSVType resultType) {
 	functionType = functionType.prune();
 	for (BSVParser.ExpressionContext param: params) {
+	    if(!functionType.name.equals("Function")) {
+		System.err.println("ERROR: Expecting a Function type instead of (" + functionType.name + ") "
+		+ functionType + " at " + StaticAnalysis.sourceLocation(param));
+                return;
+            }
 	    assert functionType.name.equals("Function")
 		: "Expecting a Function type instead of (" + functionType.name + ") "
 		+ functionType + " at " + StaticAnalysis.sourceLocation(param);
@@ -2134,6 +2172,10 @@ break;
 		resultType = methodType.params.get(1);
 	    }
 	} else {
+	    if( methodName == null) {
+                System.err.println("ERROR: No method name at " + StaticAnalysis.sourceLocation(ctx));
+                return "CALLERR";
+            }
 	    assert methodName != null : "No method name at " + StaticAnalysis.sourceLocation(ctx);
 	    assert scope != null;
 	    SymbolTableEntry functionEntry = scope.lookup(methodName);
@@ -2183,6 +2225,10 @@ break;
 		System.err.println(String.format("callm %s arg %d type %s", methodName, argNumber, argType));
 		argNumber++;
 		if (argNumber < ctx.expression().size()) {
+		    if(!resultType.name.equals("Function")) {
+                        System.err.println("ERROR: name is not Function:" + resultType.name);
+                        return "CALLERROR";
+                    }
 		    assert (resultType.name.equals("Function"));
 		    argType = resultType.params.get(0);
 		    resultType = resultType.params.get(1);
@@ -2401,6 +2447,10 @@ break;
 				   bsvTypeSize(bsvtype.params.get(0), ctx),
 				   bsvTypeSize(bsvtype.params.get(1), ctx));
 	} else {
+	    if(!bsvtype.numeric) {
+                System.err.println("ERROR: Expecting numeric type, got " + bsvtype + " at " + StaticAnalysis.sourceLocation(ctx));
+                return "1";
+            }
 	    assert bsvtype.numeric : "Expecting numeric type, got " + bsvtype + " at " + StaticAnalysis.sourceLocation(ctx);
 	    result = bsvtype.toString();
 	}
@@ -2440,6 +2490,10 @@ break;
 	    level = 0;
 	    value = bsvtype.toString();
 	} else {
+	    if(!bsvtype.numeric) {
+                System.err.println("ERROR: bsvTypeValue expected numeric type, got " + bsvtype + " at " + StaticAnalysis.sourceLocation(ctx));
+                return "ERRORTYPEVALUE";
+            }
 	    assert bsvtype.numeric : "bsvTypeValue expected numeric type, got " + bsvtype + " at " + StaticAnalysis.sourceLocation(ctx);
 	    level = 0;
 	    value = bsvtype.toString();

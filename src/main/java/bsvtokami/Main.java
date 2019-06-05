@@ -116,6 +116,7 @@ class PreprocessedTokenSource implements TokenSource {
 	while (true) {
 	    Token token = tokenSource.nextToken();
 	    //logger.fine(String.format("token.type %d %s %s:%d", token.getType(), token.getText(), token.getTokenSource().getSourceName(), token.getLine()));
+//System.err.println(String.format("token.type %d %s %s:%d", token.getType(), token.getText(), token.getTokenSource().getSourceName(), token.getLine()));
 	    if (token.getType() == Token.EOF && tokenSources.size() > 1) {
 		pop();
 		continue;
@@ -269,6 +270,7 @@ class Main {
 	for (String path: searchDirs) {
 	    String filename = String.format("%s/%s.bsv", path, pkgName);
 	    File file = new File(filename);
+System.err.println(String.format("Trying %s %s", filename, file.exists()));
 	    if (file.exists())
 		return filename;
 	}
@@ -277,6 +279,7 @@ class Main {
     }
 
     static BSVParser.PackagedefContext analyzePackage(String pkgName, String filename, boolean translateToKami) throws IOException {
+        System.err.println("STARTPACKAGE: " + pkgName);
 	packages.put(pkgName, null); // mark that we are working on this package
 	if (!packages.containsKey("Prelude")) {
 	    analyzePackage("Prelude", findPackageFile("Prelude"), false);
@@ -321,10 +324,9 @@ class Main {
 	    if (!dir.exists()) {
 		dir.mkdirs();
 	    }
-	    File irfile = new File(dirname, pkgName + ".generated.IR");
-	    //File ofile = new File(dirname, pkgName + ".v");
+	    File ofile = new File(dirname, pkgName + ".generated.IR");
 	    try {
-		BSVToKami bsvToKami = new BSVToKami(pkgName, irfile, staticAnalyzer);
+		BSVToKami bsvToKami = new BSVToKami(pkgName, ofile, staticAnalyzer);
 
 		bsvToKami.visit(packagedef);
 	    } catch (Exception e) {
@@ -340,6 +342,7 @@ class Main {
 	    }
 	}
 
+        System.err.println("ENDPACKAGE: " + pkgName);
 	return packagedef;
     }
 

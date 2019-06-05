@@ -1177,6 +1177,11 @@ public class Evaluator extends AbstractParseTreeVisitor<Value> implements BSVVis
             assert bsvtype != null : ctx.bsvtype().getText();
             bsvtype = bsvtype.prune();
 	    bsvtype = evaluateType(bsvtype);
+            if(bsvtype.isVar) {
+		System.err.println("ERROR: " + String.format("%s has type %s at %s",
+				ctx.getText(), bsvtype, StaticAnalysis.sourceLocation(ctx)));
+                return new IntValue(0);
+            }
             assert !bsvtype.isVar
 		: String.format("%s has type %s at %s",
 				ctx.getText(), bsvtype, StaticAnalysis.sourceLocation(ctx));

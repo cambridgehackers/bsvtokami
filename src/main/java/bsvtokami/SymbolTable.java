@@ -102,6 +102,10 @@ class SymbolTable {
     }
     SymbolTableEntry bind(String key, BSVType bsvtype) {
         logger.fine("binding " + key + " with type " + bsvtype + " in scope " + this + " " + this.name);
+	if(bindings.containsKey(key)) {
+            System.err.println("ERROR: " + String.format("Symbol %s already bound in scope %s %s", key, name, this));
+            return (SymbolTableEntry)bindings.get(key);
+        }
 	assert !bindings.containsKey(key)
 	    : String.format("Symbol %s already bound in scope %s %s", key, name, this);
 	SymbolTableEntry entry = new SymbolTableEntry(key, bsvtype);

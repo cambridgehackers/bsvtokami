@@ -802,6 +802,11 @@ System.err.println("AAAZZZ" + ctx.var.getText() + "ZZ1" + bsvtype + "ZZ2" + rhst
 		types.put(ctx, bsvtype);
 		return bsvtype;
             } else {
+                if (ctx.typeide() == null) {
+                    System.err.println("ERROR: visitBsvtype: null ctx.typeide()");
+                    BSVType bsvtype = new BSVType("BOZO", true);
+                    return bsvtype;
+                }
                 String typeide = ctx.typeide().getText();
                 // is type variable?
                 if (typeide.matches("[a-z].*")) {
@@ -1097,6 +1102,10 @@ System.err.println("AAAZZZ" + ctx.var.getText() + "ZZ1" + bsvtype + "ZZ2" + rhst
                 System.err.println("HACK FOR 'nul' VALUE");
                 return new BSVType("Bit", new BSVType(32));
             }
+            if(entry == null && !varName.startsWith("$")) {
+		System.err.println("ERROR: " + String.format("No symbol table entry for %s at %s", varName, StaticAnalysis.sourceLocation(ctx)));
+                return new BSVType("BOZO", true);
+            }
             assert entry != null || varName.startsWith("$")
 		: String.format("No symbol table entry for %s at %s", varName, StaticAnalysis.sourceLocation(ctx));
             logger.fine("var expr " + varName + " entry " + entry + " : " + ((entry != null) ? entry.type : ""));
@@ -1339,7 +1348,6 @@ System.err.println("AAAZZZ" + ctx.var.getText() + "ZZ1" + bsvtype + "ZZ2" + rhst
             assert fcntype != null : String.format("Null type for %s at %s", ctx.fcn.getText(), StaticAnalysis.sourceLocation(ctx));
 	    BSVType fcntype_i = fcntype;
 	    int i = 0;
-System.err.println("ZZZ1" + ctx.fcn.getText());
             for (BSVParser.ExpressionContext expr: ctx.expression()) {
                 BSVType resulttype = new BSVType();
                 try {
@@ -1355,11 +1363,10 @@ System.err.println("ZZZ1" + ctx.fcn.getText());
                 } catch (InferenceError e) {
                     logger.fine("Apply InferenceError " + e);
                 }
-System.err.println("ZZZZZ" + fcntype_i.prune() + "EEE" + fcntype_i.prune().params + "PPP");
-if (fcntype_i.prune().params.size() < 2) {
-    System.err.println("ZZ no items");
-    break;
-}
+                if (fcntype_i.prune().params.size() < 2) {
+                    System.err.println("ERROR: CALLERR no items" + fcntype_i.prune() + "EEE" + fcntype_i.prune().params + "PPP");
+                    break;
+                }
                 fcntype_i = fcntype_i.prune().params.get(1);
 		i++;
             }
@@ -1412,6 +1419,11 @@ if (fcntype_i.prune().params.size() < 2) {
 		return types.get(ctx);
             BSVType arraytype = visit(ctx.exprprimary());
             assert arraytype != null;
+            if(arraytype.isVar) {
+                System.err.println("ERROR: " + String.format("Array type is variable at %s",
+						    StaticAnalysis.sourceLocation(ctx)));
+                return new BSVType("BOZO", true);
+            }
             assert !arraytype.isVar : String.format("Array type is variable at %s",
 						    StaticAnalysis.sourceLocation(ctx));
             if (arraytype.name.equals("Vector"))

@@ -113,6 +113,10 @@ public class BSVType {
 	}
     }
     public long asLong() {
+	if (!numeric) {
+            System.err.println("ERROR: asLong " + this + " should be numeric " + name.matches("[0-9]+"));
+            return 0;
+        }
 	assert numeric : this + " should be numeric " + name.matches("[0-9]+");
 	return Long.parseLong(name);
     }

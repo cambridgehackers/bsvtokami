@@ -109,6 +109,10 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
 	    System.err.println(String.format("Type %s interface %s instance %s at %s",
 					     entryType, interfaceType, instanceName, StaticAnalysis.sourceLocation(ctx)));
             SymbolTableEntry interfaceEntry = scope.lookupType(interfaceType.name);
+            if(interfaceEntry == null) {
+                System.err.println("ERROR: No interface entry for " + interfaceType + " at " +  StaticAnalysis.sourceLocation(ctx));
+                return "ERRORFIELD";
+            }
             assert interfaceEntry != null : "No interface entry for " + interfaceType + " at " +  StaticAnalysis.sourceLocation(ctx);
 
 	    if (interfaceEntry.symbolType != SymbolType.Interface) {
