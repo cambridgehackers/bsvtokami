@@ -235,20 +235,20 @@ public class BSVToKami extends BSVBaseVisitor<String>
         System.err.println(String.format("BSVTOKAMI typedef struct %s\n", typeName));
         //assert ctx.typedeftype().typeformals() == null: "Typedef struct with type formals at " + StaticAnalysis.sourceLocation(ctx);
         String constructorParams = "";
-        String params = "";
         if (ctx.typedeftype().typeformals() != null) {
             StringBuilder constructorParamsBuilder = new StringBuilder();
             StringBuilder paramsBuilder = new StringBuilder();
+            constructorParamsBuilder.append(" ( ");
+            String sep = "";
             for (BSVParser.TypeformalContext formal: ctx.typedeftype().typeformals().typeformal()) {
                 String name = formal.typeide().getText();
                 //assert formal.numeric != null : "Expecting numeric type parameter at " + StaticAnalysis.sourceLocation(formal);
-                constructorParamsBuilder.append(String.format(" (%s EZZE: %s)", name,
-							      ((formal.numeric != null)? "nat" : "Type")));
+                constructorParamsBuilder.append(String.format("%s%s", sep, name));
                 paramsBuilder.append(String.format(" %s", name));
+                sep = ", ";
             }
-
+            constructorParamsBuilder.append(" ) ");
             constructorParams = constructorParamsBuilder.toString();
-            params = paramsBuilder.toString();
         }
 
         printstream.println(String.format("STRUCT %s%s {", typeName, constructorParams));
