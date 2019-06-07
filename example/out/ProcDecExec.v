@@ -40,9 +40,11 @@ Module module'mkDecExecSep.
     with Register (instancePrefix--"d2e_src1")    : Bit RegFileSz <- Default
     with Register (instancePrefix--"d2e_src2")    : Bit RegFileSz <- Default
     with Register (instancePrefix--"d2e_dst")     : Bit RegFileSz <- Default
+    with Register (instancePrefix--"e2w_nextpc")  : Bit PgmSz <- Default
     with Register (instancePrefix--"e2w_dst")     : Bit RegFileSz <- Default
     with Register (instancePrefix--"sbflags")     : Array NumRegs Bool <- Default
     with Register (instancePrefix--"rf") : Array NumRegs (Bit DataSz) <- Default
+    with Register (instancePrefix--"poison")   : Bool <- Default
     with Rule instancePrefix--"decode" :=
     (
 	Read d2e_valid_v   : Bool <- (instancePrefix--"d2e_valid") ;
@@ -79,11 +81,14 @@ Module module'mkDecExecSep.
 	Read arithOp : Bit 2 <- (instancePrefix--"d2e_arithOp") ;
 	Read addr    : Bit AddrSz <- (instancePrefix--"d2e_addr") ;
 	Read op      : Bit 2 <- (instancePrefix--"d2e_op") ;
-	Read valid   : Bool <- (instancePrefix--"d2e_valid") ;
+	Read d2e_validv   : Bool <- (instancePrefix--"d2e_valid") ;
 	Read sbflags : Array NumRegs Bool <- (instancePrefix--"sbflags") ;
+	Read poisonv   : Bool <- (instancePrefix--"poison") ;
 	LET  sbflag1 : Bool <- #sbflags @[ #src1 ] ;
 	LET  sbflag2 : Bool <- #sbflags @[ #src2 ] ;
-        Assert (#op == $$ (* isConstT *)opArith && #valid) ;
+        Assert (!#poisonv) ;
+        Assert (#op == $$ (* isConstT *)opArith) ;
+	Assert (#d2e_validv) ;
         Assert (!#sbflag1) ;
         Assert (!#sbflag2) ;
 
@@ -92,12 +97,14 @@ Module module'mkDecExecSep.
         LET eval : ExecuterResult <- (execArith exec _ arithOp val1 val2)  ;
 	LET dval : Bit DataSz <- #eval @% "data" ;
 	LET addr : Bit AddrSz <- #eval @% "addr" ;
+	LET nextpc : Bit PgmSz <- #eval @% "nextpc" ;
 
         LET sbflags : Array NumRegs Bool <- #sbflags @[ #dst <- $$true ] ;
 
         BKCall unused : Void <- (mem--"req") (#addr : Bit DataSz) ;
 	BKCall enq : Void (* actionBinding *) <- (e2wfifo--"enq") ((#dval) : Bit DataSz)  ;
         Write (instancePrefix--"sbflags") : Array NumRegs Bool <- #sbflags ;
+        Write (instancePrefix--"e2w_nextpc") : Bit PgmSz <- #nextpc ;
         Write (instancePrefix--"e2w_dst") : Bit RegFileSz <- #dst ;
 
         Retv ) (* rule executeArith *)
@@ -107,13 +114,16 @@ Module module'mkDecExecSep.
         BKCall v : Bit DataSz <- (e2wfifo--"first") ();
         BKCall unused1 : Void <- (e2wfifo--"deq") ();
         Read rf_v : Array NumRegs (Bit DataSz) <- (instancePrefix--"rf") ;
+	Read nextpc_v : Bit PgmSz <- (instancePrefix--"e2w_nextpc") ;
 	Read dst_v : Bit RegFileSz <- (instancePrefix--"e2w_dst") ;
 	Read sbflags : Array NumRegs Bool <- (instancePrefix--"sbflags") ;
 	Read d2e_valid_v : Bool <- (instancePrefix--"d2e_valid") ;
+	Read poison_v : Bool <- (instancePrefix--"poison") ;
 	LET sbflag1 : Bool <- #sbflags @[ #dst_v ] ;
 
 	Assert( #sbflag1 ) ;
 	Assert( #d2e_valid_v ) ;
+	Assert( #poison_v ) ;
 
 	LET rf_v : Array NumRegs (Bit DataSz) <- (#rf_v @[ #dst_v <- #v ]) ;
 
@@ -125,6 +135,18 @@ Module module'mkDecExecSep.
         BKCall unused : Bit DataSz <- (mem--"resp") () ;
 
         Retv ) (* rule executeArith *)
+
+    with Rule instancePrefix--"dumpE2W" :=
+    (
+        Read rf_v : Array NumRegs (Bit DataSz) <- (instancePrefix--"rf") ;
+        Read e2w_nextpc_v : Bit PgmSz <- (instancePrefix--"e2w_nextpc") ;
+	Read poisonv   : Bool <- (instancePrefix--"poison") ;
+        Assert(#poisonv) ;
+	Write (instancePrefix--"d2e_valid") : Bool <- $$false ;
+	Write (instancePrefix--"pc") : Bit PgmSz <- #e2w_nextpc_v ;
+
+	Retv )
+
     }). (* mkDecExecSep *)
 
     Hint Unfold mkDecExecSepModule : ModuleDefs.

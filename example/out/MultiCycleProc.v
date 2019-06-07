@@ -20,6 +20,7 @@ Module module'mkMultiCycleProc.
     Let d2e_src1 : string := instancePrefix--"d2e_src1".
     Let d2e_src2 : string := instancePrefix--"d2e_src2".
     Let d2e_dst : string := instancePrefix--"d2e_dst".
+    Let d2e_nextpc : string := instancePrefix--"d2e_nextpc".
     Let d2e_addr : string := instancePrefix--"d2e_addr".
     Let e2w_val : string := instancePrefix--"e2w_val".
     (* instance methods *)
@@ -44,6 +45,7 @@ Module module'mkMultiCycleProc.
     with Register (instancePrefix--"d2e_src2") : Bit RegFileSz <- Default
     with Register (instancePrefix--"d2e_dst") : Bit RegFileSz <- Default
     with Register (instancePrefix--"d2e_addr") : Bit AddrSz <- Default
+    with Register (instancePrefix--"e2w_nextpc") : Bit PgmSz <- Default
     with Register (instancePrefix--"e2w_dst") : Bit RegFileSz <- Default
     with Register (instancePrefix--"e2w_val") : Bit DataSz <- Default
 
@@ -90,8 +92,10 @@ Module module'mkMultiCycleProc.
 
        LET dval : Bit DataSz <- #eval @% "data" ;
        LET addr : Bit AddrSz <- #eval @% "addr" ;
-       LET nextpc : Bit PgmSz <- #eval @% "nextpc" ;
+       LET nextpc_v : Bit PgmSz <- #eval @% "nextpc" ;
 
+
+               Write instancePrefix--"e2w_nextpc" : Bit PgmSz <- #nextpc_v  ;
                Write instancePrefix--"e2w_dst" : Bit RegFileSz <- #d2e_dst_v  ;
                Write instancePrefix--"e2w_val" : Bit DataSz <- #dval  ;
                Write state : Bit 2 <- $$(natToWord 2 2)  ;
@@ -102,6 +106,7 @@ Module module'mkMultiCycleProc.
 
     with Rule instancePrefix--"doWriteBack" :=
     (
+        Read e2w_nextpc_v : Bit PgmSz <- instancePrefix--"e2w_nextpc" ;
         Read e2w_dst_v : Bit RegFileSz <- instancePrefix--"e2w_dst" ;
         Read e2w_val_v : Bit DataSz <- instancePrefix--"e2w_val" ;
         Read pc_v : Bit PgmSz <- pc ;
@@ -111,7 +116,7 @@ Module module'mkMultiCycleProc.
         Read rf_v : Array NumRegs (Bit DataSz) <- (instancePrefix--"rf") ;
 	LET rf_v : Array NumRegs (Bit DataSz) <- #rf_v @[#e2w_dst_v <- #e2w_val_v ]  ;
         Write (instancePrefix--"rf") : Array NumRegs (Bit DataSz) <-  #rf_v ;
-        Write pc : Bit PgmSz <- (#pc_v + $$ (* intwidth *) (natToWord PgmSz 1))  ;
+        Write pc : Bit PgmSz <- #e2w_nextpc_v  ;
 
         BKCall unused : Bit DataSz <- (mem--"resp") () ;
 
