@@ -195,12 +195,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
             }
         }
 	if (ctx.bsvtype() != null) {
-	    printstream.println(String.format("2Definition %s := %s.",
+	    printstream.println(String.format("DEFINITION %s %s",
 					      bsvTypeToKami(StaticAnalysis.getBsvType(ctx.typedeftype())),
 					      bsvTypeToKami(StaticAnalysis.getBsvType(ctx.bsvtype()))
 					      ));
-	    //printstream.println(String.format("End %s.", bsvTypeToKami(StaticAnalysis.getBsvType(ctx.typedeftype()))));
-	    printstream.println("");
 	}
 	return null;
     }
@@ -2007,11 +2005,11 @@ break;
 		char firstChar = varName.charAt(0);
 		if (entry.symbolType == SymbolType.ModuleParam
 		    && entry.type.isVar)
-		    prefix = "$$ (* isVar *)";
+		    prefix = "";
 		if (entry.isConstT)
-		    prefix = "$$ (* isConstT *)";
+		    prefix = "";
 		else if (entry.type.name.equals("Integer"))
-		    prefix = "$ (* Integer *) ";
+		    prefix = "";
 		else if (firstChar >= 'A' && firstChar <= 'Z')
 		    prefix = "";
 		if (!actionContext)

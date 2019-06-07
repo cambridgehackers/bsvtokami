@@ -227,7 +227,6 @@ public class BSVType {
 
     public String toString() {
 	if (instance != null)
-	    //return "(*" + name + "*)" + instance.toString();
 	    return instance.toString();
 	if (name.equals("Function")) {
 	    String result = "";
