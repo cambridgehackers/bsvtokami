@@ -810,7 +810,7 @@ System.err.println("AAAZZZ" + ctx.var.getText() + "ZZ1" + bsvtype + "ZZ2" + rhst
                 }
                 String typeide = ctx.typeide().getText();
                 // is type variable?
-                if (typeide.matches("[a-z].*")) {
+                if (false && typeide.matches("[a-z].*")) { //jca
                     assert typeide != null;
                     assert scope != null : "must have called popScope() too many times";
                     SymbolTableEntry entry = scope.lookupType(typeide);
