@@ -126,7 +126,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             System.err.println("ERROR: Unexpected statements at " + StaticAnalysis.sourceLocation(ctx));
 	//assert statements.size() == 0 : "Unexpected statements at " + StaticAnalysis.sourceLocation(ctx);
 	for (String letBinding: letBindings) {
-	    printstream.println(String.format("1Definition %s.\n", letBinding));
+	    printstream.println(String.format("DEFINITION %s", letBinding));
 	}
 	return null;
     }
@@ -621,10 +621,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 						       bsvTypeToKami(t, 1),
 						       visit(args.get(0))));
 			} else {
-			    letBindings.add(String.format("%1$s : ConstT %2$s := $%3$s",
-							  varName,
-							  bsvTypeToKami(t, 1),
-							  visit(args.get(0))));
+			    letBindings.add(String.format("%s %s", varName, visit(args.get(0))));
 			}
 		    } else if (functionName.equals("truncate")) {
 			BSVType arg0Type = typeVisitor.visit(args.get(0));
@@ -733,7 +730,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
                         statement.append(visit(rhs));
 			actionContext = wasActionContext;
                     } else {
-                        letBindings.add(String.format("%s : ConstT %s := (%s)%%kami", varName, bsvTypeToKami(t, 1), visit(rhs)));
+                        letBindings.add(String.format("%s %s", varName, visit(rhs)));
                         statement.append("(* varbinding in action context *)");
                         varEntry.isConstT = true;
                     }
