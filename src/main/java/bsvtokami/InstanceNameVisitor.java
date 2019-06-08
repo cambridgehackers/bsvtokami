@@ -30,6 +30,7 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
     private final StaticAnalysis scopes;
     private Stack<SymbolTable> scopeStack = new Stack<>();
     private SymbolTable scope;
+    private boolean traceInstance = false;
     public TreeMap<String,InstanceEntry> methodsUsed;
     InstanceNameVisitor(StaticAnalysis scopes) {
 	this.scopes = scopes;
@@ -106,6 +107,7 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
 								       instanceName, StaticAnalysis.sourceLocation(ctx));
 	    BSVType entryType = (InstanceNameEntry != null) ? InstanceNameEntry.instanceType : entry.type;
 	    BSVType interfaceType = dereferenceTypedef(entryType);
+            if (traceInstance)
 	    System.err.println(String.format("Type %s interface %s instance %s at %s",
 					     entryType, interfaceType, instanceName, StaticAnalysis.sourceLocation(ctx)));
             SymbolTableEntry interfaceEntry = scope.lookupType(interfaceType.name);
@@ -116,6 +118,7 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
             assert interfaceEntry != null : "No interface entry for " + interfaceType + " at " +  StaticAnalysis.sourceLocation(ctx);
 
 	    if (interfaceEntry.symbolType != SymbolType.Interface) {
+                if (traceInstance)
 		System.err.println(String.format("    %s is not an interface (%s)", interfaceType.name, interfaceEntry.symbolType));
 		return null;
 	    }
@@ -124,11 +127,13 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
             SymbolTableEntry methodEntry = interfaceEntry.mappings.lookup(fieldName);
 	    if (methodEntry == null) {
 		for (Map.Entry<String,SymbolTableEntry> mapping: interfaceEntry.mappings.bindings.entrySet()) {
+                    if (traceInstance)
 		    System.err.println(String.format("ifc %s method %s type %s", interfaceType.name, mapping.getKey(), mapping.getValue().type));
 		}
 		return null;
 	    }
 	    BSVType instantiatedType = methodEntry.type.instantiate(interfaceType.params, entryType.params);
+            if (traceInstance)
 	    System.err.println(String.format("    method %s type %s interface type %s",
 					     fieldName, instantiatedType, methodEntry.type));
 
