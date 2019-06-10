@@ -38,7 +38,7 @@ typedef struct {
 module mkPipelinedDecoder#(RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm,
                            Decoder dec,
                            FIFO#(D2E) d2eFifo)(Empty);
-   Reg#(Bit#(PgmSz)) pc <- mkReg(16'h0);
+   Reg#(Bit#(PgmSz)) pc <- mkReg(3'h0);
 
    rule decode;
       Bit#(InstrSz) inst = pgm.sub(pc);
@@ -53,7 +53,7 @@ module mkPipelinedDecoder#(RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm,
          op: op, arithOp: arithOp, src1: src1, src2: src2, dst: dst, addr: addr, pc: pc
          };
       void enq <- d2eFifo.enq(decoded);
-      pc <= pc + 16'd1;
+      pc <= pc + 'd1;
    endrule
 endmodule
 

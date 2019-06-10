@@ -1,5 +1,4 @@
 -R ../../kami Kami
 -R ../../bbv/theories bbv
--R ../../coq-record-update
 -R ../../coq-record-update/src RecordUpdate
 -R . BK

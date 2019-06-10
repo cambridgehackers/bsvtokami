@@ -93,7 +93,7 @@ module procSpec#(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
    rule doDecode if (stage == 2'd0);
      Bit#(InstrSz) inst = pgm.sub(pc);
       d2e_op <= dec.getOp(inst);
-      d2esrc1 <= dec.getSrc1(inst);
+      d2e_src1 <= dec.getSrc1(inst);
       d2e_src2 <= dec.getSrc2(inst);
       d2e_dst <= dec.getDst(inst);
 

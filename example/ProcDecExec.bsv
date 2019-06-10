@@ -1,8 +1,9 @@
 
-import FIFO::*;
+import FIFOF::*;
 import RegFile::*;
 import ProcMemSpec::*;
 import PipelinedProc::*;
+import Vector::*;
 
 interface NoMethods;
 endinterface
@@ -11,15 +12,14 @@ module mkDecExecSep#(RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm,
 		     Decoder dec,
 		     Executer exec,
 		     Memory mem,
-                     Reg#(Vector#(NumRegs, Bit#(DataSz))) rf,
-		     ToHost toHost)(NoMethods);
-   FIFO#(D2E) d2eFifo <- mkFIFO();
-   FIFO#(E2W) e2wFifo <- mkFIFO();
+                     Reg#(Vector#(NumRegs, Bit#(DataSz))) rf)(NoMethods);
+   FIFOF#(D2E) d2eFifo <- mkFIFOF();
+   FIFOF#(E2W) e2wFifo <- mkFIFOF();
 
-   Reg#(Bit#(PgmSz)) decoder_pc <- mkReg(16'h0);
-   RegFile#(Bit#(RegFileSz), Bool) sbFlags <- mkRegFileFull();
+   Reg#(Bit#(PgmSz)) decoder_pc <- mkRegU;
+   Reg#(Vector#(NumRegs, Bool)) sbFlags <- mkRegU();
 
-   rule decode if (d2eFifo.notFull());
+   rule decode if (!d2eFifo.notFull());
       Bit#(InstrSz) inst = pgm.sub(decoder_pc);
       OpK op = dec.getOp(inst);
       OpArithK arithOp = dec.getArithOp(inst);
@@ -32,17 +32,15 @@ module mkDecExecSep#(RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm,
          op: op, arithOp: arithOp, src1: src1, src2: src2, dst: dst, addr: addr, pc: decoder_pc
          };
       void enq <- d2eFifo.enq(decoded);
-      decoder_pc <= decoder_pc + 16'd1;
+      decoder_pc <= decoder_pc + 3'd1;
 
    endrule
 
    D2E d2e = d2eFifo.first();
    rule executeArith if (d2eFifo.notEmpty()
-                         && d2e.op == opArith
-                         && !sbFlags.sub(d2e.src1)
-                         && !sbFlags.sub(d2e.src2)
+                         && !sbFlags[d2e.src1]
+                         && !sbFlags[d2e.src2]
                         );
-      D2E d2e = d2eFifo.first();
       void deq <- d2eFifo.deq();
       Bit#(RegFileSz) src1 = d2e.src1;
       Bit#(RegFileSz) src2 = d2e.src2;
@@ -51,49 +49,22 @@ module mkDecExecSep#(RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm,
       Bit#(DataSz) val1 = rf[src1];
       Bit#(DataSz) val2 = rf[src2];
       Bit#(DataSz) execVal = exec.execArith(arithOp, val1, val2);
-      void unused <- sbFlags.upd(dst, True);
+      Vector#(NumRegs, Bool) flags = sbFlags;
+      //flags[dst] = True;
+      sbFlags <= flags;
       E2W e2w = E2W { idx: dst, val: execVal };
       void enq <- e2wFifo.enq(e2w);
    endrule
 
-//    rule executeLoad if (d2e.op == opLd
-//                          && !sbFlags.sub(d2e.src1)
-//                          && !sbFlags.sub(d2e.dst)
-//                         );
-//       D2E d2e = d2eFifo.first();
-//       void deq <- d2eFifo.deq();
-//       Bit#(RegFileSz) src1 = d2e.src1;
-//       Bit#(RegFileSz) dst = d2e.dst;
-//       Bit#(AddrSz) addr = d2e.addr;
-//       Bit#(DataSz) val1 = rf[src1];
-//       MemRq memrq = MemRq { isLoad: 1'b1, addr: addr, data: 32'b0 };
-//       Bit#(DataSz) ldVal <- mem.doMem(memrq);
-//       void unused <- sbFlags.upd(dst, True);
-//       E2W e2w = E2W { idx: dst, val: ldVal };
-//       void enq <- e2wFifo.enq(e2w);
-//    endrule
+   E2W e2w = e2wFifo.first();
+      rule writeBack if (sbFlags[e2w.idx]);
+         void e2wDeq <- e2wFifo.deq();
+	 void d2eDeq <- d2eFifo.deq();
 
-//    rule executeStore if (d2e.op == opSt
-//                          && !sbFlags.sub(d2e.src1)
-//                         );
-//       D2E d2e = d2eFifo.first();
-//       void deq <- d2eFifo.deq();
-//       Bit#(RegFileSz) src1 = d2e.src1;
-//       Bit#(AddrSz) addr = d2e.addr;
-//       Bit#(DataSz) val1 = rf[src1];
-//       MemRq memrq = MemRq { isLoad: 1'b0, addr: addr, data: val1 };
-//       Bit#(DataSz) unused <- mem.doMem(memrq);
-//    endrule
-
-//    rule executeToHost if (d2e.op == opTh
-//                          && !sbFlags.sub(d2e.src1)
-//                         );
-//       D2E d2e = d2eFifo.first();
-//       void deq <- d2eFifo.deq();
-//       Bit#(RegFileSz) src1 = d2e.src1;
-//       Bit#(AddrSz) addr = d2e.addr;
-//       Bit#(DataSz) val1 = rf[src1];
-//       void unused <- toHost.toHost(val1);
-//    endrule
+	 rf[e2w.idx] <= e2w.val;
+	 Vector#(NumRegs, Bool) flags = sbFlags;
+	 //flags[e2w.idx] = False;
+	 sbFlags <= flags;
+      endrule
 
 endmodule
