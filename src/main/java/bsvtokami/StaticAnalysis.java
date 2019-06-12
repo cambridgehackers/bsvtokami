@@ -45,14 +45,14 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
             logger.severe(String.format("Failed to import package %s", pkgname));
             return;
         }
-        logger.info(String.format("Importing package %s", pkgname));
+        logger.fine(String.format("Importing package %s", pkgname));
         for (Map.Entry<String,SymbolTableEntry> iterator: pkgscope.bindings.entrySet()) {
             String identifier = iterator.getKey();
             SymbolTableEntry entry = iterator.getValue();
             logger.fine(String.format("Importing %s::%s entry %s into %s", pkgname, identifier, entry, this.packageName));
             SymbolTableEntry oldEntry = importScope.lookup(identifier);
             if (oldEntry != null) {
-                logger.info(String.format("Overriding %s::%s", oldEntry.pkgName, identifier));
+                logger.fine(String.format("Overriding %s::%s", oldEntry.pkgName, identifier));
                 importScope.unbind(identifier);
             }
             importScope.bind(identifier, entry);
@@ -712,6 +712,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
             boolean arrowBinding = ctx.op.getText().equals("<-");
             if (arrowBinding) {
                 lhstype = new BSVType();
+System.err.println("ARROWBINDING " + varName + " : " + rhstype + " " + ctx.op.getText() + " " + ctx.rhs.getText() + " BECOMES " + lhstype.toString());
                 handleArrowBinding(varName, lhstype, rhstype, ident, ctx.rhs);
             }
             SymbolTableEntry entry = new SymbolTableEntry(varName, lhstype.prune());
@@ -984,6 +985,9 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 	    return getBsvType(ctx.functionproto());
 	} else if (ctx.typenat() != null) {
 	    return new BSVType(ctx.typenat().getText(), true);
+	} else if (ctx.typeide() == null) {
+            System.err.println("ERROR: getBsvType ctx.typeide == null\n");
+	    return new BSVType("BOZO", true);
 	} else {
 	    String typeide = ctx.typeide().getText();
 	    List<BSVType> typeparams = new ArrayList<BSVType>();
@@ -1013,7 +1017,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
                 p.add(functiontype);
                 functiontype = new BSVType("Function", p);
             }
-            System.err.println("functionproto " + ctx.name.getText() + " : " + functiontype);
+            //noisy System.err.println("functionproto " + ctx.name.getText() + " : " + functiontype);
             return functiontype;
     }
 

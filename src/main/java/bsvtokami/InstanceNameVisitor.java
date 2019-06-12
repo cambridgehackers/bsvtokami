@@ -99,7 +99,7 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
         String instanceName = visit(ctx.exprprimary());
         if (instanceName != null) {
             String fieldName = ctx.field.getText();
-            String methodName = String.format("%s'%s", instanceName, fieldName);
+            String methodName = String.format("%s.%s", instanceName, fieldName);
             SymbolTableEntry entry = scope.lookup(instanceName);
 	    InstanceEntry InstanceNameEntry = methodsUsed.containsKey(instanceName) ? methodsUsed.get(instanceName) : null;
             assert InstanceNameEntry != null || entry != null: String.format("No entry for field expr instance %s at %s",
@@ -109,6 +109,10 @@ class InstanceNameVisitor extends BSVBaseVisitor<String> {
 	    System.err.println(String.format("Type %s interface %s instance %s at %s",
 					     entryType, interfaceType, instanceName, StaticAnalysis.sourceLocation(ctx)));
             SymbolTableEntry interfaceEntry = scope.lookupType(interfaceType.name);
+            if(interfaceEntry == null) {
+                System.err.println("ERROR: No interface entry for " + interfaceType + " at " +  StaticAnalysis.sourceLocation(ctx));
+                return "ERRORFIELD";
+            }
             assert interfaceEntry != null : "No interface entry for " + interfaceType + " at " +  StaticAnalysis.sourceLocation(ctx);
 
 	    if (interfaceEntry.symbolType != SymbolType.Interface) {

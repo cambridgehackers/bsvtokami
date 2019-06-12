@@ -74,7 +74,14 @@ class IntValue extends Value {
 	    digits = digits.replace("_", "");
 	    value = Long.parseLong(digits, base);
 	} else {
-	    value = Integer.parseInt(x);
+            long tmpValue;
+            try {
+	        tmpValue = Integer.parseInt(x);
+            } catch (java.lang.NumberFormatException e) {
+                System.err.println("ERROR: value error in integer conversion " + x);
+                tmpValue = 0;
+            }
+            value = tmpValue;
 	    width = 0;
 	    this.basespec = null;
 	}
@@ -180,7 +187,7 @@ class RegValue extends Value {
     RegValue(String name, Value initValue) {
         this.name = name;
         value = initValue;
-        logger.info(String.format("New register %s with value %s", name, initValue));
+        logger.fine(String.format("New register %s with value %s", name, initValue));
     }
     void update(Value v) {
         newValue = v;

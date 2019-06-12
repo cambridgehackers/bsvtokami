@@ -113,6 +113,10 @@ public class BSVType {
 	}
     }
     public long asLong() {
+	if (!numeric) {
+            System.err.println("ERROR: asLong " + this + " should be numeric " + name.matches("[0-9]+"));
+            return 0;
+        }
 	assert numeric : this + " should be numeric " + name.matches("[0-9]+");
 	return Long.parseLong(name);
     }
@@ -223,7 +227,7 @@ public class BSVType {
 
     public String toString() {
 	if (instance != null)
-	    return "(*" + name + "*)" + instance.toString();
+	    return instance.toString();
 	if (name.equals("Function")) {
 	    String result = "";
 	    BSVType p0 = params.get(0);
@@ -237,8 +241,10 @@ public class BSVType {
 	}
 
 	String result = name;
+        if (result.equals("Bool"))
+            result = "Bit(1)";
 	if (params.size() > 0) {
-	    result = name + (numeric ? "'numeric" : "" ) + "#(";
+	    result = name + (numeric ? "'numeric" : "" ) + "(";
 	    String sep = "";
 	    for (BSVType p: params) {
 		result += sep;

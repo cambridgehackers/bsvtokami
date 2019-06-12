@@ -40,7 +40,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
     private static Logger logger = Logger.getGlobal();
     public static String newline = System.getProperty("line.separator");
 
-    private static boolean callRegMethods = false;
     private static boolean generateWellformedDefinition = false;
 
     private final File ofile;
@@ -55,14 +54,17 @@ public class BSVToKami extends BSVBaseVisitor<String>
     private boolean actionContext;
     private boolean useAbstractOmega;
     private boolean stmtEmitted;
-    private String returnPending;
     private boolean inModule;
     // for modules and rules
     private LetBindings letBindings;
     private LetBindings methodBindings;
     private ArrayList<String> statements;
+    private ArrayList<String> nextMethod;
     private ArrayList<String> modulevarbindings;
     private TreeMap<String,String> mSizeRelationshipProvisos;
+    private String blockCondition;
+    private static boolean traceCallm = false;
+    private static int forIndex = 1;
 
     BSVToKami(String pkgName, File ofile, StaticAnalysis scopes) {
         this.scopes = scopes;
@@ -72,6 +74,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         pkg = new Package(pkgName);
         actionContext = false;
         inModule = false;
+        blockCondition = "";
         try {
             printstream = new PrintStream(ofile);
         } catch (FileNotFoundException ex) {
@@ -85,10 +88,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	mSizeRelationshipProvisos.put("Max", "max");
 	mSizeRelationshipProvisos.put("Min", "min");
 	mSizeRelationshipProvisos.put("Log", "log");
+	nextMethod = new ArrayList<>();
+    }
+
+    void close() {
+        printstream.close();
     }
 
     @Override public String visitImportitem(BSVParser.ImportitemContext ctx) {
-	printstream.println(String.format("Require Import %s.", ctx.pkgname.getText()));
 	return null;
     }
 
@@ -96,16 +103,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
     public String visitPackagedef(BSVParser.PackagedefContext ctx) {
         logger.fine("Package " + pkgName);
 
-        printstream.println("Require Import Bool String List Arith.");
-        printstream.println("Require Import Omega.");
-        //printstream.println("Require Import micromega.Lia.");
-        printstream.println("Require Import Kami.All.");
-        printstream.println("Require Import Bsvtokami.");
-        printstream.println("");
-        printstream.println("Require Import FunctionalExtensionality.");
-        printstream.println("");
-        printstream.println("Set Implicit Arguments.");
-        printstream.println("");
         printstream.println();
 
         scope = scopes.pushScope(ctx);
@@ -125,54 +122,68 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	statements = new ArrayList<>();
 	letBindings = new LetBindings();
 	visitChildren(ctx);
-	assert statements.size() == 0 : "Unexpected statements at " + StaticAnalysis.sourceLocation(ctx);
+	if(statements.size() != 0)
+            System.err.println("ERROR: Unexpected statements at " + StaticAnalysis.sourceLocation(ctx));
+	//assert statements.size() == 0 : "Unexpected statements at " + StaticAnalysis.sourceLocation(ctx);
 	for (String letBinding: letBindings) {
-	    printstream.println(String.format("Definition %s.\n", letBinding));
+	    printstream.println(String.format("DEFINITION %s", letBinding));
 	}
 	return null;
     }
 
     @Override public String visitInterfacedecl(BSVParser.InterfacedeclContext ctx) {
 	// modules are represented by a string: the name of the instance
-	String interfaceName = ctx.typedeftype().typeide().getText();
 
 	typeVisitor.pushScope(scope);
 	BSVType interfaceType = typeVisitor.visit(ctx.typedeftype());
 	typeVisitor.popScope();
-	printstream.println(String.format("(* * interface %s *)", interfaceType));
+	String interfaceName = interfaceType.toString();
 
 	TreeMap<String,BSVType> freeTypeVariables = interfaceType.getFreeVariables();
 
 	StringBuilder paramsStringBuilder = new StringBuilder();
         for (BSVType freeType: interfaceType.params) {
 	    logger.fine("Ifc decl: Free type variable " + freeType + (freeType.numeric ? " nat" : " interface type"));
-	    paramsStringBuilder.append(String.format(" (%s : %s)",
+	    paramsStringBuilder.append(String.format(" (%s ZZIZ: %s)",
 						     freeType.name,
 						     (freeType.numeric ? "nat" : "Kind")));
 	}
 	String paramsString = paramsStringBuilder.toString();
 
-	StringBuilder hintBuilder = new StringBuilder();
-	printstream.println(String.format("Record %s := {", interfaceName));
-	printstream.println(String.format("    %s'mod: Mod;", interfaceName));
-	hintBuilder.append(String.format("Hint Unfold %s'mod : ModuleDefs.\n", interfaceName));
+	printstream.println(String.format("INTERFACE %s {", interfaceName));
 	for (BSVParser.InterfacememberdeclContext decl: ctx.interfacememberdecl()) {
 	    if (decl.methodproto() != null) {
-		printstream.println(String.format("    %s'%s : string;", interfaceName, decl.methodproto().name.getText()));
-		hintBuilder.append(String.format("Hint Unfold %s'%s : ModuleDefs.\n", interfaceName, decl.methodproto().name.getText()));
+                BSVParser.MethodprotoContext mproto = decl.methodproto();
+	        assert mproto.bsvtype() != null : "Method return type required at " + StaticAnalysis.sourceLocation(mproto);
+                String returntype = (mproto.bsvtype() != null) ? bsvTypeToKami(StaticAnalysis.getBsvType(mproto.bsvtype())) : "";
+		printstream.print("    METHOD");
+                if (returntype == "Void")
+		    printstream.print("/Action");
+		printstream.print(" " + mproto.name.getText());
+                if (mproto.methodprotoformals() != null) {
+                    printstream.print(" ( ");
+                    String sep = "";
+                    for (BSVParser.MethodprotoformalContext formal: mproto.methodprotoformals().methodprotoformal()) {
+                        BSVType bsvtype = typeVisitor.visit(formal.bsvtype());
+                        String varName = formal.name.getText();
+                        printstream.print(String.format("%s%s %s", sep, bsvTypeToKami(bsvtype, 1), varName));
+                        sep = ",";
+                    }
+                    printstream.print(" )");
+                }
+                if (returntype != "Void")
+                    printstream.print(" " + returntype);
+		printstream.println("");
 	    } else {
 		BSVType subinterfacetype = StaticAnalysis.getBsvType(decl.subinterfacedecl().bsvtype());
 		String kamiType = bsvTypeToKami(subinterfacetype);
 		assert kamiType != null;
-		printstream.println(String.format("    %s'%s : %s;",
-						  interfaceName, decl.subinterfacedecl().lowerCaseIdentifier().getText(), subinterfacetype.name));
-		hintBuilder.append(String.format("Hint Unfold %s'%s : ModuleDefs.\n",
-						 interfaceName, decl.subinterfacedecl().lowerCaseIdentifier().getText()));
+		printstream.println(String.format("    INTERFACE %s %s",
+                          kamiType, decl.subinterfacedecl().lowerCaseIdentifier().getText()));
 	    }
 	}
-	printstream.println(String.format("}."));
+	printstream.println(String.format("}"));
 	printstream.println("");
-	printstream.println(hintBuilder.toString());
 	return null;
     }
 
@@ -184,14 +195,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
             }
         }
 	if (ctx.bsvtype() != null) {
-	    //printstream.println(String.format("Section %s.", bsvTypeToKami(StaticAnalysis.getBsvType(ctx.typedeftype()))));
-	    //printstream.println(String.format("Variable ty: Kind -> Type."));
-	    printstream.println(String.format("Definition %s := %s.",
+	    printstream.println(String.format("DEFINITION %s %s",
 					      bsvTypeToKami(StaticAnalysis.getBsvType(ctx.typedeftype())),
 					      bsvTypeToKami(StaticAnalysis.getBsvType(ctx.bsvtype()))
 					      ));
-	    //printstream.println(String.format("End %s.", bsvTypeToKami(StaticAnalysis.getBsvType(ctx.typedeftype()))));
-	    printstream.println("");
 	}
 	return null;
     }
@@ -209,7 +216,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
         for (BSVParser.StructmemberContext member: substruct.structmember()) {
             assert member.subunion() == null;
             if (member.bsvtype() != null) {
-                members.add(String.format("    \"%s$%s\" :: %s",
+                members.add(String.format("    \"%s$%s\" JJ1:: %s",
                                           fieldPrefix,
                                           member.lowerCaseIdentifier().getText(),
                                           bsvTypeToKami(StaticAnalysis.getBsvType(member.bsvtype()))));
@@ -226,23 +233,23 @@ public class BSVToKami extends BSVBaseVisitor<String>
         System.err.println(String.format("BSVTOKAMI typedef struct %s\n", typeName));
         //assert ctx.typedeftype().typeformals() == null: "Typedef struct with type formals at " + StaticAnalysis.sourceLocation(ctx);
         String constructorParams = "";
-        String params = "";
         if (ctx.typedeftype().typeformals() != null) {
             StringBuilder constructorParamsBuilder = new StringBuilder();
             StringBuilder paramsBuilder = new StringBuilder();
+            constructorParamsBuilder.append(" ( ");
+            String sep = "";
             for (BSVParser.TypeformalContext formal: ctx.typedeftype().typeformals().typeformal()) {
                 String name = formal.typeide().getText();
                 //assert formal.numeric != null : "Expecting numeric type parameter at " + StaticAnalysis.sourceLocation(formal);
-                constructorParamsBuilder.append(String.format(" (%s : %s)", name,
-							      ((formal.numeric != null)? "nat" : "Type")));
+                constructorParamsBuilder.append(String.format("%s%s", sep, name));
                 paramsBuilder.append(String.format(" %s", name));
+                sep = ", ";
             }
-
+            constructorParamsBuilder.append(" ) ");
             constructorParams = constructorParamsBuilder.toString();
-            params = paramsBuilder.toString();
         }
 
-        printstream.println(String.format("Definition %s%s := (STRUCT_TYPE {", typeName, constructorParams));
+        printstream.println(String.format("STRUCT %s%s {", typeName, constructorParams));
         ArrayList<String> members = new ArrayList<>();
 	SymbolTableEntry structTypeEntry = scope.lookupType(typeName);
 	assert structTypeEntry != null : "No entry for type name " + typeName;;
@@ -255,16 +262,15 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		    continue;
 		assert member.subunion() == null;
 		if (member.bsvtype() != null) {
-		    members.add(String.format("    \"%s\" :: %s",
-					      memberName,
-					      bsvTypeToKami(StaticAnalysis.getBsvType(member.bsvtype()))));
+		    members.add(String.format("    %s %s", //jca
+					      bsvTypeToKami(StaticAnalysis.getBsvType(member.bsvtype())),
+					      memberName));
 		} else {
 		}
 	    }
 	}
         printstream.print(String.join(";\n", members));
-        printstream.println("}).");
-        printstream.println("");
+        printstream.println(";\n}");
 
         //scope = scopes.popScope();
         inModule = wasInModule;
@@ -347,11 +353,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	maxValue += 1;
 	int tagSize = (int)java.lang.Math.ceil(java.lang.Math.log(maxValue) / java.lang.Math.log(2.0));
 	// emit type declaration
-        printstream.println(String.format("Definition %s : Kind := (STRUCT_TYPE { \"$tag\" :: (Bit %d) }).", typeName, tagSize));
+        printstream.println(String.format("4STRUCT %s { \"$tag\" JJ3:: (Bit %d) }).", typeName, tagSize));
 
 	for (TagValue pair: tagsAndValues) {
 	    if (pair.value < 128)
-		printstream.println(String.format("Definition  %s {ty} : %s @# ty := (STRUCT { \"$tag\" ::= $$(%s) })%%kami_expr.",
+		printstream.println(String.format("5STRUCT  %s {ty} : %s @# ty := { \"$tag\" ::= $$(%s) }",
 						  pair.tag, typeName, intToWord(tagSize, pair.value)));
 
 	}
@@ -374,6 +380,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
             StringBuilder paramsBuilder = new StringBuilder();
             for (BSVParser.TypeformalContext formal: ctx.typedeftype().typeformals().typeformal()) {
                 String name = formal.typeide().getText();
+                if(formal.numeric == null) {
+                    System.err.println("ERROR: Expecting numeric type parameter at " + StaticAnalysis.sourceLocation(formal));
+                    return "ERRORTAGGEDUNION";
+                }
                 assert formal.numeric != null : "Expecting numeric type parameter at " + StaticAnalysis.sourceLocation(formal);
                 constructorParamsBuilder.append(String.format(" (%s : nat)", name));
                 paramsBuilder.append(String.format(" %s", name));
@@ -385,7 +395,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         System.err.println(String.format("BSVTOKAMI typedef tagged union %s\n", typeName));
 
-        printstream.println(String.format("Definition %s%s := (STRUCT_TYPE {", typeName, constructorParams));
+        printstream.println(String.format("6STRUCT %s%s {", typeName, constructorParams));
         ArrayList<String> members = new ArrayList<>();
         members.add(String.format("    \"$tag\" :: (Bit 8)"));
 	SymbolTableEntry typeEntry = scope.lookupType(typeName);
@@ -399,7 +409,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		    continue;
 		assert member.subunion() == null;
 		if (member.bsvtype() != null) {
-		    members.add(String.format("    \"%s\" :: %s",
+		    members.add(String.format("    \"%s\" JJ5:: %s",
 					      memberName,
 					      bsvTypeToKami(StaticAnalysis.getBsvType(member.bsvtype()))));
 		} else if (member.substruct() != null) {
@@ -436,7 +446,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         BSVParser.ModuleprotoContext moduleproto = ctx.moduleproto();
         String moduleName = moduleproto.name.getText();
-	String interfaceName = (moduleName.startsWith("mk") ? moduleName.substring(2) : moduleName);
+	moduleName = (moduleName.startsWith("mk") ? moduleName.substring(2) : moduleName);
+	String interfaceName = moduleName;
 	BSVType moduleType = typeVisitor.visit(ctx.moduleproto());
 	TreeMap<String,BSVType> freeTypeVariables = moduleType.getFreeVariables();
 	logger.fine(String.format("module %s type %s free vars %d",
@@ -453,7 +464,22 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
         interfaceType = typeVisitor.dereferenceTypedef(interfaceType);
 	interfaceName = interfaceType.name;
-        String sectionName = "Section'" + moduleName;
+        String iname = interfaceType.toString();
+        if (!iname.equals("Empty")) {
+	    ArrayList<String> convertedParams = new ArrayList<>();
+            /* prepend module params */
+            if (moduleproto.methodprotoformals() != null) {
+                for (BSVParser.MethodprotoformalContext formal : moduleproto.methodprotoformals().methodprotoformal()) {
+                    if (formal.name != null)
+                        convertedParams.add(formal.name.getText());
+                }
+            }
+            /* now add interface params */
+	    for (BSVType p: interfaceType.params)
+	        convertedParams.add(bsvTypeToKami(p, 1));
+	    if (convertedParams.size() > 0)
+	        moduleName = String.format("%s(%s)", moduleName, String.join(",", convertedParams));
+        }
 
 	moduleDef = new ModuleDef(moduleName);
         pkg.addStatement(moduleDef);
@@ -470,8 +496,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
 
         logger.fine("module " + moduleName);
-	printstream.println("Module module'" + moduleName + ".");
-        printstream.println("    Section " + sectionName + ".");
+	printstream.println("MODULE " + moduleName + " {");
+        if (!iname.equals("Empty"))
+	    printstream.println("    INTERFACE " + interfaceType.toString());
         for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
 	    BSVType freeType = entry.getValue();
 	    boolean isNumeric = freeType.numeric;
@@ -479,32 +506,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    if (freeType.name.startsWith("Num") || freeType.name.endsWith("sz") || freeType.name.endsWith("Sz") || freeType.name.equals("xlen"))
 		isNumeric = true;
 	    logger.fine("Module def: Free type variable " + freeType + (isNumeric ? " numeric" : " interface type"));
-
-	    printstream.println(String.format("    Variable %s : %s.",
-					      entry.getKey(),
-					      (isNumeric ? "nat" : "Kind")));
 	}
-
-        printstream.println("    Variable instancePrefix: string.");
-
         boolean wasInModule = inModule;
         inModule = true;
-
-	ArrayList<String> formalNames = new ArrayList<>();
-        if (moduleproto.methodprotoformals() != null) {
-            for (BSVParser.MethodprotoformalContext formal : moduleproto.methodprotoformals().methodprotoformal()) {
-		BSVType bsvType = StaticAnalysis.getBsvType(formal.bsvtype());
-                if (formal.name != null) {
-                    String formalName = formal.name.getText();
-                    formalNames.add(formalName);
-                    printstream.println(String.format("    Variable %s: %s.",
-                                                      formalName,
-                                                      ((isKamiKind(bsvType) || bsvType.isVar)
-                                                       ? String.format("ConstT %s", bsvTypeToKami(bsvType, 1))
-                                                       : bsvType.name)));
-                }
-            }
-        }
 
 	boolean hasProvisos = moduleproto.provisos() != null;
 	useAbstractOmega = false; // does not seem to work with sifive kami: hasProvisos;
@@ -516,7 +520,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		    if (typeVariable.matches("[0-9]+"))
 			continue;
 		    if (!freeTypeVariables.containsKey(typeVariable)) {
-			printstream.println(String.format("    Variable %s: %s.", typeVariable, "nat"));
 			freeTypeVariables.put(typeVariable, typeVisitor.visit(bsvtype));
 		    }
 		}
@@ -526,7 +529,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		// emit hypothesis for proviso
 	    }
 	}
-        String stmtPrefix = "    ";
+        String stmtPrefix = "";
         for (BSVParser.ModulestmtContext modulestmt: ctx.modulestmt()) {
             visit(modulestmt);
         }
@@ -536,114 +539,27 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    for (String letBinding: letBindings) {
 		printstream.print(stmtPrefix);
 		printstream.println(String.format("%s%s.",
-						  (letBinding.startsWith("Definition") ? "" : "Let "),
+						  (letBinding.startsWith("Definition") ? "" : "LET "),
 						  letBinding));
 	    }
 	}
-	if (methodBindings.size() > 0) {
-	    printstream.print(stmtPrefix);
-	    printstream.println("    (* method bindings *)");
-	    for (String methodBinding: methodBindings) {
-		printstream.print(stmtPrefix);
-		printstream.println(String.format("Let %s.", methodBinding));
-	    }
-	}
 
-	if (inv.methodsUsed.size() > 0) {
-	    printstream.print(stmtPrefix);
-	    printstream.println("(* instance methods *)");
-	    for (Map.Entry<String,InstanceEntry> iter: inv.methodsUsed.entrySet()) {
-		InstanceEntry methodEntry = iter.getValue();
-		String instanceName = methodEntry.instanceName;
-		String method = methodEntry.methodName;
-		BSVType methodType = methodEntry.methodType;
-		System.err.println(String.format("inv %s.%s: %s", instanceName, method, methodType));
-		BSVType returnType = methodType.name.equals("Function") ? methodType.params.get(1) : methodType;
-		String methodInterfaceName = methodEntry.interfaceName;
-		printstream.print(stmtPrefix);
-		printstream.println(String.format("Let %1$s'%2$s : string := (%3$s'%2$s %1$s).",
-						  instanceName,
-						  method,
-						  methodInterfaceName));
-	    }
-	}
-
-        printstream.println(String.format("    Local Open Scope kami_expr.\n"));
-        printstream.println(String.format("    Definition %1$sModule: Mod%2$s",
-					  moduleName,
-					  (useAbstractOmega ? "." : " :=")));
-	printstream.println(String.format("        %s (BKMODULE {", (useAbstractOmega ? "refine " : "")));
 	if (statements.size() > 0) {
-	    String sep = "    ";
 	    for (String statement: statements) {
 		printstream.print(stmtPrefix);
-		printstream.println(String.format("%s%s", sep, statement));
-		sep = "with ";
+		printstream.println(String.format("    %s", statement));
 	    }
 	}
-	printstream.print(stmtPrefix);
-        printstream.print("})");
-	if (useAbstractOmega) {
-	    printstream.print("; abstract omega. Qed");
-	}
-	printstream.println(". (* " + ctx.moduleproto().name.getText() + " *)" + "\n");
-        printstream.print(String.format("    Hint Unfold %1$sModule : ModuleDefs.", moduleName));
-
-
-        if (instances.size() > 0)
-            printstream.println(String.format("    Definition %sInstances := (%s)%%kami.",
-                                             moduleName,
-                                             String.join("\n            ++ ", instances)));
 
 	SymbolTableEntry interfaceEntry = scope.lookupType(interfaceName);
+	if(interfaceEntry == null) {
+            System.err.println("ERROR: No symbol table entry for interface " + interfaceName + " at location " + StaticAnalysis.sourceLocation(ctx));
+            return null;
+        }
 	assert interfaceEntry != null: "No symbol table entry for interface " + interfaceName + " at location " + StaticAnalysis.sourceLocation(ctx);
         assert interfaceEntry.mappings != null: "No interface mappings for " + interfaceName + " at location " + StaticAnalysis.sourceLocation(ctx);
 
-	StringBuilder methodNames = new StringBuilder();
-        for (Map.Entry<String,SymbolTableEntry> iterator: interfaceEntry.mappings.bindings.entrySet()) {
-            String methodName = iterator.getKey();
-	    methodNames.append(String.format(" (instancePrefix--\"%s\")", methodName));
-	}
-
-	BSVType moduleReturnType = moduleType.name.equals("Module")
-	    ? moduleType.params.get(0)
-	    : moduleType.params.get(1).params.get(0);
-
-	printstream.println("");
-	printstream.println(String.format("(* Module %s type %s return type %s *)",
-					  moduleName, moduleType, moduleReturnType));
-
-        printstream.print(String.format("    Definition %1$s := Build_%2$s ", moduleName, interfaceName));
-        if (instances.size() > 0)
-            printstream.print(String.format("(%1$sInstances ++ ",
-                                            moduleName));
-
-        printstream.print(String.format("%1$sModule", moduleName));
-        if (instances.size() > 0)
-	    printstream.print(")");
-	printstream.print(methodNames.toString());
-	printstream.println(".");
-        printstream.print(String.format("    Hint Unfold %1$s : ModuleDefs.", moduleName));
-
-	printstream.println("");
-	printstream.println(String.format("    Hint Unfold %1$sModule : ModuleDefs.", moduleName));
-	if (generateWellformedDefinition)
-	    printstream.println(String.format("    Definition wellformed_%1$s : ModWf := @Build_ModWf %1$sModule ltac:(intros; repeat autounfold with ModuleDefs; discharge_wf).",
-					  moduleName));
-	printstream.println("");
-
-
-        printstream.println(String.format("    End %1$s.", sectionName));
-        printstream.println(String.format("End module'%1$s.", moduleName));
-	printstream.println("");
-	printstream.println(String.format("Definition %1$s := module'%1$s.%1$s.", moduleName));
-	printstream.println(String.format("Hint Unfold %1$s : ModuleDefs.", moduleName));
-	printstream.println(String.format("Hint Unfold module'%1$s.%1$s : ModuleDefs.", moduleName));
-	if (generateWellformedDefinition)
-	    printstream.println(String.format("Hint Unfold module'%1$s.wellformed_%1$s : ModuleDefs.", moduleName));
-	if (!useAbstractOmega)
-	    printstream.println(String.format("Hint Unfold module'%1$s.%1$sModule : ModuleDefs.", moduleName));
-	printstream.println("");
+        printstream.println("}");
 	typeVisitor.popScope();
         scope = scopes.popScope();
         moduleDef = null;
@@ -705,10 +621,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 						       bsvTypeToKami(t, 1),
 						       visit(args.get(0))));
 			} else {
-			    letBindings.add(String.format("%1$s : ConstT %2$s := $%3$s",
-							  varName,
-							  bsvTypeToKami(t, 1),
-							  visit(args.get(0))));
+			    letBindings.add(String.format("%s %s", varName, visit(args.get(0))));
 			}
 		    } else if (functionName.equals("truncate")) {
 			BSVType arg0Type = typeVisitor.visit(args.get(0));
@@ -797,7 +710,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 						       struct.toString()));
 		    } else if (functionName.startsWith("tpl_")) {
 			BSVType arg0Type = typeVisitor.visit(args.get(0));
-			statement.append(String.format("LET %1$s : %2$s <-  %3$s @%% \"tpl_%4$s\"",
+			statement.append(String.format("LET %1$s : %2$s <-  %3$s . tpl_%4$s",
 						       varName,
 						       bsvTypeToKami(varType, 1),
 						       visit(args.get(0)),
@@ -806,25 +719,25 @@ public class BSVToKami extends BSVBaseVisitor<String>
 			System.err.println(String.format("Call varbinding %s fcn %s", varName, functionName));
 			boolean wasActionContext = actionContext;
 			actionContext = true;
-			statement.append(String.format("BKCall %s : %s (* varbinding *) <- %s ", varName, bsvTypeToKami(t), translateCall(call)));
+			statement.append(String.format("LET %s : %s = %s ", bsvTypeToKami(t), varName, translateCall(call)));
 			actionContext = wasActionContext;
 		    }
                 } else {
                     if (inModule) {
-                        statement.append(String.format("        LET %s : %s (* non-call varbinding *) <- ", varName, bsvTypeToKami(t)));
+                        statement.append(String.format("        LET %s %s : %s = ", bsvTypeToKami(t), blockCondition, varName));
 			boolean wasActionContext = actionContext;
 			actionContext = true;
                         statement.append(visit(rhs));
 			actionContext = wasActionContext;
                     } else {
-                        letBindings.add(String.format("%s : ConstT %s := (%s)%%kami", varName, bsvTypeToKami(t, 1), visit(rhs)));
+                        letBindings.add(String.format("%s %s", varName, visit(rhs)));
                         statement.append("(* varbinding in action context *)");
                         varEntry.isConstT = true;
                     }
                 }
             } else {
                 System.err.println("No rhs for " + ctx.getText() + " at " + StaticAnalysis.sourceLocation(ctx));
-                statement.append(String.format("        LET %s : %s", varName, bsvTypeToKami(t)));
+                statement.append(String.format("        LET %s %s : %s", bsvTypeToKami(t), blockCondition, varName));
             }
             if (actionContext) {
                 statements.add(statement.toString());
@@ -843,17 +756,17 @@ public class BSVToKami extends BSVBaseVisitor<String>
         BSVParser.CallexprContext call = getCall(rhs);
         assert ctx.lowerCaseIdentifier().size() == 1;
 	StringBuilder statement = new StringBuilder();
-	statement.append(String.format("        %s ", (call != null) ? "BKCall" : "LET"));
+	statement.append("        LET ");
         for (BSVParser.LowerCaseIdentifierContext ident: ctx.lowerCaseIdentifier()) {
             String varName = ident.getText();
             SymbolTableEntry entry = scope.lookup(varName);
             assert entry != null : String.format("No entry for %s at %s",
                                                  varName, StaticAnalysis.sourceLocation(ctx));
-            statement.append(String.format("%s : %s", varName, bsvTypeToKami(entry.type)));
+            statement.append(String.format("%s %s : %s", bsvTypeToKami(entry.type), blockCondition, varName));
         }
 
         if (ctx.op != null) {
-            statement.append(String.format(" %s ", (call != null) ? "<-" : ctx.op.getText()));
+            statement.append(String.format(" %s ", (call != null) ? "=" : ctx.op.getText()));
 	    statement.append(visit(ctx.rhs));
 	    statement.append(" ");
 	}
@@ -872,17 +785,15 @@ public class BSVToKami extends BSVBaseVisitor<String>
         InstanceNameVisitor inv = new InstanceNameVisitor(scopes);
 	inv.pushScope(scope);
         String calleeInstanceName = inv.visit(ctx.rhs);
-        if (calleeInstanceName != null && actionContext)
-            calleeInstanceName = calleeInstanceName.replace(".", "");
+        //if (calleeInstanceName != null && actionContext)
+            //calleeInstanceName = calleeInstanceName.replace(".", "");
 
 	StringBuilder statement = new StringBuilder();
 
-        if (!callRegMethods && typeName.equals("Reg")) {
+        if (false && !typeName.equals("Bit")) {
             BSVType paramtype = bsvtype.params.get(0);
-	    methodBindings.add(String.format("%s : string := instancePrefix--\"%s\"", varName, varName));
-            statement.append("Register " + varName + " : " + bsvTypeToKami(paramtype)
-                             + " <- ");
-
+	    methodBindings.add(String.format("%s STRING", varName, varName));
+            statement.append("FIELD " + bsvTypeToKami(paramtype) + varName + " <- ");
             BSVParser.CallexprContext call = getCall(ctx.rhs);
 	    if (call != null)
 		logger.fine("Register " + call.getText() + " fcn " + ((call.fcn != null) ? call.fcn.getText() : "")
@@ -900,25 +811,27 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         } else if (calleeInstanceName != null && actionContext) {
             BSVParser.CallexprContext call = getCall(ctx.rhs);
+	    if(call == null || call.fcn == null) {
+                System.err.println("ERROR: Something wrong with action context " + ctx.rhs.getText() + " at " + StaticAnalysis.sourceLocation(ctx.rhs));
+                return null;
+            }
 	    assert call != null && call.fcn != null: "Something wrong with action context " + ctx.rhs.getText() + " at " + StaticAnalysis.sourceLocation(ctx.rhs);
 
-	    statement.append(String.format("        BKCall %s : %s (* actionBinding *) <- %s",
-					   varName, bsvTypeToKami(bsvtype),calleeInstanceName));
+	    statement.append(String.format("        CALL/Action %s : %s(", blockCondition, calleeInstanceName));
+            String sep = "";
 	    for (BSVParser.ExpressionContext arg: call.expression()) {
 		BSVType argType = typeVisitor.visit(arg);
-		if (argType.name.equals("Reg"))
-		    argType = argType.params.get(0);
-		statement.append(String.format(" ((%s) : %s)",
-					       visit(arg),
-					       bsvTypeToKami(argType)));
+		statement.append(String.format("%s %s", sep, visit(arg)));
+                sep = ", ";
 	    }
-	    if (call.expression().size() == 0) {
-		statement.append(" ()");
-	    }
-	    statement.append(" ");
+	    statement.append(")");
 
         } else if (!actionContext) {
             BSVParser.CallexprContext call = getCall(ctx.rhs);
+	    if(call == null || call.fcn == null) {
+                System.err.println( "ERROR: Something wrong with " + ctx.rhs.getText() + " at " + StaticAnalysis.sourceLocation(ctx.rhs));
+                return null;
+            }
 	    assert call != null && call.fcn != null: "Something wrong with " + ctx.rhs.getText() + " at " + StaticAnalysis.sourceLocation(ctx.rhs);
 	    String fcnName = call.fcn.getText();
 	    SymbolTableEntry fcnEntry = scope.lookup(fcnName);
@@ -929,24 +842,35 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    } catch (InferenceError e) {
 		logger.fine(e.toString());
 	    }
+            if (interfaceType.name.equals("Reg"))
+                interfaceType = interfaceType.params.get(0).instance;
 	    System.err.println(String.format("fcnName %s moduleType %s interfaceType %s",
 					     fcnName, moduleType, interfaceType));
-	    String interfaceName = interfaceType.name;
+	    String interfaceName = interfaceType.toString();
 	    StringBuilder typeParameters = new StringBuilder();
 	    StringBuilder params = new StringBuilder();
 	    BSVType t = moduleType;
 	    int argNum = 0;
 	    for (BSVParser.ExpressionContext arg: call.expression()) {
 		BSVType argType = typeVisitor.visit(arg);
-		System.err.println(String.format("    arg %s type %s", arg.getText(), argType));
-		assert t.name.equals("Function");
+		System.err.println(String.format("    arg %s type %s name %s", arg.getText(), argType, t.name));
+		//jca assert t.name.equals("Function");
 		try {
 		    t.params.get(0).unify(argType);
 		} catch (InferenceError e) {
 		    logger.fine(e.toString());
 		}
+if (t.params.size() < 2) { //jca
+System.err.println("paramsizeless2 " + t.params.size());
+break;
+}
 		t = t.params.get(1);
 	    }
+	    if (!t.name.equals("Module")) {
+                System.err.println("ERROR: NOTMOD " +  String.format("Expected Module but got %s in type %s at %s",
+							   t.name, t, StaticAnalysis.sourceLocation(call)));
+                return null;
+            }
 	    assert t.name.equals("Module") : String.format("Expected Module but got %s in type %s at %s",
 							   t.name, t, StaticAnalysis.sourceLocation(call));
 	    List<BSVType> moduleFreeTypeVars = interfaceType.getInstanceVariables();
@@ -970,10 +894,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 					     StaticAnalysis.sourceLocation(ctx.rhs)));
 	    if (moduleFreeTypeVars.size() != 0 || true)
 		System.err.println("   freeTypeVars: " + typeParameters.toString());
-            methodBindings.add(String.format("(* action binding *) %s := %s%s (instancePrefix--\"%s\")%s",
+            methodBindings.add(String.format("(* action binding *) %s := %s%s %s%s",
 					     varName, fcnName, typeParameters.toString(), varName,
 					     params.toString()));
-            statement.append(String.format("(BKMod (%s'mod %s :: nil))", interfaceName, varName));
+            statement.append(String.format("FIELD %s %s", interfaceName, varName));
 
             String instanceName = String.format("%s", varName); //FIXME concat methodName
             entry.instanceName = instanceName;
@@ -985,10 +909,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             BSVParser.CallexprContext call = getCall(ctx.rhs);
             String sep = "";
             for (BSVParser.ExpressionContext expr: call.expression()) {
-                statement.append(sep);
-		statement.append("(");
-                statement.append(visit(expr));
-		statement.append(")");
+                statement.append(sep + "(" + visit(expr) + ")");
                 sep = ", ";
             }
             statement.append(")");
@@ -1003,7 +924,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	ArrayList<String> parentStatements = statements;
 	letBindings = new LetBindings();
 	statements = new ArrayList<>();
-	returnPending = "Retv";
 
         boolean outerContext = actionContext;
         actionContext = true;
@@ -1013,8 +933,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
         BSVParser.RulecondContext rulecond = ruledef.rulecond();
         moduleDef.addRule(ruleDef);
 
-
-
         RegReadVisitor regReadVisitor = new RegReadVisitor(scope);
         if (rulecond != null)
 	    regReadVisitor.visit(rulecond);
@@ -1023,18 +941,12 @@ public class BSVToKami extends BSVBaseVisitor<String>
         }
 
 	StringBuilder statement = new StringBuilder();
-        statement.append("Rule instancePrefix--\"" + ruleName + "\" :=\n");
-	statement.append("    (\n");
-        for (Map.Entry<String,BSVType> entry: regReadVisitor.regs.entrySet()) {
-            String regName = entry.getKey();
-	    if (callRegMethods) {
-		methodBindings.add(String.format("%s_read : string := (Reg'_read %s)", regName, regName));
-		statement.append(String.format("        Call %s_v : %s (* regRead *) <- %s_read() ;\n",
-					       regName, bsvTypeToKami(entry.getValue()), regName));
-	    } else {
-		statement.append("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- " + regName + " ;\n");
-	    }
+        statement.append("METHOD/Rule/Action " + ruleName);
+        if (rulecond != null) {
+            String rulecondValue = visit(rulecond);
+            statement.append(" if (" + rulecondValue + ")");
         }
+        statement.append(" {\n");
 
         if (rulecond != null) {
 	    BSVType rulecondtype = typeVisitor.visit(rulecond);
@@ -1046,24 +958,15 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    }
 	    if (modulevarbindings.size() > 0) {
                 for (String s: modulevarbindings) {
-                    statement.append("       ");
-                    statement.append(s);
-                    statement.append(" ;");
-                    statement.append(newline);
+                    statement.append("QQ99       " + s + newline);
                 }
 	    }
-            String rulecondValue = visit(rulecond);
             if (statements.size() > 0) {
                 for (String s: statements) {
-                    statement.append("       ");
-                    statement.append(s);
-                    statement.append(" ;");
-                    statement.append(newline);
+                    statement.append("    " + s + newline);
                 }
                 statements.clear();
             }
-	    statement.append(newline);
-            statement.append("        Assert(" + rulecondValue + ") ;\n");
         }
 
 	// now visit the body statements
@@ -1079,11 +982,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	}
 	if (statements.size() > 0) {
 	    for (String ruleStatement: statements) {
-		statement.append(String.format("       %s ;", ruleStatement));
-		statement.append(newline);
+		statement.append("       " + ruleStatement + newline);
 	    }
 	}
-        statement.append("        Retv ) (* rule " + ruledef.name.getText() + " *)");
+        statement.append("        }");
         scope = scopes.popScope();
         actionContext = outerContext;
 
@@ -1103,7 +1005,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
         statements = new ArrayList<>();
         modulevarbindings = new ArrayList<>();
         scope = scopes.pushScope(ctx);
-	returnPending = "Retv";
 
         for (BSVParser.AttributeinstanceContext attrinstance: ctx.attributeinstance()) {
             for (BSVParser.AttrspecContext attr: attrinstance.attrspec()) {
@@ -1123,16 +1024,13 @@ public class BSVToKami extends BSVBaseVisitor<String>
 					 functionName, functionType,
 					 String.join(" ", freeTypeVariables.keySet())));
 
-	printstream.println(String.format("(* interface for module wrapper for %1$s *)", functionName));
-	printstream.println(String.format("Record Interface'%1$s := {", functionName));
-	printstream.println(String.format("    Interface'%1$s'mod: Mod;", functionName));
-	printstream.println(String.format("    Interface'%1$s'%1$s: string;", functionName));
-	printstream.println(String.format("}."));
-	printstream.println(String.format("Hint Unfold Interface'%1$s'mod : ModuleDefs.", functionName));
-	printstream.println(String.format("Hint Unfold Interface'%1$s'%1$s : ModuleDefs.", functionName));
-	printstream.println(String.format(""));
-	printstream.println(String.format("Module module'%s.", functionName));
-	printstream.println(String.format("    Section Section'%s.", functionName));
+	//printstream.println(String.format("(* interface for module wrapper for %1$s *)", functionName));
+	//printstream.println(String.format("Record Interface'%1$s := {", functionName));
+	//printstream.println(String.format("    Interface'%1$s'mod: Mod;", functionName));
+	//printstream.println(String.format("    Interface'%1$s'%1$s: string;", functionName));
+	//printstream.println(String.format("}."));
+	//printstream.println(String.format(""));
+	//printstream.println(String.format("MODULE %s {", functionName));
 
         for (Map.Entry<String,BSVType> entry: freeTypeVariables.entrySet()) {
             BSVType freeType = entry.getValue();
@@ -1141,13 +1039,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
             if (freeType.name.endsWith("sz") || freeType.name.endsWith("Sz") || freeType.name.equals("xlen"))
                 isNumeric = true;
             logger.fine("Function def: Free type variable " + freeType + (isNumeric ? " numeric" : " interface type"));
-
-            printstream.println(String.format("    Variable %s : %s.",
-                                              entry.getKey(),
-                                              (isNumeric ? "nat" : "Kind")));
+            //printstream.println(String.format("    %s %s",
+                       //(isNumeric ? "nat" : "Kind"), entry.getKey()));
         }
-
-	printstream.println(String.format("    Variable instancePrefix: string."));
 
 	boolean wasActionContext = actionContext;
 	actionContext = true;
@@ -1155,46 +1049,22 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
         RegReadVisitor regReadVisitor = new RegReadVisitor(scope);
         if (ctx.expression() != null) {
-            printstream.print("    ");
+            //printstream.print("    ");
             regReadVisitor.visit(ctx.expression());
 
         if (ctx.expression() != null)
             functionBody.append(visit(ctx.expression()));
         } else {
-
-            for (Map.Entry<String,BSVType> entry: regReadVisitor.regs.entrySet()) {
-                String regName = entry.getKey();
-		if (callRegMethods) {
-		    methodBindings.add(String.format("%s_read : string := (Reg'_read %s)", regName, regName));
-		    functionBody.append(String.format("BKCall %s_v : %s (* funcdef regread *) <- %s_read() ; \nL",
-						      regName, bsvTypeToKami(entry.getValue()), regName));
-		} else {
-		    functionBody.append("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- \"" + regName + "\" ;");
-		    functionBody.append(newline);
-		}
-            }
             for (BSVParser.StmtContext stmt: ctx.stmt())
                 regReadVisitor.visit(stmt);
             for (BSVParser.StmtContext stmt: ctx.stmt())
                 visit(stmt);
 
-	    //assert(letBindings.size() == 0) : "Unexpected let bindings at " + StaticAnalysis.sourceLocation(ctx);;
 	    if (letBindings.size() > 0)
 		System.err.println("Unexpected let bindings in function def at " + StaticAnalysis.sourceLocation(ctx) + "\n" + String.join("\n    ", letBindings));
 	    if (statements.size() > 0) {
 		functionBody.append("        ");
 		functionBody.append(String.join(" ;\n        ", statements));
-	    }
-	    if (returnPending != null) {
-		if (statements.size() > 0) {
-		    functionBody.append(" ;");
-		    functionBody.append(newline);
-		}
-		functionBody.append("        ");
-		functionBody.append(returnPending);
-		functionBody.append(newline);
-		System.err.println("end of functiondef clearing returnPending at " + StaticAnalysis.sourceLocation(ctx));
-		returnPending = null;
 	    }
         }
 
@@ -1214,23 +1084,23 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		BSVType argType = methodType.params.get(0);
 		BSVType returnType = methodType.params.get(1);
 		String methodInterfaceName = methodEntry.interfaceName;
-		printstream.println(String.format("    Let %1$s%2$s : string := (%3$s'%2$s %1$s).",
-						  instanceName, method, methodInterfaceName));
+		//printstream.println(String.format("    LET %1$s%2$s : string := (%3$s'%2$s %1$s).",
+						  //instanceName, method, methodInterfaceName));
 	    } else {
-		printstream.println(String.format("(* FIXME: interface %s subinterface %s *)", methodEntry.interfaceName, method));
+		//printstream.println(String.format("(* FIXME: interface %s subinterface %s *)", methodEntry.interfaceName, method));
 	    }
         }
-	for (String letBinding: letBindings) {
-	    printstream.println(String.format("       Let %s.", letBinding));
-	}
-	for (String methodBinding: methodBindings) {
-	    printstream.println(String.format("       Definition %s.\n", methodBinding));
-	}
+	//for (String letBinding: letBindings) {
+	    //printstream.println(String.format("       LET %s.", letBinding));
+	//}
+	//for (String methodBinding: methodBindings) {
+	    //printstream.println(String.format("       12Definition %s.\n", methodBinding));
+	//}
 
 	boolean hasProvisos = functionproto.provisos() != null;
 	useAbstractOmega = hasProvisos;
-	printstream.println(String.format("    Local Open Scope kami_expr.\n"));
-	printstream.println(String.format("    Definition Mod'%s: Mod%s",
+/*
+	printstream.println(String.format("    13Definition Mod'%s: Mod%s",
 					  functionName,
 					  (useAbstractOmega ? "." : " :=")
 					  ));
@@ -1240,36 +1110,31 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	int numArguments = (functionproto.methodprotoformals() != null)
 	    ? functionproto.methodprotoformals().methodprotoformal().size()
 	    : 0;
-	printstream.print(String.format("        Method (instancePrefix--\"%s\")", functionName));
+	printstream.print(String.format("    METHOD %s ", functionName));
 
         if (functionproto.methodprotoformals() != null) {
+            String sep = "";
+            printstream.print("( ");
             for (BSVParser.MethodprotoformalContext formal: functionproto.methodprotoformals().methodprotoformal()) {
                 BSVType bsvType = StaticAnalysis.getBsvType(formal);
                 String formalName = StaticAnalysis.getFormalName(formal);
-                printstream.print(String.format(" (%s: %s)", formalName, bsvTypeToKami(bsvType, 1)));
+                printstream.print(String.format("%s%s %s", sep, bsvTypeToKami(bsvType, 1), formalName));
+                sep = ", ";
             }
+            printstream.print(" ) ");
         }
         String returntype = (functionproto.bsvtype() != null) ? bsvTypeToKami(StaticAnalysis.getBsvType(functionproto.bsvtype())) : "";
-        printstream.println(String.format(": %s := ", returntype));
-	printstream.println("    (");
-
+        printstream.print(String.format(" %s = ", returntype));
+	printstream.println(" {");
 	printstream.println(functionBody.toString());
-	printstream.println("    )");
-
-        printstream.println(String.format("    })%s. (* %s *)",
-					  (useAbstractOmega ? "; abstract omega. Qed" : ""),
-					  functionName));
-        printstream.println(String.format("    Definition %1$s := Build_Interface'%1$s Mod'%1$s (instancePrefix--\"%1$s\").", functionName));
-	printstream.println(String.format("    End Section'%s.", functionName));
-	printstream.println(String.format("End module'%s.", functionName));
+        printstream.println(String.format("    }"));
+        printstream.println(String.format("    14Definition %1$s := Build_Interface'%1$s Mod'%1$s %1$s.", functionName));
+	printstream.println(String.format("}")); // functionName));
 	printstream.println("");
-        printstream.println(String.format("Definition function'%1$s := module'%1$s.%1$s.", functionName));
-	printstream.println(String.format("Hint Unfold function'%1$s : ModuleDefs.", functionName));
-	printstream.println(String.format("Hint Unfold module'%1$s.%1$s : ModuleDefs.", functionName));
-	if (!useAbstractOmega)
-	    printstream.println(String.format("Hint Unfold module'%1$s.Mod'%1$s : ModuleDefs.", functionName));
+        printstream.println(String.format("15Definition function'%1$s := module'%1$s.%1$s.", functionName));
 	printstream.println("");
 	printstream.println("");
+*/
 
 	actionContext = wasActionContext;
 	methodBindings = parentMethodBindings;
@@ -1294,54 +1159,58 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	StringBuilder statement = new StringBuilder();
 	StringBuilder paramunpack = new StringBuilder();
-	returnPending = "Retv";
 
         String methodName = ctx.name.getText();
-	String noParams = " ()";
+	if(ctx.bsvtype() == null) {
+            System.err.println("ERROR: Method return type required at " + StaticAnalysis.sourceLocation(ctx));
+            return "ERRORETHOD";
+        }
+	assert ctx.bsvtype() != null : "Method return type required at " + StaticAnalysis.sourceLocation(ctx);
+        String returntype = "Void";
+        if (ctx.bsvtype() != null) {
+            BSVType ty = StaticAnalysis.getBsvType(ctx.bsvtype());
+            if (ty != null && !ty.toString().equals("Action"))
+                returntype = bsvTypeToKami(ty);
+        }
+        statement.append("METHOD");
+        if (returntype == "Void")
+            statement.append("/Action");
+        statement.append(" " + methodName);
 	int numArgs = 0;
         if (ctx.methodformals() != null) {
 	    numArgs = ctx.methodformals().methodformal().size();
-	    noParams = "";
-	}
-
-        statement.append(String.format("Method (instancePrefix--\"%s\")%s", methodName, noParams));
-        if (numArgs == 1) {
+            statement.append(" ( ");
+            String sep = "";
             for (BSVParser.MethodformalContext formal: ctx.methodformals().methodformal()) {
+                if(formal.bsvtype() == null) {
+                     System.err.println("ERROR: formalparam null");
+                     break;
+                }
                 BSVType bsvtype = typeVisitor.visit(formal.bsvtype());
                 String varName = formal.name.getText();
-                statement.append(String.format(" (%s : %s)", varName, bsvTypeToKami(bsvtype, 1)));
+                statement.append(String.format("%s%s %s", sep, bsvtype.toString(), varName));
+                sep = ",";
             }
-        } else if (numArgs > 1) {
-	    StringBuilder paramsT = new StringBuilder();
-	    statement.append(String.format(" ( params : %1$s'paramsT ) ", methodName));
-	    paramsT.append(String.format("Definition %1$s'paramsT := ", methodName));
-	    paramsT.append(" ( STRUCT_TYPE { ");
-	    int paramNumber = 1;
-            for (BSVParser.MethodformalContext formal: ctx.methodformals().methodformal()) {
-                BSVType bsvtype = typeVisitor.visit(formal.bsvtype());
-                String varName = formal.name.getText();
-		String fieldName = String.format("_%d", paramNumber);
-		if (paramNumber > 1)
-		    paramsT.append(" ; ");
-                paramsT.append(String.format("\"%s\" :: %s", fieldName, bsvTypeToKami(bsvtype, 1)));
-
-		paramunpack.append("        ");
-                paramunpack.append(String.format("LET %s : %s <- #params @%% \"_%d\" ;",
-						 varName,
-						 bsvTypeToKami(bsvtype, 1),
-						 paramNumber));
-		paramunpack.append(newline);
-		paramNumber += 1;
-            }
-	    paramsT.append(" })%kami_struct");
-	    letBindings.add(paramsT.toString());
-	}
-	assert ctx.bsvtype() != null : "Method return type required at " + StaticAnalysis.sourceLocation(ctx);
-        String returntype = (ctx.bsvtype() != null) ? bsvTypeToKami(StaticAnalysis.getBsvType(ctx.bsvtype())) : "";
-        statement.append(" : " + returntype + " :=");
-	statement.append(newline);
-	statement.append("    (");
-	statement.append(newline);
+            statement.append(" )");
+        }
+        if (returntype != "Void") {
+            ReturnVisitor returnVisitor = new ReturnVisitor(scope);
+            for (BSVParser.StmtContext stmt: ctx.stmt())
+                returnVisitor.visit(stmt);
+	    StringBuilder expression = new StringBuilder();
+            if (returnVisitor.returnExpr != null)
+                expression.append(visit(returnVisitor.returnExpr.expression()));
+            else if (ctx.expression() != null)
+                expression.append(visit(ctx.expression()));
+            else
+                expression.append("0");
+            statement.append(" " + returntype + " = (" + expression.toString() + ")");
+        }
+	if (methodcond != null) {
+            String methodcondValue = visit(methodcond);
+            statement.append(" if (" + methodcondValue + ")");
+        }
+	statement.append(" {\n");
 	statement.append(paramunpack.toString());
 
         RegReadVisitor regReadVisitor = new RegReadVisitor(scope);
@@ -1351,67 +1220,29 @@ public class BSVToKami extends BSVBaseVisitor<String>
             regReadVisitor.visit(stmt);
         if (ctx.expression() != null)
             regReadVisitor.visit(ctx.expression());
-
-        for (Map.Entry<String,BSVType> entry: regReadVisitor.regs.entrySet()) {
-            String regName = entry.getKey();
-	    if (callRegMethods) {
-		methodBindings.add(String.format("%s_read : string := (Reg'_read %s)", regName, regName));
-		statement.append(String.format("BKCall %s_v : %s (* methoddef regread *) <- %s_read() ; \n",
-					       regName, bsvTypeToKami(entry.getValue()), regName));
-	    } else {
-		statement.append("        Read " + regName + "_v : " + bsvTypeToKami(entry.getValue()) + " <- \"" + regName + "\" ;");
-	    }
-        }
-
-
-	if (modulevarbindings.size() > 0) {
-	    for (String s: modulevarbindings) {
-		statement.append("       ");
-		statement.append(s);
-		statement.append(" ;");
-		statement.append(newline);
-	    }
-	}
 	statements = new ArrayList<>();
-	//letBindings = new LetBindings();
 	if (methodcond != null) {
-            String methodcondValue = visit(methodcond);
             if (statements.size() > 0) {
                 for (String s: statements) {
-                    statement.append("       ");
+                    statement.append("QQ2           ");
                     statement.append(s);
-                    statement.append(" ;");
                     statement.append(newline);
                 }
                 statements.clear();
             }
-	    statement.append(newline);
-            statement.append("        Assert(" + methodcondValue + ") ;\n");
 	}
         for (BSVParser.StmtContext stmt: ctx.stmt())
             visit(stmt);
 	boolean hasStatements = statements.size() > 0;
-	statement.append(String.join(" ;" + newline, statements));
-        if (ctx.expression() != null) {
-            statement.append(visit(ctx.expression()));
-	    hasStatements = true;
-	}
-
-        if (returnPending != null) {
-	    if (hasStatements) {
-		statement.append(" ;");
-		statement.append(newline);
-	    }
-            statement.append("        ");
-	    statement.append(returnPending);
-	    returnPending = null;
-	}
-	statement.append("    )");
-	statement.append(newline);
+        if (hasStatements)
+	    statement.append("   " + String.join(newline + "   ", statements) + "\n"); // QQ9
+	statement.append("    }");
+	for (String item: nextMethod) {
+             statement.append(item);
+        }
+        nextMethod.clear();
 
         actionContext = outerContext;
-
-	//letBindings = parentLetBindings;
 	statements  = parentStatements;
 	statements.add(statement.toString());
 	typeVisitor.popScope();
@@ -1427,31 +1258,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	BSVType rhsType = typeVisitor.visit(rhs);
 	typeVisitor.visit(regwrite);
 
-	if (callRegMethods) {
-	    String regName = regwrite.lhs.getText();
-	    methodBindings.add(String.format("%1$s_write : string := (Reg'_write %1$s) ",
-					     regName));
-	    if (rhsType.name.equals("Reg"))
-		rhsType = rhsType.params.get(0);
-	    statement.append(String.format("        Call %s_write ( (%s) : %s ) ",
-					   regName,
-					   visit(rhs),
-					   bsvTypeToKami(rhsType)));
-	    statements.add(statement.toString());
-	} else {
-	    statement.append("        Write ");
-	    statement.append(visit(regwrite.lhs));
 	    String regName = regwrite.lhs.getText();
 	    SymbolTableEntry entry = scope.lookup(regName);
-	    if (entry != null) {
-		statement.append(" : ");
-		statement.append(bsvTypeToKami(entry.type.params.get(0)));
-	    }
-	    statement.append(" <- ");
+	    statement.append("        STORE " + blockCondition + " : ");
+	    statement.append(visit(regwrite.lhs));
+	    statement.append(" = ");
 	    statement.append(visit(regwrite.rhs));
 	    statement.append(" ");
 	    statements.add(statement.toString());
-	}
 	typeVisitor.popScope();
         return null;
     }
@@ -1467,7 +1281,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		// call is performed for side effect, so visit it but ignore the expression it returns
 		String unusedValue = visit(ctx.expression());
 	    } else {
-		statements.add(visit(ctx.expression()));
+                String ret = visit(ctx.expression());
+                if (!ret.equals(""))
+		    statements.add(ret);
 	    }
 	} else {
 	    visitChildren(ctx);
@@ -1500,57 +1316,37 @@ public class BSVToKami extends BSVBaseVisitor<String>
         ArrayList<String> parentStatements = statements;
         letBindings = new LetBindings();
         statements = new ArrayList<>();
+        String previousCondition = blockCondition;
 
 	typeVisitor.pushScope(scope);
 	typeVisitor.visit(ctx.expression());
 	typeVisitor.popScope();
 
-	String predicate = visit(ctx.expression());
+	String predicate = "( " + visit(ctx.expression()) + " )";
 
-        returnPending = "Retv";
         assert(letBindings.size() == 0) : "Unexpected let bindings at " + StaticAnalysis.sourceLocation(ctx) + "\n" + String.join("\n", letBindings);
 
         StringBuilder statement = new StringBuilder();
-        statement.append(String.join(";\n        ", statements));
-	if (statements.size() > 0)
-	    statement.append(";\n        ");
-	statements.clear();
-
-        statement.append("        If ");
-        statement.append(predicate);
-        statement.append(" then (\n        ");
+        if (previousCondition.equals(""))
+            blockCondition = predicate;
+        else
+            blockCondition = "( " + previousCondition + " & " + predicate + " )";
 	System.err.println(String.format("if stmts %d bindings %d at %s",
 					 statements.size(), letBindings.size(), StaticAnalysis.sourceLocation(ctx)));
         visit(ctx.stmt(0));
         statement.append(String.join(";\n        ", statements));
-        if (returnPending != null) {
-            if (statements.size() > 0)
-                statement.append(";\n        ");
-            statement.append("        ");
-	    statement.append(returnPending);
-        }
         if (ctx.stmt(1) != null) {
-            statement.append(newline);
-            statement.append("        ) else (\n        ");
             letBindings = new LetBindings();
             statements = new ArrayList<>();
-            returnPending = "Retv";
+            predicate = "( !" + predicate + " )";
+            if (previousCondition.equals(""))
+                blockCondition = predicate;
+            else
+                blockCondition = "( " + previousCondition + " & " + predicate + " )";
             visit(ctx.stmt(1));
             assert(letBindings.size() == 0);
             statement.append(String.join(";\n        ", statements));
-            if (returnPending != null) {
-                if (statements.size() > 0)
-                    statement.append(";\n        ");
-                statement.append("        ");
-		statement.append(returnPending);
-            }
-	    statement.append(") as retval\n");
-        } else {
-	    statement.append(") else (\n");
-	    statement.append("            Retv\n");
-	    statement.append("        ) as retval\n");
 	}
-	returnPending = "Ret #retval";
 
         letBindings = parentLetBindings;
         statements  = parentStatements;
@@ -1558,6 +1354,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             System.err.println("Not gathering statements at " + StaticAnalysis.sourceLocation(ctx));
 
         statements.add(statement.toString());
+        blockCondition = previousCondition;
         return null;
     }
 
@@ -1574,7 +1371,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             if (pat != null) {
 		if (pat.var != null) {
 		    String fieldName = pat.var.getText();
-		    return String.format("            LET %1$s <- (#%2$s @%% \"%5$s\") ;",
+		    return String.format("            LET %1$s <- (#%2$s . %5$s) ;",
 					 fieldName,
 					 match,
 					 tagType.name,
@@ -1601,7 +1398,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
             for (int i = 0; i < structpattern.pattern().size(); i++) {
                 String fieldName = structpattern.lowerCaseIdentifier(i).getText();
                 BSVParser.PatternContext fieldPattern = structpattern.pattern(i);
-                patternString.append(destructurePattern(fieldPattern, String.format("(#%1$s @%% \"%3$s%4$s%5$s\")", match,
+                patternString.append(destructurePattern(fieldPattern, String.format("(#%1$s . %3$s%4$s%5$s)", match,
                                                                                     bsvTypeToKami(tagType),
                                                                                     ((tagName != null) ? tagName : ""), // unused in Kami2
                                                                                     ((tagName != null) ? "$" : ""),
@@ -1653,7 +1450,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		assert expritem.patterncond().size() == 0 : "pattern cond at " + StaticAnalysis.sourceLocation(expritem);
 		assert expritem.pattern().taggedunionpattern().pattern() == null
 		    : "Case expr cannot handle tagged union pattern destructuring at " + StaticAnalysis.sourceLocation(expritem.pattern());
-		statement.append(String.format("(%1$s @%% \"$tag\")",
+		statement.append(String.format("(%1$s . $tag)",
 					       visit(ctx.expression()),
 					       exprType.name,  // unused in Kami2
 					       ((exprType.params.size() > 0) ? bsvTypeToKami(exprType.params.get(0)) : "")  // unused in Kami2
@@ -1745,10 +1542,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		assert tagEntry.value != null : String.format("Missing value for tag %s", tagName);
 		tagValue = (IntValue)tagEntry.value;
 	    }
-            statement.append("    If (");
+            statement.append("   CASEIf (");
             statement.append(visit(ctx.expression()));
 	    if (tagName != null)
-		statement.append(String.format(" @%% \"$tag\"",
+		statement.append(String.format(" . $tag",
 				tagType.name,
 				((matchType.params.size() > 0) ? bsvTypeToKami(matchType.params.get(0)) : "") // unused in kami2
 		));
@@ -1776,7 +1573,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	for (BSVParser.CasestmtitemContext item: ctx.casestmtitem()) {
 	    boolean multivalue = item.expression().size() > 0;
-            statement.append("    If (");
+            statement.append("    CASE2If (");
 	    if (multivalue)
 		statement.append("(");
 	    statement.append(visit(item.expression(0)));
@@ -1829,7 +1626,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		statement.append(newline);
 	    }
 	}
-	returnPending = "Ret #retval";
 
 	typeVisitor.popScope();
 	letBindings = parentLetBindings;
@@ -1865,46 +1661,35 @@ public class BSVToKami extends BSVBaseVisitor<String>
         BSVParser.BinopexprContext binop = operatorExpr.binopexpr();
         assert binop != null;
         assert binop.left != null;
+        if(!binop.left.getText().equals(iterationVar)) {
+            System.err.println("ERROR: loop condition variable does not match: " + binop.left.getText());
+            return "ERRORFOR";
+        }
         assert binop.left.getText().equals(iterationVar);
+        if(!binop.op.getText().equals("<")) {
+            System.err.println("ERROR: Unimplemented for loop condition " + testExpr.getText() + " at " + StaticAnalysis.sourceLocation(testExpr));
+            return "ERRORFOR";
+        }
         assert binop.op.getText().equals("<"): "Unimplemented for loop condition " + testExpr.getText() + " at " + StaticAnalysis.sourceLocation(testExpr);
         String limitVar = binop.right.getText();
 
 	StringBuilder statement = new StringBuilder();
-        statement.append("    (BKBlock");
-	statement.append(newline);
-        statement.append(String.format("      (let limit : nat := %s", limitVar));
-	statement.append(newline);
-        statement.append(String.format("       in let instancePrefix : string := instancePrefix--\"%s\"", iterationVar));
-	statement.append(newline);
-        statement.append("      in ((fix loopM' (m: nat): InBKModule :=");
-	statement.append(newline);
-        statement.append("        match m with");
-	statement.append(newline);
-        statement.append("        | 0 => NilInBKModule");
-	statement.append(newline);
-        statement.append("        | S m' =>");
-	statement.append(newline);
-        statement.append(String.format("          let %s := limit - m", iterationVar));
-	statement.append(newline);
-        statement.append(String.format("          in let instancePrefix := instancePrefix--(toBinaryString %s)", iterationVar));
-	statement.append(newline);
-        statement.append("          in ConsInBKModule");
-	statement.append(newline);
+        String instVar = "__inst$Genvar1";
+        String lowerBound = "0";
+        String forBody = String.format("FOR$%dBody__ENA", forIndex);
+        forIndex = forIndex + 1;
+	statement.append("        GENERATE :" + instVar + ",(" + lowerBound + ",(" + instVar + "< (" + limitVar + "), (1), " + forBody);
 
 	letBindings = new LetBindings();
 	statements = new ArrayList<>();
         visit(ctx.stmt());
 	assert(letBindings.size() == 0);
+        nextMethod.add("METHOD/Action " + forBody + " ( " + iterationVarType + " " + iterationVar + " ) {\n");
 	for (String substatement: statements) {
-	    statement.append(substatement);
-	    statement.append(newline);
+	    nextMethod.add(substatement + newline);
 	}
+        nextMethod.add("}\n");
 
-        statement.append("        (loopM' m')");
-	statement.append(newline);
-        statement.append("        end)");
-	statement.append(newline);
-        statement.append(String.format("        %s)))", limitVar));
 
 	letBindings = parentLetBindings;
 	statements  = parentStatements;
@@ -1922,29 +1707,25 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    //FIXME: Not handling TAdd#, etc...
 	    params.add(bsvtype.getText());
 	}
-	logger.info(String.format("proviso name=%s", name));
+	logger.fine(String.format("proviso name=%s", name));
 
 	if (mSizeRelationshipProvisos.containsKey(name)) {
 	    assert params.size() >= 2 : String.format("Unexpected proviso %s %d params %s at %s",
 						      name, params.size(), params,
 						      StaticAnalysis.sourceLocation(ctx));
 	    if (params.size() == 3)
-		return String.format("Hypothesis H%s: (%s = %s %s %s)%%nat.",
-				     name,
+		return String.format("REPLACE %s = %s %s %s",
 				     params.get(2),
 				     params.get(0),
 				     mSizeRelationshipProvisos.get(name),
 				     params.get(1));
 	    else
-		return String.format("Hypothesis H%s: (%s = %s %s)%%nat.",
-				     name,
+		return String.format("REPLACE %s = %s %s",
 				     params.get(1),
 				     mSizeRelationshipProvisos.get(name),
 				     params.get(0));
 	} else if (name.equals("Pos")) {
-	    return String.format("Hypothesis H%1$s: (%2$s > 0)%%nat.",
-				 name,
-				 params.get(0));
+	    return String.format("CHECK (%2$s > 0)", params.get(0));
 	}
 
 	return null;
@@ -2082,9 +1863,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     @Override public String visitStructexpr(BSVParser.StructexprContext ctx) {
 	StringBuilder expression = new StringBuilder();
-        expression.append("STRUCT { ");
-        int i = 0;
 	String tagName = ctx.tag.getText();
+        expression.append(tagName + " { ");
+        int i = 0;
 	SymbolTableEntry structTypeEntry = scope.lookupType(tagName);
 	assert structTypeEntry != null : String.format("No symbol table entry for type %s at %s",
 						       tagName, StaticAnalysis.sourceLocation(ctx.tag));
@@ -2101,14 +1882,14 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		i++;
 	    }
 	}
-        expression.append(" }%kami_expr");
+        expression.append(" }");
         return expression.toString();
     }
     @Override public String visitTaggedunionexpr(BSVParser.TaggedunionexprContext ctx) {
 	StringBuilder expression = new StringBuilder();
         String tagName = ctx.tag.getText();
 	String sourceLocation = StaticAnalysis.sourceLocation(ctx);
-        expression.append(String.format("(* tagged union %s %s *) STRUCT { ", tagName, sourceLocation));
+        expression.append(String.format("(* tagged union *) STRUCT %s { ", tagName));
         SymbolTableEntry tagEntry = scope.lookup(tagName);
         assert tagEntry != null;
         BSVType tagtype = tagEntry.type.fresh();
@@ -2169,7 +1950,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 						bsvTypeToKami(fieldTypeInstance, 1)));
             }
         }
-        expression.append(" }%kami_expr");
+        expression.append(" }");
         return expression.toString();
     }
     @Override public String visitIntliteral(BSVParser.IntliteralContext ctx) {
@@ -2178,7 +1959,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	BSVType bsvType = typeVisitor.visit(ctx).prune();
 	if (bsvType.name.equals("Bit")) {
 	    BSVType typeWidth = bsvType.params.get(0).prune();
-	    assert !typeWidth.isVar : String.format("Unknown width for type %s at %s", bsvType, StaticAnalysis.sourceLocation(ctx));
+	    //assert !typeWidth.isVar : String.format("Unknown width for type %s at %s", bsvType, StaticAnalysis.sourceLocation(ctx));
 	    long widthFromType = 0;
 	    try {
 		widthFromType = typeWidth.asLong();
@@ -2189,13 +1970,16 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    intWidth = widthFromType;
 	}
 	if (intWidth != 0 || intValue.basespec != null || actionContext) {
-            return String.format("%1$s (* intwidth *) %2$s",
-                                 (actionContext ? "$$" : ""),
+            return String.format("%1$s %2$s", "",
                                  intToWord(intWidth, intValue.value));
 	} else {
 	    //FIXME width from type
+	    if(intValue.value >= 128) {
+                System.err.println("ERROR: Specify width of int literal %d at " + StaticAnalysis.sourceLocation(ctx));
+                return "ERRORINTLITERAL";
+            }
 	    assert (intValue.value < 128) : "Specify width of int literal %d at " + StaticAnalysis.sourceLocation(ctx);
-	    return (String.format("$ (* int *) %d", intValue.value));
+	    return (String.format("$ %d", intValue.value));
 	}
     }
     @Override public String visitRealliteral(BSVParser.RealliteralContext ctx) {
@@ -2205,11 +1989,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	return "Default";
     }
     @Override public String visitReturnexpr(BSVParser.ReturnexprContext ctx) {
-	StringBuilder expression = new StringBuilder();
-        expression.append("        Ret ");
-        expression.append(visit(ctx.expression()));
-	returnPending = null;
-        return expression.toString();
+        return ""; // jca
     }
     @Override public String visitVarexpr(BSVParser.VarexprContext ctx) {
 	StringBuilder expression = new StringBuilder();
@@ -2218,15 +1998,15 @@ public class BSVToKami extends BSVBaseVisitor<String>
             logger.fine("var " + varName + " scope " + scope);
             if (scope.containsKey(varName)) {
                 SymbolTableEntry entry = scope.lookup(varName);
-		String prefix = "#";
+		String prefix = "";//#";
 		char firstChar = varName.charAt(0);
 		if (entry.symbolType == SymbolType.ModuleParam
 		    && entry.type.isVar)
-		    prefix = "$$ (* isVar *)";
+		    prefix = "";
 		if (entry.isConstT)
-		    prefix = "$$ (* isConstT *)";
+		    prefix = "";
 		else if (entry.type.name.equals("Integer"))
-		    prefix = "$ (* Integer *) ";
+		    prefix = "";
 		else if (firstChar >= 'A' && firstChar <= 'Z')
 		    prefix = "";
 		if (!actionContext)
@@ -2234,25 +2014,25 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
                 logger.fine("found binding " + varName + " " + entry.type);
                 if (entry.type.name.equals("Reg")) {
-                    expression.append(prefix + varName + "_v");
+                    expression.append(varName);
 		} else if (varName.equals("True")) {
-		    expression.append("($$true)%kami_expr");
+		    expression.append("true");
 		} else if (varName.equals("False")) {
-		    expression.append("($$false)%kami_expr");
+		    expression.append("false");
 		} else {
                     expression.append(prefix + varName);
 		}
             } else if (varName.equals("True")) {
-		expression.append("($$true)%kami_expr");
+		expression.append("true");
             } else if (varName.equals("False")) {
-		expression.append("($$false)%kami_expr");
+		expression.append("false");
 	    } else {
 		char firstChar = varName.charAt(0);
 		if (firstChar >= 'A' && firstChar <= 'Z') {
 		    System.err.println("Capital var " + varName);
 		    expression.append(varName);
 		} else
-		    expression.append("#" + varName);
+		    expression.append("#ZZ" + varName);
             }
         }
         return expression.toString();
@@ -2264,7 +2044,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	BSVType exprType = typeVisitor.visit(ctx.exprprimary());
 	typeVisitor.popScope();
-	return String.format("(%1$s @%% \"%3$s\")",
+	return String.format("(%1$s . %3$s)",
 			     visit(ctx.exprprimary()),
 			     exprType.name, // unused in Kami2
 			     ctx.field.getText());
@@ -2332,6 +2112,11 @@ public class BSVToKami extends BSVBaseVisitor<String>
     void instantiateParameterTypes(BSVType functionType, List<BSVParser.ExpressionContext> params, BSVType resultType) {
 	functionType = functionType.prune();
 	for (BSVParser.ExpressionContext param: params) {
+	    if(!functionType.name.equals("Function")) {
+		System.err.println("ERROR: Expecting a Function type instead of (" + functionType.name + ") "
+		+ functionType + " at " + StaticAnalysis.sourceLocation(param));
+                return;
+            }
 	    assert functionType.name.equals("Function")
 		: "Expecting a Function type instead of (" + functionType.name + ") "
 		+ functionType + " at " + StaticAnalysis.sourceLocation(param);
@@ -2371,6 +2156,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		resultType = methodType.params.get(1);
 	    }
 	} else {
+	    if( methodName == null) {
+                System.err.println("ERROR: No method name at " + StaticAnalysis.sourceLocation(ctx));
+                return "CALLERR";
+            }
 	    assert methodName != null : "No method name at " + StaticAnalysis.sourceLocation(ctx);
 	    assert scope != null;
 	    SymbolTableEntry functionEntry = scope.lookup(methodName);
@@ -2396,7 +2185,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
 		}
 
 		String nameSuffix = suffixBuilder.toString();
-		methodBindings.add(String.format("instance'%1$s%2$s := function'%1$s%3$s (instancePrefix--\"%1$s%2$s\")",
+		methodBindings.add(String.format("instance'%1$s%2$s := function'%1$s%3$s %1$s%2$s)",
 						 methodName,
 						 nameSuffix,
 						 typeParameters.toString()));
@@ -2408,54 +2197,35 @@ public class BSVToKami extends BSVBaseVisitor<String>
         if (methodName == null)
             methodName = "FIXME$" + ctx.fcn.getText();
         assert methodName != null : "No methodName for " + ctx.fcn.getText();
-        methodName = methodName.replace(".", "");
 	StringBuilder statement = new StringBuilder();
-        if (methodName != null) {
             // "Call" is up where the binding is, hopefully
-	    statement.append(" (* translateCall *) ");
             statement.append(methodName);
 	    int argNumber = 0;
+	    statement.append(" (");
+            String sep = "";
             for (BSVParser.ExpressionContext expr: ctx.expression()) {
-		statement.append(" ((");
+		statement.append(sep);
                 statement.append(visit(expr));
-		statement.append(") : ");
-		if (argType.name.equals("Reg"))
-		    argType = argType.params.get(0);
-		statement.append(bsvTypeToKami(argType));
-		statement.append(")");
+                if(traceCallm)
 		System.err.println(String.format("callm %s arg %d type %s", methodName, argNumber, argType));
 		argNumber++;
 		if (argNumber < ctx.expression().size()) {
+		    if(!resultType.name.equals("Function")) {
+                        System.err.println("ERROR: name is not Function:" + resultType.name);
+                        return "CALLERROR";
+                    }
 		    assert (resultType.name.equals("Function"));
 		    argType = resultType.params.get(0);
 		    resultType = resultType.params.get(1);
 		}
+                sep = ", ";
             }
-	    // zero argument call still needs ()
-	    if (argNumber == 0)
-		statement.append(" ()");
-        } else {
-            logger.fine(String.format("How to call action function {%s}", ctx.fcn.getText()));
-        }
+	    statement.append(" )");
         return statement.toString();
     }
 
-    static int callCount = 0;
     @Override public String visitCallexpr(BSVParser.CallexprContext ctx) {
-	typeVisitor.pushScope(scope);
-	BSVType resultType = typeVisitor.visit(ctx);
-	typeVisitor.popScope();
-	String varName = String.format("call%d", callCount);
-	callCount++;
-
-	System.err.println(String.format("BSVToKami callexpr resultType %s (forcing Action) at %s", resultType, StaticAnalysis.sourceLocation(ctx)));
-
-	statements.add(String.format("(* call expr %s *) BKCall %s : %s <- %s ",
-				     StaticAnalysis.sourceLocation(ctx),
-				     varName,
-				     bsvTypeToKami(resultType),
-				     translateCall(ctx)));
-        return "#" + varName;
+        return translateCall(ctx);
     }
 
     @Override public String visitValueofexpr(BSVParser.ValueofexprContext ctx) {
@@ -2474,8 +2244,6 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
 	letBindings = new LetBindings();
 	statements = new ArrayList<>();
-	String wasReturnPending = returnPending;
-	returnPending = "Retv";
         for (BSVParser.StmtContext stmt: ctx.stmt()) {
             stmtEmitted = true;
             visit(stmt);
@@ -2495,17 +2263,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	if (letBindings.size() > 0)
 	    statement.append("        BKSTMTS {");
 	statement.append(newline);
-	String separator = (actionContext) ? (" ;" + newline + "        ") : (newline + "        with ");
+	String separator = (actionContext) ? (newline + "        ") : (newline);
 	statement.append(String.join(separator, statements));
-
-	if (returnPending != null) {
-	    if (statements.size() > 0) {
-		statement.append(";\n");
-	    }
-	    statement.append("        ");
-	    statement.append(returnPending);
-	    returnPending = null;
-	}
 
 	if (letBindings.size() != 0) {
 	    statement.append("        }");
@@ -2531,9 +2290,9 @@ public class BSVToKami extends BSVBaseVisitor<String>
 
     String intToWord(long width, long value) {
 	if (value < 128 && width == 0) {
-	    return String.format("(natToWord _ %d)", value);
+	    return String.format("%d", value);
 	} else if (value < 128 && width != 0) {
-	    return String.format("(natToWord %d %d)", width, value);
+	    return String.format("%d", value);
 	} else {
 	    StringBuilder woNotation = new StringBuilder();
 	    woNotation.append(String.format("( (* %d'h%x *) WO", width, value));
@@ -2567,10 +2326,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
             kamitype = "Void";
         if (kamitype.equals("Integer"))
             kamitype = "nat";
-	if (kamitype.equals("Bit") && !inModule)
-	    kamitype = "Bit";
-	else if (kamitype.equals("Bool") && !inModule)
-	    kamitype = "Bool";
+	else if (kamitype.equals("Bool"))
+	    kamitype = "Bit(1)";
 	else if (kamitype.equals("Integer"))
 	    kamitype = "nat";
 	else if (kamitype.equals("Action"))
@@ -2613,13 +2370,8 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	} else if (t.name.equals("TExp")) {
 	    kamitype = String.format("exp2 %s", convertedParams.get(0));
 	} else if (convertedParams.size() > 0) {
-	    kamitype = String.format("%s %s", t.name, String.join(" ", convertedParams));
-	} else {
-	    level = 0;
-	    kamitype = t.name;
+	    kamitype = String.format("%s(%s)", t.name, String.join(",", convertedParams));
 	}
-	if (level > 0)
-	    kamitype = String.format("(%s)", kamitype);
         return kamitype;
     }
 
@@ -2680,6 +2432,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 				   bsvTypeSize(bsvtype.params.get(0), ctx),
 				   bsvTypeSize(bsvtype.params.get(1), ctx));
 	} else {
+	    if(!bsvtype.numeric) {
+                System.err.println("ERROR: Expecting numeric type, got " + bsvtype + " at " + StaticAnalysis.sourceLocation(ctx));
+                return "1";
+            }
 	    assert bsvtype.numeric : "Expecting numeric type, got " + bsvtype + " at " + StaticAnalysis.sourceLocation(ctx);
 	    result = bsvtype.toString();
 	}
@@ -2719,6 +2475,10 @@ public class BSVToKami extends BSVBaseVisitor<String>
 	    level = 0;
 	    value = bsvtype.toString();
 	} else {
+	    if(!bsvtype.numeric) {
+                System.err.println("ERROR: bsvTypeValue expected numeric type, got " + bsvtype + " at " + StaticAnalysis.sourceLocation(ctx));
+                return "ERRORTYPEVALUE";
+            }
 	    assert bsvtype.numeric : "bsvTypeValue expected numeric type, got " + bsvtype + " at " + StaticAnalysis.sourceLocation(ctx);
 	    level = 0;
 	    value = bsvtype.toString();

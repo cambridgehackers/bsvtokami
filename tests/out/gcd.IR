@@ -1,7 +1,7 @@
 
 INTERFACE GCD(a) {
-    METHOD/Action set_n (a n)
-    METHOD/Action set_m (a m)
+    METHOD/Action set_n ( a n )
+    METHOD/Action set_m ( a m )
     METHOD result a
 }
 
@@ -16,17 +16,17 @@ MODULE GCD(Bit(32)) {
         METHOD/Rule/Action sub if (((n <= m) && (m !=  0))) {
                STORE : m = (m - n) 
         }
-        METHOD/Action set_n ( Bit_32 in_n ) if ((m ==  0)) {
+        METHOD/Action set_n ( Bit(32) in_n ) if ((m ==  0)) {
         STORE : n = in_n 
         }
-        METHOD/Action set_m ( Bit_32 in_m ) if ((m ==  0)) {
+        METHOD/Action set_m ( Bit(32) in_m ) if ((m ==  0)) {
         STORE : m = in_m 
         }
-        METHOD result Bit_32 = (n) if ((m ==  0)) {
+        METHOD result Bit(32) = (n) if ((m ==  0)) {
 
         }
 }
-MODULE mkMain {
+MODULE Main {
         FIELD GCD(Bit(32)) gcd
         FIELD Bit(1) started
         FIELD Bit(32) dv
@@ -36,7 +36,7 @@ MODULE mkMain {
                STORE : started =  1 
         }
         METHOD/Rule/Action rl_display {
-               LET a v = gcd.result () 
+               LET a : v = gcd.result () 
                STORE : dv = v 
         }
 }

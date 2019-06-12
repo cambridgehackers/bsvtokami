@@ -20,6 +20,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
     private HashMap<ParserRuleContext, BSVType> types;
     private static Logger logger = Logger.getGlobal();
     private static boolean callUnify = true;
+    private static boolean traceEval = false;
 
     BSVTypeVisitor(StaticAnalysis staticAnalyzer) {
         this.staticAnalyzer = staticAnalyzer;
@@ -427,10 +428,13 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         @Override public BSVType visitActionBinding(BSVParser.ActionBindingContext ctx) {
 	    if (types.containsKey(ctx))
 		return types.get(ctx);
-	    assert ctx.arraydims().expression().size() == 0;
             BSVType bsvtype = visit(ctx.t);
-            logger.fine("actiondecl " + ctx.var.getText() + " <- " + bsvtype);
 	    BSVType rhstype = visit(ctx.rhs);
+	    if(ctx.arraydims().expression().size() != 0) {
+System.err.println("AAAZZZ" + ctx.var.getText() + "ZZ1" + bsvtype + "ZZ2" + rhstype + "ZZDIM" + ctx.arraydims().expression().size());
+            }
+	    //jca assert ctx.arraydims().expression().size() == 0;
+            logger.fine("actiondecl " + ctx.var.getText() + " <- " + bsvtype);
             try {
 		BSVType actiontype = new BSVType("ActionValue", bsvtype);
 		System.err.println(String.format("actiontype %1$s rhstype %2$s", actiontype, rhstype));
@@ -799,9 +803,14 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 		types.put(ctx, bsvtype);
 		return bsvtype;
             } else {
+                if (ctx.typeide() == null) {
+                    System.err.println("ERROR: visitBsvtype: null ctx.typeide()");
+                    BSVType bsvtype = new BSVType("BOZO", true);
+                    return bsvtype;
+                }
                 String typeide = ctx.typeide().getText();
                 // is type variable?
-                if (typeide.matches("[a-z].*")) {
+                if (false && typeide.matches("[a-z].*")) { //jca
                     assert typeide != null;
                     assert scope != null : "must have called popScope() too many times";
                     SymbolTableEntry entry = scope.lookupType(typeide);
@@ -979,6 +988,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 		    try {
 			if (lhstype.prune() != rhstype.prune())
 			    lhstype.unify(rhstype);
+                        if (traceEval)
 			System.err.println(String.format("Binop lhstype %s rhstype %s at %s",
 							 lhstype.prune(), rhstype.prune(),
 							 StaticAnalysis.sourceLocation(ctx)));
@@ -1008,6 +1018,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 		return types.get(ctx);
             BSVType bsvtype = visit(ctx.exprprimary());
             if (ctx.op == null) {
+                if(traceEval)
                 System.err.println("Unop expr " + ctx.exprprimary().getText() + " : " + bsvtype + " at " + StaticAnalysis.sourceLocation(ctx));
 		types.put(ctx, bsvtype);
                 return bsvtype;
@@ -1090,6 +1101,14 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
             assert (ctx.pkg == null);
 	    assert scope != null : "no scope for " + StaticAnalysis.sourceLocation(ctx);
             SymbolTableEntry entry = scope.lookup(varName);
+            if (entry == null && varName.equals("nul")) {
+                System.err.println("HACK FOR 'nul' VALUE");
+                return new BSVType("Bit", new BSVType(32));
+            }
+            if(entry == null && !varName.startsWith("$")) {
+		System.err.println("ERROR: " + String.format("No symbol table entry for %s at %s", varName, StaticAnalysis.sourceLocation(ctx)));
+                return new BSVType("BOZO", true);
+            }
             assert entry != null || varName.startsWith("$")
 		: String.format("No symbol table entry for %s at %s", varName, StaticAnalysis.sourceLocation(ctx));
             logger.fine("var expr " + varName + " entry " + entry + " : " + ((entry != null) ? entry.type : ""));
@@ -1188,13 +1207,20 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 	    if (types.containsKey(ctx))
 		return types.get(ctx);
             String literal = ctx.getText();
+	    BSVType bsvtype;
+            try {
             IntValue value = new IntValue(literal);
-	    BSVType bsvtype = (value.width != 0)
+	    bsvtype = (value.width != 0)
 		? new BSVType("Bit", new BSVType(value.width))
 		: new BSVType("Bit", new BSVType(null, true));
 	    if (value.width == 0)
 		System.err.println("Integer type at " + StaticAnalysis.sourceLocation(ctx));
 	    types.put(ctx, bsvtype);
+            }
+            catch (java.lang.NumberFormatException e) {
+                System.err.println("ERROR: failed integer conversion of " + literal);
+                bsvtype = new BSVType("BOZO", true);
+            }
             return bsvtype;
         }
         /**
@@ -1260,6 +1286,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
         @Override public BSVType visitFieldexpr(BSVParser.FieldexprContext ctx) {
             if (types.containsKey(ctx))
                 return types.get(ctx);
+            if(traceEval)
             System.err.println("computing type of field " + ctx.getText());
             BSVType basetype = visit(ctx.exprprimary());
             String interfaceName = basetype.name;
@@ -1274,6 +1301,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                 if (subentry != null) {
                     // FIXME: instantiate interface
                     BSVType dereftype = dereferenceTypedef(subentry.type);
+                    if(traceEval)
                     System.err.println("expr field " + interfaceName + "." + subname + " : " + subentry.type
                                        + "(" + dereftype + ")" + " at " + StaticAnalysis.sourceLocation(ctx));
                     return dereftype;
@@ -1338,20 +1366,28 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
                     BSVType argtype = visit(expr);
                     assert argtype != null : String.format("Null type for %s at %s", expr.getText(), StaticAnalysis.sourceLocation(ctx));
                     BSVType ftype = new BSVType("Function", argtype, resulttype);
+                    if(traceEval)
                     System.err.println("    " + i + " Apply (" + fcntype_i + ") to (" + ftype + ")");
 		    if (true || callUnify)
 			fcntype_i.unify(ftype);
+                    if(traceEval)
                     System.err.println("    " + i + " Apply (" + fcntype_i + ") to (" + ftype + ")"
 				       + " result type " + resulttype.prune());
                     logger.fine("   -> " + resulttype.prune());
                 } catch (InferenceError e) {
                     logger.fine("Apply InferenceError " + e);
                 }
+                if (fcntype_i.prune().params.size() < 2) {
+                    System.err.println("ERROR: CALLERR no items" + fcntype_i.prune() + "EEE" + fcntype_i.prune().params + "PPP");
+                    break;
+                }
                 fcntype_i = fcntype_i.prune().params.get(1);
 		i++;
             }
+            if(traceEval) {
 	    System.err.println("    now type " + fcntype.prune() + " resulttype " + fcntype_i + " prune " + fcntype_i.prune());
 	    System.err.println("    and fcntype_i " + fcntype_i);
+            }
 	    types.put(ctx, fcntype_i.prune());
 	    return fcntype_i.prune();
         }
@@ -1399,6 +1435,11 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 		return types.get(ctx);
             BSVType arraytype = visit(ctx.exprprimary());
             assert arraytype != null;
+            if(arraytype.isVar) {
+                System.err.println("ERROR: " + String.format("Array type is variable at %s",
+						    StaticAnalysis.sourceLocation(ctx)));
+                return new BSVType("BOZO", true);
+            }
             assert !arraytype.isVar : String.format("Array type is variable at %s",
 						    StaticAnalysis.sourceLocation(ctx));
             if (arraytype.name.equals("Vector"))
@@ -1520,6 +1561,7 @@ public class BSVTypeVisitor extends AbstractParseTreeVisitor<BSVType> implements
 
 	    try {
 		lhstype.unify(rhstype);
+                if(traceEval)
 		System.err.println(String.format("   regwrite lhs %1$s rhs %2$s", lhstype, rhstype));
 	    } catch (InferenceError e) {
 		logger.fine(e.toString());
