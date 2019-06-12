@@ -35,7 +35,7 @@ class LetBindings implements Iterable<String>
     }
 }
 
-public class BSVToKami extends BSVBaseVisitor<String>
+public class GenerateIR extends BSVBaseVisitor<String>
 {
     private static Logger logger = Logger.getGlobal();
     public static String newline = System.getProperty("line.separator");
@@ -66,7 +66,7 @@ public class BSVToKami extends BSVBaseVisitor<String>
     private static boolean traceCallm = false;
     private static int forIndex = 1;
 
-    BSVToKami(String pkgName, File ofile, StaticAnalysis scopes) {
+    GenerateIR(String pkgName, File ofile, StaticAnalysis scopes) {
         this.scopes = scopes;
 	this.typeVisitor = scopes.typeVisitor;
         this.pkgName = pkgName;
@@ -1274,7 +1274,7 @@ break;
 	if (ctx.expression() != null) {
 	    typeVisitor.pushScope(scope);
 	    BSVType exprType = typeVisitor.visit(ctx.expression());
-	    System.err.println(String.format("BSVToKami stmt expr type %s at %s", exprType, StaticAnalysis.sourceLocation(ctx)));
+	    System.err.println(String.format("GenerateIR stmt expr type %s at %s", exprType, StaticAnalysis.sourceLocation(ctx)));
 	    typeVisitor.popScope();
 	    BSVParser.CallexprContext call = getCall(ctx.expression());
 	    if (call != null) {

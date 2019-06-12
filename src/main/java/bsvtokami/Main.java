@@ -326,7 +326,7 @@ System.err.println(String.format("Trying %s %s", filename, file.exists()));
 	    }
 	    File ofile = new File(dirname, pkgName + ".generated.IR");
 	    try {
-		BSVToKami bsvToKami = new BSVToKami(pkgName, ofile, staticAnalyzer);
+		GenerateIR bsvToKami = new GenerateIR(pkgName, ofile, staticAnalyzer);
 
 		bsvToKami.visit(packagedef);
 	    } catch (Exception e) {

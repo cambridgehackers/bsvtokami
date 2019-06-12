@@ -442,7 +442,7 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
                     String name = formal.name.getText();
                     symbolTable.bind(name, bsvtype)
 			.setSymbolType(SymbolType.ModuleParam)
-			.setIsConstT(BSVToKami.isKamiKind(bsvtype));
+			.setIsConstT(GenerateIR.isKamiKind(bsvtype));
                 } else {
                     assert formal.functionproto() != null;
                     BSVType bsvtype = typeVisitor.visit(formal.functionproto());
