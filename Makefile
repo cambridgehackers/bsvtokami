@@ -1,9 +1,13 @@
 
 all: gradlebuild kamibuild
 
-gradlebuild:
+gradlebuild: z3/build/com.microsoft.z3.jar
 	gradle build
 	gradle installDist
+
+z3/build/com.microsoft.z3.jar:
+	git submodule update --init
+	cd z3; ./configure --java; cd build; make -j4
 
 bbv/Makefile:
 	git submodule update --init

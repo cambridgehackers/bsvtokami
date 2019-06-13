@@ -13,6 +13,8 @@ dependencies {
     antlr "org.antlr:antlr4:4.7.1" // use ANTLR version 4
     compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
 
+    compile files('z3/build/com.microsoft.z3.jar')
+
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.1.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.1.0'
 }

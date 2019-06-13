@@ -7,3 +7,6 @@
 [submodule "bbv"]
 	path = bbv
 	url = git://github.com/mit-plv/bbv
+[submodule "z3"]
+	path = z3
+	url = git://github.com/Z3Prover/z3
