@@ -13,6 +13,7 @@
 #include "BSVLexer.h"
 #include "BSVParser.h"
 #include "StaticAnalyzer.h"
+#include "TypeChecker.h"
 
 using namespace antlr4;
 
@@ -42,6 +43,8 @@ int main(int argc, const char **argv) {
 	}
 	StaticAnalyzer *staticAnalyzer = new StaticAnalyzer();
 	staticAnalyzer->visit(tree);
+	TypeChecker *typeChecker = new TypeChecker();
+	typeChecker->visit(tree);
     }
     return (numberOfSyntaxErrors == 0) ? 0 : 1;
 }

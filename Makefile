@@ -58,7 +58,7 @@ generated/libBSVParser.a: generated/BSVParser.cpp $(GENERATED_OBJS)
 	@echo AR libBSVParser.a
 	ar crs generated/libBSVParser.a $(GENERATED_OBJS)
 
-bin/bsv-parser-cpp: cpp/main.cpp cpp/StaticAnalyzer.h generated/libBSVParser.a
+bin/bsv-parser-cpp: cpp/main.cpp cpp/StaticAnalyzer.h cpp/TypeChecker.h generated/libBSVParser.a
 	test -f /usr/include/z3.h || echo sudo apt install z3-dev
 	mkdir -p bin
 	$(CXX) -O -Wall -std=c++11 -Igenerated -Iantlr4-cpp-runtime/runtime/src/ -o bin/bsv-parser-cpp cpp/main.cpp -Lgenerated -lBSVParser antlr4-cpp-runtime/dist/libantlr4-runtime.a -lz3
