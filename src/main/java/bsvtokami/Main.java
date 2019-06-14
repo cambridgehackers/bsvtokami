@@ -279,12 +279,12 @@ System.err.println(String.format("Trying %s %s", filename, file.exists()));
     }
 
     static BSVParser.PackagedefContext analyzePackage(String pkgName, String filename, boolean translateToKami) throws IOException {
-        System.err.println("STARTPACKAGE: " + pkgName);
 	packages.put(pkgName, null); // mark that we are working on this package
 	if (!packages.containsKey("Prelude")) {
 	    analyzePackage("Prelude", findPackageFile("Prelude"), false);
 	}
 
+        System.err.println("STARTPACKAGE: " + pkgName);
 	System.err.println(String.format("parsePkg %s %s", pkgName, filename));
 	ParserRuleContext ctx = parsePackage(pkgName, filename);
 	if (dotstream != null) {
@@ -380,7 +380,7 @@ System.err.println(String.format("Trying %s %s", filename, file.exists()));
 		logger.fine("Option " + option.getOpt());
 		if (option.getOpt().equals("I")) {
 		    for (String includePath: option.getValues()) {
-			logger.info("Including " + includePath);
+			//logger.info("Including " + includePath);
 			searchDirs.add(includePath);
 		    }
 		} else if (option.getOpt().equals("K")) {

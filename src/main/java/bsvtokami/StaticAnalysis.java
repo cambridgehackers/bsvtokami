@@ -704,6 +704,10 @@ public class StaticAnalysis extends BSVBaseVisitor<Void>
 
     @Override public Void visitLetBinding(BSVParser.LetBindingContext ctx) {
         assert !declOnly;
+        if(ctx.rhs == null) {
+            System.err.println("ERROR: null in LetBinding");
+            return null;
+        }
         BSVType rhstype = typeVisitor.visit(ctx.rhs);
         for (BSVParser.LowerCaseIdentifierContext ident: ctx.lowerCaseIdentifier()) {
             String varName = ident.getText();

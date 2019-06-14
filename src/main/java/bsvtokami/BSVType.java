@@ -15,6 +15,7 @@ public class BSVType {
 
     private static int count = 0;
     private static boolean skipUnify = false;
+    private static boolean traceGetInstance = false;
 
     private void init(String name, boolean numeric) {
 	params = new ArrayList<BSVType>();
@@ -84,14 +85,17 @@ public class BSVType {
     }
 
     private void getInstanceVariables(ArrayList<BSVType> freeVars) {
+        if(traceGetInstance)
 	System.err.println("getInstanceVariables " + this + " instance " + instance);
 	if (isVar) {
 	    if (instance != null) {
+                if(traceGetInstance)
 		System.err.println("    name " + name + " instance " + instance);
 		freeVars.add(instance);
 	    }
 	} else {
 	    for (BSVType param: params) {
+                if(traceGetInstance)
 		System.err.println("    param " + param + " " + param.isVar);
 		param.getInstanceVariables(freeVars);
 	    }

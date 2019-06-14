@@ -65,6 +65,8 @@ public class GenerateIR extends BSVBaseVisitor<String>
     private String blockCondition;
     private static boolean traceCallm = false;
     private static int forIndex = 1;
+    private static boolean traceModInst = false;
+    private static boolean traceArgNotAction = false;
 
     GenerateIR(String pkgName, File ofile, StaticAnalysis scopes) {
         this.scopes = scopes;
@@ -853,6 +855,7 @@ public class GenerateIR extends BSVBaseVisitor<String>
 	    int argNum = 0;
 	    for (BSVParser.ExpressionContext arg: call.expression()) {
 		BSVType argType = typeVisitor.visit(arg);
+                if(traceArgNotAction)
 		System.err.println(String.format("    arg %s type %s name %s", arg.getText(), argType, t.name));
 		//jca assert t.name.equals("Function");
 		try {
@@ -889,11 +892,13 @@ break;
 	    }
 	    actionContext = wasActionContext;
 
+            if (traceModInst) {
 	    System.err.println(String.format("Module instantiation fcn %s type %s interface %s at %s",
 					     fcnName, fcnEntry.type, interfaceType,
 					     StaticAnalysis.sourceLocation(ctx.rhs)));
 	    if (moduleFreeTypeVars.size() != 0 || true)
 		System.err.println("   freeTypeVars: " + typeParameters.toString());
+            }
             methodBindings.add(String.format("(* action binding *) %s := %s%s %s%s",
 					     varName, fcnName, typeParameters.toString(), varName,
 					     params.toString()));
@@ -904,7 +909,7 @@ break;
 
             //instances.add(String.format("%s(\"%s\")", call.fcn.getText(), instanceName));
         } else {
-            statement.append(String.format("        Call %s (* here *) <- %s(", varName, calleeInstanceName));
+            statement.append(String.format("        6Call %s (* here *) <- %s(", varName, calleeInstanceName));
             logger.fine("generic call " + ctx.rhs.getRuleIndex() + " " + ctx.rhs.getText());
             BSVParser.CallexprContext call = getCall(ctx.rhs);
             String sep = "";
@@ -956,11 +961,11 @@ break;
 		logger.fine(e.toString());
 		System.err.println(e.toString() + " at " + StaticAnalysis.sourceLocation(rulecond));
 	    }
-	    if (modulevarbindings.size() > 0) {
-                for (String s: modulevarbindings) {
-                    statement.append("QQ99       " + s + newline);
-                }
-	    }
+	    //if (modulevarbindings.size() > 0) {
+                //for (String s: modulevarbindings) {
+                    //statement.append("QQ99       " + s + newline);
+                //}
+	    //}
             if (statements.size() > 0) {
                 for (String s: statements) {
                     statement.append("    " + s + newline);
@@ -1277,14 +1282,9 @@ break;
 	    System.err.println(String.format("GenerateIR stmt expr type %s at %s", exprType, StaticAnalysis.sourceLocation(ctx)));
 	    typeVisitor.popScope();
 	    BSVParser.CallexprContext call = getCall(ctx.expression());
-	    if (call != null) {
-		// call is performed for side effect, so visit it but ignore the expression it returns
-		String unusedValue = visit(ctx.expression());
-	    } else {
-                String ret = visit(ctx.expression());
-                if (!ret.equals(""))
-		    statements.add(ret);
-	    }
+            String ret = visit(ctx.expression());
+            if (!ret.equals(""))
+	        statements.add(String.format("        CALL/Action %s : %s", blockCondition, ret));
 	} else {
 	    visitChildren(ctx);
 	}
@@ -2044,7 +2044,7 @@ break;
 
 	BSVType exprType = typeVisitor.visit(ctx.exprprimary());
 	typeVisitor.popScope();
-	return String.format("(%1$s . %3$s)",
+	return String.format("%1$s.%3$s",
 			     visit(ctx.exprprimary()),
 			     exprType.name, // unused in Kami2
 			     ctx.field.getText());
@@ -2147,7 +2147,7 @@ break;
 	BSVType callResultType = typeVisitor.visit(ctx);
 	BSVType resultType = callResultType;
 	if (inv.methodsUsed.size() > 0) {
-	    System.err.println(String.format("First key %s", inv.methodsUsed.firstKey()));
+	    //System.err.println(String.format("First key %s", inv.methodsUsed.firstKey()));
 	    InstanceEntry instanceEntry = inv.methodsUsed.get(inv.methodsUsed.firstKey());
 
 	    BSVType methodType = instanceEntry.methodType;
