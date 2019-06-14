@@ -12,6 +12,7 @@
 #include "antlr4-runtime.h"
 #include "BSVLexer.h"
 #include "BSVParser.h"
+#include "StaticAnalyzer.h"
 
 using namespace antlr4;
 
@@ -39,6 +40,8 @@ int main(int argc, const char **argv) {
 	if (dumptree) {
 	    std::cout << tree->toStringTree(&parser) << std::endl << std::endl;
 	}
+	StaticAnalyzer *staticAnalyzer = new StaticAnalyzer();
+	staticAnalyzer->visit(tree);
     }
     return (numberOfSyntaxErrors == 0) ? 0 : 1;
 }
