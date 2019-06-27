@@ -51,17 +51,17 @@ GENERATED_SRCS = $(wildcard generated/*.cpp)
 GENERATED_OBJS = $(patsubst %.cpp,%.o,$(GENERATED_SRCS))
 
 generated/%.o: generated/%.cpp
-	$(CXX) -c -O -Wno-attributes -Wno-unused-but-set-variable -Wall -std=c++11 -Igenerated -Iantlr4-cpp-runtime/runtime/src/ -o generated/$(*).o generated/$(*).cpp
+	$(CXX) -c -g -O -Wno-attributes -Wno-unused-but-set-variable -Wall -std=c++11 -Igenerated -Iantlr4-cpp-runtime/runtime/src/ -o generated/$(*).o generated/$(*).cpp
 
 generated/libBSVParser.a: generated/BSVParser.cpp $(GENERATED_OBJS)
 	echo $(GENERATED_SRCS)
 	@echo AR libBSVParser.a
 	ar crs generated/libBSVParser.a $(GENERATED_OBJS)
 
-bin/bsv-parser-cpp: cpp/main.cpp cpp/StaticAnalyzer.h cpp/TypeChecker.h generated/libBSVParser.a
+bin/bsv-parser-cpp: cpp/main.cpp cpp/TypeChecker.cpp cpp/StaticAnalyzer.h cpp/TypeChecker.h generated/libBSVParser.a
 	test -f /usr/include/z3.h || echo sudo apt install z3-dev
 	mkdir -p bin
-	$(CXX) -O -Wall -std=c++11 -Igenerated -Iantlr4-cpp-runtime/runtime/src/ -o bin/bsv-parser-cpp cpp/main.cpp -Lgenerated -lBSVParser antlr4-cpp-runtime/dist/libantlr4-runtime.a -lz3
+	$(CXX) -g -O -Wall -std=c++11 -Igenerated -Iz3/src/api -Iz3/src/api/c++ -Iantlr4-cpp-runtime/runtime/src/ -o bin/bsv-parser-cpp cpp/main.cpp cpp/TypeChecker.cpp -Lgenerated -lBSVParser antlr4-cpp-runtime/dist/libantlr4-runtime.a -Lz3/build -lz3
 
 antlr4-cpp-runtime: antlr4-cpp-runtime-4.7.1-source.zip
 	rm -fr antlr4-cpp-runtime/*
