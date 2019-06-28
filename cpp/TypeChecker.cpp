@@ -145,3 +145,26 @@ z3::expr TypeChecker::orExprs(std::vector<z3::expr> exprs)
         return result;
     }
 }
+
+std::shared_ptr<BSVType> TypeChecker::exprToBSVType(z3::expr expr)
+{
+    z3::sort sort = expr.get_sort();
+    if (eq(sort, typeSort)) {
+        std::string name(expr.to_string());
+        if (expr.is_const()) {
+            std::shared_ptr<BSVType> bsvtype(new BSVType(name));
+            return bsvtype;
+        }
+        std::shared_ptr<BSVType> bsvtype(new BSVType(name));
+        if (expr.is_app()) {
+            z3::func_decl func_decl = expr.decl();
+            size_t num_args = expr.num_args();
+            for (size_t i = 0; i < num_args; i++)
+                bsvtype->params.push_back(exprToBSVType(expr.arg(i)));
+        }
+        return bsvtype;
+    } else {
+        std::shared_ptr<BSVType> bsvtype(new BSVType(expr.to_string()));
+        return bsvtype;
+    }
+}
