@@ -45,7 +45,7 @@ public:
     void insertExpr(antlr4::ParserRuleContext *ctx, z3::expr expr);
     void insertTracker(antlr4::ParserRuleContext *ctx, z3::expr tracker);
     z3::expr orExprs(std::vector<z3::expr> exprs);
-    std::shared_ptr<BSVType> exprToBSVType(z3::expr expr)
+    std::shared_ptr<BSVType> exprToBSVType(z3::expr expr);
 
  protected:
 
