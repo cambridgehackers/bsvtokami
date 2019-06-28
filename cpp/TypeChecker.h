@@ -360,6 +360,9 @@ public:
 
     virtual antlrcpp::Any visitMethoddef(BSVParser::MethoddefContext *ctx) override {
         fprintf(stderr, "    tc MethodDef %s\n", ctx->name->getText().c_str());
+	if (ctx->methodcond() != NULL) {
+	    z3::expr condtype = visit(ctx->methodcond());
+	}
         return visitChildren(ctx);
     }
 
@@ -372,7 +375,10 @@ public:
     }
 
     virtual antlrcpp::Any visitMethodcond(BSVParser::MethodcondContext *ctx) override {
-        return visitChildren(ctx);
+	z3::expr condtype = visit(ctx->expression());
+	z3::func_decl boolcon = typeDecls.find("Bool")->second;
+	solver.add(condtype == boolcon());
+        return condtype;
     }
 
     virtual antlrcpp::Any visitSubinterfacedef(BSVParser::SubinterfacedefContext *ctx) override {
@@ -381,11 +387,18 @@ public:
 
     virtual antlrcpp::Any visitRuledef(BSVParser::RuledefContext *ctx) override {
         fprintf(stderr, "    tc RuleDef %s\n", ctx->name->getText().c_str());
+	if (ctx->rulecond() != NULL) {
+	    z3::expr condtype = visit(ctx->rulecond());
+	}
         return visitChildren(ctx);
     }
 
     virtual antlrcpp::Any visitRulecond(BSVParser::RulecondContext *ctx) override {
-        return visitChildren(ctx);
+	z3::expr condtype = visit(ctx->expression());
+	z3::func_decl boolcon = typeDecls.find("Bool")->second;
+	solver.add(condtype == boolcon());
+	insertExpr(ctx, condtype);
+        return condtype;
     }
 
     virtual antlrcpp::Any visitRulebody(BSVParser::RulebodyContext *ctx) override {
@@ -850,7 +863,9 @@ public:
 
             solver.add(orExprs(exprs), tracker);
 
-	    return constant(patname, typeSort);
+	    z3::expr patexpr = constant(patname, typeSort);
+	    insertExpr(ctx, patexpr);
+	    return patexpr;
 	}
 	//FIXME
         return visitChildren(ctx);
