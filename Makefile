@@ -58,10 +58,10 @@ generated/libBSVParser.a: generated/BSVParser.cpp $(GENERATED_OBJS)
 	@echo AR libBSVParser.a
 	ar crs generated/libBSVParser.a $(GENERATED_OBJS)
 
-bin/bsv-parser-cpp: cpp/main.cpp cpp/TypeChecker.cpp cpp/TypeChecker.h generated/libBSVParser.a
+bin/bsv-parser-cpp: cpp/main.cpp cpp/TypeChecker.cpp cpp/BSVType.h cpp/BSVType.cpp cpp/TypeChecker.h generated/libBSVParser.a
 	test -f /usr/include/z3.h || echo sudo apt install z3-dev
 	mkdir -p bin
-	$(CXX) -g -O -Wall -std=c++11 -Igenerated -Iz3/src/api -Iz3/src/api/c++ -Iantlr4-cpp-runtime/runtime/src/ -o bin/bsv-parser-cpp cpp/main.cpp cpp/TypeChecker.cpp -Lgenerated -lBSVParser antlr4-cpp-runtime/dist/libantlr4-runtime.a -Lz3/build -lz3
+	$(CXX) -g -O -Wall -std=c++11 -Igenerated -Iz3/src/api -Iz3/src/api/c++ -Iantlr4-cpp-runtime/runtime/src/ -o bin/bsv-parser-cpp cpp/main.cpp cpp/BSVType.cpp cpp/TypeChecker.cpp -Lgenerated -lBSVParser antlr4-cpp-runtime/dist/libantlr4-runtime.a -Lz3/build -lz3
 
 antlr4-cpp-runtime: antlr4-cpp-runtime-4.7.1-source.zip
 	rm -fr antlr4-cpp-runtime/*
