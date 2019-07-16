@@ -38,23 +38,25 @@ Module module'mkFIFO.
     (
         Read v_v : element_type <- (instancePrefix--"v") ;
         Read valid_v : Bool <- (instancePrefix--"valid") ;
-        Assert((#valid_v)) ;
-        Ret #v_v    )
+        Ret #v_v )
 
     with Method (instancePrefix--"enq") (new_v : element_type) : Void :=
     (
         Read valid_v : Bool <- (instancePrefix--"valid") ;
-        Assert((!#valid_v)) ;
-        Write (instancePrefix--"v") : element_type <- #new_v  ;
-        Write (instancePrefix--"valid") : Bool <- $$ true  ;
-        Retv    )
+        If (!#valid_v) then (
+           Write (instancePrefix--"v") : element_type <- #new_v  ;
+           Write (instancePrefix--"valid") : Bool <- $$ true  ;
+           Retv    ) ;
+        Retv
+    )
 
     with Method (instancePrefix--"deq") () : Void :=
     (
         Read valid_v : Bool <- (instancePrefix--"valid") ;
-        Assert((#valid_v)) ;
-        Write (instancePrefix--"valid") : Bool <- $$false  ;
-        Retv    )
+        If (#valid_v) then (
+            Write (instancePrefix--"valid") : Bool <- $$false  ;
+            Retv    ) ;
+        Retv )
 
     with Method (instancePrefix--"clear") () : Void :=
     (
@@ -101,25 +103,28 @@ Module module'mkLFIFO.
     with Register (instancePrefix--"valid") : Bit 1 <-  (* intwidth *) (natToWord 1 0)
     with Method (instancePrefix--"first") () : element_type :=
     (
-        Read v_v : element_type <- (instancePrefix--"v") ;        Read valid_v : Bit 1 <- (instancePrefix--"valid") ;
-        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
+        Read valid_v : Bit 1 <- (instancePrefix--"valid") ;
+        (* If (#valid_v == $$ (* intwidth *) (natToWord 1 1)) *)
+        Read v_v : element_type <- (instancePrefix--"v") ;
         LET result : element_type (* non-call varbinding *) <- #v_v ;
         Ret #result    )
 
     with Method (instancePrefix--"enq") (new_v : element_type) : Void :=
     (
         Read valid_v : Bit 1 <- (instancePrefix--"valid") ;
-        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 0))) ;
-        Write (instancePrefix--"v") : element_type <- #new_v  ;
-        Write (instancePrefix--"valid") : Bit 1 <- $$ (* intwidth *) (natToWord 1 1)  ;
-        Retv    )
+        If ((#valid_v == $$ (* intwidth *) (natToWord 1 0))) then (
+            Write (instancePrefix--"v") : element_type <- #new_v  ;
+            Write (instancePrefix--"valid") : Bit 1 <- $$ (* intwidth *) (natToWord 1 1)  ;
+            Retv    ) ;
+        Retv )
 
     with Method (instancePrefix--"deq") () : Void :=
     (
         Read valid_v : Bit 1 <- (instancePrefix--"valid") ;
-        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
-        Write (instancePrefix--"valid") : Bit 1 <- $$ (* intwidth *) (natToWord 1 0)  ;
-        Retv    )
+        If (#valid_v == $$ (* intwidth *) (natToWord 1 1)) then (
+            Write (instancePrefix--"valid") : Bit 1 <- $$ (* intwidth *) (natToWord 1 0)  ;
+            Retv    ) ;
+        Retv )
 
     with Method (instancePrefix--"clear") () : Void :=
     (
@@ -156,22 +161,24 @@ Module module'mkFIFO1.
     with Method (instancePrefix--"first") () : element_type :=
     (
         Read v_v : element_type <- (instancePrefix--"v") ;        Read valid_v : Bit 1 <- (instancePrefix--"valid") ;
-        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
+        (* Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ; *)
         Ret #v_v    )
 
     with Method (instancePrefix--"enq") (new_v : element_type) : Void :=
     (
         Read valid_v : Bit 1 <- (instancePrefix--"valid") ;
-        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 0))) ;
-        Write (instancePrefix--"v") : element_type <- #new_v  ;
-        Write (instancePrefix--"valid") : Bit 1 <- $$ (* intwidth *) (natToWord 1 1)  ;
+        If (#valid_v == $$ (* intwidth *) (natToWord 1 0)) then (
+            Write (instancePrefix--"v") : element_type <- #new_v  ;
+            Write (instancePrefix--"valid") : Bit 1 <- $$ (* intwidth *) (natToWord 1 1)  ;
+            Retv ) ;
         Retv    )
 
     with Method (instancePrefix--"deq") () : Void :=
     (
         Read valid_v : Bit 1 <- (instancePrefix--"valid") ;
-        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
-        Write (instancePrefix--"valid") : Bit 1 <- $$ (* intwidth *) (natToWord 1 0)  ;
+        If (#valid_v == $$ (* intwidth *) (natToWord 1 1)) then (
+            Write (instancePrefix--"valid") : Bit 1 <- $$ (* intwidth *) (natToWord 1 0)  ;
+            Retv ) ;
         Retv    )
 
     with Method (instancePrefix--"clear") () : Void :=
@@ -210,22 +217,24 @@ Module module'mkSizedFIFO.
     with Method (instancePrefix--"first") () : element_type :=
     (
         Read v_v : element_type <- (instancePrefix--"v") ;        Read valid_v : Bit 1 <- (instancePrefix--"valid") ;
-        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
+        (* Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ; *)
         Ret #v_v    )
 
     with Method (instancePrefix--"enq") (new_v : element_type) : Void :=
     (
         Read valid_v : Bit 1 <- (instancePrefix--"valid") ;
-        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 0))) ;
-        Write (instancePrefix--"v") : element_type <- #new_v  ;
-        Write (instancePrefix--"valid") : Bit 1 <- $$ (* intwidth *) (natToWord 1 1)  ;
+        If (#valid_v == $$ (* intwidth *) (natToWord 1 0)) then (
+            Write (instancePrefix--"v") : element_type <- #new_v  ;
+            Write (instancePrefix--"valid") : Bit 1 <- $$ (* intwidth *) (natToWord 1 1)  ;
+            Retv ) ;
         Retv    )
 
     with Method (instancePrefix--"deq") () : Void :=
     (
         Read valid_v : Bit 1 <- (instancePrefix--"valid") ;
-        Assert((#valid_v == $$ (* intwidth *) (natToWord 1 1))) ;
-        Write (instancePrefix--"valid") : Bit 1 <- $$ (* intwidth *) (natToWord 1 0)  ;
+        If (#valid_v == $$ (* intwidth *) (natToWord 1 1)) then (
+            Write (instancePrefix--"valid") : Bit 1 <- $$ (* intwidth *) (natToWord 1 0)  ;
+            Retv ) ;
         Retv    )
 
     with Method (instancePrefix--"clear") () : Void :=
