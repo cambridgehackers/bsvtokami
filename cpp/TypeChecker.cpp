@@ -70,17 +70,17 @@ void TypeChecker::setupZ3Context()
     Z3_constructor *constructors = new Z3_constructor[num_constructors];
 
     for (int i = 0; i < num_default_constructors; i++)
-	constructors[i] = default_constructors[i];
+        constructors[i] = default_constructors[i];
 
     for (int i = 0; i < typeDeclarationList.size(); i++) {
-	std::shared_ptr<Declaration> typeDecl(typeDeclarationList[i]);
-	std::string typePredicate(std::string("is_") + typeDecl->name);
-	fprintf(stderr, "User defined type %s\n", typeDecl->name.c_str());
-	constructors[i + num_default_constructors] = Z3_mk_constructor(context,
-								       Z3_mk_string_symbol(context, typeDecl->name.c_str()),
-								       Z3_mk_string_symbol(context, typePredicate.c_str()),
-								       //FIXME type parameters
-								       0, NULL, NULL, NULL);
+        std::shared_ptr<Declaration> typeDecl(typeDeclarationList[i]);
+        std::string typePredicate(std::string("is_") + typeDecl->name);
+        fprintf(stderr, "User defined type %s\n", typeDecl->name.c_str());
+        constructors[i + num_default_constructors] = Z3_mk_constructor(context,
+                                                                       Z3_mk_string_symbol(context, typeDecl->name.c_str()),
+                                                                       Z3_mk_string_symbol(context, typePredicate.c_str()),
+                                                                       //FIXME type parameters
+                                                                       0, NULL, NULL, NULL);
     }
 
     fprintf(stderr, "Defining typeSort\n");
@@ -93,7 +93,9 @@ void TypeChecker::setupZ3Context()
         Z3_symbol name = Z3_get_decl_name(context, func_decl);
         fprintf(stderr, "Constructor %d name is %s\n", i, Z3_get_symbol_string(context, name));
         // since no default constructor for z3::func_decl, use insert with a pair
-        typeDecls.insert(std::pair<std::string, z3::func_decl>(Z3_get_symbol_string(context, name), z3::func_decl(context, func_decl)));
+        z3::func_decl func_decl_obj = z3::func_decl(context, func_decl);
+        typeDecls.insert(std::pair<std::string, z3::func_decl>(Z3_get_symbol_string(context, name), func_decl_obj));
+        fprintf(stderr, "               name is %s\n", func_decl_obj.name().str().c_str());
     }
     boolops["=="] =  true;
     boolops["!="] =  true;
