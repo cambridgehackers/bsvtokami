@@ -50,15 +50,16 @@ public:
  protected:
 
     virtual antlrcpp::Any visitPackagedef(BSVParser::PackagedefContext *ctx) override {
-	size_t numelts = ctx->packagestmt().size();
-	for (size_t i = 0; i < numelts; i++) {
-	    visit(ctx->packagestmt().at(i));
-	}
+        size_t numelts = ctx->packagestmt().size();
+        for (size_t i = 0; i < numelts; i++) {
+            visit(ctx->packagestmt().at(i));
+        }
         return freshConstant("pkgstmt", typeSort);
     }
 
     virtual antlrcpp::Any visitPackagedecl(BSVParser::PackagedeclContext *ctx) override {
-	return freshConstant("pkgdecl", typeSort);
+        setupZ3Context();
+        return freshConstant("pkgdecl", typeSort);
     }
 
     virtual antlrcpp::Any visitEndpackage(BSVParser::EndpackageContext *ctx) override {
@@ -71,46 +72,40 @@ public:
     }
 
     virtual antlrcpp::Any visitUpperCaseIdentifier(BSVParser::UpperCaseIdentifierContext *ctx) override {
-	assert(0);
-	return freshConstant(__FUNCTION__, typeSort);
-    }
-
-    virtual antlrcpp::Any visitIdentifier(BSVParser::IdentifierContext *ctx) override {
-	assert(0);
-	return freshConstant(__FUNCTION__, typeSort);
+        assert(0);
+        return freshConstant(__FUNCTION__, typeSort);
     }
 
     virtual antlrcpp::Any visitAnyidentifier(BSVParser::AnyidentifierContext *ctx) override {
-	assert(0);
-	return freshConstant(__FUNCTION__, typeSort);
+        assert(0);
+        return freshConstant(__FUNCTION__, typeSort);
     }
 
     virtual antlrcpp::Any visitExportdecl(BSVParser::ExportdeclContext *ctx) override {
-	return freshConstant(__FUNCTION__, typeSort);
+        return freshConstant(__FUNCTION__, typeSort);
     }
 
     virtual antlrcpp::Any visitExportitem(BSVParser::ExportitemContext *ctx) override {
-	return freshConstant(__FUNCTION__, typeSort);
+        return freshConstant(__FUNCTION__, typeSort);
     }
 
     virtual antlrcpp::Any visitImportdecl(BSVParser::ImportdeclContext *ctx) override {
-	assert(0);
-	return freshConstant(__FUNCTION__, typeSort);
+        return freshConstant(__FUNCTION__, typeSort);
     }
 
     virtual antlrcpp::Any visitImportitem(BSVParser::ImportitemContext *ctx) override {
-	assert(0);
-	return freshConstant(__FUNCTION__, typeSort);
+        assert(0);
+        return freshConstant(__FUNCTION__, typeSort);
     }
 
     virtual antlrcpp::Any visitPackagestmt(BSVParser::PackagestmtContext *ctx) override {
-	//FIXMEE
+        setupZ3Context();
         return visitChildren(ctx);
     }
 
     virtual antlrcpp::Any visitPackageide(BSVParser::PackageideContext *ctx) override {
-	assert(0);
-	return freshConstant(__FUNCTION__, typeSort);
+        assert(0);
+        return freshConstant(__FUNCTION__, typeSort);
     }
 
     virtual antlrcpp::Any visitInterfacedecl(BSVParser::InterfacedeclContext *ctx) override {
@@ -120,14 +115,18 @@ public:
         std::shared_ptr<Declaration> decl(new Declaration(name, bsvtype));
         typeDeclarationList.push_back(decl);
         typeDeclaration[name] = decl;
-        return visitChildren(ctx);
+        return freshConstant(__FUNCTION__, typeSort);
     }
 
     virtual antlrcpp::Any visitInterfacememberdecl(BSVParser::InterfacememberdeclContext *ctx) override {
+	if (ctx->methodproto()) {
+	} else {
+	}
         return visitChildren(ctx);
     }
 
     virtual antlrcpp::Any visitMethodproto(BSVParser::MethodprotoContext *ctx) override {
+	fprintf(stderr, "Visit method proto %s\n", ctx->getText().c_str());
         return visitChildren(ctx);
     }
 
@@ -173,15 +172,15 @@ public:
         typeDeclaration[name] = decl;
         subdeclaration.clear();
 
-	size_t numelts = ctx->typedefenumelement().size();
+        size_t numelts = ctx->typedefenumelement().size();
         for (size_t i = 0; i < numelts; i++) {
-	    BSVParser::TypedefenumelementContext *elt = ctx->typedefenumelement().at(i);
-	    fprintf(stderr, "elt %p\n", elt);
-	    if (elt) {
-		fprintf(stderr, "elt %s\n", elt->getText().c_str());
+            BSVParser::TypedefenumelementContext *elt = ctx->typedefenumelement().at(i);
+            fprintf(stderr, "elt %p\n", elt);
+            if (elt) {
+                fprintf(stderr, "elt %s\n", elt->getText().c_str());
 
-		visit(elt);
-	    }
+                visit(elt);
+            }
         }
 
         return decl;
@@ -194,7 +193,7 @@ public:
         std::shared_ptr<Declaration> decl(new Declaration(name, bsvtype));
         //declarationList.push_back(decl);
         enumtag.insert(std::make_pair(name, parentDecl));
-	return decl;
+        return decl;
     }
 
     virtual antlrcpp::Any visitTypedefstruct(BSVParser::TypedefstructContext *ctx) override {
@@ -204,7 +203,7 @@ public:
         std::shared_ptr<Declaration> decl(new Declaration(name, bsvtype));
         typeDeclarationList.push_back(decl);
         typeDeclaration[name] = decl;
-	return decl;
+        return decl;
     }
 
     virtual antlrcpp::Any visitTypedeftaggedunion(BSVParser::TypedeftaggedunionContext *ctx) override {
@@ -282,15 +281,7 @@ public:
         return visitChildren(ctx);
     }
 
-    virtual antlrcpp::Any visitArraydims(BSVParser::ArraydimsContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
     virtual antlrcpp::Any visitTypeclassdecl(BSVParser::TypeclassdeclContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitTypeclasside(BSVParser::TypeclassideContext *ctx) override {
         return visitChildren(ctx);
     }
 
@@ -310,10 +301,6 @@ public:
         return visitChildren(ctx);
     }
 
-    virtual antlrcpp::Any visitTctype(BSVParser::TctypeContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
     virtual antlrcpp::Any visitTypeclassinstance(BSVParser::TypeclassinstanceContext *ctx) override {
         return visitChildren(ctx);
     }
@@ -323,7 +310,7 @@ public:
     }
 
     virtual antlrcpp::Any visitModuledef(BSVParser::ModuledefContext *ctx) override {
-	setupZ3Context();
+        setupZ3Context();
 
         std::string module_name = ctx->moduleproto()->name->getText();
         fprintf(stderr, "tc ModuleDef %s\n", module_name.c_str());
@@ -380,9 +367,9 @@ public:
 
     virtual antlrcpp::Any visitMethoddef(BSVParser::MethoddefContext *ctx) override {
         fprintf(stderr, "    tc MethodDef %s\n", ctx->name->getText().c_str());
-	if (ctx->methodcond() != NULL) {
-	    z3::expr condtype = visit(ctx->methodcond());
-	}
+        if (ctx->methodcond() != NULL) {
+            z3::expr condtype = visit(ctx->methodcond());
+        }
         return visitChildren(ctx);
     }
 
@@ -395,9 +382,9 @@ public:
     }
 
     virtual antlrcpp::Any visitMethodcond(BSVParser::MethodcondContext *ctx) override {
-	z3::expr condtype = visit(ctx->expression());
-	z3::func_decl boolcon = typeDecls.find("Bool")->second;
-	solver.add(condtype == boolcon());
+        z3::expr condtype = visit(ctx->expression());
+        z3::func_decl boolcon = typeDecls.find("Bool")->second;
+        solver.add(condtype == boolcon());
         return condtype;
     }
 
@@ -407,25 +394,23 @@ public:
 
     virtual antlrcpp::Any visitRuledef(BSVParser::RuledefContext *ctx) override {
         fprintf(stderr, "    tc RuleDef %s\n", ctx->name->getText().c_str());
-	if (ctx->rulecond() != NULL) {
-	    z3::expr condtype = visit(ctx->rulecond());
-	}
+        if (ctx->rulecond() != NULL) {
+            z3::expr condtype = visit(ctx->rulecond());
+        }
 
-	visit(ctx->rulebody());
+        for (int i = 0; i < ctx->stmt().size(); i++) {
+            visit(ctx->stmt().at(i));
+        }
 
         return freshConstant("rule", typeSort);
     }
 
     virtual antlrcpp::Any visitRulecond(BSVParser::RulecondContext *ctx) override {
-	z3::expr condtype = visit(ctx->expression());
-	z3::func_decl boolcon = typeDecls.find("Bool")->second;
-	solver.add(condtype == boolcon());
-	insertExpr(ctx, condtype);
+        z3::expr condtype = visit(ctx->expression());
+        z3::func_decl boolcon = typeDecls.find("Bool")->second;
+        solver.add(condtype == boolcon());
+        insertExpr(ctx, condtype);
         return condtype;
-    }
-
-    virtual antlrcpp::Any visitRulebody(BSVParser::RulebodyContext *ctx) override {
-        return visitChildren(ctx);
     }
 
     virtual antlrcpp::Any visitFunctiondef(BSVParser::FunctiondefContext *ctx) override {
@@ -522,30 +507,26 @@ public:
     }
 
     virtual antlrcpp::Any visitCaseexpr(BSVParser::CaseexprContext *ctx) override {
-	fprintf(stderr, "visit case expr %s\n", ctx->getText().c_str());
-	z3::expr casetype = freshConstant("case", typeSort);
-	z3::expr exprtype = visit(ctx->expression());
-	size_t numitems = ctx->caseexpritem().size();
-	for (size_t i = 0; i < numitems; i++) {
-	    BSVParser::CaseexpritemContext *item = ctx->caseexpritem()[i];
-	    fprintf(stderr, "item = %p\n", item);
-	    if (item->body != NULL) {
-                fprintf(stderr, "caseexpritem has %ld exprs, %s body %s\n",
-                        item->exprprimary().size(),
+        fprintf(stderr, "visit case expr %s\n", ctx->getText().c_str());
+        z3::expr casetype = freshConstant("case", typeSort);
+        z3::expr exprtype = visit(ctx->expression());
+        size_t numitems = ctx->caseexpritem().size();
+        for (size_t i = 0; i < numitems; i++) {
+            BSVParser::CaseexpritemContext *item = ctx->caseexpritem()[i];
+            fprintf(stderr, "item = %p\n", item);
+            if (item->body != NULL) {
+                fprintf(stderr, "caseexpritem has pattern %s body %s\n",
                         item->pattern()->getText().c_str(),
                         item->body->getText().c_str());
 
                 if (item->pattern() != NULL) {
                     z3::expr itemtype = visit(item->pattern());
                     solver.add(exprtype == itemtype);
-		} else if (item->exprprimary().size()) {
-                    z3::expr itemtype = visit(item->exprprimary().at(0));
-                    solver.add(exprtype == itemtype);
-                }
+		}
                 z3::expr bodytype = visit(item->body);
                 solver.add(casetype == bodytype);
             }
-	}
+        }
         return casetype;
     }
 
@@ -554,10 +535,6 @@ public:
     }
 
     virtual antlrcpp::Any visitCondexpr(BSVParser::CondexprContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitTripleandexpr(BSVParser::TripleandexprContext *ctx) override {
         return visitChildren(ctx);
     }
 
@@ -638,11 +615,11 @@ public:
             for (auto it = enumtag.find(varname); it != enumtag.end() && it->first == varname; ++it) {
                 std::shared_ptr<Declaration> decl(it->second);
                 fprintf(stderr, "Tag %s of type %s\n", varname.c_str(), decl->name.c_str());
-		z3::func_decl type_decl = typeDecls.find(decl->name)->second;
+                z3::func_decl type_decl = typeDecls.find(decl->name)->second;
                 exprs.push_back(sym == type_decl());
             }
-	    z3::expr tracker(freshConstant("$track", boolSort));
-	    insertTracker(ctx, tracker);
+            z3::expr tracker(freshConstant("$track", boolSort));
+            insertTracker(ctx, tracker);
 
             solver.add(orExprs(exprs), tracker);
         }
@@ -654,19 +631,7 @@ public:
         return visitChildren(ctx);
     }
 
-    virtual antlrcpp::Any visitParfsmexpr(BSVParser::ParfsmexprContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitStructexpr(BSVParser::StructexprContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
     virtual antlrcpp::Any visitStringliteral(BSVParser::StringliteralContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitRulesexpr(BSVParser::RulesexprContext *ctx) override {
         return visitChildren(ctx);
     }
 
@@ -713,10 +678,6 @@ public:
         return visitChildren(ctx);
     }
 
-    virtual antlrcpp::Any visitReturnexpr(BSVParser::ReturnexprContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
     virtual antlrcpp::Any visitFieldexpr(BSVParser::FieldexprContext *ctx) override {
         return visitChildren(ctx);
     }
@@ -726,10 +687,6 @@ public:
     }
 
     virtual antlrcpp::Any visitInterfaceexpr(BSVParser::InterfaceexprContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitActionblockexpr(BSVParser::ActionblockexprContext *ctx) override {
         return visitChildren(ctx);
     }
 
@@ -749,14 +706,6 @@ public:
         return visitChildren(ctx);
     }
 
-    virtual antlrcpp::Any visitActionvalueblockexpr(BSVParser::ActionvalueblockexprContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitSeqfsmexpr(BSVParser::SeqfsmexprContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
     virtual antlrcpp::Any visitMemberbinds(BSVParser::MemberbindsContext *ctx) override {
         return visitChildren(ctx);
     }
@@ -769,19 +718,7 @@ public:
         return visitChildren(ctx);
     }
 
-    virtual antlrcpp::Any visitRulesstmt(BSVParser::RulesstmtContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
     virtual antlrcpp::Any visitBeginendblock(BSVParser::BeginendblockContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitActionblock(BSVParser::ActionblockContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitActionvalueblock(BSVParser::ActionvalueblockContext *ctx) override {
         return visitChildren(ctx);
     }
 
@@ -801,14 +738,6 @@ public:
         return visitChildren(ctx);
     }
 
-    virtual antlrcpp::Any visitCasestmtitem(BSVParser::CasestmtitemContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitCasestmtpatitem(BSVParser::CasestmtpatitemContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
     virtual antlrcpp::Any visitCasestmtdefaultitem(BSVParser::CasestmtdefaultitemContext *ctx) override {
         return visitChildren(ctx);
     }
@@ -822,18 +751,6 @@ public:
     }
 
     virtual antlrcpp::Any visitForinit(BSVParser::ForinitContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitForoldinit(BSVParser::ForoldinitContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitSimplevarassign(BSVParser::SimplevarassignContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitFornewinit(BSVParser::FornewinitContext *ctx) override {
         return visitChildren(ctx);
     }
 
@@ -854,51 +771,47 @@ public:
     }
 
     virtual antlrcpp::Any visitPattern(BSVParser::PatternContext *ctx) override {
-	if (ctx->var != NULL) {
-	    fprintf(stderr, "Visit pattern var %s\n", ctx->var->getText().c_str());
-	    return constant(ctx->var->getText().c_str(), typeSort);
-	} else if (ctx->constantpattern() != NULL) {
-	    return visit(ctx->constantpattern());
-	} else {
-	    fprintf(stderr, "Visit pattern wildcarrd %s\n", ctx->getText().c_str());
-	    return freshConstant("wildcard", typeSort);
-	}
+        if (ctx->var != NULL) {
+            fprintf(stderr, "Visit pattern var %s\n", ctx->var->getText().c_str());
+            return constant(ctx->var->getText().c_str(), typeSort);
+        } else if (ctx->constantpattern() != NULL) {
+            return visit(ctx->constantpattern());
+        } else {
+            fprintf(stderr, "Visit pattern wildcarrd %s\n", ctx->getText().c_str());
+            return freshConstant("wildcard", typeSort);
+        }
         return visitChildren(ctx);
     }
 
     virtual antlrcpp::Any visitConstantpattern(BSVParser::ConstantpatternContext *ctx) override {
-	if (ctx->upperCaseIdentifier() != NULL) {
-	    std::string tagname(ctx->upperCaseIdentifier()->getText());
-	    fprintf(stderr, "Visit pattern tag %s\n", tagname.c_str());
+        //FIXME
+        return visitChildren(ctx);
+    }
 
-	    std::string patname(tagname + std::string("pat"));
-	    z3::expr patsym = context.constant(context.str_symbol(patname.c_str()), typeSort);
+    virtual antlrcpp::Any visitTaggedunionpattern(BSVParser::TaggedunionpatternContext *ctx) override {
+        if (ctx->upperCaseIdentifier() != NULL) {
+            std::string tagname(ctx->upperCaseIdentifier()->getText());
+            fprintf(stderr, "Visit pattern tag %s\n", tagname.c_str());
+
+            std::string patname(tagname + std::string("pat"));
+            z3::expr patsym = context.constant(context.str_symbol(patname.c_str()), typeSort);
 
             std::vector<z3::expr> exprs;
             for (auto it = enumtag.find(tagname); it != enumtag.end() && it->first == tagname; ++it) {
                 std::shared_ptr<Declaration> decl(it->second);
                 fprintf(stderr, "Tag pattern %s of type %s\n", tagname.c_str(), decl->name.c_str());
-		z3::func_decl type_decl = typeDecls.find(decl->name)->second;
+                z3::func_decl type_decl = typeDecls.find(decl->name)->second;
                 exprs.push_back(patsym == type_decl());
             }
-	    z3::expr tracker(freshConstant("$track", boolSort));
-	    insertTracker(ctx, tracker);
+            z3::expr tracker(freshConstant("$track", boolSort));
+            insertTracker(ctx, tracker);
 
             solver.add(orExprs(exprs), tracker);
 
-	    z3::expr patexpr = constant(patname, typeSort);
-	    insertExpr(ctx, patexpr);
-	    return patexpr;
-	}
-	//FIXME
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitTaggedunionpattern(BSVParser::TaggedunionpatternContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitStructpattern(BSVParser::StructpatternContext *ctx) override {
+            z3::expr patexpr = constant(patname, typeSort);
+            insertExpr(ctx, patexpr);
+            return patexpr;
+        }
         return visitChildren(ctx);
     }
 
@@ -913,86 +826,5 @@ public:
     virtual antlrcpp::Any visitAttrspec(BSVParser::AttrspecContext *ctx) override {
         return visitChildren(ctx);
     }
-
-    virtual antlrcpp::Any visitProvisos(BSVParser::ProvisosContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitProviso(BSVParser::ProvisoContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitFsmstmt(BSVParser::FsmstmtContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitSeqfsmstmt(BSVParser::SeqfsmstmtContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitParfsmstmt(BSVParser::ParfsmstmtContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitIffsmstmt(BSVParser::IffsmstmtContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitReturnfsmstmt(BSVParser::ReturnfsmstmtContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitWhilefsmstmt(BSVParser::WhilefsmstmtContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitForfsminit(BSVParser::ForfsminitContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitForfsmstmt(BSVParser::ForfsmstmtContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitRepeatfsmstmt(BSVParser::RepeatfsmstmtContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitLoopbodyfsmstmt(BSVParser::LoopbodyfsmstmtContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitPortide(BSVParser::PortideContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitImportbvi(BSVParser::ImportbviContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitBvistmt(BSVParser::BvistmtContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitBviportopt(BSVParser::BviportoptContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitBvimethodopt(BSVParser::BvimethodoptContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitBvimethodname(BSVParser::BvimethodnameContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitBvimethodnames(BSVParser::BvimethodnamesContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitBvischedule(BSVParser::BvischeduleContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
 
 };

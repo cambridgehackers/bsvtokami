@@ -7,6 +7,8 @@
 //  main.cpp
 //
 
+#include <stdlib.h>
+#include <unistd.h>
 #include <iostream>
 
 #include "antlr4-runtime.h"
@@ -16,10 +18,29 @@
 
 using namespace antlr4;
 
-int main(int argc, const char **argv) {
+void usage(char * const argv[])
+{
+    fprintf(stderr, "Usage: %s [-t]\n", argv[0]);
+    exit(-1);
+}
+
+int main(int argc, char * const argv[]) {
     bool dumptokens = false;
     bool dumptree = false;
     size_t numberOfSyntaxErrors = 0;
+    
+    int ch;
+    int opt_type_check = 0;
+    while ((ch = getopt(argc, argv, "t")) != -1) {
+        switch (ch) {
+        case 't':
+            opt_type_check = 1;
+            break;
+        default:
+            usage(argv);
+        }
+    }
+
     for (int i = 1; i < argc; i++) {
         std::cout << "Parsing file " << argv[i] << std::endl;
         std::string inputFileName(argv[i]);
@@ -41,8 +62,10 @@ int main(int argc, const char **argv) {
         if (dumptree) {
             std::cout << tree->toStringTree(&parser) << std::endl << std::endl;
         }
-        TypeChecker *typeChecker = new TypeChecker();
-        typeChecker->visit(tree);
+        if (opt_type_check) {
+            TypeChecker *typeChecker = new TypeChecker();
+            typeChecker->visit(tree);
+        }
     }
     return (numberOfSyntaxErrors == 0) ? 0 : 1;
 }
