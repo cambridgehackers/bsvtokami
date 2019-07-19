@@ -50,20 +50,20 @@ Section DecExec.
 
   Local Definition spec : Mod := 
               hideMethods (ConcatMod
-  	                           (ConcatMod
+                                   (ConcatMod
                                     (Empty'mod (MultiCycleProc.mkMultiCycleProc "spec" "pgm" "dec" kamiexec "mem"))
-				     (RegFile'mod pgm))
-				     (ProcMemSpec.Decoder'mod dec))
+                                     (RegFile'mod pgm))
+                                     (ProcMemSpec.Decoder'mod dec))
              ("pgm-sub" :: "dec-getOp" :: "dec-getArithOp" :: "dec-getSrc1" :: "dec-getSrc2" :: "dec-getDst" :: "dec-getAddr" :: nil).
 
 
   Local Definition impl : Mod := 
              hideMethods (ConcatMod
-  	                           (ConcatMod
-  	                           (ConcatMod
+                                   (ConcatMod
+                                   (ConcatMod
                                     (NoMethods'mod (ProcDecExec.mkDecExecSep "impl" "pgm" "dec" kamiexec "e2wfifo" "mem"))
-				     (RegFile'mod pgm))
-				    (ProcMemSpec.Decoder'mod dec))
+                                     (RegFile'mod pgm))
+                                    (ProcMemSpec.Decoder'mod dec))
                                     (FIFO'mod e2wfifo))
              ("e2wfifo-first" :: "e2wfifo-deq" :: "e2wfifo-clear" :: "e2wfifo-enq" :: "e2wfifo-notFull" :: "e2wfifo-notEmpty"
              :: "pgm-sub" :: "dec-getOp" :: "dec-getArithOp" :: "dec-getSrc1" :: "dec-getSrc2" :: "dec-getDst" :: "dec-getAddr" :: nil).
@@ -238,7 +238,7 @@ Ltac unfold_flatten_inline_remove :=
   try (unfold inlineSingle_Meths_pos at 2 ; simpl) ;
   try (unfold inlineSingle_Meths_pos at 1 ; simpl) ;
   idtac "unfolding inlineAll_Rules" ;
-  unfold inlineAll_Rules ; unfold Datatypes.length ; unfold range ; simpl ;
+  unfold inlineAll_Rules ; unfold Datatypes.length ; (* unfold range ; simpl ; *)
   unfold inlineSingle_Rules_pos ; simpl ;
   unfold removeHides ;
   unfold getRegisters ; unfold getRules ; unfold getMethods ;
@@ -325,16 +325,16 @@ Record mySimRel (dec : Decoder) (iregs sregs: RegsT): Prop :=
    ("spec-pc", existT _ (SyntaxKind (Bit PgmSz)) spec_pcv)
    :: ("spec-state", existT _ (SyntaxKind (Bit 2)) spec_statev)
       :: ("spec-rf", existT _ (SyntaxKind (Array NumRegs (Bit DataSz))) rf_v)
-	   :: ("spec-d2e_op", existT _ (SyntaxKind (Bit 2)) spec_d2e_opv)
-	      :: ("spec-d2e_arithOp", existT _ (SyntaxKind (Bit 2)) spec_d2e_arithopv)
-		 :: ("spec-d2e_src1", existT _ (SyntaxKind (Bit RegFileSz)) spec_d2e_src1v)
-		    :: ("spec-d2e_src2", existT _ (SyntaxKind (Bit RegFileSz)) spec_d2e_src2v)
-		       :: ("spec-d2e_dst", existT _ (SyntaxKind (Bit RegFileSz)) spec_d2e_dstv)
-			  :: ("spec-d2e_addr", existT _ (SyntaxKind (Bit AddrSz)) spec_d2e_addrv)
-			       :: ("spec-e2w_dst", existT _ (SyntaxKind (Bit RegFileSz)) spec_e2w_dstv)
-				  :: ("spec-e2w_val", existT _ (SyntaxKind (Bit DataSz)) spec_e2w_valv)
-				     :: ("pgm-rfreg", existT _ (SyntaxKind (Array NumInstrs (Bit InstrSz))) pgmv)
-					:: nil ;
+           :: ("spec-d2e_op", existT _ (SyntaxKind (Bit 2)) spec_d2e_opv)
+              :: ("spec-d2e_arithOp", existT _ (SyntaxKind (Bit 2)) spec_d2e_arithopv)
+                 :: ("spec-d2e_src1", existT _ (SyntaxKind (Bit RegFileSz)) spec_d2e_src1v)
+                    :: ("spec-d2e_src2", existT _ (SyntaxKind (Bit RegFileSz)) spec_d2e_src2v)
+                       :: ("spec-d2e_dst", existT _ (SyntaxKind (Bit RegFileSz)) spec_d2e_dstv)
+                          :: ("spec-d2e_addr", existT _ (SyntaxKind (Bit AddrSz)) spec_d2e_addrv)
+                               :: ("spec-e2w_dst", existT _ (SyntaxKind (Bit RegFileSz)) spec_e2w_dstv)
+                                  :: ("spec-e2w_val", existT _ (SyntaxKind (Bit DataSz)) spec_e2w_valv)
+                                     :: ("pgm-rfreg", existT _ (SyntaxKind (Array NumInstrs (Bit InstrSz))) pgmv)
+                                        :: nil ;
 
    Hpc_validv: (impl_d2e_validv = false) -> (spec_statev = (natToWord 2 0)) ;
    Hpc_state1: (impl_d2e_validv = true) -> (impl_e2w_validv = false ) -> (spec_statev = (natToWord 2 1)) ;
@@ -439,20 +439,21 @@ Search (weq _ _ ). rewrite rewrite_weq with (pf := H). reflexivity.
      evar (impl_d2e_validv0 : bool).
      evar (impl_pcv0 : word PgmSz).
      econstructor 1 with (impl_d2e_validv := impl_d2e_validv0)
-                         (pgmv := x6) (impl_pcv := impl_pcv0) (spec_pcv := spec_pcv)
+                         (pgmv := rv2) (impl_pcv := impl_pcv0) (spec_pcv := spec_pcv)
                          (spec_e2w_valv := spec_e2w_valv)
                          (impl_e2w_valv := impl_e2w_valv).
      *** trivial.
      *** repeat (f_equal).
         instantiate (impl_d2e_validv0 := true).
 
-        instantiate (impl_pcv0 := wzero PgmSz ^+ x0 ^+ $1). (* looks wrong below *)
+        instantiate (impl_pcv0 := wzero PgmSz ^+ rv1 ^+ $1). (* looks wrong below *)
         unfold impl_pcv0. reflexivity. 
         unfold impl_d2e_validv0. reflexivity.
-     *** repeat f_equal.
+     *** admit.
+     (* *** repeat f_equal. *)
      *** unfold impl_d2e_validv0. intro. inv H.
      *** unfold impl_d2e_validv0. intro. intro. reflexivity.
-     *** unfold impl_d2e_validv0. intro. apply negb_true_iff in H3. go.
+     *** unfold impl_d2e_validv0. intro. go.
      *** unfold impl_d2e_validv0. intro. unfold impl_pcv0. rewrite wzero_wplus.
         split. reflexivity. go.
      *** go.
@@ -484,27 +485,30 @@ Search (weq _ _ ). rewrite rewrite_weq with (pf := H). reflexivity.
   * right. left. trivial.
     * (* reads spec *) eexists. (* updates spec *) eexists. split.
      **  discharge_SemAction.
-        *** go.
-assert (natToWord 2 1 = natToWord 2 1). reflexivity. rewrite rewrite_weq with (pf := H0). reflexivity.
+        *** go. admit. (*
+assert (natToWord 2 1 = natToWord 2 1). reflexivity. go. rewrite rewrite_weq with (pf := H0). reflexivity.
         *** rewrite H14. go. assert (x8 = wzero 0). ++ trivial.
-         ++ rewrite H0. simpl. reflexivity.
-     ** simpl.
+         ++ rewrite H0. simpl. reflexivity. *)
+     ** simpl. admit. (*
 evar (impl_d2e_validv0 : bool).
 
 econstructor 1 with (impl_d2e_validv := impl_d2e_validv0)
-                    (impl_d2e_src1v := x1)
-                    (impl_d2e_src2v := x0)
+                    (impl_d2e_src1v := spec_d2e_src1v)
+                    (impl_d2e_src2v := spec_d2e_src2v)
                     (impl_e2w_validv := true).
      *** trivial.
-     *** repeat f_equal. unfold impl_d2e_validv0. trivial.
-     *** repeat f_equal.
+     *** repeat f_equal. ++ unfold impl_d2e_validv0. trivial. 
+         ++ admit.
+         ++ admit.
+         ++ admit.
+     *** admit. (* repeat f_equal. *)
      *** unfold impl_d2e_validv0. go.
      *** go.
      *** go.
      *** go.
      *** go.
      *** go.
-     *** go. unfold evalExpr. simpl. reflexivity.
+     *** go. unfold evalExpr. simpl. reflexivity. *)
 
   + (* wb rule *) idtac "writeBack".
     right. exists "spec-doWriteBack". eexists. split.
