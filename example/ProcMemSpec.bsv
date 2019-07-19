@@ -49,7 +49,7 @@ interface Memory;
 endinterface
 
 (* synthesize *)
-module mkMemory(Memory);
+module Memory mkMemory();
    RegFile#(Bit#(AddrSz),Bit#(DataSz)) mem <- mkRegFileFull();
    method ActionValue#(Bit#(DataSz)) doMem(MemRq req);
       if (req.isLoad == 1'b1) begin
@@ -72,10 +72,11 @@ interface ToHost;
 endinterface
 
 (* synthesize *)
-module procSpec#(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
-		 Decoder dec,
-		 Executer exec,
-		 ToHost tohost)(Empty);
+module Empty
+       procSpec(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
+		Decoder dec,
+		Executer exec,
+		ToHost tohost);
    Reg#(Bit#(PgmSz)) pc <- mkRegU();
    RegFile#(Bit#(RegFileSz), Bit#(DataSz)) rf <- mkRegFileFull();
    Reg#(Bit#(2)) stage <- mkRegU();
@@ -90,7 +91,7 @@ module procSpec#(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
    Reg#(Bit#(RegFileSz)) e2w_dst <- mkRegU();
    Reg#(Bit#(DataSz))    e2w_val <- mkRegU();
 
-   rule doDecode if (stage == 2'd0);
+   rule doDecode when (stage == 2'd0);
      Bit#(InstrSz) inst = pgm.sub(pc);
       d2e_op <= dec.getOp(inst);
       d2e_src1 <= dec.getSrc1(inst);
@@ -100,7 +101,7 @@ module procSpec#(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
       stage <= 2'd1;
    endrule
 
-   rule doExec if (stage == 2'd1);
+   rule doExec when (stage == 2'd1);
 
       Bit#(DataSz) val1 = rf.sub(d2e_src1);
       Bit#(DataSz) val2 = rf.sub(d2e_src2);
@@ -112,7 +113,7 @@ module procSpec#(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
       stage <= 2'd2;
    endrule
 
-   rule doWriteBack if (stage == 2'd2);
+   rule doWriteBack when (stage == 2'd2);
 
       rf.upd(e2w_dst, e2w_val);
 
@@ -121,7 +122,7 @@ module procSpec#(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
       stage <= 2'd0;
    endrule
 
-//    rule doLoad if (dec.isOp(pgm.sub(pc),opLd));
+//    rule doLoad when (dec.isOp(pgm.sub(pc),opLd));
 //       Bit#(InstrSz) inst = pgm.sub(pc);
 //       Bit#(AddrSz) addr = dec.getAddr(inst);
 //       Bit#(RegFileSz) dst = dec.getDst(inst);
@@ -130,7 +131,7 @@ module procSpec#(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
 //       pc <= pc + 16'd1;
 //    endrule
 
-//    rule doStore if (dec.isOp(pgm.sub(pc),opSt));
+//    rule doStore when (dec.isOp(pgm.sub(pc),opSt));
 //       Bit#(InstrSz) inst = pgm.sub(pc);
 //       Bit#(AddrSz) addr = dec.getAddr(inst);
 //       Bit#(RegFileSz) src = dec.getSrc1(inst);
@@ -139,7 +140,7 @@ module procSpec#(RegFile#(Bit#(PgmSz),Bit#(InstrSz)) pgm,
 //       pc <= pc + 16'd1;
 //    endrule
 
-//    rule doHost if (dec.isOp(pgm.sub(pc),opTh));
+//    rule doHost when (dec.isOp(pgm.sub(pc),opTh));
 //       Bit#(InstrSz) inst = pgm.sub(pc);
 //       Bit#(RegFileSz) src1 = dec.getSrc1(inst);
 //       Bit#(DataSz) val1 = rf.sub(src1);

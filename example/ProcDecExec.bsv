@@ -8,18 +8,18 @@ import Vector::*;
 interface NoMethods;
 endinterface
 
-module mkDecExecSep#(RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm,
+module NoMethods mkDecExecSep(RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm,
 		     Decoder dec,
 		     Executer exec,
 		     Memory mem,
-                     Reg#(Vector#(NumRegs, Bit#(DataSz))) rf)(NoMethods);
+                     Reg#(Vector#(NumRegs, Bit#(DataSz))) rf);
    FIFOF#(D2E) d2eFifo <- mkFIFOF();
    FIFOF#(E2W) e2wFifo <- mkFIFOF();
 
    Reg#(Bit#(PgmSz)) decoder_pc <- mkRegU;
    Reg#(Vector#(NumRegs, Bool)) sbFlags <- mkRegU();
 
-   rule decode if (!d2eFifo.notFull());
+   rule decode when (!d2eFifo.notFull());
       Bit#(InstrSz) inst = pgm.sub(decoder_pc);
       OpK op = dec.getOp(inst);
       OpArithK arithOp = dec.getArithOp(inst);
@@ -37,7 +37,7 @@ module mkDecExecSep#(RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm,
    endrule
 
    D2E d2e = d2eFifo.first();
-   rule executeArith if (d2eFifo.notEmpty()
+   rule executeArith when (d2eFifo.notEmpty()
                          && !sbFlags[d2e.src1]
                          && !sbFlags[d2e.src2]
                         );
@@ -57,7 +57,7 @@ module mkDecExecSep#(RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm,
    endrule
 
    E2W e2w = e2wFifo.first();
-      rule writeBack if (sbFlags[e2w.idx]);
+      rule writeBack when (sbFlags[e2w.idx]);
          void e2wDeq <- e2wFifo.deq();
 	 void d2eDeq <- d2eFifo.deq();
 

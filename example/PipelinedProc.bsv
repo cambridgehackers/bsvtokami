@@ -10,7 +10,7 @@ interface ProcRegs;
    method Action write(Bit#(RegFileSz) r, Bit#(DataSz) val);
 endinterface
 
-module mkProcRegs(ProcRegs);
+module ProcRegs mkProcRegs();
    RegFile#(Bit#(RegFileSz),Bit#(DataSz)) rf <- mkRegFileFull();
    method Bit#(DataSz) read1(Bit#(RegFileSz) r1);
       Bit#(DataSz) val = rf.sub(r1);
@@ -35,9 +35,9 @@ typedef struct {
    Bit#(PgmSz) pc;
    } D2E deriving (Bits);
 
-module mkPipelinedDecoder#(RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm,
+module Empty mkPipelinedDecoder(RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm,
                            Decoder dec,
-                           FIFO#(D2E) d2eFifo)(Empty);
+                           FIFO#(D2E) d2eFifo);
    Reg#(Bit#(PgmSz)) pc <- mkReg(3'h0);
 
    rule decode;
@@ -64,10 +64,10 @@ interface Scoreboard;
    method Action remove(Bit#(RegFileSz) sidx);
 endinterface
 
-module mkScoreboard(Scoreboard);
+module Scoreboard mkScoreboard();
    RegFile#(Bit#(RegFileSz), Bool) sbFlags <- mkRegFileFull();
 
-   method Bool search1(Bit#(RegFileSz) sidx) if (True);
+   method Bool search1(Bit#(RegFileSz) sidx) when (True);
       Bool flag = sbFlags.sub(sidx);
       return flag;
    endmethod
@@ -91,15 +91,15 @@ typedef struct {
    Bit#(DataSz) val;
    } E2W deriving(Bits);
 
-module mkPipelinedExecuter#(FIFO#(D2E) d2eFifo,
+module Empty mkPipelinedExecuter(FIFO#(D2E) d2eFifo,
                             FIFO#(E2W) e2wFifo,
                             Scoreboard sb,
                             Executer exec,
                             ProcRegs rf,
 			    Memory mem,
-			    ToHost toHost)(Empty);
+			    ToHost toHost);
    D2E d2e = d2eFifo.first();
-   rule executeArith if (d2e.op == opArith
+   rule executeArith when (d2e.op == opArith
                          && !sb.search1(d2e.src1)
                          && !sb.search2(d2e.src2)
                         );
@@ -117,7 +117,7 @@ module mkPipelinedExecuter#(FIFO#(D2E) d2eFifo,
       void enq <- e2wFifo.enq(e2w);
    endrule
 
-   rule executeLoad if (d2e.op == opLd
+   rule executeLoad when (d2e.op == opLd
                          && !sb.search1(d2e.src1)
                          && !sb.search2(d2e.dst)
                         );
@@ -134,7 +134,7 @@ module mkPipelinedExecuter#(FIFO#(D2E) d2eFifo,
       void enq <- e2wFifo.enq(e2w);
    endrule
 
-   rule executeStore if (d2e.op == opSt
+   rule executeStore when (d2e.op == opSt
                          && !sb.search1(d2e.src1)
                         );
       D2E d2e = d2eFifo.first();
@@ -146,7 +146,7 @@ module mkPipelinedExecuter#(FIFO#(D2E) d2eFifo,
       Bit#(DataSz) unused <- mem.doMem(memrq);
    endrule
 
-   rule executeToHost if (d2e.op == opTh
+   rule executeToHost when (d2e.op == opTh
                          && !sb.search1(d2e.src1)
                         );
       D2E d2e = d2eFifo.first();
@@ -159,9 +159,9 @@ module mkPipelinedExecuter#(FIFO#(D2E) d2eFifo,
 
 endmodule
 
-module mkPipelinedWriteback#(FIFO#(E2W) e2wFifo,
+module Empty mkPipelinedWriteback(FIFO#(E2W) e2wFifo,
                              Scoreboard sb,
-                             ProcRegs rf)(Empty);
+                             ProcRegs rf);
    rule writeback;
       E2W e2w = e2wFifo.first();
       void deq <- e2wFifo.deq();
@@ -172,10 +172,10 @@ module mkPipelinedWriteback#(FIFO#(E2W) e2wFifo,
    endrule
 endmodule
 
-module mkProcImpl#(RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm,
+module Empty mkProcImpl(RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm,
                    Decoder dec,
                    Executer exec,
-		   ToHost toHost)(Empty);
+		   ToHost toHost);
    FIFO#(D2E) d2eFifo <- mkFIFO();
    FIFO#(E2W) e2wFifo <- mkFIFO();
    Memory mem <- mkMemory();
