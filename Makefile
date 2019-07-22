@@ -43,21 +43,13 @@ python/BSVParser.py: src/main/antlr/bsvtokami/BSV.g4 $(JARS)
 	pip3 install -q -r requirements.txt
 	java -jar $(JARS)  -Dlanguage=Python3 -listener -visitor -o python src/main/antlr/bsvtokami/BSV.g4
 
-GENERATED_SRCS = $(wildcard generated/*.cpp)
-GENERATED_OBJS = $(patsubst %.cpp,%.o,$(GENERATED_SRCS))
+.PHONY: bin/bsv-parser
 
-generated/%.o: generated/%.cpp
-	$(CXX) -c -g -O -Wno-attributes -Wno-unused-but-set-variable -Wall -std=c++11 -Igenerated -Iantlr4-cpp-runtime/runtime/src/ -o generated/$(*).o generated/$(*).cpp
-
-generated/libBSVParser.a: generated/BSVParser.cpp $(GENERATED_OBJS)
-	echo $(GENERATED_SRCS)
-	@echo AR libBSVParser.a
-	ar crs generated/libBSVParser.a $(GENERATED_OBJS)
-
-bin/bsv-parser: cpp/main.cpp cpp/TypeChecker.cpp cpp/BSVType.h cpp/BSVType.cpp cpp/TypeChecker.h generated/libBSVParser.a
+bin/bsv-parser:
 	test -f /usr/include/z3.h || echo sudo apt install z3-dev
-	mkdir -p bin
-	$(CXX) -g -O -Wall -std=c++11 -Igenerated -Iz3/src/api -Iz3/src/api/c++ -Iantlr4-cpp-runtime/runtime/src/ -o bin/bsv-parser cpp/main.cpp cpp/BSVType.cpp cpp/TypeChecker.cpp -Lgenerated -lBSVParser antlr4-cpp-runtime/dist/libantlr4-runtime.a -Lz3/build -lz3
+	mkdir -p bin build
+	@(cd build; cmake ..)
+	@$(MAKE) -C build && rsync -a build/bsv-parser ../bin
 
 antlr4-cpp-runtime: antlr4-cpp-runtime-4.7.1-source.zip
 	rm -fr antlr4-cpp-runtime/*
