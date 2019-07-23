@@ -6,16 +6,17 @@
 enum ExprType {
   InvalidType,
   VarExprType,
-  OperatorExpr,
+  OperatorExprType,
   CondExprType,
   CaseExprType
 };
 
 class Expr {
+ protected:
   ExprType exprType;
   
  public:
-  Expr();
+  Expr(ExprType exprType);
   virtual ~Expr();
 };
 

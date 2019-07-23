@@ -9,6 +9,7 @@ link_directories(
 set (SOURCE
      cpp/BSVType.cpp
      cpp/Expr.cpp
+     cpp/GenerateAst.cpp
      cpp/TypeChecker.cpp
      cpp/main.cpp
      generated/BSVBaseListener.cpp

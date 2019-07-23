@@ -14,6 +14,7 @@
 #include "antlr4-runtime.h"
 #include "BSVLexer.h"
 #include "BSVParser.h"
+#include "GenerateAst.h"
 #include "TypeChecker.h"
 
 using namespace antlr4;
@@ -31,8 +32,12 @@ int main(int argc, char * const argv[]) {
     
     int ch;
     int opt_type_check = 0;
-    while ((ch = getopt(argc, argv, "t")) != -1) {
+    int opt_ast = 1;
+    while ((ch = getopt(argc, argv, "at")) != -1) {
         switch (ch) {
+        case 'a':
+            opt_ast = 1;
+            break;
         case 't':
             opt_type_check = 1;
             break;
@@ -57,7 +62,7 @@ int main(int argc, char * const argv[]) {
 
         BSVParser parser(&tokens);
         //parser.addErrorListener(&ConsoleErrorListener::INSTANCE);
-        tree::ParseTree* tree = parser.packagedef();
+	BSVParser::PackagedefContext* tree = parser.packagedef();
         numberOfSyntaxErrors += parser.getNumberOfSyntaxErrors();
         if (dumptree) {
             std::cout << tree->toStringTree(&parser) << std::endl << std::endl;
@@ -65,6 +70,10 @@ int main(int argc, char * const argv[]) {
         if (opt_type_check) {
             TypeChecker *typeChecker = new TypeChecker();
             typeChecker->visit(tree);
+        }
+        if (opt_ast) {
+            GenerateAst *generateAst = new GenerateAst();
+            generateAst->generateAst(tree);
         }
     }
     return (numberOfSyntaxErrors == 0) ? 0 : 1;
