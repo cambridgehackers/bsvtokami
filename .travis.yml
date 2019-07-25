@@ -1,0 +1,25 @@
+language: cpp
+dist: bionic
+
+# addons:
+#   apt:
+#     sources:
+#      - 
+#     packages:
+#      - 
+
+before_install:
+  - sudo apt-get install -y z3-dev
+
+before_script:
+  - make antlr4-cpp-runtime
+  - make antlr4-cpp-runtime/dist/libantlr4-runtime.a
+
+script:
+  - make generated/BSVParser.g4
+  - make generated/BSVParser.cpp
+  - make bin/bsv-parser
+  - bin/bsv-parser example/ProcMemSpec.bsv
+
+after_success:
+  - echo yay!
