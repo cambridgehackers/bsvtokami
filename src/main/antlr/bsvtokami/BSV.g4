@@ -50,18 +50,16 @@ exportitem :
     ;
 
 importdecl :
-    'import' importitem (',' importitem)* ';'
-    ;
-importitem :
-    (upperCaseIdentifier '::')+ '*'
+    'import' (upperCaseIdentifier '::')+ '*' ';'
     ;
 packagestmt :
     interfacedecl
-    | typedecl
-    | typeclassdecl
-    | typeclassinstance
+    | typedefsynonym
+    | typedefenum
+    | typedefstruct
+    | typedeftaggedunion
     | externcimport
-    | vardecl
+    | varbinding
     | functiondef
     | moduledef
     | importdecl
@@ -89,12 +87,6 @@ methodprotoformal :
     ;
 subinterfacedecl :
     attributeinstance* 'interface' bsvtype lowerCaseIdentifier ';'
-    ;
-typedecl :
-    typedefsynonym
-    | typedefenum
-    | typedefstruct
-    | typedeftaggedunion
     ;
 typedeftype :
     typeide typeformals?
@@ -139,43 +131,14 @@ subunion :
 derives :
     'deriving' '(' typeide (',' typeide)* ')'
     ;
-vardecl :
-    attributeinstance* t=bsvtype varinit (',' varinit)*  ';' #VarBinding
-    | attributeinstance* t=bsvtype var=lowerCaseIdentifier '<-' rhs=expression ';' #ActionBinding
-    | attributeinstance* 'let' (lowerCaseIdentifier | ('{' lowerCaseIdentifier (',' lowerCaseIdentifier )* '}'))  (op=('='|'<-') rhs=expression)? ';' #LetBinding
-    | attributeinstance* 'match' pattern op=('<-'|'=') rhs=expression ';' #PatternBinding
+varbinding :
+    attributeinstance* ('let' | t=bsvtype) var=lowerCaseIdentifier '=' rhs=expression  ';'
     ;
-varinit :
-    var=lowerCaseIdentifier ('=' rhs=expression)?
+actionbinding:
+    attributeinstance* ('let' | t=bsvtype) var=lowerCaseIdentifier '<-' rhs=expression ';'
     ;
-typeclassdecl :
-    attributeinstance* 'typeclass' typeide typeformals typedepends? ';' overloadeddecl* 'endtypeclass' (':' typeide)?
-    ;
-typedepends :
-    'dependencies' '(' typedepend (',' typedepend)* ')'
-    ;
-typedepend :
-    typelist 'determines' typelist
-    ;
-typelist :
-    typeide
-    | '(' typeide (',' typeide)* ')'
-    ;
-overloadeddecl :
-    attributeinstance*
-    ( functionproto ';'
-    | moduleproto
-    | vardecl )
-    ;
-typeclassinstance :
-    attributeinstance*
-    'instance' typeide '#' '(' bsvtype (',' bsvtype)* ')' ';'
-    overloadeddef* 'endinstance' (':' typeide)?
-    ;
-overloadeddef :
-    varassign
-    | functiondef
-    | moduledef
+patternbinding:
+    attributeinstance* 'match' pattern op=('<-'|'=') rhs=expression ';'
     ;
 moduledef :
     attributeinstance* moduleproto (modulestmt)* 'endmodule' (':' lowerCaseIdentifier)?
@@ -185,6 +148,7 @@ moduleproto :
     ;
 modulestmt :
     methoddef
+    | moduledef
     | moduleinst
     | subinterfacedef
     | stmt
@@ -252,7 +216,6 @@ lvalue :
     ;
 bsvtype :
     typeide ('#' '(' bsvtype (',' bsvtype)* ')')?
-    | '(' typeide ('#' '(' bsvtype (',' bsvtype)* ')')? ')'
     | var=lowerCaseIdentifier
     | typenat
     | '(' bsvtype ')'
@@ -327,7 +290,7 @@ memberbind :
 interfacestmt :
     methoddef
     | subinterfacedef
-    | vardecl
+    | varbinding
     | varassign
     ;
 beginendblock :
@@ -338,10 +301,11 @@ regwrite :
     ;
 
 stmt :
-     vardecl
+     varbinding
+    | actionbinding
+    | patternbinding
     | varassign
     | functiondef
-    | moduledef
     | ruledef
     | regwrite ';'
     | beginendblock
@@ -350,7 +314,7 @@ stmt :
     | forstmt
     | whilestmt
     | expression ';'
-    | 'return' expression ';'
+    | returnstmt
     ;
 ifstmt :
     'if' '(' expression ')' stmt ('else' stmt)?
@@ -384,6 +348,9 @@ forincr :
     ;
 varincr :
     lowerCaseIdentifier '=' expression
+    ;
+returnstmt :
+    'return' expression ';'
     ;
 pattern :
     '.' var=lowerCaseIdentifier
