@@ -2,11 +2,10 @@
 #include "TypeChecker.h"
 
 const char *TypeChecker::check_result_name[] = {
-    "unsat", "sat", "unknown"
+        "unsat", "sat", "unknown"
 };
 
-void TypeChecker::setupZ3Context()
-{
+void TypeChecker::setupZ3Context() {
     exprs.clear();
     trackers.clear();
     typeDecls.clear();
@@ -14,55 +13,66 @@ void TypeChecker::setupZ3Context()
     intSort = context.int_sort();
     boolSort = context.bool_sort();
 
-    Z3_constructor action_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Action"), Z3_mk_string_symbol(context, "isAction"),
+    Z3_constructor action_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Action"),
+                                                  Z3_mk_string_symbol(context, "isAction"),
                                                   0, NULL, NULL, NULL);
-    Z3_symbol actionvalue_field_names[] = { Z3_mk_string_symbol(context, "elt") };
-    Z3_sort actionvalue_field_sorts[] = { NULL };
-    unsigned actionvalue_field_sort_refs[] = { 0 };
-    Z3_constructor actionvalue_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "ActionValue"), Z3_mk_string_symbol(context, "isActionValue"),
+    Z3_symbol actionvalue_field_names[] = {Z3_mk_string_symbol(context, "elt")};
+    Z3_sort actionvalue_field_sorts[] = {NULL};
+    unsigned actionvalue_field_sort_refs[] = {0};
+    Z3_constructor actionvalue_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "ActionValue"),
+                                                       Z3_mk_string_symbol(context, "isActionValue"),
                                                        1,
                                                        actionvalue_field_names,
                                                        actionvalue_field_sorts,
                                                        actionvalue_field_sort_refs);
-    Z3_symbol bit_field_names[] = { Z3_mk_string_symbol(context, "width") };
-    Z3_sort bit_field_sorts[] = { intSort };
-    unsigned bit_field_sort_refs[] = { 0 };
-    Z3_constructor bit_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Bit"), Z3_mk_string_symbol(context, "isBit"),
-                                               1, 
+    Z3_symbol bit_field_names[] = {Z3_mk_string_symbol(context, "width")};
+    Z3_sort bit_field_sorts[] = {intSort};
+    unsigned bit_field_sort_refs[] = {0};
+    Z3_constructor bit_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Bit"),
+                                               Z3_mk_string_symbol(context, "isBit"),
+                                               1,
                                                bit_field_names,
                                                bit_field_sorts,
                                                bit_field_sort_refs);
     Z3_constructor bool_con = Z3_mk_constructor(context,
-                                                Z3_mk_string_symbol(context, "Bool"), Z3_mk_string_symbol(context, "isBool"),
+                                                Z3_mk_string_symbol(context, "Bool"),
+                                                Z3_mk_string_symbol(context, "isBool"),
                                                 0, NULL, NULL, NULL);
     Z3_constructor bozo_con = Z3_mk_constructor(context,
-                                                Z3_mk_string_symbol(context, "Bozo"), Z3_mk_string_symbol(context, "isBozo"),
+                                                Z3_mk_string_symbol(context, "Bozo"),
+                                                Z3_mk_string_symbol(context, "isBozo"),
                                                 0, NULL, NULL, NULL);
     Z3_constructor integer_con = Z3_mk_constructor(context,
-                                                   Z3_mk_string_symbol(context, "Integer"), Z3_mk_string_symbol(context, "isInteger"),
+                                                   Z3_mk_string_symbol(context, "Integer"),
+                                                   Z3_mk_string_symbol(context, "isInteger"),
                                                    0, NULL, NULL, NULL);
-    Z3_constructor real_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Real"), Z3_mk_string_symbol(context, "isReal"),
+    Z3_constructor real_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Real"),
+                                                Z3_mk_string_symbol(context, "isReal"),
                                                 0, NULL, NULL, NULL);
-    Z3_symbol reg_field_names[] = { Z3_mk_string_symbol(context, "elt") };
-    Z3_sort reg_field_sorts[] = { NULL };
-    unsigned reg_field_sort_refs[] = { 0 };
-    Z3_constructor reg_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Reg"), Z3_mk_string_symbol(context, "isReg"),
+    Z3_symbol reg_field_names[] = {Z3_mk_string_symbol(context, "elt")};
+    Z3_sort reg_field_sorts[] = {NULL};
+    unsigned reg_field_sort_refs[] = {0};
+    Z3_constructor reg_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Reg"),
+                                               Z3_mk_string_symbol(context, "isReg"),
                                                1,
                                                reg_field_names,
                                                reg_field_sorts,
-                                               reg_field_sort_refs );
-    Z3_constructor rule_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Rule"), Z3_mk_string_symbol(context, "isRule"),
+                                               reg_field_sort_refs);
+    Z3_constructor rule_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Rule"),
+                                                Z3_mk_string_symbol(context, "isRule"),
                                                 0, NULL, NULL, NULL);
-    Z3_constructor string_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "String"), Z3_mk_string_symbol(context, "isString"),
+    Z3_constructor string_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "String"),
+                                                  Z3_mk_string_symbol(context, "isString"),
                                                   0, NULL, NULL, NULL);
-    Z3_constructor void_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Void"), Z3_mk_string_symbol(context, "isVoid"),
+    Z3_constructor void_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Void"),
+                                                Z3_mk_string_symbol(context, "isVoid"),
                                                 0, NULL, NULL, NULL);
 
 
     //FIXME: add support for user defined types
     Z3_constructor default_constructors[] = {
-        action_con, actionvalue_con, bit_con, bool_con, bozo_con,
-        integer_con, real_con, reg_con, rule_con, string_con, void_con
+            action_con, actionvalue_con, bit_con, bool_con, bozo_con,
+            integer_con, real_con, reg_con, rule_con, string_con, void_con
     };
     unsigned num_default_constructors = sizeof(default_constructors) / sizeof(default_constructors[0]);
     // constructors for user-defined types
@@ -77,9 +87,11 @@ void TypeChecker::setupZ3Context()
         std::string typePredicate(std::string("is_") + typeDecl->name);
         fprintf(stderr, "User defined type %s\n", typeDecl->name.c_str());
         constructors[i + num_default_constructors] = Z3_mk_constructor(context,
-                                                                       Z3_mk_string_symbol(context, typeDecl->name.c_str()),
-                                                                       Z3_mk_string_symbol(context, typePredicate.c_str()),
-                                                                       //FIXME type parameters
+                                                                       Z3_mk_string_symbol(context,
+                                                                                           typeDecl->name.c_str()),
+                                                                       Z3_mk_string_symbol(context,
+                                                                                           typePredicate.c_str()),
+                //FIXME type parameters
                                                                        0, NULL, NULL, NULL);
     }
 
@@ -97,46 +109,41 @@ void TypeChecker::setupZ3Context()
         typeDecls.insert(std::pair<std::string, z3::func_decl>(Z3_get_symbol_string(context, name), func_decl_obj));
         fprintf(stderr, "               name is %s\n", func_decl_obj.name().str().c_str());
     }
-    boolops["=="] =  true;
-    boolops["!="] =  true;
-    boolops["<"] =  true;
-    boolops[">"] =  true;
-    boolops["<="] =  true;
-    boolops[">="] =  true;
-    boolops["&&"] =  true;
-    boolops["||"] =  true;
+    boolops["=="] = true;
+    boolops["!="] = true;
+    boolops["<"] = true;
+    boolops[">"] = true;
+    boolops["<="] = true;
+    boolops[">="] = true;
+    boolops["&&"] = true;
+    boolops["||"] = true;
 }
 
-z3::symbol TypeChecker::freshName(std::string name)
-{
+z3::symbol TypeChecker::freshName(std::string name) {
     char uniq_name[128];
     snprintf(uniq_name, sizeof(uniq_name), "%s-%d", name.c_str(), nameCount++);
     return context.str_symbol(uniq_name);
 }
 
-z3::expr TypeChecker::freshConstant(std::string name, z3::sort sort)
-{
+z3::expr TypeChecker::freshConstant(std::string name, z3::sort sort) {
     return context.constant(freshName(name), sort);
 }
 
-z3::expr TypeChecker::constant(std::string name, z3::sort sort)
-{
+z3::expr TypeChecker::constant(std::string name, z3::sort sort) {
     return context.constant(context.str_symbol(name.c_str()), sort);
 }
 
-void TypeChecker::insertExpr(antlr4::ParserRuleContext *ctx, z3::expr expr)
-{
+void TypeChecker::insertExpr(antlr4::ParserRuleContext *ctx, z3::expr expr) {
     fprintf(stderr, "  insert expr %s\n", ctx->getText().c_str());
     exprs.insert(std::pair<antlr4::ParserRuleContext *, z3::expr>(ctx, expr));
 }
-void TypeChecker::insertTracker(antlr4::ParserRuleContext *ctx, z3::expr tracker)
-{
+
+void TypeChecker::insertTracker(antlr4::ParserRuleContext *ctx, z3::expr tracker) {
     fprintf(stderr, "  insert tracker %s\n", ctx->getText().c_str());
     trackers.insert(std::pair<antlr4::ParserRuleContext *, z3::expr>(ctx, tracker));
 }
 
-z3::expr TypeChecker::orExprs(std::vector<z3::expr> exprs)
-{
+z3::expr TypeChecker::orExprs(std::vector<z3::expr> exprs) {
     if (exprs.size() == 1) {
         return exprs.at(0);
     } else {
@@ -148,8 +155,7 @@ z3::expr TypeChecker::orExprs(std::vector<z3::expr> exprs)
     }
 }
 
-std::shared_ptr<BSVType> TypeChecker::exprToBSVType(z3::expr expr)
-{
+std::shared_ptr<BSVType> TypeChecker::exprToBSVType(z3::expr expr) {
     z3::sort sort = expr.get_sort();
     if (eq(sort, typeSort)) {
         std::string name(expr.to_string());

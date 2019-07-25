@@ -11,7 +11,7 @@
 /**
  * Static analyzer of BSV package
  */
-class  TypeChecker : public BSVBaseVisitor {
+class TypeChecker : public BSVBaseVisitor {
     z3::context context;
     z3::solver solver;
     std::map<antlr4::ParserRuleContext *, z3::expr> exprs;
@@ -30,24 +30,29 @@ class  TypeChecker : public BSVBaseVisitor {
     int nameCount;
 public:
     TypeChecker()
-        : context(), solver(context)
-        , typeSort(context), intSort(context), boolSort(context)
-        , nameCount(100)
-    {
+            : context(), solver(context), typeSort(context), intSort(context), boolSort(context), nameCount(100) {
     }
 
- private:
+private:
     static const char *check_result_name[];
+
     void setupZ3Context();
+
     z3::symbol freshName(std::string name);
+
     z3::expr freshConstant(std::string name, z3::sort sort);
+
     z3::expr constant(std::string name, z3::sort sort);
+
     void insertExpr(antlr4::ParserRuleContext *ctx, z3::expr expr);
+
     void insertTracker(antlr4::ParserRuleContext *ctx, z3::expr tracker);
+
     z3::expr orExprs(std::vector<z3::expr> exprs);
+
     std::shared_ptr<BSVType> exprToBSVType(z3::expr expr);
 
- protected:
+protected:
 
     virtual antlrcpp::Any visitPackagedef(BSVParser::PackagedefContext *ctx) override {
         size_t numelts = ctx->packagestmt().size();
@@ -93,11 +98,6 @@ public:
         return freshConstant(__FUNCTION__, typeSort);
     }
 
-    virtual antlrcpp::Any visitImportitem(BSVParser::ImportitemContext *ctx) override {
-        assert(0);
-        return freshConstant(__FUNCTION__, typeSort);
-    }
-
     virtual antlrcpp::Any visitPackagestmt(BSVParser::PackagestmtContext *ctx) override {
         setupZ3Context();
         return visitChildren(ctx);
@@ -119,14 +119,14 @@ public:
     }
 
     virtual antlrcpp::Any visitInterfacememberdecl(BSVParser::InterfacememberdeclContext *ctx) override {
-	if (ctx->methodproto()) {
-	} else {
-	}
+        if (ctx->methodproto()) {
+        } else {
+        }
         return visitChildren(ctx);
     }
 
     virtual antlrcpp::Any visitMethodproto(BSVParser::MethodprotoContext *ctx) override {
-	fprintf(stderr, "Visit method proto %s\n", ctx->getText().c_str());
+        fprintf(stderr, "Visit method proto %s\n", ctx->getText().c_str());
         return visitChildren(ctx);
     }
 
@@ -139,10 +139,6 @@ public:
     }
 
     virtual antlrcpp::Any visitSubinterfacedecl(BSVParser::SubinterfacedeclContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitTypedecl(BSVParser::TypedeclContext *ctx) override {
         return visitChildren(ctx);
     }
 
@@ -230,19 +226,18 @@ public:
         return visitChildren(ctx);
     }
 
-    virtual antlrcpp::Any visitVarBinding(BSVParser::VarBindingContext *ctx) override {
-        z3::expr bsvtypeExpr = visit(ctx->t);
-        for (int i = ctx->varinit().size(); i < ctx->varinit().size(); i++) {
-            BSVParser::VarinitContext *varinit = ctx->varinit().at(i);
-            z3::expr lhsexpr = visit(varinit->var);
+    virtual antlrcpp::Any visitVarbinding(BSVParser::VarbindingContext *ctx) override {
+        z3::expr lhsexpr = visit(ctx->var);
+        if (ctx->t) {
+            z3::expr bsvtypeExpr = visit(ctx->t);
             solver.add(lhsexpr == bsvtypeExpr);
-            z3::expr rhsexpr = visit(varinit->rhs);
-            solver.add(bsvtypeExpr == rhsexpr);
         }
+        z3::expr rhsexpr = visit(ctx->rhs);
+        solver.add(lhsexpr == rhsexpr);
         return visitChildren(ctx);
     }
 
-    virtual antlrcpp::Any visitActionBinding(BSVParser::ActionBindingContext *ctx) override {
+    virtual antlrcpp::Any visitActionbinding(BSVParser::ActionbindingContext *ctx) override {
         auto it = exprs.find(ctx);
         if (it != exprs.end())
             return it->second;
@@ -265,47 +260,7 @@ public:
         return varsym;
     }
 
-    virtual antlrcpp::Any visitLetBinding(BSVParser::LetBindingContext *ctx) override {
-        z3::expr lhsexpr = visit(ctx->lowerCaseIdentifier().at(0));
-        fprintf(stderr, "Let binding rhs %s\n", ctx->rhs->getText().c_str());
-        z3::expr rhsexpr = visit(ctx->rhs);
-        solver.add(lhsexpr == rhsexpr);
-        return NULL;
-    }
-
-    virtual antlrcpp::Any visitPatternBinding(BSVParser::PatternBindingContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitVarinit(BSVParser::VarinitContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitTypeclassdecl(BSVParser::TypeclassdeclContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitTypedepends(BSVParser::TypedependsContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitTypedepend(BSVParser::TypedependContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitTypelist(BSVParser::TypelistContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitOverloadeddecl(BSVParser::OverloadeddeclContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitTypeclassinstance(BSVParser::TypeclassinstanceContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitOverloadeddef(BSVParser::OverloadeddefContext *ctx) override {
+    virtual antlrcpp::Any visitPatternbinding(BSVParser::PatternbindingContext *ctx) override {
         return visitChildren(ctx);
     }
 
@@ -327,7 +282,7 @@ public:
                 try {
                     z3::expr v = mod.eval(e, true);
                     std::cerr << e << " evaluates to " << v << std::endl;
-                } catch (const std::exception& e) {
+                } catch (const std::exception &e) {
                     std::cerr << "exception" << std::endl;
                 }
             }
@@ -336,7 +291,7 @@ public:
                 try {
                     z3::expr v = mod.eval(e, true);
                     std::cerr << e << " evaluates to " << v << std::endl;
-                } catch (const std::exception& e) {
+                } catch (const std::exception &e) {
                     std::cerr << "exception" << std::endl;
                 }
             }
@@ -460,20 +415,22 @@ public:
                     std::vector<BSVParser::BsvtypeContext *> typeArgs = ctx->bsvtype();
                     int numArgs = typeArgs.size();
                     switch (numArgs) {
-                    case 0:
-                        bsvtype = decl();
-                        break;
-                    case 1: {
-                        z3::expr t0 = visit(typeArgs[0]);
-                        bsvtype = decl(t0);
-                    } break;
-                    case 2: {
-                        z3::expr t0 = visit(typeArgs[0]);
-                        z3::expr t1 = visit(typeArgs[1]);
-                        bsvtype = decl(t0, t1);
-                    } break;
-                    default:
-                        fprintf(stderr, "Too many type arguments: %d\n", numArgs);
+                        case 0:
+                            bsvtype = decl();
+                            break;
+                        case 1: {
+                            z3::expr t0 = visit(typeArgs[0]);
+                            bsvtype = decl(t0);
+                        }
+                            break;
+                        case 2: {
+                            z3::expr t0 = visit(typeArgs[0]);
+                            z3::expr t1 = visit(typeArgs[1]);
+                            bsvtype = decl(t0, t1);
+                        }
+                            break;
+                        default:
+                            fprintf(stderr, "Too many type arguments: %d\n", numArgs);
                     }
                 } else {
                     z3::func_decl bozoDecl = typeDecls.find("Bozo")->second;
@@ -481,7 +438,7 @@ public:
                 }
             }
         } else if (ctx->typenat() != NULL) {
-            return context.int_val((int)strtol(ctx->getText().c_str(), NULL, 0));
+            return context.int_val((int) strtol(ctx->getText().c_str(), NULL, 0));
         } else {
             fprintf(stderr, "Unhandled bsvtype %s\n", ctx->getText().c_str());
         }
@@ -522,7 +479,7 @@ public:
                 if (item->pattern() != NULL) {
                     z3::expr itemtype = visit(item->pattern());
                     solver.add(exprtype == itemtype);
-		}
+                }
                 z3::expr bodytype = visit(item->body);
                 solver.add(casetype == bodytype);
             }
@@ -570,7 +527,7 @@ public:
 
         std::string opstr(ctx->op->getText());
         char opnamebuf[128];
-        snprintf(opnamebuf, sizeof(opnamebuf)-1, "expr%s-%d", opstr.c_str(), nameCount++);
+        snprintf(opnamebuf, sizeof(opnamebuf) - 1, "expr%s-%d", opstr.c_str(), nameCount++);
         std::string binopstr(opnamebuf);
         z3::expr binopsym = context.constant(binopstr.c_str(), typeSort);
         if (boolops.find(opstr) != boolops.end()) {

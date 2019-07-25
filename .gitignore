@@ -16,3 +16,9 @@ connectal
 Makefile.coq.all
 Makefile.coq.all.conf
 Makefile.conf
+Makefile.coq*
+build
+.coqdeps.d
+.classpath
+.gradle
+.idea

@@ -3,23 +3,47 @@
 
 #include <BSVParser.h>
 
+#include "BSVType.h"
 #include "Expr.h"
+#include "Stmt.h"
 
 class GenerateAst {
- public:
-  GenerateAst() {}
+public:
+    GenerateAst() {}
 
-  void generateAst(BSVParser::PackagedefContext *ctx);
-  void generateAst(BSVParser::PackagestmtContext *ctx);
-  void generateAst(BSVParser::ModuledefContext *ctx);
-  void generateAst(BSVParser::MethoddefContext *ctx);
-  void generateAst(BSVParser::RuledefContext *ctx);
-  void generateAst(BSVParser::StmtContext *ctx);
+    void generateAst(BSVParser::PackagedefContext *ctx);
 
-  std::shared_ptr<Expr> expr(BSVParser::ExpressionContext *ctx);
-  std::shared_ptr<Expr> expr(BSVParser::CaseexpritemContext *ctx);
-  std::shared_ptr<Expr> expr(BSVParser::CaseexprdefaultitemContext *ctx);
-  std::shared_ptr<Expr> expr(BSVParser::BinopexprContext *ctx);
-  std::shared_ptr<Expr> expr(BSVParser::UnopexprContext *ctx);
-  std::shared_ptr<Expr> expr(BSVParser::ExprprimaryContext *ctx);
+    void generateAst(BSVParser::PackagestmtContext *ctx);
+
+    std::shared_ptr<Stmt> generateAst(BSVParser::InterfacedeclContext *ctx);
+
+    std::shared_ptr<Stmt> generateAst(BSVParser::ModuledefContext *ctx);
+
+    std::shared_ptr<Stmt> generateAst(BSVParser::MethoddefContext *ctx);
+
+    std::shared_ptr<BSVType> bsvtype(BSVParser::BsvtypeContext *);
+
+    std::shared_ptr<BSVType> bsvtype(BSVParser::TypedeftypeContext *);
+
+    std::shared_ptr<Stmt> generateAst(BSVParser::RuledefContext *ctx);
+
+    std::shared_ptr<Stmt> generateAst(BSVParser::StmtContext *ctx);
+
+    std::shared_ptr<Expr> expr(BSVParser::ExpressionContext *ctx);
+
+    std::shared_ptr<Expr> expr(BSVParser::CaseexpritemContext *ctx);
+
+    std::shared_ptr<Expr> expr(BSVParser::CaseexprdefaultitemContext *ctx);
+
+    std::shared_ptr<Expr> expr(BSVParser::BinopexprContext *ctx);
+
+    std::shared_ptr<Expr> expr(BSVParser::UnopexprContext *ctx);
+
+    std::shared_ptr<Expr> expr(BSVParser::ExprprimaryContext *ctx);
+
+    std::shared_ptr<Expr> expr(BSVParser::TaggedunionexprContext *ctx);
+
+    std::shared_ptr<Stmt> generateAst(BSVParser::VarbindingContext *varbinding);
+
+    std::shared_ptr<Stmt> generateAst(BSVParser::ActionbindingContext *actionbinding);
 };

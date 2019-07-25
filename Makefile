@@ -47,9 +47,9 @@ python/BSVParser.py: src/main/antlr/bsvtokami/BSV.g4 $(JARS)
 
 bin/bsv-parser:
 	test -f /usr/include/z3.h || echo sudo apt install z3-dev
-	mkdir -p bin build
-	@(cd build; cmake ..)
-	@$(MAKE) -C build && echo built && cp build/bsv-parser bin/bsv-parser
+	mkdir -p bin cpp/build
+	@(cd cpp/build; cmake ..)
+	@$(MAKE) -C cpp/build && echo built && cp cpp/build/bsv-parser bin/bsv-parser
 
 antlr4-cpp-runtime: antlr4-cpp-runtime-4.7.1-source.zip
 	rm -fr antlr4-cpp-runtime/*

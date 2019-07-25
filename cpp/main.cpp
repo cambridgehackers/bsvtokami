@@ -19,35 +19,34 @@
 
 using namespace antlr4;
 
-void usage(char * const argv[])
-{
+void usage(char *const argv[]) {
     fprintf(stderr, "Usage: %s [-t]\n", argv[0]);
     exit(-1);
 }
 
-int main(int argc, char * const argv[]) {
+int main(int argc, char *const argv[]) {
     bool dumptokens = false;
     bool dumptree = false;
     size_t numberOfSyntaxErrors = 0;
-    
+
     int ch;
     int opt_type_check = 0;
     int opt_ast = 1;
     while ((ch = getopt(argc, argv, "at")) != -1) {
         switch (ch) {
-        case 'a':
-            opt_ast = 1;
-            break;
-        case 't':
-            opt_type_check = 1;
-            break;
-        default:
-            usage(argv);
+            case 'a':
+                opt_ast = 1;
+                break;
+            case 't':
+                opt_type_check = 1;
+                break;
+            default:
+                usage(argv);
         }
     }
 
-    for (int i = 1; i < argc; i++) {
-        std::cout << "Parsing file " << argv[i] << std::endl;
+    for (int i = optind; i < argc; i++) {
+        std::cerr << "Parsing file " << argv[i] << std::endl;
         std::string inputFileName(argv[i]);
         ANTLRFileStream input(inputFileName);
         BSVLexer lexer(&input);
@@ -62,7 +61,7 @@ int main(int argc, char * const argv[]) {
 
         BSVParser parser(&tokens);
         //parser.addErrorListener(&ConsoleErrorListener::INSTANCE);
-	BSVParser::PackagedefContext* tree = parser.packagedef();
+        BSVParser::PackagedefContext *tree = parser.packagedef();
         numberOfSyntaxErrors += parser.getNumberOfSyntaxErrors();
         if (dumptree) {
             std::cout << tree->toStringTree(&parser) << std::endl << std::endl;
