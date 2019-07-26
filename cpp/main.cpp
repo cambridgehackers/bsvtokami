@@ -15,6 +15,7 @@
 #include "BSVLexer.h"
 #include "BSVParser.h"
 #include "GenerateAst.h"
+#include "GenerateIR.h"
 #include "TypeChecker.h"
 
 using namespace antlr4;
@@ -32,10 +33,14 @@ int main(int argc, char *const argv[]) {
     int ch;
     int opt_type_check = 0;
     int opt_ast = 1;
-    while ((ch = getopt(argc, argv, "at")) != -1) {
+    int opt_ir = 1;
+    while ((ch = getopt(argc, argv, "ait")) != -1) {
         switch (ch) {
             case 'a':
                 opt_ast = 1;
+                break;
+            case 'i':
+                opt_ir = 1;
                 break;
             case 't':
                 opt_type_check = 1;
@@ -72,7 +77,13 @@ int main(int argc, char *const argv[]) {
         }
         if (opt_ast) {
             GenerateAst *generateAst = new GenerateAst();
-            generateAst->generateAst(tree);
+            vector<shared_ptr<Stmt>> stmts = generateAst->generateAst(tree);
+            if (opt_ir) {
+                GenerateIR *generateIR = new GenerateIR();
+                generateIR->open(argv[i] + string(".IR"));
+                generateIR->generateIR(stmts);
+                generateIR->close();
+            }
         }
     }
     return (numberOfSyntaxErrors == 0) ? 0 : 1;

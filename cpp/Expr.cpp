@@ -15,7 +15,7 @@ Expr::Expr(ExprType exprType)
 Expr::~Expr() {
 }
 
-VarExpr::VarExpr(string name)
+VarExpr::VarExpr(const string &name)
         : Expr(VarExprType), name(name), sourceName(name) {
 }
 
@@ -26,7 +26,9 @@ void VarExpr::prettyPrint(int depth) {
     cout << name;
 }
 
-IntConst::IntConst(string repr)
+shared_ptr<VarExpr> VarExpr::varExpr() { return static_pointer_cast<VarExpr,Expr>(shared_from_this()); }
+
+IntConst::IntConst(const string &repr)
         : Expr(IntConstType), repr(repr), base(0), width(0) {
     const char *repr_ptr = repr.c_str();
     const char *quote_ptr = strchr(repr_ptr, '\'');
@@ -63,13 +65,15 @@ void IntConst::prettyPrint(int depth) {
     cout << repr;
 }
 
+shared_ptr<IntConst> IntConst::intConst() { return static_pointer_cast<IntConst,Expr>(shared_from_this()); }
 
-OperatorExpr::OperatorExpr(string op, shared_ptr<Expr> lhs)
+
+OperatorExpr::OperatorExpr(const string &op, const shared_ptr<Expr> &lhs)
         : Expr(OperatorExprType), op(op), lhs(lhs) {
     assert(lhs);
 }
 
-OperatorExpr::OperatorExpr(string op, shared_ptr<Expr> lhs, shared_ptr<Expr> rhs)
+OperatorExpr::OperatorExpr(const string &op, const shared_ptr<Expr> &lhs, const shared_ptr<Expr> &rhs)
         : Expr(OperatorExprType), op(op), lhs(lhs), rhs(rhs) {
     assert(lhs);
 }
@@ -88,7 +92,9 @@ void OperatorExpr::prettyPrint(int depth) {
     }
 }
 
-FieldExpr::FieldExpr(shared_ptr<Expr> object, std::string fieldName)
+shared_ptr<OperatorExpr> OperatorExpr::operatorExpr() { return static_pointer_cast<OperatorExpr,Expr>(shared_from_this()); }
+
+FieldExpr::FieldExpr(const shared_ptr<Expr> &object, const std::string &fieldName)
         : Expr(FieldExprType), object(object), fieldName(fieldName) {
 }
 
@@ -100,6 +106,8 @@ void FieldExpr::prettyPrint(int depth) {
     object->prettyPrint(depth + 1);
     cout << "." << fieldName;
 }
+
+shared_ptr<FieldExpr> FieldExpr::fieldExpr() { return static_pointer_cast<FieldExpr,Expr>(shared_from_this()); }
 
 CallExpr::CallExpr(const shared_ptr<Expr> &function, const vector<shared_ptr<Expr>> &args) : Expr(
         CallExprType), function(function), args(args) {
@@ -121,6 +129,8 @@ void CallExpr::prettyPrint(int depth) {
     cout << ")";
 }
 
+shared_ptr<CallExpr> CallExpr::callExpr() { return static_pointer_cast<CallExpr,Expr>(shared_from_this()); }
+
 EnumUnionStructExpr::EnumUnionStructExpr(const string &tag, const vector<string> &keys,
                                          const vector<shared_ptr<Expr>> &vals) : Expr(EnumUnionStructExprType), tag(tag), keys(keys),
                                                                                  vals(vals) {}
@@ -135,6 +145,8 @@ void EnumUnionStructExpr::prettyPrint(int depth) {
     }
     cout << " }";
 }
+
+shared_ptr<EnumUnionStructExpr> EnumUnionStructExpr::enumUnionStructExpr() { return static_pointer_cast<EnumUnionStructExpr,Expr>(shared_from_this()); }
 
 ArraySubExpr::ArraySubExpr(const shared_ptr<Expr> &array, const shared_ptr<Expr> &msb,
                            const shared_ptr<Expr> &lsb) : Expr(ArraySubExprType), array(array), msb(msb), lsb(lsb) {}
@@ -153,3 +165,5 @@ void ArraySubExpr::prettyPrint(int depth) {
     }
     cout << "]";
 }
+
+shared_ptr<ArraySubExpr> ArraySubExpr::arraySubExpr() { return static_pointer_cast<ArraySubExpr,Expr>(shared_from_this()); }

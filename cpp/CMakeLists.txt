@@ -11,6 +11,7 @@ set (SOURCE
      Expr.cpp
      Stmt.cpp
      GenerateAst.cpp
+     GenerateIR.cpp
      TypeChecker.cpp
      main.cpp
      ../generated/BSVBaseListener.cpp
@@ -19,7 +20,7 @@ set (SOURCE
      ../generated/BSVListener.cpp
      ../generated/BSVParser.cpp
      ../generated/BSVVisitor.cpp
-     )
+		GenerateIR.cpp GenerateIR.h)
 set(CMAKE_CXX_FLAGS "-O -g -std=c++14")
 add_executable(${PROJECT_NAME} ${SOURCE})
 target_include_directories(${PROJECT_NAME}

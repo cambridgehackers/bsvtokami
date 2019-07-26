@@ -11,9 +11,9 @@ class GenerateAst {
 public:
     GenerateAst() {}
 
-    void generateAst(BSVParser::PackagedefContext *ctx);
+    std::vector<std::shared_ptr<Stmt>> generateAst(BSVParser::PackagedefContext *ctx);
 
-    void generateAst(BSVParser::PackagestmtContext *ctx);
+    std::shared_ptr<Stmt> generateAst(BSVParser::PackagestmtContext *ctx);
 
     std::shared_ptr<Stmt> generateAst(BSVParser::InterfacedeclContext *ctx);
 

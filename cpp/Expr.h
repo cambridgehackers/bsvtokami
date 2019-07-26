@@ -4,6 +4,8 @@
 #include <vector>
 #include <memory>
 
+using namespace std;
+
 enum ExprType {
     InvalidExprType,
     ArraySubExprType,
@@ -17,7 +19,15 @@ enum ExprType {
     EnumUnionStructExprType
 };
 
-class Expr {
+class FieldExpr;
+class VarExpr;
+class CallExpr;
+class IntConst;
+class OperatorExpr;
+class ArraySubExpr;
+class EnumUnionStructExpr;
+
+class Expr : public enable_shared_from_this<Expr> {
 protected:
     ExprType exprType;
 
@@ -27,101 +37,118 @@ public:
     virtual ~Expr();
 
     virtual void prettyPrint(int depth = 0) = 0;
+
+    virtual shared_ptr<FieldExpr> fieldExpr() { return shared_ptr<FieldExpr>(); }
+    virtual shared_ptr<VarExpr> varExpr() { return shared_ptr<VarExpr>(); }
+    virtual shared_ptr<CallExpr> callExpr() { return shared_ptr<CallExpr>(); }
+    virtual shared_ptr<IntConst> intConst() { return shared_ptr<IntConst>(); }
+    virtual shared_ptr<OperatorExpr> operatorExpr() { return shared_ptr<OperatorExpr>(); }
+    virtual shared_ptr<ArraySubExpr> arraySubExpr() { return shared_ptr<ArraySubExpr>(); }
+    virtual shared_ptr<EnumUnionStructExpr> enumUnionStructExpr() { return shared_ptr<EnumUnionStructExpr>(); }
+
 };
 
 class FieldExpr : public Expr {
-private:
-    std::shared_ptr<Expr> object;
-    std::string fieldName;
 public:
-    FieldExpr(std::shared_ptr<Expr> object, std::string fieldName);
+    const shared_ptr<Expr> object;
+    const string fieldName;
+public:
+    FieldExpr(const shared_ptr<Expr> &object, const string &fieldName);
 
     virtual ~FieldExpr();
 
-    virtual void prettyPrint(int depth = 0);
+    virtual void prettyPrint(int depth = 0) override;
+    shared_ptr<FieldExpr> fieldExpr() override;
+
 };
 
 class VarExpr : public Expr {
-private:
-    std::string name;
-    std::string sourceName;
 public:
-    VarExpr(std::string name);
+    const string name;
+    const string sourceName;
+public:
+    VarExpr(const string &name);
 
     virtual ~VarExpr();
 
-    virtual void prettyPrint(int depth = 0);
+    virtual void prettyPrint(int depth = 0) override;
+    shared_ptr<VarExpr> varExpr() override;
 };
 
 
 class CallExpr : public Expr {
-private:
-    std::shared_ptr<Expr> function;
-    std::vector<std::shared_ptr<Expr>> args;
 public:
-    CallExpr(const std::shared_ptr<Expr> &function, const std::vector<std::shared_ptr<Expr>> &args);
+    const shared_ptr<Expr> function;
+    const vector<shared_ptr<Expr>> args;
+public:
+    CallExpr(const shared_ptr<Expr> &function, const vector<shared_ptr<Expr>> &args);
 
     virtual ~CallExpr();
 
-    virtual void prettyPrint(int depth = 0);
+    virtual void prettyPrint(int depth = 0) override;
+    virtual shared_ptr<CallExpr> callExpr() override;
 };
 
 class IntConst : public Expr {
-private:
-    std::string repr;
+public:
+    const string repr;
     long value;
     long base;
     long width;
 public:
-    IntConst(std::string repr);
+    IntConst(const string &repr);
 
     ~IntConst() override;
 
     void prettyPrint(int depth = 0) override;
+    shared_ptr<IntConst> intConst() override;
 };
 
 
 class OperatorExpr : public Expr {
-private:
-    std::string op;
-    std::shared_ptr<Expr> lhs;
-    std::shared_ptr<Expr> rhs;
+public:
+    const string op;
+    const shared_ptr<Expr> lhs;
+    const shared_ptr<Expr> rhs;
 public:
 
-    OperatorExpr(std::string op, std::shared_ptr<Expr> lhs);
+    OperatorExpr(const string &op, const shared_ptr<Expr> &lhs);
 
-    OperatorExpr(std::string op, std::shared_ptr<Expr> lhs, std::shared_ptr<Expr> rhs);
+    OperatorExpr(const string &op, const shared_ptr<Expr> &lhs, const shared_ptr<Expr> &rhs);
 
     ~OperatorExpr() override;
 
     void prettyPrint(int depth = 0) override;
+    shared_ptr<OperatorExpr> operatorExpr() override;
 };
 
 class ArraySubExpr : public Expr {
 public:
-    ArraySubExpr( const std::shared_ptr<Expr> &array, const std::shared_ptr<Expr> &msb,
-                 const std::shared_ptr<Expr> &lsb);
+    ArraySubExpr( const shared_ptr<Expr> &array, const shared_ptr<Expr> &msb,
+                 const shared_ptr<Expr> &lsb);
 
     virtual ~ArraySubExpr();
 
     void prettyPrint(int depth) override;
+    shared_ptr<ArraySubExpr> arraySubExpr() override;
 
-private:
-    std::shared_ptr<Expr> array;
-    std::shared_ptr<Expr> msb;
-    std::shared_ptr<Expr> lsb;
+public:
+    const shared_ptr<Expr> array;
+    const shared_ptr<Expr> msb;
+    const shared_ptr<Expr> lsb;
 };
 
 class EnumUnionStructExpr : public Expr {
 public:
-    EnumUnionStructExpr(const std::string &tag, const std::vector<std::string> &keys,
-                        const std::vector<std::shared_ptr<Expr>> &vals);
+    EnumUnionStructExpr(const string &tag, const vector<string> &keys,
+                        const vector<shared_ptr<Expr>> &vals);
     ~EnumUnionStructExpr() override {}
 
     void prettyPrint(int depth = 0) override;
+    shared_ptr<EnumUnionStructExpr> enumUnionStructExpr() override;
 
-private:
-    std::string tag;
-    std::vector<std::string> keys;
-    std::vector<std::shared_ptr<Expr>> vals;
+public:
+    const string tag;
+    const vector<string> keys;
+    const vector<shared_ptr<Expr>> vals;
 };

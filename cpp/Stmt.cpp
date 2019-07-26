@@ -10,12 +10,17 @@ void indent(int depth) {
         cout << " ";
 }
 
+void indent(ostream &s, int depth) {
+    for (int i = 0; i < depth; i++)
+        s << " ";
+}
+
 Stmt::Stmt(StmtType stmtType)
         : stmtType(stmtType) {
 }
 
-RuleDefStmt::RuleDefStmt(string name, shared_ptr<Expr> guard)
-        : Stmt(RuleDefStmtType), name(name), guard(guard) {
+RuleDefStmt::RuleDefStmt(const string &name, const shared_ptr<Expr> &guard, const vector<shared_ptr<Stmt>> &stmts)
+        : Stmt(RuleDefStmtType), name(name), guard(guard), stmts(stmts) {
 }
 
 void RuleDefStmt::prettyPrint(int depth) {
@@ -36,7 +41,11 @@ void RuleDefStmt::prettyPrint(int depth) {
     cout << "endrule //" << name << endl;
 }
 
-RegWriteStmt::RegWriteStmt(string regName, shared_ptr<Expr> rhs)
+shared_ptr<RuleDefStmt> RuleDefStmt::ruleDefStmt() {
+    return static_pointer_cast<RuleDefStmt, Stmt>(shared_from_this());
+}
+
+RegWriteStmt::RegWriteStmt(const string &regName, const shared_ptr<Expr> &rhs)
         : Stmt(RegWriteStmtType), regName(regName), rhs(rhs) {
 }
 
@@ -50,8 +59,12 @@ void RegWriteStmt::prettyPrint(int depth) {
     cout << ";" << endl;
 }
 
+shared_ptr<RegWriteStmt> RegWriteStmt::regWriteStmt() {
+    return static_pointer_cast<RegWriteStmt, Stmt>(shared_from_this());
+}
+
 ActionBindingStmt::ActionBindingStmt(const shared_ptr<BSVType> &bsvtype, const string &name,
-                               const shared_ptr<Expr> &rhs)
+                                     const shared_ptr<Expr> &rhs)
         : Stmt(ActionBindingStmtType), bsvtype(bsvtype), name(name), rhs(rhs) {
 
 }
@@ -65,9 +78,12 @@ void ActionBindingStmt::prettyPrint(int depth) {
 
 }
 
+shared_ptr<ActionBindingStmt>
+ActionBindingStmt::actionBindingStmt() { return static_pointer_cast<ActionBindingStmt, Stmt>(shared_from_this()); }
+
 VarBindingStmt::VarBindingStmt(const shared_ptr<BSVType> &bsvtype, const string &name,
                                const shared_ptr<Expr> &rhs)
-                               : Stmt(VarBindingStmtType), bsvtype(bsvtype), name(name), rhs(rhs) {
+        : Stmt(VarBindingStmtType), bsvtype(bsvtype), name(name), rhs(rhs) {
 
 }
 
@@ -79,9 +95,13 @@ void VarBindingStmt::prettyPrint(int depth) {
     cout << ";" << endl;
 }
 
+shared_ptr<VarBindingStmt> VarBindingStmt::varBindingStmt() {
+    return static_pointer_cast<VarBindingStmt, Stmt>(shared_from_this());
+}
+
 MethodDeclStmt::MethodDeclStmt(const string &name, const shared_ptr<BSVType> &returnType,
-                             const std::vector<std::string> &params,
-                             const std::vector<std::shared_ptr<BSVType>> &paramTypes)
+                               const std::vector<std::string> &params,
+                               const std::vector<std::shared_ptr<BSVType>> &paramTypes)
         : Stmt(MethodDeclStmtType), name(name), returnType(returnType),
           params(params), paramTypes(paramTypes) {}
 
@@ -93,10 +113,14 @@ void MethodDeclStmt::prettyPrint(int depth) {
     for (size_t i = 0; i < params.size(); i++) {
         if (i > 0)
             cout << ", ";
-        paramTypes[i]->prettyPrint(depth+1);
+        paramTypes[i]->prettyPrint(depth + 1);
         cout << " " << params[i];
     }
     cout << ");" << endl;
+}
+
+shared_ptr<MethodDeclStmt> MethodDeclStmt::methodDeclStmt() {
+    return static_pointer_cast<MethodDeclStmt, Stmt>(shared_from_this());
 }
 
 MethodDefStmt::MethodDefStmt(const string &name, const shared_ptr<BSVType> &returnType,
@@ -105,8 +129,8 @@ MethodDefStmt::MethodDefStmt(const string &name, const shared_ptr<BSVType> &retu
                              const shared_ptr<Expr> &guard,
                              const vector<std::shared_ptr<Stmt>> &stmts)
         : Stmt(MethodDefStmtType), name(name), returnType(returnType),
-        params(params), paramTypes(paramTypes),
-        guard(guard), stmts(stmts) {}
+          params(params), paramTypes(paramTypes),
+          guard(guard), stmts(stmts) {}
 
 MethodDefStmt::~MethodDefStmt() {
 
@@ -120,7 +144,7 @@ void MethodDefStmt::prettyPrint(int depth) {
     for (size_t i = 0; i < params.size(); i++) {
         if (i > 0)
             cout << ", ";
-        paramTypes[i]->prettyPrint(depth+1);
+        paramTypes[i]->prettyPrint(depth + 1);
         cout << " " << params[i];
     }
     cout << ");" << endl;
@@ -131,13 +155,17 @@ void MethodDefStmt::prettyPrint(int depth) {
     cout << "endmethod" << endl;
 }
 
+shared_ptr<MethodDefStmt> MethodDefStmt::methodDefStmt() {
+    return static_pointer_cast<MethodDefStmt, Stmt>(shared_from_this());
+}
+
 ModuleDefStmt::ModuleDefStmt(const std::string &name, const std::shared_ptr<BSVType> &interfaceType,
                              const std::vector<std::string> &params,
                              const std::vector<std::shared_ptr<BSVType>> &paramTypes,
                              const std::vector<std::shared_ptr<Stmt>> &stmts)
-                             : Stmt(ModuleDefStmtType), name(name),
-                               params(params), paramTypes(paramTypes),
-                               interfaceType(interfaceType), stmts(stmts) {
+        : Stmt(ModuleDefStmtType), name(name),
+          params(params), paramTypes(paramTypes),
+          interfaceType(interfaceType), stmts(stmts) {
 
 }
 
@@ -153,7 +181,7 @@ void ModuleDefStmt::prettyPrint(int depth) {
     for (size_t i = 0; i < params.size(); i++) {
         if (i > 0)
             cout << ", ";
-        paramTypes[i]->prettyPrint(depth+1);
+        paramTypes[i]->prettyPrint(depth + 1);
         cout << " " << params[i];
     }
     cout << ");" << endl;
@@ -162,6 +190,10 @@ void ModuleDefStmt::prettyPrint(int depth) {
     }
     indent(4 * depth);
     cout << "endmodule" << endl;
+}
+
+shared_ptr<ModuleDefStmt> ModuleDefStmt::moduleDefStmt() {
+    return static_pointer_cast<ModuleDefStmt, Stmt>(shared_from_this());
 }
 
 IfStmt::IfStmt(const shared_ptr<Expr> &condition, const shared_ptr<Stmt> &thenStmt,
@@ -186,7 +218,10 @@ void IfStmt::prettyPrint(int depth) {
     cout << endl;
 }
 
-BlockStmt::BlockStmt(std::vector<std::shared_ptr<Stmt>> stmts) : Stmt(BlockStmtType), stmts(stmts) {}
+shared_ptr<IfStmt> IfStmt::ifStmt() { return static_pointer_cast<IfStmt, Stmt>(shared_from_this()); }
+
+BlockStmt::BlockStmt(const std::vector<std::shared_ptr<Stmt>> &stmts) : Stmt(BlockStmtType), stmts(stmts) {}
+
 BlockStmt::~BlockStmt() {}
 
 void BlockStmt::prettyPrint(int depth) {
@@ -198,19 +233,25 @@ void BlockStmt::prettyPrint(int depth) {
     cout << "end" << endl;
 }
 
+shared_ptr<BlockStmt> BlockStmt::blockStmt() { return static_pointer_cast<BlockStmt, Stmt>(shared_from_this()); }
 
-void RetStmt::prettyPrint(int depth) {
+
+void ReturnStmt::prettyPrint(int depth) {
     indent(4 * depth);
     cout << "return ";
     value->prettyPrint(depth);
     cout << ";" << endl;
 }
 
+shared_ptr<ReturnStmt> ReturnStmt::returnStmt() { return static_pointer_cast<ReturnStmt, Stmt>(shared_from_this()); }
+
 void ExprStmt::prettyPrint(int depth) {
     indent(4 * depth);
     value->prettyPrint(depth);
     cout << ";" << endl;
 }
+
+shared_ptr<ExprStmt> ExprStmt::exprStmt() { return static_pointer_cast<ExprStmt, Stmt>(shared_from_this()); }
 
 ImportStmt::ImportStmt(const std::string name) : Stmt(ImportStmtType), name(name) {
 
@@ -220,10 +261,12 @@ void ImportStmt::prettyPrint(int depth) {
     cout << "import " << name << " :: *;" << endl;
 }
 
+shared_ptr<ImportStmt> ImportStmt::importStmt() { return static_pointer_cast<ImportStmt, Stmt>(shared_from_this()); }
+
 InterfaceDeclStmt::InterfaceDeclStmt(const std::string &name, const std::shared_ptr<BSVType> &interfaceType,
                                      const vector<std::shared_ptr<Stmt>> &decls)
-                                     : Stmt(InterfaceDeclStmtType), name(name),
-                                     interfaceType(interfaceType), decls(decls) {
+        : Stmt(InterfaceDeclStmtType), name(name),
+          interfaceType(interfaceType), decls(decls) {
 }
 
 void InterfaceDeclStmt::prettyPrint(int depth) {
@@ -238,8 +281,12 @@ void InterfaceDeclStmt::prettyPrint(int depth) {
     cout << "endinterface" << endl;
 }
 
-TypedefSynonymStmt::TypedefSynonymStmt(const std::shared_ptr<BSVType> &typedeftype, const std::shared_ptr<BSVType> &type)
-    : Stmt(TypedefSynonymStmtType), typedeftype(typedeftype), type(type) {
+shared_ptr<InterfaceDeclStmt>
+InterfaceDeclStmt::interfaceDeclStmt() { return static_pointer_cast<InterfaceDeclStmt, Stmt>(shared_from_this()); }
+
+TypedefSynonymStmt::TypedefSynonymStmt(const std::shared_ptr<BSVType> &typedeftype,
+                                       const std::shared_ptr<BSVType> &type)
+        : Stmt(TypedefSynonymStmtType), typedeftype(typedeftype), type(type) {
 
 }
 
@@ -252,12 +299,15 @@ void TypedefSynonymStmt::prettyPrint(int depth) {
     cout << ":" << endl;
 }
 
+shared_ptr<TypedefSynonymStmt>
+TypedefSynonymStmt::typedefSynonymStmt() { return static_pointer_cast<TypedefSynonymStmt, Stmt>(shared_from_this()); }
+
 TypedefStructStmt::TypedefStructStmt(const std::string &name, const std::shared_ptr<BSVType> &structType,
                                      const std::vector<std::string> &members,
                                      const std::vector<std::shared_ptr<BSVType>> &memberTypes)
-                                     : Stmt(TypedefStructStmtType),
-                                     name(name), structType(structType),
-                                     members(members), memberTypes(memberTypes) {
+        : Stmt(TypedefStructStmtType),
+          name(name), structType(structType),
+          members(members), memberTypes(memberTypes) {
 }
 
 void TypedefStructStmt::prettyPrint(int depth) {
@@ -273,3 +323,6 @@ void TypedefStructStmt::prettyPrint(int depth) {
     structType->prettyPrint(depth);
     cout << ":" << endl;
 }
+
+shared_ptr<TypedefStructStmt>
+TypedefStructStmt::typedefStructStmt() { return static_pointer_cast<TypedefStructStmt, Stmt>(shared_from_this()); }
