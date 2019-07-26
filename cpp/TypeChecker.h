@@ -1,5 +1,7 @@
 #pragma once
 
+#include <assert.h>
+
 #include <map>
 #include <iostream>
 #include "antlr4-runtime.h"
