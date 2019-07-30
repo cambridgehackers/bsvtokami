@@ -88,6 +88,8 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
         }
 
         result.reset(new EnumUnionStructExpr(tag, keys, vals));
+    } else if (BSVParser::ParenexprContext *parenexpr = dynamic_cast<BSVParser::ParenexprContext *>(ctx)) {
+        return expr(parenexpr->expression());
     } else {
         cerr << "Unhandled expr " << ctx->getText() << endl;
     }
