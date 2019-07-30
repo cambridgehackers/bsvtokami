@@ -215,11 +215,13 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::MethoddefContext *ctx)
     vector<shared_ptr<BSVType>> paramTypes;
     shared_ptr<Expr> guard;
 
-    vector<BSVParser::MethodformalContext *> formals = ctx->methodformals()->methodformal();
-    for (size_t i = 0; i < formals.size(); i++) {
-        BSVParser::MethodformalContext *formal = formals.at(i);
-        params.push_back(formal->lowerCaseIdentifier()->getText());
-        paramTypes.push_back(bsvtype(formal->bsvtype()));
+    if (ctx->methodformals()) {
+        vector<BSVParser::MethodformalContext *> formals = ctx->methodformals()->methodformal();
+        for (size_t i = 0; i < formals.size(); i++) {
+            BSVParser::MethodformalContext *formal = formals.at(i);
+            params.push_back(formal->lowerCaseIdentifier()->getText());
+            paramTypes.push_back(bsvtype(formal->bsvtype()));
+        }
     }
     fprintf(stderr, "    methoddef %s\n", methodName.c_str());
     if (ctx->methodcond() != 0) {

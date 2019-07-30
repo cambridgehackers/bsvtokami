@@ -265,7 +265,7 @@ void GenerateIR::generateIR(const shared_ptr<RuleDefStmt> &stmt, int depth) {
     }
     out << " {" << endl;
     for (size_t i = 0; i < stmt->stmts.size(); i++) {
-        if (shared_ptr < VarBindingStmt > varBindingStmt = stmt->stmts[i]->varBindingStmt()) {
+        if (shared_ptr<VarBindingStmt> varBindingStmt = stmt->stmts[i]->varBindingStmt()) {
             indent(out, 4 * depth + 4);
             out << "ALLOCA ";
             generateIR(varBindingStmt->bsvtype, depth);
