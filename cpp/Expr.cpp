@@ -15,6 +15,10 @@ Expr::Expr(ExprType exprType)
 Expr::~Expr() {
 }
 
+shared_ptr<Expr> Expr::rename(string prefix, LexicalScope &scope) {
+    return shared_ptr<Expr>();
+}
+
 VarExpr::VarExpr(const string &name)
         : Expr(VarExprType), name(name), sourceName(name) {
 }
@@ -26,7 +30,14 @@ void VarExpr::prettyPrint(int depth) {
     cout << name;
 }
 
-shared_ptr<VarExpr> VarExpr::varExpr() { return static_pointer_cast<VarExpr,Expr>(shared_from_this()); }
+shared_ptr<VarExpr> VarExpr::varExpr() { return static_pointer_cast<VarExpr, Expr>(shared_from_this()); }
+
+shared_ptr<Expr> VarExpr::rename(string prefix, LexicalScope &scope) {
+    string renamed = scope.lookup(name);
+    if (!renamed.size())
+        renamed = name;
+    return shared_ptr<VarExpr>(new VarExpr(renamed));
+}
 
 IntConst::IntConst(const string &repr)
         : Expr(IntConstType), repr(repr), base(0), width(0) {
@@ -65,8 +76,11 @@ void IntConst::prettyPrint(int depth) {
     cout << repr;
 }
 
-shared_ptr<IntConst> IntConst::intConst() { return static_pointer_cast<IntConst,Expr>(shared_from_this()); }
+shared_ptr<IntConst> IntConst::intConst() { return static_pointer_cast<IntConst, Expr>(shared_from_this()); }
 
+shared_ptr<Expr> IntConst::rename(string prefix, LexicalScope &scope) {
+    return shared_ptr<IntConst>(new IntConst(repr));
+}
 
 OperatorExpr::OperatorExpr(const string &op, const shared_ptr<Expr> &lhs)
         : Expr(OperatorExprType), op(op), lhs(lhs) {
@@ -92,7 +106,16 @@ void OperatorExpr::prettyPrint(int depth) {
     }
 }
 
-shared_ptr<OperatorExpr> OperatorExpr::operatorExpr() { return static_pointer_cast<OperatorExpr,Expr>(shared_from_this()); }
+shared_ptr<OperatorExpr> OperatorExpr::operatorExpr() {
+    return static_pointer_cast<OperatorExpr, Expr>(shared_from_this());
+}
+
+shared_ptr<Expr> OperatorExpr::rename(string prefix, LexicalScope &scope) {
+    if (rhs)
+        return shared_ptr<OperatorExpr>(new OperatorExpr(op, lhs->rename(prefix, scope), rhs->rename(prefix, scope)));
+    else
+        return shared_ptr<OperatorExpr>(new OperatorExpr(op, lhs->rename(prefix, scope)));
+}
 
 FieldExpr::FieldExpr(const shared_ptr<Expr> &object, const std::string &fieldName)
         : Expr(FieldExprType), object(object), fieldName(fieldName) {
@@ -107,7 +130,11 @@ void FieldExpr::prettyPrint(int depth) {
     cout << "." << fieldName;
 }
 
-shared_ptr<FieldExpr> FieldExpr::fieldExpr() { return static_pointer_cast<FieldExpr,Expr>(shared_from_this()); }
+shared_ptr<FieldExpr> FieldExpr::fieldExpr() { return static_pointer_cast<FieldExpr, Expr>(shared_from_this()); }
+
+shared_ptr<Expr> FieldExpr::rename(string prefix, LexicalScope &scope) {
+    return shared_ptr<FieldExpr>(new FieldExpr(object->rename(prefix, scope), fieldName));
+}
 
 CallExpr::CallExpr(const shared_ptr<Expr> &function, const vector<shared_ptr<Expr>> &args) : Expr(
         CallExprType), function(function), args(args) {
@@ -129,10 +156,19 @@ void CallExpr::prettyPrint(int depth) {
     cout << ")";
 }
 
-shared_ptr<CallExpr> CallExpr::callExpr() { return static_pointer_cast<CallExpr,Expr>(shared_from_this()); }
+shared_ptr<CallExpr> CallExpr::callExpr() { return static_pointer_cast<CallExpr, Expr>(shared_from_this()); }
+
+shared_ptr<Expr> CallExpr::rename(string prefix, LexicalScope &scope) {
+    vector<shared_ptr<Expr>> renamedArgs;
+    for (size_t i = 0; i < args.size(); i++)
+        renamedArgs.push_back(args[i]->rename(prefix, scope));
+    return shared_ptr<CallExpr>(new CallExpr(function->rename(prefix, scope), renamedArgs));
+}
+
 
 EnumUnionStructExpr::EnumUnionStructExpr(const string &tag, const vector<string> &keys,
-                                         const vector<shared_ptr<Expr>> &vals) : Expr(EnumUnionStructExprType), tag(tag), keys(keys),
+                                         const vector<shared_ptr<Expr>> &vals) : Expr(EnumUnionStructExprType),
+                                                                                 tag(tag), keys(keys),
                                                                                  vals(vals) {}
 
 void EnumUnionStructExpr::prettyPrint(int depth) {
@@ -146,7 +182,17 @@ void EnumUnionStructExpr::prettyPrint(int depth) {
     cout << " }";
 }
 
-shared_ptr<EnumUnionStructExpr> EnumUnionStructExpr::enumUnionStructExpr() { return static_pointer_cast<EnumUnionStructExpr,Expr>(shared_from_this()); }
+shared_ptr<EnumUnionStructExpr> EnumUnionStructExpr::enumUnionStructExpr() {
+    return static_pointer_cast<EnumUnionStructExpr, Expr>(shared_from_this());
+}
+
+shared_ptr<Expr> EnumUnionStructExpr::rename(string prefix, LexicalScope &scope) {
+    vector<shared_ptr<Expr>> renamedVals;
+    for (size_t i = 0; i < vals.size(); i++)
+        renamedVals.push_back(vals[i]->rename(prefix, scope));
+    return shared_ptr<EnumUnionStructExpr>(new EnumUnionStructExpr(tag, keys, renamedVals));
+}
+
 
 ArraySubExpr::ArraySubExpr(const shared_ptr<Expr> &array, const shared_ptr<Expr> &msb,
                            const shared_ptr<Expr> &lsb) : Expr(ArraySubExprType), array(array), msb(msb), lsb(lsb) {}
@@ -166,4 +212,12 @@ void ArraySubExpr::prettyPrint(int depth) {
     cout << "]";
 }
 
-shared_ptr<ArraySubExpr> ArraySubExpr::arraySubExpr() { return static_pointer_cast<ArraySubExpr,Expr>(shared_from_this()); }
+shared_ptr<ArraySubExpr> ArraySubExpr::arraySubExpr() {
+    return static_pointer_cast<ArraySubExpr, Expr>(shared_from_this());
+}
+
+shared_ptr<Expr> ArraySubExpr::rename(string prefix, LexicalScope &scope) {
+    return shared_ptr<ArraySubExpr>(new ArraySubExpr(array->rename(prefix, scope),
+                                                     msb->rename(prefix, scope),
+                                                     lsb->rename(prefix, scope)));
+}

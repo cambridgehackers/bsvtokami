@@ -19,6 +19,10 @@ Stmt::Stmt(StmtType stmtType)
         : stmtType(stmtType) {
 }
 
+shared_ptr<Stmt> Stmt::rename(string prefix, LexicalScope &scope) {
+    return shared_ptr<Stmt>();
+}
+
 RuleDefStmt::RuleDefStmt(const string &name, const shared_ptr<Expr> &guard, const vector<shared_ptr<Stmt>> &stmts)
         : Stmt(RuleDefStmtType), name(name), guard(guard), stmts(stmts) {
 }
@@ -45,6 +49,18 @@ shared_ptr<RuleDefStmt> RuleDefStmt::ruleDefStmt() {
     return static_pointer_cast<RuleDefStmt, Stmt>(shared_from_this());
 }
 
+shared_ptr<Stmt> RuleDefStmt::rename(string prefix, LexicalScope &parentScope) {
+    LexicalScope scope(parentScope);
+    shared_ptr<Expr> renamedGuard;
+    if (guard)
+        renamedGuard = guard->rename(prefix, parentScope);
+    vector<shared_ptr<Stmt>> renamedStmts;
+    for (size_t i = 0; i < stmts.size(); i++) {
+        renamedStmts.push_back(stmts[i]->rename(prefix, scope));
+    }
+    return shared_ptr<Stmt>(new RuleDefStmt(prefix + name, renamedGuard, renamedStmts));
+}
+
 RegWriteStmt::RegWriteStmt(const string &regName, const shared_ptr<Expr> &rhs)
         : Stmt(RegWriteStmtType), regName(regName), rhs(rhs) {
 }
@@ -61,6 +77,18 @@ void RegWriteStmt::prettyPrint(int depth) {
 
 shared_ptr<RegWriteStmt> RegWriteStmt::regWriteStmt() {
     return static_pointer_cast<RegWriteStmt, Stmt>(shared_from_this());
+}
+
+shared_ptr<Stmt> RegWriteStmt::rename(string prefix, LexicalScope &scope) {
+    string renamedRegName = regName;
+    string replacement = scope.lookup(regName);
+    if (replacement.size()) {
+        renamedRegName = replacement;
+    }
+    shared_ptr<Expr> renamedRHS;
+    if (rhs)
+        renamedRHS = rhs->rename(prefix, scope);
+    return shared_ptr<Stmt>(new RegWriteStmt(renamedRegName, renamedRHS));
 }
 
 ActionBindingStmt::ActionBindingStmt(const shared_ptr<BSVType> &bsvtype, const string &name,
@@ -81,6 +109,16 @@ void ActionBindingStmt::prettyPrint(int depth) {
 shared_ptr<ActionBindingStmt>
 ActionBindingStmt::actionBindingStmt() { return static_pointer_cast<ActionBindingStmt, Stmt>(shared_from_this()); }
 
+
+shared_ptr<Stmt> ActionBindingStmt::rename(string prefix, LexicalScope &scope) {
+    string renamedVar = prefix + name;
+    shared_ptr<Expr> renamedRHS;
+    if (rhs)
+        renamedRHS = rhs->rename(prefix, scope);
+    scope.bind(name, renamedVar);
+    return shared_ptr<Stmt>(new ActionBindingStmt(bsvtype, renamedVar, renamedRHS));
+}
+
 VarBindingStmt::VarBindingStmt(const shared_ptr<BSVType> &bsvtype, const string &name,
                                const shared_ptr<Expr> &rhs)
         : Stmt(VarBindingStmtType), bsvtype(bsvtype), name(name), rhs(rhs) {
@@ -97,6 +135,15 @@ void VarBindingStmt::prettyPrint(int depth) {
 
 shared_ptr<VarBindingStmt> VarBindingStmt::varBindingStmt() {
     return static_pointer_cast<VarBindingStmt, Stmt>(shared_from_this());
+}
+
+shared_ptr<Stmt> VarBindingStmt::rename(string prefix, LexicalScope &scope) {
+    string renamedVar = prefix + name;
+    shared_ptr<Expr> renamedRHS;
+    if (rhs)
+        renamedRHS = rhs->rename(prefix, scope);
+    scope.bind(name, renamedVar);
+    return shared_ptr<Stmt>(new VarBindingStmt(bsvtype, renamedVar, renamedRHS));
 }
 
 MethodDeclStmt::MethodDeclStmt(const string &name, const shared_ptr<BSVType> &returnType,
@@ -159,6 +206,18 @@ shared_ptr<MethodDefStmt> MethodDefStmt::methodDefStmt() {
     return static_pointer_cast<MethodDefStmt, Stmt>(shared_from_this());
 }
 
+shared_ptr<Stmt> MethodDefStmt::rename(string prefix, LexicalScope &parentScope) {
+    LexicalScope scope(parentScope);
+    shared_ptr<Expr> renamedGuard;
+    if (guard)
+        renamedGuard = guard->rename(prefix, parentScope);
+    vector<shared_ptr<Stmt>> renamedStmts;
+    for (size_t i = 0; i < stmts.size(); i++) {
+        renamedStmts.push_back(stmts[i]->rename(prefix, scope));
+    }
+    return shared_ptr<Stmt>(new MethodDefStmt(name, returnType, params, paramTypes, renamedGuard, renamedStmts));
+}
+
 ModuleDefStmt::ModuleDefStmt(const std::string &name, const std::shared_ptr<BSVType> &interfaceType,
                              const std::vector<std::string> &params,
                              const std::vector<std::shared_ptr<BSVType>> &paramTypes,
@@ -196,6 +255,29 @@ shared_ptr<ModuleDefStmt> ModuleDefStmt::moduleDefStmt() {
     return static_pointer_cast<ModuleDefStmt, Stmt>(shared_from_this());
 }
 
+shared_ptr<ModuleDefStmt> ModuleDefStmt::inlineModule(const shared_ptr<ModuleDefStmt> &otherModule) {
+    LexicalScope scope;
+    string prefix;
+    shared_ptr<Stmt> prefixedModule = otherModule->rename(prefix, scope);
+    return shared_ptr<ModuleDefStmt>();
+}
+
+shared_ptr<Stmt> ModuleDefStmt::rename(string prefix, LexicalScope &parentScope) {
+    LexicalScope scope(&parentScope);
+    vector<string> renamedParams;
+    vector<shared_ptr<Stmt>> renamedStmts;
+    //FIXME: rename module?
+    for (size_t i = 0; i < params.size(); i++) {
+        string renamedParam(prefix + params[i]);
+        renamedParams.push_back(renamedParam);
+        scope.bind(params[i], renamedParam);
+    }
+    for (size_t i = 0; i < stmts.size(); i++) {
+        renamedStmts.push_back(stmts[i]->rename(prefix, scope));
+    }
+    return shared_ptr<Stmt>(new ModuleDefStmt(name, interfaceType, renamedParams, paramTypes, renamedStmts));
+}
+
 IfStmt::IfStmt(const shared_ptr<Expr> &condition, const shared_ptr<Stmt> &thenStmt,
                const shared_ptr<Stmt> &elseStmt) : Stmt(IfStmtType), condition(condition), thenStmt(thenStmt),
                                                    elseStmt(elseStmt) {}
@@ -220,6 +302,17 @@ void IfStmt::prettyPrint(int depth) {
 
 shared_ptr<IfStmt> IfStmt::ifStmt() { return static_pointer_cast<IfStmt, Stmt>(shared_from_this()); }
 
+shared_ptr<struct Stmt> IfStmt::rename(string prefix, LexicalScope &scope) {
+    if (elseStmt)
+        return shared_ptr<Stmt>(new IfStmt(condition->rename(prefix, scope),
+                                           thenStmt->rename(prefix, scope),
+                                           elseStmt->rename(prefix, scope)));
+    else
+        return shared_ptr<Stmt>(new IfStmt(condition->rename(prefix, scope),
+                                           thenStmt->rename(prefix, scope),
+                                           shared_ptr<Stmt>()));
+}
+
 BlockStmt::BlockStmt(const std::vector<std::shared_ptr<Stmt>> &stmts) : Stmt(BlockStmtType), stmts(stmts) {}
 
 BlockStmt::~BlockStmt() {}
@@ -235,6 +328,15 @@ void BlockStmt::prettyPrint(int depth) {
 
 shared_ptr<BlockStmt> BlockStmt::blockStmt() { return static_pointer_cast<BlockStmt, Stmt>(shared_from_this()); }
 
+shared_ptr<struct Stmt> BlockStmt::rename(string prefix, LexicalScope &parentScope) {
+    LexicalScope scope(&parentScope);
+    vector<shared_ptr<Stmt>> renamedStmts;
+    for (size_t i = 0; i < stmts.size(); i++) {
+        renamedStmts.push_back(stmts[i]->rename(prefix, scope));
+    }
+    return shared_ptr<Stmt>(new BlockStmt(renamedStmts));
+}
+
 
 void ReturnStmt::prettyPrint(int depth) {
     indent(4 * depth);
@@ -245,6 +347,10 @@ void ReturnStmt::prettyPrint(int depth) {
 
 shared_ptr<ReturnStmt> ReturnStmt::returnStmt() { return static_pointer_cast<ReturnStmt, Stmt>(shared_from_this()); }
 
+shared_ptr<struct Stmt> ReturnStmt::rename(string prefix, LexicalScope &scope) {
+    return shared_ptr<Stmt>(new ReturnStmt(value->rename(prefix, scope)));
+}
+
 void ExprStmt::prettyPrint(int depth) {
     indent(4 * depth);
     value->prettyPrint(depth);
@@ -252,6 +358,10 @@ void ExprStmt::prettyPrint(int depth) {
 }
 
 shared_ptr<ExprStmt> ExprStmt::exprStmt() { return static_pointer_cast<ExprStmt, Stmt>(shared_from_this()); }
+
+shared_ptr<struct Stmt> ExprStmt::rename(string prefix, LexicalScope &scope) {
+    return shared_ptr<Stmt>(new ExprStmt(value->rename(prefix, scope)));
+}
 
 ImportStmt::ImportStmt(const std::string name) : Stmt(ImportStmtType), name(name) {
 

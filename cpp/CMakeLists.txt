@@ -12,6 +12,7 @@ set (SOURCE
      Stmt.cpp
      GenerateAst.cpp
      GenerateIR.cpp
+     LexicalScope.cpp
      TypeChecker.cpp
      main.cpp
      ../generated/BSVBaseListener.cpp

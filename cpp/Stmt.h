@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include <memory>
 #include <iostream>
 
@@ -9,8 +10,10 @@ using namespace std;
 
 #include "BSVType.h"
 #include "Expr.h"
+#include "LexicalScope.h"
 
 void indent(int depth);
+
 void indent(ostream &s, int depth);
 
 enum StmtType {
@@ -31,23 +34,38 @@ enum StmtType {
     RuleDefStmtType,
     RegWriteStmtType
 };
+
 class ActionBindingStmt;
+
 class BlockStmt;
+
 class ExprStmt;
+
 class IfStmt;
+
 class ImportStmt;
+
 class InterfaceDeclStmt;
+
 class MethodDeclStmt;
+
 class MethodDefStmt;
+
 class ModuleDefStmt;
+
 class RegWriteStmt;
+
 class ReturnStmt;
+
 class RuleDefStmt;
+
 class TypedefStructStmt;
+
 class TypedefSynonymStmt;
+
 class VarBindingStmt;
 
-class Stmt: public enable_shared_from_this<Stmt> {
+class Stmt : public enable_shared_from_this<Stmt> {
 protected:
     const StmtType stmtType;
 
@@ -57,28 +75,49 @@ public:
     virtual ~Stmt() {}
 
     virtual void prettyPrint(int depth = 0) = 0;
+
     virtual shared_ptr<ActionBindingStmt> actionBindingStmt() { return shared_ptr<ActionBindingStmt>(); }
+
     virtual shared_ptr<BlockStmt> blockStmt() { return shared_ptr<BlockStmt>(); }
+
     virtual shared_ptr<ExprStmt> exprStmt() { return shared_ptr<ExprStmt>(); }
+
     virtual shared_ptr<IfStmt> ifStmt() { return shared_ptr<IfStmt>(); }
+
     virtual shared_ptr<ImportStmt> importStmt() { return shared_ptr<ImportStmt>(); }
+
     virtual shared_ptr<InterfaceDeclStmt> interfaceDeclStmt() { return shared_ptr<InterfaceDeclStmt>(); }
+
     virtual shared_ptr<MethodDeclStmt> methodDeclStmt() { return shared_ptr<MethodDeclStmt>(); }
+
     virtual shared_ptr<MethodDefStmt> methodDefStmt() { return shared_ptr<MethodDefStmt>(); }
+
     virtual shared_ptr<ModuleDefStmt> moduleDefStmt() { return shared_ptr<ModuleDefStmt>(); }
+
     virtual shared_ptr<RegWriteStmt> regWriteStmt() { return shared_ptr<RegWriteStmt>(); }
+
     virtual shared_ptr<ReturnStmt> returnStmt() { return shared_ptr<ReturnStmt>(); }
+
     virtual shared_ptr<RuleDefStmt> ruleDefStmt() { return shared_ptr<RuleDefStmt>(); }
+
     virtual shared_ptr<TypedefStructStmt> typedefStructStmt() { return shared_ptr<TypedefStructStmt>(); }
+
     virtual shared_ptr<TypedefSynonymStmt> typedefSynonymStmt() { return shared_ptr<TypedefSynonymStmt>(); }
+
     virtual shared_ptr<VarBindingStmt> varBindingStmt() { return shared_ptr<VarBindingStmt>(); }
+
+    virtual shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope);
+
 };
 
 class ImportStmt : public Stmt {
 public:
     explicit ImportStmt(const string name);
+
     ~ImportStmt() override {}
-    void prettyPrint(int depth = 0) override ;
+
+    void prettyPrint(int depth = 0) override;
+
     virtual shared_ptr<ImportStmt> importStmt() override;
 
     const string name;
@@ -87,8 +126,11 @@ public:
 class TypedefSynonymStmt : public Stmt {
 public:
     TypedefSynonymStmt(const shared_ptr<BSVType> &typedeftype, const shared_ptr<BSVType> &type);
+
     ~TypedefSynonymStmt() override {}
-    void prettyPrint(int depth = 0) override ;
+
+    void prettyPrint(int depth = 0) override;
+
     virtual shared_ptr<TypedefSynonymStmt> typedefSynonymStmt() override;
 
 private:
@@ -99,13 +141,14 @@ private:
 class TypedefStructStmt : public Stmt {
 public:
     TypedefStructStmt(const string &name, const shared_ptr<BSVType> &structType,
-                   const vector<string> &members,
-                   const vector<shared_ptr<BSVType>> &memberTypes);
+                      const vector<string> &members,
+                      const vector<shared_ptr<BSVType>> &memberTypes);
 
     virtual ~TypedefStructStmt() override {}
 
     void prettyPrint(int depth) override;
-    virtual shared_ptr<TypedefStructStmt> typedefStructStmt() override ;
+
+    virtual shared_ptr<TypedefStructStmt> typedefStructStmt() override;
 
 public:
     const string name;
@@ -117,11 +160,12 @@ public:
 class InterfaceDeclStmt : public Stmt {
 public:
     InterfaceDeclStmt(const string &name, const shared_ptr<BSVType> &interfaceType,
-                  const vector<shared_ptr<Stmt>> &decls);
+                      const vector<shared_ptr<Stmt>> &decls);
 
     ~InterfaceDeclStmt() override {}
 
     void prettyPrint(int depth) override;
+
     virtual shared_ptr<InterfaceDeclStmt> interfaceDeclStmt() override;
 
     const string name;
@@ -139,7 +183,12 @@ public:
     ~ModuleDefStmt() override;
 
     void prettyPrint(int depth) override;
+
     virtual shared_ptr<ModuleDefStmt> moduleDefStmt() override;
+
+    shared_ptr<ModuleDefStmt> inlineModule(const shared_ptr<ModuleDefStmt> &otherModule);
+
+    shared_ptr<Stmt> rename(string prefix, LexicalScope &scope) override;
 
 public:
     const string name;
@@ -152,12 +201,13 @@ public:
 class MethodDeclStmt : public Stmt {
 public:
     MethodDeclStmt(const string &name, const shared_ptr<BSVType> &returnType,
-                  const vector<string> &params,
-                  const vector<shared_ptr<BSVType>> &paramTypes);
+                   const vector<string> &params,
+                   const vector<shared_ptr<BSVType>> &paramTypes);
 
     virtual ~MethodDeclStmt() override {}
 
     void prettyPrint(int depth) override;
+
     virtual shared_ptr<MethodDeclStmt> methodDeclStmt() override;
 
 public:
@@ -178,7 +228,10 @@ public:
     virtual ~MethodDefStmt();
 
     void prettyPrint(int depth) override;
+
     virtual shared_ptr<MethodDefStmt> methodDefStmt() override;
+
+    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
 
 public:
     const string name;
@@ -201,7 +254,10 @@ public:
     ~RuleDefStmt() override {}
 
     void prettyPrint(int depth = 0) override;
+
     virtual shared_ptr<RuleDefStmt> ruleDefStmt() override;
+
+    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
 
 };
 
@@ -213,12 +269,15 @@ public:
     const shared_ptr<Expr> rhs;
 public:
     ActionBindingStmt(const shared_ptr<BSVType> &bsvtype, const string &name,
-                   const shared_ptr<Expr> &rhs);
+                      const shared_ptr<Expr> &rhs);
 
     ~ActionBindingStmt() override {}
 
     void prettyPrint(int depth = 0) override;
+
     virtual shared_ptr<ActionBindingStmt> actionBindingStmt() override;
+
+    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
 
 };
 
@@ -234,7 +293,10 @@ public:
     ~VarBindingStmt() override {}
 
     void prettyPrint(int depth = 0) override;
+
     shared_ptr<VarBindingStmt> varBindingStmt() override;
+
+    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
 
 };
 
@@ -248,7 +310,10 @@ public:
     ~RegWriteStmt() override {}
 
     void prettyPrint(int depth = 0) override;
+
     virtual shared_ptr<RegWriteStmt> regWriteStmt() override;
+
+    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
 
 };
 
@@ -259,9 +324,13 @@ public:
     ~BlockStmt() override;
 
     void prettyPrint(int depth = 0) override;
+
     virtual shared_ptr<BlockStmt> blockStmt() override;
 
     const vector<shared_ptr<Stmt>> stmts;
+
+    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+
 };
 
 class IfStmt : public Stmt {
@@ -272,29 +341,44 @@ public:
     ~IfStmt() override;
 
     void prettyPrint(int depth) override;
+
     virtual shared_ptr<IfStmt> ifStmt() override;
 
     const shared_ptr<Expr> condition;
     const shared_ptr<Stmt> thenStmt;
     const shared_ptr<Stmt> elseStmt;
+
+    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+
 };
 
 class ReturnStmt : public Stmt {
 public:
     ReturnStmt(const shared_ptr<Expr> value) : Stmt(ReturnStmtType), value(value) {}
+
     ~ReturnStmt() override {}
+
     void prettyPrint(int depth) override;
+
     virtual shared_ptr<ReturnStmt> returnStmt() override;
 
     const shared_ptr<Expr> value;
+
+    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+
 };
 
 class ExprStmt : public Stmt {
 public:
     ExprStmt(const shared_ptr<Expr> value) : Stmt(ExprStmtType), value(value) {}
+
     ~ExprStmt() override {}
+
     void prettyPrint(int depth) override;
+
     virtual shared_ptr<ExprStmt> exprStmt() override;
 
     const shared_ptr<Expr> value;
+
+    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
 };

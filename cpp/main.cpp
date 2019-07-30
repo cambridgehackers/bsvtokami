@@ -34,13 +34,17 @@ int main(int argc, char *const argv[]) {
     int opt_type_check = 0;
     int opt_ast = 1;
     int opt_ir = 1;
-    while ((ch = getopt(argc, argv, "ait")) != -1) {
+    string opt_rename;
+    while ((ch = getopt(argc, argv, "air:t")) != -1) {
         switch (ch) {
             case 'a':
                 opt_ast = 1;
                 break;
             case 'i':
                 opt_ir = 1;
+                break;
+            case 'r':
+                opt_rename = string(optarg);
                 break;
             case 't':
                 opt_type_check = 1;
@@ -83,6 +87,16 @@ int main(int argc, char *const argv[]) {
                 generateIR->open(argv[i] + string(".IR"));
                 generateIR->generateIR(stmts);
                 generateIR->close();
+            }
+            if (opt_rename.size()) {
+                for (size_t i = 0; i < stmts.size(); i++) {
+                    shared_ptr<Stmt> stmt = stmts[i];
+                    if (stmt && stmt->moduleDefStmt()) {
+                        LexicalScope scope;
+                        shared_ptr<Stmt> renamedStmt = stmt->rename(opt_rename, scope);
+                        renamedStmt->prettyPrint();
+                    }
+                }
             }
         }
     }
