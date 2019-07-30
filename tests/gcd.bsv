@@ -6,48 +6,44 @@ interface GCD#(type a);
     method a result;
 endinterface: GCD
 
-module mkGCD(GCD#(Bit#(32)));
+module GCD#(Bit#(32)) mkGCD();
    Reg#(Bit#(32)) n <- mkRegU();
    Reg #(Bit#(32)) m <- mkRegU();
 
-   rule swap (n > m && m != 0);
+   rule swap when (n > m && m != 0);
       n <= m;
       m <= n;
    endrule
 
-   rule sub (n <= m && m != 0);
+   rule sub when (n <= m && m != 0);
       m <= m - n;
    endrule
 
-   method Action set_n(Bit#(32) in_n) if (m == 0);
-         n <= in_n;
+   method Action set_n(Bit#(32) in_n) when (m == 0);
+       n <= in_n;
    endmethod
-   method Action set_m(Bit#(32) in_m) if (m == 0);
-      action
-         m <= in_m;
-      endaction
+   method Action set_m(Bit#(32) in_m) when (m == 0);
+       m <= in_m;
    endmethod
 
-   method Bit#(32) result() if (m == 0);
+   method Bit#(32) result() when (m == 0);
       return n;
    endmethod: result
 endmodule: mkGCD
 
-module mkMain(Empty);
+module Empty mkMain();
    GCD#(Bit#(32)) gcd <- mkGCD();
    Reg#(Bit#(1)) started <- mkRegU();
    Reg#(Bit#(32)) dv <- mkRegU();
-   rule rl_start if (started == 0);
-      Void unused1 <- gcd.set_n(32'd100);
-      Void unused2 <- gcd.set_m(32'd20);
+   rule rl_start when (started == 0);
+      gcd.set_n(32'd100);
+      gcd.set_m(32'd20);
       started <= 1;
    endrule
    rule rl_display;
       let v = gcd.result();
       dv <= v;
-`ifndef BSVTOKAMI
-      $finish();
-`endif
+      finish();
    endrule
 endmodule
 
