@@ -311,8 +311,6 @@ Theorem decexecSep_ok:
 
       econstructor 1 with (pgmv := pgmv)
           (impl_d2efifo_validv := impl_d2efifo_validv0)
-
-
           (impl_pcv := impl_pcv0).
       ** repeat f_equal.
        *** instantiate (impl_pcv0 := wzero PgmSz ^+ x1 ^+ $1). eauto.

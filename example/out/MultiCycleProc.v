@@ -52,7 +52,7 @@ Module module'mkMultiCycleProc.
         Read state_v : Bit 2 <- state ;
         Read pc_v : Bit PgmSz <- pc ;
 
-        Assert(#state_v == $$(natToWord 2 0)) ;
+        If ( !#d2e_valid_v ) then (
        Call inst : Bit InstrSz (* varbinding *) <-  (* translateCall *) pgm'sub ((#pc_v) : Bit PgmSz)  ;
        (* call expr ./ProcMemSpec.bsv:95 *) Call call1 : Bit 2 <-  (* translateCall *) dec'getOp ((#inst) : Bit InstrSz)  ;
                Write d2e_op : Bit 2 <- #call1  ;
@@ -66,8 +66,11 @@ Module module'mkMultiCycleProc.
                Write d2e_src2 : Bit RegFileSz <- #call3  ;
        (* call expr ./ProcMemSpec.bsv:98 *) Call call4 : Bit RegFileSz <-  (* translateCall *) dec'getDst ((#inst) : Bit InstrSz)  ;
                Write d2e_dst : Bit RegFileSz <- #call4  ;
-               Write state : Bit 2 <- $$(natToWord 2 1)  ;
-        Retv ) (* rule doDecode *)
+               Write d2e_valid : Bool <- $$ true  ;
+        Retv ) else (
+	Retv ) ;
+        Retv
+    ) (* rule doDecode *)
 
     with Rule instancePrefix--"doExec" :=
     (
@@ -80,7 +83,7 @@ Module module'mkMultiCycleProc.
         Read d2e_src2_v : Bit RegFileSz <- d2e_src2 ;
         Read state_v : Bit 2 <- state ;
 
-        Assert(#state_v == $$(natToWord 2 1)) ;
+       If ( #d2e_valid_v && !#e2w_valid_v) then (
 
        Read rf_v : Array NumRegs (Bit DataSz) <- (instancePrefix--"rf") ;
        LET val1 : Bit DataSz (* varbinding *) <-  #rf_v @[#d2e_src1_v]  ;
@@ -98,7 +101,9 @@ Module module'mkMultiCycleProc.
 
         BKCall unused : Void <- (mem--"req") (#addr : Bit DataSz) ;
 
-        Retv ) (* rule doExec *)
+        Retv ) else ( Retv ) ;
+        Retv
+	) (* rule doExec *)
 
     with Rule instancePrefix--"doWriteBack" :=
     (
@@ -107,7 +112,7 @@ Module module'mkMultiCycleProc.
         Read pc_v : Bit PgmSz <- pc ;
         Read state_v : Bit 2 <- state ;
 
-        Assert (#state_v == $$(natToWord 2 2)) ;
+        If (#e2w_valid_v) then (
         Read rf_v : Array NumRegs (Bit DataSz) <- (instancePrefix--"rf") ;
 	LET rf_v : Array NumRegs (Bit DataSz) <- #rf_v @[#e2w_dst_v <- #e2w_val_v ]  ;
         Write (instancePrefix--"rf") : Array NumRegs (Bit DataSz) <-  #rf_v ;
@@ -117,6 +122,7 @@ Module module'mkMultiCycleProc.
 
         Write state : Bit 2 <- $$(natToWord 2 0)  ;
 
+        Retv ) else ( Retv ) ;
         Retv ) (* rule doWriteBack *)
     }). (* mkMultiCycleProc *)
 
