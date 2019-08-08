@@ -16,6 +16,8 @@ Expr::~Expr() {
 }
 
 shared_ptr<Expr> Expr::rename(string prefix, LexicalScope &scope) {
+    cerr << "Unhandled rename";
+    prettyPrint(4);
     return shared_ptr<Expr>();
 }
 

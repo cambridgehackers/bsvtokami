@@ -113,6 +113,8 @@ ActionBindingStmt::actionBindingStmt() { return static_pointer_cast<ActionBindin
 shared_ptr<Stmt> ActionBindingStmt::rename(string prefix, LexicalScope &scope) {
     string renamedVar = prefix + name;
     shared_ptr<Expr> renamedRHS;
+    cerr << "Renaming action binding" << endl;
+    rhs->prettyPrint(4);
     if (rhs)
         renamedRHS = rhs->rename(prefix, scope);
     scope.bind(name, renamedVar);
@@ -255,13 +257,6 @@ shared_ptr<ModuleDefStmt> ModuleDefStmt::moduleDefStmt() {
     return static_pointer_cast<ModuleDefStmt, Stmt>(shared_from_this());
 }
 
-shared_ptr<ModuleDefStmt> ModuleDefStmt::inlineModule(const shared_ptr<ModuleDefStmt> &otherModule) {
-    LexicalScope scope;
-    string prefix;
-    shared_ptr<Stmt> prefixedModule = otherModule->rename(prefix, scope);
-    return shared_ptr<ModuleDefStmt>();
-}
-
 shared_ptr<Stmt> ModuleDefStmt::rename(string prefix, LexicalScope &parentScope) {
     LexicalScope scope(&parentScope);
     vector<string> renamedParams;
@@ -273,6 +268,8 @@ shared_ptr<Stmt> ModuleDefStmt::rename(string prefix, LexicalScope &parentScope)
         scope.bind(params[i], renamedParam);
     }
     for (size_t i = 0; i < stmts.size(); i++) {
+	cout << "renaming stmt" << endl;
+	stmts[i]->prettyPrint();
         renamedStmts.push_back(stmts[i]->rename(prefix, scope));
     }
     return shared_ptr<Stmt>(new ModuleDefStmt(name, interfaceType, renamedParams, paramTypes, renamedStmts));

@@ -12,6 +12,7 @@ set (SOURCE
      Stmt.cpp
      GenerateAst.cpp
      GenerateIR.cpp
+     Inliner.cpp
      LexicalScope.cpp
      TypeChecker.cpp
      main.cpp

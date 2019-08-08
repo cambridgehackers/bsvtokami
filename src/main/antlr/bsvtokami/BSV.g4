@@ -131,6 +131,9 @@ subunion :
 derives :
     'deriving' '(' typeide (',' typeide)* ')'
     ;
+moduleinst:
+    attributeinstance* ('let' | t=bsvtype) var=lowerCaseIdentifier '=' 'new' rhs=expression ';'
+    ;
 varbinding :
     attributeinstance* ('let' | t=bsvtype) var=lowerCaseIdentifier '=' rhs=expression  ';'
     ;
@@ -152,17 +155,6 @@ modulestmt :
     | moduleinst
     | subinterfacedef
     | stmt
-    ;
-moduleinst :
-    attributeinstance* bsvtype lowerCaseIdentifier ':' moduleapp ';'
-    ;
-moduleapp :
-    lowerCaseIdentifier ('(' moduleactualparamarg (',' moduleactualparamarg)* ')')?
-    ;
-moduleactualparamarg :
-    'reset_by' expression
-    | 'clocked_by' expression
-    | expression
     ;
 methoddef :
     'method' bsvtype? name=lowerCaseIdentifier ('(' methodformals? ')')? methodcond? ';' (stmt)* 'endmethod' (':' lowerCaseIdentifier)?

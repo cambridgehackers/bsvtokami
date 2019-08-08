@@ -46,4 +46,6 @@ public:
     std::shared_ptr<Stmt> generateAst(BSVParser::VarbindingContext *varbinding);
 
     std::shared_ptr<Stmt> generateAst(BSVParser::ActionbindingContext *actionbinding);
+
+    std::shared_ptr<Stmt> generateAst(BSVParser::ModuleinstContext *moduleinst);
 };

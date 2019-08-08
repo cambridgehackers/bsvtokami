@@ -107,7 +107,6 @@ public:
     virtual shared_ptr<VarBindingStmt> varBindingStmt() { return shared_ptr<VarBindingStmt>(); }
 
     virtual shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope);
-
 };
 
 class ImportStmt : public Stmt {
@@ -185,8 +184,6 @@ public:
     void prettyPrint(int depth) override;
 
     virtual shared_ptr<ModuleDefStmt> moduleDefStmt() override;
-
-    shared_ptr<ModuleDefStmt> inlineModule(const shared_ptr<ModuleDefStmt> &otherModule);
 
     shared_ptr<Stmt> rename(string prefix, LexicalScope &scope) override;
 

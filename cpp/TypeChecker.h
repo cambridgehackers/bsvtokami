@@ -314,14 +314,6 @@ protected:
         return visitChildren(ctx);
     }
 
-    virtual antlrcpp::Any visitModuleapp(BSVParser::ModuleappContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
-    virtual antlrcpp::Any visitModuleactualparamarg(BSVParser::ModuleactualparamargContext *ctx) override {
-        return visitChildren(ctx);
-    }
-
     virtual antlrcpp::Any visitMethoddef(BSVParser::MethoddefContext *ctx) override {
         fprintf(stderr, "    tc MethodDef %s\n", ctx->name->getText().c_str());
         if (ctx->methodcond() != NULL) {

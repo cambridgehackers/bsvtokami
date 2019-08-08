@@ -196,6 +196,8 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ModuledefContext *ctx)
         BSVParser::ModulestmtContext *modstmt = stmts.at(i);
         if (modstmt->methoddef() != 0) {
             ast_stmts.push_back(generateAst(modstmt->methoddef()));
+	} else if (modstmt->moduleinst() != 0) {
+            ast_stmts.push_back(generateAst(modstmt->moduleinst()));
         } else if (modstmt->stmt() != 0) {
             BSVParser::StmtContext *stmt = modstmt->stmt();
             ast_stmts.push_back(generateAst(stmt));
@@ -326,7 +328,19 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ActionbindingContext *actio
         varType.reset(new BSVType());
     shared_ptr<Expr> rhs(expr(actionbinding->rhs));
     shared_ptr<Stmt> actionBindingStmt(new ActionBindingStmt(varType, varName, rhs));
-    actionBindingStmt->prettyPrint(1);
+    return actionBindingStmt;
+}
+
+shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ModuleinstContext *moduleinst) {
+    string varName = moduleinst->lowerCaseIdentifier()->getText();
+    shared_ptr<BSVType> varType;
+    if (moduleinst->t)
+        varType = bsvtype(moduleinst->t);
+    else
+        varType.reset(new BSVType());
+    shared_ptr<Expr> rhs(expr(moduleinst->rhs));
+    //FIXME: mark it as module instantiation?
+    shared_ptr<Stmt> actionBindingStmt(new ActionBindingStmt(varType, varName, rhs));
     return actionBindingStmt;
 }
 
