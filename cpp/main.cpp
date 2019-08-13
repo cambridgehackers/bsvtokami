@@ -86,7 +86,8 @@ int main(int argc, char *const argv[]) {
         }
         if (opt_ast) {
             GenerateAst *generateAst = new GenerateAst();
-            vector<shared_ptr<Stmt>> stmts = generateAst->generateAst(tree);
+            shared_ptr<PackageDefStmt> packageDef = generateAst->generateAst(tree);;
+            vector<shared_ptr<Stmt>> stmts = packageDef->stmts;
             if (opt_ir) {
                 GenerateIR *generateIR = new GenerateIR();
                 generateIR->open(argv[i] + string(".IR"));

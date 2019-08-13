@@ -433,3 +433,26 @@ void TypedefStructStmt::prettyPrint(int depth) {
 
 shared_ptr<TypedefStructStmt>
 TypedefStructStmt::typedefStructStmt() { return static_pointer_cast<TypedefStructStmt, Stmt>(shared_from_this()); }
+
+PackageDefStmt::PackageDefStmt(const string& name, const vector<shared_ptr<Stmt>> &stmts)
+    : Stmt(PackageDefStmtType), name(name),
+    stmts(stmts), bindings() {
+    for (int i = 0; i < stmts.size(); i++) {
+        if (shared_ptr<ModuleDefStmt> moduleStmt = stmts[i]->moduleDefStmt()) {
+            bindings[moduleStmt->name] = moduleStmt;
+        }
+    }
+}
+
+shared_ptr<Stmt> PackageDefStmt::lookup(const string &name)
+{
+    return bindings[name];
+}
+
+void PackageDefStmt::prettyPrint(int depth) {
+    for (size_t i = 0; i < stmts.size(); i++) {
+        indent(4 * (depth + 1));
+        stmts[i]->prettyPrint(depth + 1);
+        cout << " " << stmts[i] << ";" << endl;
+    }
+}

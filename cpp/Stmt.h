@@ -27,6 +27,7 @@ enum StmtType {
     MethodDeclStmtType,
     MethodDefStmtType,
     ModuleDefStmtType,
+    PackageDefStmtType,
     ReturnStmtType,
     TypedefStructStmtType,
     TypedefSynonymStmtType,
@@ -170,6 +171,19 @@ public:
     const string name;
     const shared_ptr<BSVType> interfaceType;
     const vector<shared_ptr<Stmt>> decls;
+};
+
+class PackageDefStmt : public Stmt {
+public:
+    PackageDefStmt(const string &name, const vector<shared_ptr<Stmt>> &package_stmts);
+
+    void prettyPrint(int depth) override;
+
+    shared_ptr<Stmt> lookup(const string &name);
+    const vector<shared_ptr<Stmt>> stmts;
+private:
+    string name;
+    map<string, shared_ptr<Stmt>> bindings;
 };
 
 class ModuleDefStmt : public Stmt {

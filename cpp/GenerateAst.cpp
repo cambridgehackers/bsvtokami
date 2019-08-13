@@ -96,16 +96,20 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
     return result;
 }
 
-vector<shared_ptr<Stmt>> GenerateAst::generateAst(BSVParser::PackagedefContext *ctx) {
+shared_ptr<PackageDefStmt> GenerateAst::generateAst(BSVParser::PackagedefContext *ctx) {
     vector<BSVParser::PackagestmtContext *> stmts = ctx->packagestmt();
     vector<shared_ptr<Stmt>> package_stmts;
     fprintf(stderr, "generateAst %lu stmts\n", stmts.size());
+    string packageName("<unnamed>");
     for (size_t i = 0; i < stmts.size(); i++) {
+        if (ctx->packagedecl()) {
+            packageName = ctx->packagedecl()->packageide()->getText();
+        }
         shared_ptr<Stmt> stmt = generateAst(stmts[i]);
         if (stmt)
             package_stmts.push_back(stmt);
     }
-    return package_stmts;
+    return shared_ptr<PackageDefStmt>(new PackageDefStmt(packageName, package_stmts));
 }
 
 shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::PackagestmtContext *ctx) {
