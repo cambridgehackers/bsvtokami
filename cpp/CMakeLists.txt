@@ -22,7 +22,8 @@ set (SOURCE
      ../generated/BSVListener.cpp
      ../generated/BSVParser.cpp
      ../generated/BSVVisitor.cpp
-		GenerateIR.cpp GenerateIR.h)
+		GenerateIR.cpp GenerateIR.h BSVPreprocessor.cpp BSVPreprocessor.h
+)
 set(CMAKE_CXX_FLAGS "-O -g -std=c++14")
 add_executable(${PROJECT_NAME} ${SOURCE})
 target_include_directories(${PROJECT_NAME}

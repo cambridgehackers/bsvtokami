@@ -14,6 +14,7 @@
 #include "antlr4-runtime.h"
 #include "BSVLexer.h"
 #include "BSVParser.h"
+#include "BSVPreprocessor.h"
 #include "GenerateAst.h"
 #include "GenerateIR.h"
 #include "Inliner.h"
@@ -60,11 +61,10 @@ int main(int argc, char *const argv[]) {
     }
 
     for (int i = optind; i < argc; i++) {
-        std::cerr << "Parsing file " << argv[i] << std::endl;
+        std::cerr << "Parsing file -1- " << argv[i] << std::endl;
         std::string inputFileName(argv[i]);
-        ANTLRFileStream input(inputFileName);
-        BSVLexer lexer(&input);
-        CommonTokenStream tokens(&lexer);
+        BSVPreprocessor preprocessor(inputFileName);
+        CommonTokenStream tokens((TokenSource *)&preprocessor);
 
         tokens.fill();
         if (dumptokens) {
