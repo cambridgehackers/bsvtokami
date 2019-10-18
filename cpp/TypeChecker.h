@@ -229,13 +229,17 @@ protected:
     }
 
     virtual antlrcpp::Any visitVarbinding(BSVParser::VarbindingContext *ctx) override {
-        z3::expr lhsexpr = visit(ctx->var);
-        if (ctx->t) {
-            z3::expr bsvtypeExpr = visit(ctx->t);
-            solver.add(lhsexpr == bsvtypeExpr);
+        std::vector<BSVParser::VarinitContext *> varinits = ctx->varinit();
+        for (size_t i = 0; i < varinits.size(); i++) {
+            BSVParser::VarinitContext *varinit = varinits[i];
+            z3::expr lhsexpr = visit(varinit->var);
+            if (ctx->t) {
+                z3::expr bsvtypeExpr = visit(ctx->t);
+                solver.add(lhsexpr == bsvtypeExpr);
+            }
+            z3::expr rhsexpr = visit(varinit->rhs);
+            solver.add(lhsexpr == rhsexpr);
         }
-        z3::expr rhsexpr = visit(ctx->rhs);
-        solver.add(lhsexpr == rhsexpr);
         return visitChildren(ctx);
     }
 

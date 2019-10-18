@@ -31,7 +31,7 @@ EscapedOperator :
     ;
 
 lowerCaseIdentifier :
-    LowerCaseIdentifier | EscapedOperator
+    LowerCaseIdentifier | EscapedOperator | DollarIdentifier
     ;
 
 upperCaseIdentifier :
@@ -132,10 +132,14 @@ derives :
     'deriving' '(' typeide (',' typeide)* ')'
     ;
 moduleinst:
+    /* MIT BSV: "new" */
     attributeinstance* ('let' | t=bsvtype) var=lowerCaseIdentifier '=' 'new' rhs=expression ';'
     ;
+varinit :
+    var=lowerCaseIdentifier ('=' rhs=expression)?
+    ;
 varbinding :
-    attributeinstance* ('let' | t=bsvtype) var=lowerCaseIdentifier '=' rhs=expression  ';'
+    attributeinstance* ('let' | t=bsvtype) varinit (',' varinit)*  ';'
     ;
 actionbinding:
     attributeinstance* ('let' | t=bsvtype) var=lowerCaseIdentifier '<-' rhs=expression ';'
@@ -147,7 +151,11 @@ moduledef :
     attributeinstance* moduleproto (modulestmt)* 'endmodule' (':' lowerCaseIdentifier)?
     ;
 moduleproto :
+/* MIT BSV module proto */
     'module' moduleinterface=bsvtype name=lowerCaseIdentifier '(' methodprotoformals? ')' ';'
+/* Classic BSV module proto */
+    | 'module' name=lowerCaseIdentifier '(' moduleinterface=bsvtype ')' ';'
+    | 'module' name=lowerCaseIdentifier '#' '(' methodprotoformals? ')' '(' moduleinterface=bsvtype ')' ';'
     ;
 modulestmt :
     methoddef
@@ -167,7 +175,8 @@ methodformal :
     attributeinstance* bsvtype? name=lowerCaseIdentifier
     ;
 methodcond :
-    'when' '(' expression ')'
+    /* MIT BSV allows when, Classic BSV: if */
+    ('when'|'if') '(' expression ')'
     ;
 subinterfacedef :
     'interface' upperCaseIdentifier lowerCaseIdentifier ';' (interfacestmt)* 'endinterface' (':' lowerCaseIdentifier)?
@@ -177,14 +186,15 @@ ruledef :
     attributeinstance* 'rule' name=lowerCaseIdentifier rulecond? ';' stmt* 'endrule' (':' lowerCaseIdentifier)?
     ;
 rulecond :
-    'when' '(' expression ')'
+    /* MIT BSV allows when, Classic BSV: optional if */
+    ('when'|'if'|) '(' expression ')'
     ;
 functiondef :
     attributeinstance* functionproto ';' (stmt)* 'endfunction' (':' lowerCaseIdentifier)?
     | functionproto '=' expression ';'
     ;
 functionproto :
-    'function' bsvtype? name=lowerCaseIdentifier '(' methodprotoformals? ')'
+    'function' bsvtype? name=lowerCaseIdentifier ('(' methodprotoformals? ')')?
     ;
 externcimport :
     'import' '"BDPI"' (lowerCaseIdentifier '=')? 'function' bsvtype lowerCaseIdentifier '(' externcfuncargs? ')' ';'
@@ -214,13 +224,14 @@ bsvtype :
     ;
 typeide :
     (pkg=upperCaseIdentifier '::')* name=upperCaseIdentifier
+    | typevar=lowerCaseIdentifier
     ;
 typenat :
     IntLiteral
     ;
 expression :
       pred=expression '?' expression ':' expression #condexpr
-    | expression 'matches' pattern #matchesexpr
+    | expression 'matches' pattern patterncond* #matchesexpr
     | 'case' '(' expression ')' 'matches' caseexpritem* caseexprdefaultitem? 'endcase' #caseexpr
     | binopexpr #operatorexpr
     ;
@@ -255,7 +266,7 @@ unopexpr :
     ;
 exprprimary :
     '(' expression ')' #parenexpr
-    | exprprimary '.' field=lowerCaseIdentifier #fieldexpr
+    | exprprimary '.' field=anyidentifier #fieldexpr
     | ( bsvtype | ( '(' bsvtype ')' ) ) '\'' exprprimary #castexpr
     | (pkg=upperCaseIdentifier '::')* var=lowerCaseIdentifier #varexpr
     | IntLiteral #intliteral
@@ -269,7 +280,8 @@ exprprimary :
     | 'clocked_by' exprprimary #clockedbyexpr
     | 'reset_by' exprprimary #resetbyexpr
     | bsvtype '’' ( ('{' expression (',' expression)* '}' ) | ( '(' expression ')' ) ) #typeassertionexpr
-    | (upperCaseIdentifier '::')* tag=upperCaseIdentifier (('{' memberbinds '}')|exprprimary|) #taggedunionexpr
+    /* MIT BSV: optional tagged */
+    | 'tagged'? (upperCaseIdentifier '::')* tag=upperCaseIdentifier (('{' memberbinds '}')|exprprimary|) #taggedunionexpr
     | 'interface' bsvtype (';')? (interfacestmt)* 'endinterface' (':' typeide)? #interfaceexpr
     | beginendblock #blockexpr
     ;
@@ -288,6 +300,17 @@ interfacestmt :
 beginendblock :
     attributeinstance* 'begin' (':' lowerCaseIdentifier)? (stmt)* 'end' (':' lowerCaseIdentifier)?
     ;
+
+/* MIT BSV does not need actionblock */
+actionblock :
+    attributeinstance* 'action' (stmt)* 'endaction'
+    ;
+
+/* MIT BSV does not need actionblock */
+actionvalueblock :
+    attributeinstance* 'actionvalue' (stmt)* 'endactionvalue'
+    ;
+
 regwrite :
     lhs=lvalue '<=' rhs=expression
     ;
@@ -307,12 +330,15 @@ stmt :
     | whilestmt
     | expression ';'
     | returnstmt
+    | actionblock
+    | actionvalueblock
     ;
 ifstmt :
     'if' '(' expression ')' stmt ('else' stmt)?
     ;
+/* MIT BSV: requires "matches" */
 casestmt :
-    'case' '(' expression ')' 'matches' casestmtpatitem* casestmtdefaultitem? 'endcase'
+    'case' '(' expression ')' 'matches'? casestmtpatitem* casestmtdefaultitem? 'endcase'
     ;
 casestmtpatitem :
     pattern patterncond* ':' stmt
@@ -367,7 +393,8 @@ RealLiteral : [0-9]+'.'[0-9]+ ;
 StringLiteral : '"' (~ [\f\n\r\t"])* '"'
     ;
 taggedunionpattern :
-    tag=upperCaseIdentifier pattern?
+    /* MIT BSV: optional "tagged" */
+    'tagged'? tag=upperCaseIdentifier pattern?
     | tag=upperCaseIdentifier '{' lowerCaseIdentifier ':' pattern (',' lowerCaseIdentifier ':' pattern)* '}'
     ;
 tuplepattern :

@@ -270,7 +270,7 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::RuledefContext *ctx) {
 }
 
 shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
-    //fprintf(stderr, "        stmt %s\n", ctx->getText().c_str());
+    fprintf(stderr, "        stmt %s\n", ctx->getText().c_str());
     if (BSVParser::RegwriteContext *regwrite = ctx->regwrite()) {
         string regName(regwrite->lhs->getText());
         shared_ptr<Expr> rhs(expr(regwrite->rhs));
@@ -311,16 +311,22 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
 }
 
 shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::VarbindingContext *varbinding) {
-    string varName = varbinding->lowerCaseIdentifier()->getText();
     shared_ptr<BSVType> varType;
     if (varbinding->t)
         varType = bsvtype(varbinding->t);
     else
         varType.reset(new BSVType());
-    shared_ptr<Expr> rhs(expr(varbinding->rhs));
-    if (!rhs)
-        cerr << "var binding unhandled rhs: " << varbinding->expression()->getText() << endl;
-    return shared_ptr<Stmt>(new VarBindingStmt(varType, varName, rhs));
+    std::vector<BSVParser::VarinitContext *> varinits = varbinding->varinit();
+    for (size_t i = 0; i < varinits.size(); i++) {
+        BSVParser::VarinitContext *varinit = varinits[i];
+        string varName = varinit->lowerCaseIdentifier()->getText();
+        shared_ptr<Expr> rhs(expr(varinit->rhs));
+        if (!rhs)
+            cerr << "var binding unhandled rhs: " << varinit->expression()->getText() << endl;
+        return shared_ptr<Stmt>(new VarBindingStmt(varType, varName, rhs));
+    }
+    //FIXME: how to make multiple bindings?
+    return shared_ptr<Stmt>();
 }
 
 shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ActionbindingContext *actionbinding) {
