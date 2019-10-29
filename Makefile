@@ -45,7 +45,7 @@ python/BSVParser.py: src/main/antlr/bsvtokami/BSV.g4 $(JARS)
 
 .PHONY: bin/bsv-parser
 
-bin/bsv-parser: cpp/antlr4-cpp-runtime/dist/libantlr4-runtime.a cpp/generated/BSVParser.cpp
+bin/bsv-parser: cpp/antlr4-cpp-runtime/dist/libantlr4-runtime.a cpp/generated/BSVParser.cpp z3/build/com.microsoft.z3.jar
 	test -f /usr/include/z3.h || echo sudo apt install z3-dev
 	mkdir -p bin cpp/build
 	@(cd cpp/build; cmake ..)

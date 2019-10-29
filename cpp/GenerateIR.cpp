@@ -125,7 +125,7 @@ void GenerateIR::generateIR(const shared_ptr<BlockStmt> &stmt, int depth) {
 
 void GenerateIR::generateIR(const shared_ptr<ExprStmt> &stmt, int depth) {
     indent(out, 4 * depth);
-    generateIR(stmt->value, depth + 1);
+    generateIR(stmt->expr, depth + 1);
     out << ":" << endl;
 }
 

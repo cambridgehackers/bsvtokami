@@ -245,3 +245,32 @@ shared_ptr<StringConst> StringConst::stringConst() { return static_pointer_cast<
 shared_ptr<Expr> StringConst::rename(string prefix, LexicalScope &scope) {
     return shared_ptr<StringConst>(new StringConst(repr));
 }
+
+CondExpr::CondExpr(const shared_ptr<Expr> &cond, const shared_ptr<Expr> &thenExpr, const shared_ptr<Expr> &elseExpr) : Expr(CondExprType) {
+
+}
+
+CondExpr::~CondExpr() {
+
+}
+
+void CondExpr::prettyPrint(int depth) {
+    cout << "(";
+    cond->prettyPrint(depth);
+    cout << ") ? (";
+    thenExpr->prettyPrint(depth);
+    cout << ") : (";
+    elseExpr->prettyPrint(depth);
+    cout << ")";
+}
+
+shared_ptr<CondExpr> CondExpr::condExpr() {
+    return static_pointer_cast<CondExpr, Expr>(shared_from_this());
+}
+
+shared_ptr<Expr> CondExpr::rename(string prefix, LexicalScope &renames) {
+    return shared_ptr<CondExpr>(new CondExpr(cond->rename(prefix, renames),
+                                             thenExpr->rename(prefix, renames),
+                                             elseExpr->rename(prefix, renames)));
+}
+

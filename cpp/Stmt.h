@@ -10,6 +10,7 @@ using namespace std;
 
 #include "BSVType.h"
 #include "Expr.h"
+#include "LValue.h"
 #include "LexicalScope.h"
 
 void indent(int depth);
@@ -32,6 +33,7 @@ enum StmtType {
     TypedefStructStmtType,
     TypedefSynonymStmtType,
     VarBindingStmtType,
+    VarAssignStmtType,
     RuleDefStmtType,
     RegWriteStmtType
 };
@@ -65,6 +67,8 @@ class TypedefStructStmt;
 class TypedefSynonymStmt;
 
 class VarBindingStmt;
+
+class VarAssignStmt;
 
 class Stmt : public enable_shared_from_this<Stmt> {
 protected:
@@ -106,6 +110,8 @@ public:
     virtual shared_ptr<TypedefSynonymStmt> typedefSynonymStmt() { return shared_ptr<TypedefSynonymStmt>(); }
 
     virtual shared_ptr<VarBindingStmt> varBindingStmt() { return shared_ptr<VarBindingStmt>(); }
+
+    virtual shared_ptr<VarAssignStmt> varAssignStmt() { return shared_ptr<VarAssignStmt>(); };
 
     virtual shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope);
 };
@@ -292,6 +298,24 @@ public:
 
 };
 
+class VarAssignStmt : public Stmt {
+public:
+    const shared_ptr<LValue> lhs;
+    const string op;
+    const shared_ptr<Expr> rhs;
+public:
+    VarAssignStmt(const shared_ptr<LValue> &lhs, const string &op, const shared_ptr<Expr> &rhs);
+
+    ~VarAssignStmt() override = default;
+
+    void prettyPrint(int depth = 0) override;
+
+    shared_ptr<VarAssignStmt> varAssignStmt() override;
+
+    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+
+};
+
 class VarBindingStmt : public Stmt {
 public:
     const shared_ptr<BSVType> bsvtype;
@@ -381,7 +405,7 @@ public:
 
 class ExprStmt : public Stmt {
 public:
-    ExprStmt(const shared_ptr<Expr> value) : Stmt(ExprStmtType), value(value) {}
+    ExprStmt(const shared_ptr<Expr> expr) : Stmt(ExprStmtType), expr(expr) {}
 
     ~ExprStmt() override {}
 
@@ -389,7 +413,7 @@ public:
 
     virtual shared_ptr<ExprStmt> exprStmt() override;
 
-    const shared_ptr<Expr> value;
+    const shared_ptr<Expr> expr;
 
     shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
 };

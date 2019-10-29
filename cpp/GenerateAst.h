@@ -29,11 +29,15 @@ public:
 
     std::shared_ptr<Stmt> generateAst(BSVParser::StmtContext *ctx);
 
+    std::shared_ptr<LValue> lvalue(BSVParser::LvalueContext *lhs);
+
     std::shared_ptr<Expr> expr(BSVParser::ExpressionContext *ctx);
 
     std::shared_ptr<Expr> expr(BSVParser::CaseexpritemContext *ctx);
 
     std::shared_ptr<Expr> expr(BSVParser::CaseexprdefaultitemContext *ctx);
+
+    std::shared_ptr<Expr> expr(BSVParser::CondexprContext *ctx);
 
     std::shared_ptr<Expr> expr(BSVParser::BinopexprContext *ctx);
 
@@ -44,6 +48,8 @@ public:
     std::shared_ptr<Expr> expr(BSVParser::TaggedunionexprContext *ctx);
 
     std::shared_ptr<Stmt> generateAst(BSVParser::VarbindingContext *varbinding);
+
+    std::shared_ptr<Stmt> generateAst(BSVParser::VarassignContext *varassign);
 
     std::shared_ptr<Stmt> generateAst(BSVParser::ActionbindingContext *actionbinding);
 

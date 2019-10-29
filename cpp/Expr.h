@@ -29,6 +29,8 @@ class VarExpr;
 
 class CallExpr;
 
+class CondExpr;
+
 class IntConst;
 
 class StringConst;
@@ -55,6 +57,8 @@ public:
     virtual shared_ptr<VarExpr> varExpr() { return shared_ptr<VarExpr>(); }
 
     virtual shared_ptr<CallExpr> callExpr() { return shared_ptr<CallExpr>(); }
+
+    virtual shared_ptr<CondExpr> condExpr() { return shared_ptr<CondExpr>(); }
 
     virtual shared_ptr<IntConst> intConst() { return shared_ptr<IntConst>(); }
 
@@ -115,6 +119,24 @@ public:
     virtual void prettyPrint(int depth = 0) override;
 
     virtual shared_ptr<CallExpr> callExpr() override;
+
+    shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
+};
+
+class CondExpr : public Expr {
+public:
+    const shared_ptr<Expr> cond;
+    const shared_ptr<Expr> thenExpr;
+    const shared_ptr<Expr> elseExpr;
+
+public:
+    CondExpr(const shared_ptr<Expr> &cond, const shared_ptr<Expr> &thenExpr, const shared_ptr<Expr> &elseExpr);
+
+    virtual ~CondExpr();
+
+    virtual void prettyPrint(int depth = 0) override;
+
+    virtual shared_ptr<CondExpr> condExpr() override;
 
     shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
 };

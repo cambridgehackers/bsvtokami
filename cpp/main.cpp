@@ -16,6 +16,7 @@
 #include "BSVParser.h"
 #include "BSVPreprocessor.h"
 #include "GenerateAst.h"
+#include "GenerateKami.h"
 #include "GenerateIR.h"
 #include "Inliner.h"
 #include "TypeChecker.h"
@@ -35,7 +36,8 @@ int main(int argc, char *const argv[]) {
     int ch;
     int opt_type_check = 0;
     int opt_ast = 1;
-    int opt_ir = 1;
+    int opt_kami = 1;
+    int opt_ir = 0;
     int opt_inline = 0;
     string opt_rename;
     while ((ch = getopt(argc, argv, "Iair:t")) != -1) {
@@ -45,6 +47,9 @@ int main(int argc, char *const argv[]) {
                 break;
             case 'i':
                 opt_ir = 1;
+                break;
+            case 'k':
+                opt_kami = 1;
                 break;
             case 'I':
                 opt_inline = 1;
@@ -88,6 +93,12 @@ int main(int argc, char *const argv[]) {
             GenerateAst *generateAst = new GenerateAst();
             shared_ptr<PackageDefStmt> packageDef = generateAst->generateAst(tree);;
             vector<shared_ptr<Stmt>> stmts = packageDef->stmts;
+            if (opt_kami) {
+                GenerateKami *generateKami = new GenerateKami();
+                generateKami->open(argv[i] + string(".v"));
+                generateKami->generateStmts(stmts);
+                generateKami->close();
+            }
             if (opt_ir) {
                 GenerateIR *generateIR = new GenerateIR();
                 generateIR->open(argv[i] + string(".IR"));

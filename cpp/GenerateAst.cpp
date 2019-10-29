@@ -2,12 +2,28 @@
 
 using namespace std;
 
+std::shared_ptr<LValue> GenerateAst::lvalue(BSVParser::LvalueContext *lhs) {
+    if (lhs->lvalue() != nullptr) {
+        shared_ptr<LValue> lhsLValue(lvalue(lhs->lvalue()));
+        if (lhs->index != nullptr) {
+            return ArraySubLValue::create(lhsLValue, expr(lhs->index));
+        } else if (lhs->msb != nullptr) {
+            return RangeSelLValue::create(lhsLValue, expr(lhs->msb), expr(lhs->lsb));
+        } else {
+            return FieldLValue::create(lhsLValue, lhs->lowerCaseIdentifier()->getText());
+        }
+    } else {
+        return VarLValue::create(lhs->lowerCaseIdentifier()->getText());
+    }
+}
+
 shared_ptr<Expr> GenerateAst::expr(BSVParser::ExpressionContext *ctx) {
     shared_ptr<Expr> result;
-    BSVParser::OperatorexprContext *oc = dynamic_cast<BSVParser::OperatorexprContext *>(ctx);
-    if (oc) {
+    if (BSVParser::OperatorexprContext *oc = dynamic_cast<BSVParser::OperatorexprContext *>(ctx)) {
         BSVParser::BinopexprContext *binopexpr = oc->binopexpr();
         result = expr(binopexpr);
+    } else if (BSVParser::CondexprContext *condexpr = dynamic_cast<BSVParser::CondexprContext *>(ctx)) {
+        result = expr(condexpr);
     }
     return result;
 }
@@ -21,6 +37,12 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::CaseexprdefaultitemContext *ctx) {
     shared_ptr<Expr> result;
     return result;
 }
+
+std::shared_ptr<Expr> GenerateAst::expr(BSVParser::CondexprContext *ctx) {
+    shared_ptr<Expr> result(new CondExpr(expr(ctx->pred), expr(ctx->expression(0)), expr(ctx->expression(1))));
+    return result;
+}
+
 
 shared_ptr<Expr> GenerateAst::expr(BSVParser::BinopexprContext *ctx) {
     if (ctx->unopexpr()) {
@@ -92,6 +114,8 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
         result.reset(new EnumUnionStructExpr(tag, keys, vals));
     } else if (BSVParser::ParenexprContext *parenexpr = dynamic_cast<BSVParser::ParenexprContext *>(ctx)) {
         return expr(parenexpr->expression());
+    } else if (BSVParser::UndefinedexprContext *undef = dynamic_cast<BSVParser::UndefinedexprContext *>(ctx)) {
+        return shared_ptr<Expr>(new VarExpr("Undefined"));
     } else {
         cerr << "Unhandled expr " << ctx->getText() << endl;
     }
@@ -286,6 +310,10 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
         return generateAst(varbinding);
     } else if (BSVParser::ActionbindingContext *actionbinding = ctx->actionbinding()) {
         return generateAst(actionbinding);
+    } else if (BSVParser::VarassignContext *varassign = ctx->varassign()) {
+        shared_ptr<Stmt> stmt = generateAst(varassign);
+        stmt->prettyPrint(0);
+        return stmt;
     } else if (BSVParser::IfstmtContext *ifstmt = ctx->ifstmt()) {
         shared_ptr<Expr> condition(expr(ifstmt->expression()));
         shared_ptr<Stmt> thenStmt(generateAst(ifstmt->stmt(0)));
@@ -346,6 +374,15 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ActionbindingContext *actio
     shared_ptr<Expr> rhs(expr(actionbinding->rhs));
     shared_ptr<Stmt> actionBindingStmt(new ActionBindingStmt(varType, varName, rhs));
     return actionBindingStmt;
+}
+
+shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::VarassignContext *varassign) {
+    shared_ptr<LValue> lhs(lvalue(varassign->lvalue(0)));
+    string op = varassign->op->getText();
+    shared_ptr<Expr> rhs(expr(varassign->expression()));
+    if (!rhs)
+        cerr << "var binding unhandled rhs: " << varassign->expression()->getText() << endl;
+    return shared_ptr<Stmt>(new VarAssignStmt(lhs, op, rhs));
 }
 
 shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ModuleinstContext *moduleinst) {

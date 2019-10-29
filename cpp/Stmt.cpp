@@ -151,6 +151,30 @@ shared_ptr<Stmt> VarBindingStmt::rename(string prefix, LexicalScope &scope) {
     return shared_ptr<Stmt>(new VarBindingStmt(bsvtype, renamedVar, renamedRHS));
 }
 
+VarAssignStmt::VarAssignStmt(const shared_ptr<LValue> &lhs, const string &op, const shared_ptr<Expr> &rhs)
+        : Stmt(VarAssignStmtType), lhs(lhs), op(op), rhs(rhs) {
+
+}
+
+void VarAssignStmt::prettyPrint(int depth)
+{
+    indent(4 * depth);
+    lhs->prettyPrint(depth);
+    cout << " " << op << " ";
+    rhs->prettyPrint(depth+1);
+    cout << endl;
+}
+
+shared_ptr<VarAssignStmt> VarAssignStmt::varAssignStmt() {
+    return static_pointer_cast<VarAssignStmt, Stmt>(shared_from_this());
+}
+
+shared_ptr<struct Stmt> VarAssignStmt::rename(string prefix, LexicalScope &scope) {
+    shared_ptr<LValue> newLHS; //FIXME
+    return shared_ptr<Stmt>(new VarAssignStmt(newLHS, op, rhs->rename(prefix, scope)));
+}
+
+
 MethodDeclStmt::MethodDeclStmt(const string &name, const shared_ptr<BSVType> &returnType,
                                const std::vector<std::string> &params,
                                const std::vector<std::shared_ptr<BSVType>> &paramTypes)
@@ -359,14 +383,14 @@ shared_ptr<struct Stmt> ReturnStmt::rename(string prefix, LexicalScope &scope) {
 
 void ExprStmt::prettyPrint(int depth) {
     indent(4 * depth);
-    value->prettyPrint(depth);
+    expr->prettyPrint(depth);
     cout << ";" << endl;
 }
 
 shared_ptr<ExprStmt> ExprStmt::exprStmt() { return static_pointer_cast<ExprStmt, Stmt>(shared_from_this()); }
 
 shared_ptr<struct Stmt> ExprStmt::rename(string prefix, LexicalScope &scope) {
-    return shared_ptr<Stmt>(new ExprStmt(value->rename(prefix, scope)));
+    return shared_ptr<Stmt>(new ExprStmt(expr->rename(prefix, scope)));
 }
 
 ImportStmt::ImportStmt(const std::string name) : Stmt(ImportStmtType), name(name) {
