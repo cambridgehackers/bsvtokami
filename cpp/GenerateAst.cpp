@@ -55,6 +55,8 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
         result.reset(new VarExpr(varexpr->getText()));
     } else if (BSVParser::IntliteralContext *intliteral = dynamic_cast<BSVParser::IntliteralContext *>(ctx)) {
         result.reset(new IntConst(intliteral->getText()));
+    } else if (BSVParser::StringliteralContext *stringliteral = dynamic_cast<BSVParser::StringliteralContext *>(ctx)) {
+        result.reset(new StringConst(stringliteral->getText()));
     } else if (BSVParser::ArraysubContext *arraysub = dynamic_cast<BSVParser::ArraysubContext *>(ctx)) {
         shared_ptr<Expr> array(expr(arraysub->array));
         shared_ptr<Expr> msb(expr(arraysub->msb));
@@ -228,7 +230,12 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::MethoddefContext *ctx)
         for (size_t i = 0; i < formals.size(); i++) {
             BSVParser::MethodformalContext *formal = formals.at(i);
             params.push_back(formal->lowerCaseIdentifier()->getText());
-            paramTypes.push_back(bsvtype(formal->bsvtype()));
+            if (formal->bsvtype() != nullptr) {
+                paramTypes.push_back(bsvtype(formal->bsvtype()));
+            } else {
+                fprintf(stderr, "formal with no type: %s at %s\n",
+                        formal->getText().c_str(), sourceLocation(formal).c_str());
+            }
         }
     }
     fprintf(stderr, "    methoddef %s\n", methodName.c_str());
@@ -357,7 +364,7 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ModuleinstContext *modulein
 std::shared_ptr<BSVType> GenerateAst::bsvtype(BSVParser::BsvtypeContext *ctx) {
     if (BSVParser::TypeideContext *typeide = ctx->typeide()) {
         //FIXME: package prefix
-        string typeName = typeide->upperCaseIdentifier(0)->getText();
+        string typeName = typeide->name ? typeide->name->getText() : typeide->typevar->getText();
         vector<BSVParser::BsvtypeContext *> params = ctx->bsvtype();
         vector<shared_ptr<BSVType>> typeParams;
         for (size_t i = 0; i < params.size(); i++) {
@@ -388,4 +395,11 @@ std::shared_ptr<BSVType> GenerateAst::bsvtype(BSVParser::TypedeftypeContext *ctx
         }
     }
     return shared_ptr<BSVType>(new BSVType(name, typeParams));
+}
+
+string GenerateAst::sourceLocation(antlr4::ParserRuleContext *ctx) {
+    antlr4::Token *start = ctx->getStart();
+    string filename = start->getTokenSource()->getSourceName();
+    size_t line = start->getLine();
+    return filename + ":" + to_string(line);
 }

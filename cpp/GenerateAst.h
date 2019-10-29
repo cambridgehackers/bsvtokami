@@ -48,4 +48,6 @@ public:
     std::shared_ptr<Stmt> generateAst(BSVParser::ActionbindingContext *actionbinding);
 
     std::shared_ptr<Stmt> generateAst(BSVParser::ModuleinstContext *moduleinst);
+
+    string sourceLocation(antlr4::ParserRuleContext *pContext);
 };
