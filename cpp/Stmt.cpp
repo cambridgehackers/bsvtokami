@@ -130,8 +130,11 @@ VarBindingStmt::VarBindingStmt(const shared_ptr<BSVType> &bsvtype, const string 
 void VarBindingStmt::prettyPrint(int depth) {
     indent(4 * depth);
     if (bsvtype) bsvtype->prettyPrint();
-    cout << " " << name << " = ";
-    rhs->prettyPrint(depth + 1);
+    cout << " " << name;
+    if (rhs) {
+        cout << " = ";
+        rhs->prettyPrint(depth + 1);
+    }
     cout << ";" << endl;
 }
 
@@ -247,7 +250,10 @@ void ModuleDefStmt::prettyPrint(int depth) {
     }
     cout << ");" << endl;
     for (size_t i = 0; i < stmts.size(); i++) {
-        stmts.at(i)->prettyPrint(depth + 1);
+        if (stmts.at(i))
+            stmts.at(i)->prettyPrint(depth + 1);
+        else
+            cout << "Empty stmt ..." << endl;
     }
     indent(4 * depth);
     cout << "endmodule" << endl;
@@ -317,7 +323,10 @@ BlockStmt::~BlockStmt() {}
 void BlockStmt::prettyPrint(int depth) {
     cout << "begin" << endl;
     for (size_t i = 0; i < stmts.size(); i++) {
-        stmts.at(i)->prettyPrint(depth + 1);
+        if (stmts.at(i))
+            stmts.at(i)->prettyPrint(depth + 1);
+        else
+            cout << "emptystmt:" << to_string(i) << endl;
     }
     indent(4 * depth);
     cout << "end" << endl;
