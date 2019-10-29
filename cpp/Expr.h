@@ -14,6 +14,7 @@ enum ExprType {
     ArraySubExprType,
     VarExprType,
     IntConstType,
+    StringConstType,
     OperatorExprType,
     CallExprType,
     FieldExprType,
@@ -29,6 +30,8 @@ class VarExpr;
 class CallExpr;
 
 class IntConst;
+
+class StringConst;
 
 class OperatorExpr;
 
@@ -54,6 +57,8 @@ public:
     virtual shared_ptr<CallExpr> callExpr() { return shared_ptr<CallExpr>(); }
 
     virtual shared_ptr<IntConst> intConst() { return shared_ptr<IntConst>(); }
+
+    virtual shared_ptr<StringConst> stringConst() { return shared_ptr<StringConst>(); }
 
     virtual shared_ptr<OperatorExpr> operatorExpr() { return shared_ptr<OperatorExpr>(); }
 
@@ -132,6 +137,20 @@ public:
     shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
 };
 
+class StringConst : public Expr {
+public:
+    const string repr;
+public:
+    StringConst(const string &repr);
+
+    ~StringConst() override;
+
+    void prettyPrint(int depth = 0) override;
+
+    shared_ptr<StringConst> stringConst() override;
+
+    shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
+};
 
 class OperatorExpr : public Expr {
 public:

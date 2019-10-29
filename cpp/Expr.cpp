@@ -153,7 +153,10 @@ void CallExpr::prettyPrint(int depth) {
     for (size_t i = 0; i < args.size(); i++) {
         if (i > 0)
             cout << ", ";
-        args[i]->prettyPrint(depth + 1);
+        if (args[i])
+            args[i]->prettyPrint(depth + 1);
+        else
+            cout << "emptyarg:" << to_string(i);
     }
     cout << ")";
 }
@@ -222,4 +225,23 @@ shared_ptr<Expr> ArraySubExpr::rename(string prefix, LexicalScope &scope) {
     return shared_ptr<ArraySubExpr>(new ArraySubExpr(array->rename(prefix, scope),
                                                      msb->rename(prefix, scope),
                                                      lsb->rename(prefix, scope)));
+}
+
+StringConst::StringConst(const string &repr)
+    : Expr(StringConstType), repr(repr) {
+
+}
+
+StringConst::~StringConst() {
+
+}
+
+void StringConst::prettyPrint(int depth) {
+    cout << repr;
+}
+
+shared_ptr<StringConst> StringConst::stringConst() { return static_pointer_cast<StringConst, Expr>(shared_from_this()); }
+
+shared_ptr<Expr> StringConst::rename(string prefix, LexicalScope &scope) {
+    return shared_ptr<StringConst>(new StringConst(repr));
 }
