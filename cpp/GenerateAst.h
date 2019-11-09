@@ -17,6 +17,10 @@ public:
 
     std::shared_ptr<Stmt> generateAst(BSVParser::InterfacedeclContext *ctx);
 
+    std::shared_ptr<Stmt> generateAst(BSVParser::SubinterfacedefContext *ctx);
+
+    std::shared_ptr<Stmt> generateAst(BSVParser::FunctiondefContext *ctx);
+
     std::shared_ptr<Stmt> generateAst(BSVParser::ModuledefContext *ctx);
 
     std::shared_ptr<Stmt> generateAst(BSVParser::MethoddefContext *ctx);
@@ -38,6 +42,8 @@ public:
     std::shared_ptr<Expr> expr(BSVParser::CaseexprdefaultitemContext *ctx);
 
     std::shared_ptr<Expr> expr(BSVParser::CondexprContext *ctx);
+
+    std::shared_ptr<Expr> expr(BSVParser::MatchesexprContext *ctx);
 
     std::shared_ptr<Expr> expr(BSVParser::BinopexprContext *ctx);
 

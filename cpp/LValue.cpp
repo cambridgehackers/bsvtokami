@@ -16,7 +16,7 @@ shared_ptr<VarLValue> VarLValue::create(const string &name) {
 
 VarLValue::~VarLValue(){}
 
-void VarLValue::prettyPrint(int depth) {
+void VarLValue::prettyPrint(ostream &out, int depth) {
     cout << name;
 }
 
@@ -37,8 +37,8 @@ FieldLValue::FieldLValue(const shared_ptr<LValue> &lhs, const string &field)
 }
 
 FieldLValue::~FieldLValue() {}
-void FieldLValue::prettyPrint(int depth) {
-    lhs->prettyPrint(depth);
+void FieldLValue::prettyPrint(ostream &out, int depth) {
+    lhs->prettyPrint(out, depth);
     cout << "." << field;
 }
 
@@ -60,10 +60,10 @@ ArraySubLValue::~ArraySubLValue() {
 
 }
 
-void ArraySubLValue::prettyPrint(int depth) {
-    lhs->prettyPrint(depth);
+void ArraySubLValue::prettyPrint(ostream &out, int depth) {
+    lhs->prettyPrint(out, depth);
     cout << "[";
-    index->prettyPrint(depth);
+    index->prettyPrint(out, depth);
     cout << "]";
 }
 
@@ -82,12 +82,12 @@ RangeSelLValue::RangeSelLValue(const shared_ptr<LValue> &lhs, const shared_ptr<E
 
 RangeSelLValue::~RangeSelLValue(){}
 
-void RangeSelLValue::prettyPrint(int depth) {
-    lhs->prettyPrint(depth);
+void RangeSelLValue::prettyPrint(ostream &out, int depth) {
+    lhs->prettyPrint(out, depth);
     cout << "[";
-    msb->prettyPrint(depth);
+    msb->prettyPrint(out, depth);
     cout << " : ";
-    lsb->prettyPrint(depth);
+    lsb->prettyPrint(out, depth);
     cout << "]";
 }
 

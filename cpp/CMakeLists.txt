@@ -1,6 +1,7 @@
 
 cmake_minimum_required(VERSION 3.0)
 project(bsv-parser)
+
 link_directories(
 	antlr4-cpp-runtime/dist
 	../z3/build
@@ -25,16 +26,17 @@ set (SOURCE
      GenerateIR.cpp GenerateIR.h
      BSVPreprocessor.cpp BSVPreprocessor.h
      GenerateKami.cpp GenerateKami.h
-        LValue.cpp LValue.h)
+        LValue.cpp LValue.h GenerateKoika.cpp GenerateKoika.h)
 set(CMAKE_CXX_FLAGS "-O -g -std=c++14")
 add_executable(${PROJECT_NAME} ${SOURCE})
 target_include_directories(${PROJECT_NAME}
-	PRIVATE
-	generated
-	../z3/src/api
-	../z3/src/api/c++
-	antlr4-cpp-runtime/runtime/src
-	)
+		PRIVATE
+		generated
+		../z3/src/api
+		../z3/src/api/c++
+		antlr4-cpp-runtime/runtime/src
+		/usr/local/include
+		)
 target_link_libraries(${PROJECT_NAME}
 	antlr4-runtime
 	z3

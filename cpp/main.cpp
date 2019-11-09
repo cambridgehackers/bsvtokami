@@ -6,10 +6,15 @@
 //
 //  main.cpp
 //
-
+#include <libgen.h>
+#include <iostream>
 #include <stdlib.h>
 #include <unistd.h>
-#include <iostream>
+#include <string>
+#include <sys/stat.h>
+
+//#include <boost/filesystem.hpp>
+
 
 #include "antlr4-runtime.h"
 #include "BSVLexer.h"
@@ -17,11 +22,13 @@
 #include "BSVPreprocessor.h"
 #include "GenerateAst.h"
 #include "GenerateKami.h"
+#include "GenerateKoika.h"
 #include "GenerateIR.h"
 #include "Inliner.h"
 #include "TypeChecker.h"
 
 using namespace antlr4;
+//namespace fs = boost::filesystem;
 
 void usage(char *const argv[]) {
     fprintf(stderr, "Usage: %s [-t]\n", argv[0]);
@@ -37,6 +44,7 @@ int main(int argc, char *const argv[]) {
     int opt_type_check = 0;
     int opt_ast = 1;
     int opt_kami = 1;
+    int opt_koika = 1;
     int opt_ir = 0;
     int opt_inline = 0;
     string opt_rename;
@@ -50,6 +58,9 @@ int main(int argc, char *const argv[]) {
                 break;
             case 'k':
                 opt_kami = 1;
+                break;
+            case 'K':
+                opt_koika = 1;
                 break;
             case 'I':
                 opt_inline = 1;
@@ -66,10 +77,10 @@ int main(int argc, char *const argv[]) {
     }
 
     for (int i = optind; i < argc; i++) {
-        std::cerr << "Parsing file -1- " << argv[i] << std::endl;
-        std::string inputFileName(argv[i]);
+        string inputFileName(argv[i]);
+        std::cerr << "Parsing file -1- " << inputFileName << std::endl;
         BSVPreprocessor preprocessor(inputFileName);
-        CommonTokenStream tokens((TokenSource *)&preprocessor);
+        CommonTokenStream tokens((TokenSource *) &preprocessor);
 
         tokens.fill();
         if (dumptokens) {
@@ -94,10 +105,29 @@ int main(int argc, char *const argv[]) {
             shared_ptr<PackageDefStmt> packageDef = generateAst->generateAst(tree);;
             vector<shared_ptr<Stmt>> stmts = packageDef->stmts;
             if (opt_kami) {
+                ::mkdir("kami", 0755);
+
+                string kamiFileName("kami/");
+                char buffer[4096];
+                kamiFileName += string(::basename_r(inputFileName.c_str(), buffer));
+                kamiFileName += string(".kami");
                 GenerateKami *generateKami = new GenerateKami();
-                generateKami->open(argv[i] + string(".v"));
+                generateKami->open(kamiFileName);
                 generateKami->generateStmts(stmts);
                 generateKami->close();
+            }
+            if (opt_koika) {
+                ::mkdir("koika", 0775);
+
+                string koikaFileName("koika/");
+                char buffer[4096];
+                koikaFileName += string(::basename_r(inputFileName.c_str(), buffer));
+                koikaFileName += string(".koika");
+
+                GenerateKoika *generateKoika = new GenerateKoika();
+                generateKoika->open(koikaFileName);
+                generateKoika->generateStmts(stmts);
+                generateKoika->close();
             }
             if (opt_ir) {
                 GenerateIR *generateIR = new GenerateIR();
@@ -111,17 +141,17 @@ int main(int argc, char *const argv[]) {
                     if (stmt && stmt->moduleDefStmt()) {
                         LexicalScope scope;
                         shared_ptr<Stmt> renamedStmt = stmt->rename(opt_rename, scope);
-                        renamedStmt->prettyPrint();
+                        renamedStmt->prettyPrint(cout, 0);
                     }
                 }
             }
-	    if (opt_inline) {
-		Inliner *inliner = new Inliner();
-		vector<shared_ptr<Stmt>> inlinedStmts = inliner->processPackage(stmts);
+            if (opt_inline) {
+                Inliner *inliner = new Inliner();
+                vector<shared_ptr<Stmt>> inlinedStmts = inliner->processPackage(stmts);
                 for (size_t i = 0; i < inlinedStmts.size(); i++) {
-		    inlinedStmts[i]->prettyPrint();
-		}
-	    }
+                    inlinedStmts[i]->prettyPrint(cout, 0);
+                }
+            }
         }
     }
     return (numberOfSyntaxErrors == 0) ? 0 : 1;

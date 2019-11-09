@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <map>
 #include <string>
 #include <vector>
@@ -20,7 +21,8 @@ enum ExprType {
     FieldExprType,
     CondExprType,
     CaseExprType,
-    EnumUnionStructExprType
+    EnumUnionStructExprType,
+    MatchesExprType
 };
 
 class FieldExpr;
@@ -34,6 +36,8 @@ class CondExpr;
 class IntConst;
 
 class StringConst;
+
+class MatchesExpr;
 
 class OperatorExpr;
 
@@ -50,7 +54,7 @@ public:
 
     virtual ~Expr();
 
-    virtual void prettyPrint(int depth = 0) = 0;
+    virtual void prettyPrint(ostream &out, int depth = 0) = 0;
 
     virtual shared_ptr<FieldExpr> fieldExpr() { return shared_ptr<FieldExpr>(); }
 
@@ -61,6 +65,8 @@ public:
     virtual shared_ptr<CondExpr> condExpr() { return shared_ptr<CondExpr>(); }
 
     virtual shared_ptr<IntConst> intConst() { return shared_ptr<IntConst>(); }
+
+    virtual shared_ptr<MatchesExpr> matchesExpr() { return shared_ptr<MatchesExpr>(); }
 
     virtual shared_ptr<StringConst> stringConst() { return shared_ptr<StringConst>(); }
 
@@ -82,7 +88,7 @@ public:
 
     virtual ~FieldExpr();
 
-    virtual void prettyPrint(int depth = 0) override;
+    virtual void prettyPrint(ostream &out, int depth = 0) override;
 
     shared_ptr<FieldExpr> fieldExpr() override;
 
@@ -99,7 +105,7 @@ public:
 
     virtual ~VarExpr();
 
-    virtual void prettyPrint(int depth = 0) override;
+    virtual void prettyPrint(ostream &out, int depth = 0) override;
 
     shared_ptr<VarExpr> varExpr() override;
 
@@ -116,7 +122,7 @@ public:
 
     virtual ~CallExpr();
 
-    virtual void prettyPrint(int depth = 0) override;
+    virtual void prettyPrint(ostream &out, int depth = 0) override;
 
     virtual shared_ptr<CallExpr> callExpr() override;
 
@@ -134,7 +140,7 @@ public:
 
     virtual ~CondExpr();
 
-    virtual void prettyPrint(int depth = 0) override;
+    virtual void prettyPrint(ostream &out, int depth = 0) override;
 
     virtual shared_ptr<CondExpr> condExpr() override;
 
@@ -152,7 +158,7 @@ public:
 
     ~IntConst() override;
 
-    void prettyPrint(int depth = 0) override;
+    void prettyPrint(ostream &out, int depth = 0) override;
 
     shared_ptr<IntConst> intConst() override;
 
@@ -167,7 +173,7 @@ public:
 
     ~StringConst() override;
 
-    void prettyPrint(int depth = 0) override;
+    void prettyPrint(ostream &out, int depth = 0) override;
 
     shared_ptr<StringConst> stringConst() override;
 
@@ -187,11 +193,37 @@ public:
 
     ~OperatorExpr() override;
 
-    void prettyPrint(int depth = 0) override;
+    void prettyPrint(ostream &out, int depth = 0) override;
 
     shared_ptr<OperatorExpr> operatorExpr() override;
 
     shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
+};
+
+class MatchesExpr : public Expr {
+public:
+    const shared_ptr<Expr> expr;
+    //const shared_ptr<Pattern> pattern;
+    const string pattern;
+    const vector<shared_ptr<Expr>> patterncond;
+public:
+
+    MatchesExpr(const shared_ptr<Expr> &expr, const string &pattern);
+
+    MatchesExpr(const shared_ptr<Expr> &expr, const string &pattern, const vector<shared_ptr<Expr>> &patterncond);
+
+    ~MatchesExpr() override;
+
+    void prettyPrint(ostream &out, int depth = 0) override;
+
+    shared_ptr<MatchesExpr> matchesExpr() override;
+
+    shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
+
+    static shared_ptr<MatchesExpr> create(const shared_ptr<Expr> &expr, const string &pattern);
+    static shared_ptr<MatchesExpr> create(const shared_ptr<Expr> &expr, const string &pattern,
+            const vector<shared_ptr<Expr>> &patterncond);
+
 };
 
 class ArraySubExpr : public Expr {
@@ -201,7 +233,7 @@ public:
 
     virtual ~ArraySubExpr();
 
-    void prettyPrint(int depth) override;
+    void prettyPrint(ostream &out, int depth) override;
 
     shared_ptr<ArraySubExpr> arraySubExpr() override;
 
@@ -220,7 +252,7 @@ public:
 
     ~EnumUnionStructExpr() override {}
 
-    void prettyPrint(int depth = 0) override;
+    void prettyPrint(ostream &out, int depth = 0) override;
 
     shared_ptr<EnumUnionStructExpr> enumUnionStructExpr() override;
 

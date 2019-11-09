@@ -28,15 +28,15 @@ std::string BSVType::to_string() {
     return result;
 }
 
-void BSVType::prettyPrint(int depth) {
-    cout << name;
+void BSVType::prettyPrint(ostream &out, int depth) {
+    out << name;
     if (params.size()) {
-        cout << "#(";
+        out << "#(";
         for (size_t i = 0; i < params.size(); i++) {
             if (i > 0)
-                cout << ", ";
-            params.at(i)->prettyPrint();
+                out << ", ";
+            params.at(i)->prettyPrint(out, 0);
         }
-        cout << ")";
+        out << ")";
     }
 }

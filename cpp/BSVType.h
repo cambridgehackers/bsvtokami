@@ -1,8 +1,11 @@
 #pragma once
 
+#include <iostream>
 #include <string>
 #include <vector>
 #include <memory>
+
+using namespace std;
 
 class BSVType {
 private:
@@ -22,5 +25,5 @@ public:
     BSVType(std::string name, const std::vector<std::shared_ptr<BSVType>> &params) : name(name), numeric(false), isVar(false), params(params) {
     }
     std::string to_string();
-    virtual void prettyPrint(int depth = 0);
+    virtual void prettyPrint(ostream &out, int depth = 0);
 };

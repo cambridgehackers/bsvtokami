@@ -17,7 +17,7 @@ Expr::~Expr() {
 
 shared_ptr<Expr> Expr::rename(string prefix, LexicalScope &scope) {
     cerr << "Unhandled rename";
-    prettyPrint(4);
+    prettyPrint(cout, 4);
     return shared_ptr<Expr>();
 }
 
@@ -28,8 +28,8 @@ VarExpr::VarExpr(const string &name)
 VarExpr::~VarExpr() {
 }
 
-void VarExpr::prettyPrint(int depth) {
-    cout << name;
+void VarExpr::prettyPrint(ostream &out, int depth) {
+    out << name;
 }
 
 shared_ptr<VarExpr> VarExpr::varExpr() { return static_pointer_cast<VarExpr, Expr>(shared_from_this()); }
@@ -74,8 +74,8 @@ IntConst::IntConst(const string &repr)
 IntConst::~IntConst() {
 }
 
-void IntConst::prettyPrint(int depth) {
-    cout << repr;
+void IntConst::prettyPrint(ostream &out, int depth) {
+    out << repr;
 }
 
 shared_ptr<IntConst> IntConst::intConst() { return static_pointer_cast<IntConst, Expr>(shared_from_this()); }
@@ -97,14 +97,14 @@ OperatorExpr::OperatorExpr(const string &op, const shared_ptr<Expr> &lhs, const 
 OperatorExpr::~OperatorExpr() {
 }
 
-void OperatorExpr::prettyPrint(int depth) {
+void OperatorExpr::prettyPrint(ostream &out, int depth) {
     if (!rhs) {
-        cout << op << " ";
+        out << op << " ";
     }
-    lhs->prettyPrint(depth + 1);
+    lhs->prettyPrint(out, depth + 1);
     if (rhs) {
-        cout << " " << op << " ";
-        rhs->prettyPrint(depth + 1);
+        out << " " << op << " ";
+        rhs->prettyPrint(out, depth + 1);
     }
 }
 
@@ -119,6 +119,48 @@ shared_ptr<Expr> OperatorExpr::rename(string prefix, LexicalScope &scope) {
         return shared_ptr<OperatorExpr>(new OperatorExpr(op, lhs->rename(prefix, scope)));
 }
 
+MatchesExpr::MatchesExpr(const shared_ptr<Expr> &expr, const string &pattern)
+        : Expr(MatchesExprType), expr(expr), pattern(pattern) {
+}
+
+MatchesExpr::MatchesExpr(const shared_ptr<Expr> &expr, const string &pattern, const vector<shared_ptr<Expr>> &patterncond)
+    : Expr(MatchesExprType), expr(expr), pattern(pattern), patterncond(patterncond) {
+
+}
+
+MatchesExpr::~MatchesExpr() {
+
+}
+
+void MatchesExpr::prettyPrint(ostream &out, int depth) {
+    expr->prettyPrint(out, depth);
+    out << " matches ";
+    //fixme: string
+    out << pattern;
+    for (int i = 0; i < patterncond.size(); i++) {
+        out << " &&& ";
+        patterncond[i]->prettyPrint(out, depth);
+    }
+};
+
+shared_ptr<MatchesExpr> MatchesExpr::matchesExpr() {
+    return static_pointer_cast<MatchesExpr, Expr>(shared_from_this());
+}
+
+shared_ptr<Expr> MatchesExpr::rename(string prefix, LexicalScope &renames) {
+    //FIXME: implement
+    return MatchesExpr::create(expr, pattern, patterncond);
+}
+
+shared_ptr<MatchesExpr> MatchesExpr::create(const shared_ptr<Expr> &expr, const string &pattern) {
+    return shared_ptr<MatchesExpr>(new MatchesExpr(expr, pattern));
+}
+
+shared_ptr<MatchesExpr> MatchesExpr::create(const shared_ptr<Expr> &expr, const string &pattern,
+                                      const vector<shared_ptr<Expr>> &exprs) {
+    return shared_ptr<MatchesExpr>(new MatchesExpr(expr, pattern, exprs));
+}
+
 FieldExpr::FieldExpr(const shared_ptr<Expr> &object, const std::string &fieldName)
         : Expr(FieldExprType), object(object), fieldName(fieldName) {
 }
@@ -127,9 +169,9 @@ FieldExpr::~FieldExpr() {
 
 }
 
-void FieldExpr::prettyPrint(int depth) {
-    object->prettyPrint(depth + 1);
-    cout << "." << fieldName;
+void FieldExpr::prettyPrint(ostream &out, int depth) {
+    object->prettyPrint(out, depth + 1);
+    out << "." << fieldName;
 }
 
 shared_ptr<FieldExpr> FieldExpr::fieldExpr() { return static_pointer_cast<FieldExpr, Expr>(shared_from_this()); }
@@ -147,18 +189,18 @@ CallExpr::~CallExpr() {
 
 }
 
-void CallExpr::prettyPrint(int depth) {
-    function->prettyPrint(depth + 1);
-    cout << "(";
+void CallExpr::prettyPrint(ostream &out, int depth) {
+    function->prettyPrint(out, depth + 1);
+    out << "(";
     for (size_t i = 0; i < args.size(); i++) {
         if (i > 0)
-            cout << ", ";
+            out << ", ";
         if (args[i])
-            args[i]->prettyPrint(depth + 1);
+            args[i]->prettyPrint(out, depth + 1);
         else
-            cout << "emptyarg:" << to_string(i);
+            out << "emptyarg:" << to_string(i);
     }
-    cout << ")";
+    out << ")";
 }
 
 shared_ptr<CallExpr> CallExpr::callExpr() { return static_pointer_cast<CallExpr, Expr>(shared_from_this()); }
@@ -176,15 +218,15 @@ EnumUnionStructExpr::EnumUnionStructExpr(const string &tag, const vector<string>
                                                                                  tag(tag), keys(keys),
                                                                                  vals(vals) {}
 
-void EnumUnionStructExpr::prettyPrint(int depth) {
-    cout << tag << " {";
+void EnumUnionStructExpr::prettyPrint(ostream &out, int depth) {
+    out << tag << " {";
     for (size_t i = 0; i < keys.size(); i++) {
         if (i > 0)
-            cout << ";";
-        cout << " " << keys.at(i) << ": ";
-        vals.at(i)->prettyPrint(depth + 1);
+            out << ";";
+        out << " " << keys.at(i) << ": ";
+        vals.at(i)->prettyPrint(out, depth + 1);
     }
-    cout << " }";
+    out << " }";
 }
 
 shared_ptr<EnumUnionStructExpr> EnumUnionStructExpr::enumUnionStructExpr() {
@@ -206,15 +248,15 @@ ArraySubExpr::~ArraySubExpr() {
 
 }
 
-void ArraySubExpr::prettyPrint(int depth) {
-    array->prettyPrint(depth + 1);
-    cout << "[";
-    msb->prettyPrint(depth + 1);
+void ArraySubExpr::prettyPrint(ostream &out, int depth) {
+    array->prettyPrint(out, depth + 1);
+    out << "[";
+    msb->prettyPrint(out, depth + 1);
     if (lsb) {
-        cout << " : ";
-        lsb->prettyPrint(depth + 1);
+        out << " : ";
+        lsb->prettyPrint(out, depth + 1);
     }
-    cout << "]";
+    out << "]";
 }
 
 shared_ptr<ArraySubExpr> ArraySubExpr::arraySubExpr() {
@@ -236,8 +278,8 @@ StringConst::~StringConst() {
 
 }
 
-void StringConst::prettyPrint(int depth) {
-    cout << repr;
+void StringConst::prettyPrint(ostream &out, int depth) {
+    out << repr;
 }
 
 shared_ptr<StringConst> StringConst::stringConst() { return static_pointer_cast<StringConst, Expr>(shared_from_this()); }
@@ -246,7 +288,8 @@ shared_ptr<Expr> StringConst::rename(string prefix, LexicalScope &scope) {
     return shared_ptr<StringConst>(new StringConst(repr));
 }
 
-CondExpr::CondExpr(const shared_ptr<Expr> &cond, const shared_ptr<Expr> &thenExpr, const shared_ptr<Expr> &elseExpr) : Expr(CondExprType) {
+CondExpr::CondExpr(const shared_ptr<Expr> &cond, const shared_ptr<Expr> &thenExpr, const shared_ptr<Expr> &elseExpr)
+    : Expr(CondExprType), cond(cond), thenExpr(thenExpr), elseExpr(elseExpr) {
 
 }
 
@@ -254,14 +297,14 @@ CondExpr::~CondExpr() {
 
 }
 
-void CondExpr::prettyPrint(int depth) {
-    cout << "(";
-    cond->prettyPrint(depth);
-    cout << ") ? (";
-    thenExpr->prettyPrint(depth);
-    cout << ") : (";
-    elseExpr->prettyPrint(depth);
-    cout << ")";
+void CondExpr::prettyPrint(ostream &out, int depth) {
+    out << "(";
+    cond->prettyPrint(out, depth);
+    out << ") ? (";
+    thenExpr->prettyPrint(out, depth);
+    out << ") : (";
+    elseExpr->prettyPrint(out, depth);
+    out << ")";
 }
 
 shared_ptr<CondExpr> CondExpr::condExpr() {

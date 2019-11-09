@@ -11,10 +11,12 @@ GenerateKami::GenerateKami() {
 
 void GenerateKami::open(const string &filename) {
     this->filename = filename;
+    cerr << "Opening Kami file " << filename << endl;
     out.open(filename);
 }
 
 void GenerateKami::close() {
+    cerr << "Closing Kami file " << filename << endl;
     out.close();
 }
 
@@ -22,8 +24,8 @@ void GenerateKami::generateStmts(std::vector<shared_ptr<struct Stmt>> stmts) {
     for (int i = 0; i < stmts.size(); i++) {
         shared_ptr<Stmt> stmt = stmts[i];
         generateKami(stmt);
+        out << endl;
     }
-
 }
 
 void GenerateKami::generateKami(shared_ptr<Stmt> stmt, int depth) {
@@ -63,35 +65,63 @@ void GenerateKami::generateKami(shared_ptr<Stmt> stmt, int depth) {
 
 void GenerateKami::generateKami(const shared_ptr<Expr> &expr, int depth, int precedence) {
     out << "Expr" << "{ ";
-    expr->prettyPrint(depth);
-    out << " }" << endl;
+    expr->prettyPrint(out, depth);
+    out << " }";
 }
 
 void GenerateKami::generateKami(const shared_ptr<BSVType> &bsvtype, int depth) {
     out << "bsvtype" << "{ ";
-    bsvtype->prettyPrint(depth);
-    out << " }" << endl;
+    bsvtype->prettyPrint(out, depth);
+    out << " } ";
 }
 
-void GenerateKami::generateKami(const shared_ptr<ActionBindingStmt> &stmt, int depth) {
+void GenerateKami::generateKami(const shared_ptr<ActionBindingStmt> &actionbinding, int depth) {
+    shared_ptr<BSVType> bsvtype = actionbinding->bsvtype;
+    if (bsvtype && bsvtype->name == "Reg") {
+        indent(out, depth);
+        out << "Register \"" << actionbinding->name << "\" : ";
+        generateKami(bsvtype, depth+1);
+        out << " <- Default";
+        //FIXME: check for initializer
+        //generateKami(actionbinding->rhs, depth + 1);
+    } else {
+        indent(out, depth);
+        out << "Call ";
+        //FIXME: Call
+        generateKami(actionbinding->rhs, depth+1);
+    }
 
 }
 
 void GenerateKami::generateKami(const shared_ptr<BlockStmt> &blockstmt, int depth) {
-
+    int num_stmts = blockstmt->stmts.size();
+    for (int i = 0; i < num_stmts; i++) {
+        shared_ptr<Stmt> stmt = blockstmt->stmts[i];
+        generateKami(stmt, depth + 1);
+        if (i < num_stmts - 1) {
+            out << ";" << endl;
+        }
+    }
 }
 
 void GenerateKami::generateKami(const shared_ptr<ExprStmt> &stmt, int depth) {
-    generateKami(stmt->expr, depth);
+    indent(out, depth);
+    generateKami(stmt->expr, depth + 1);
 }
 
 void GenerateKami::generateKami(const shared_ptr<IfStmt> &stmt, int depth) {
+    indent(out, depth);
     out << "If (";
     generateKami(stmt->condition, depth + 1);
+    indent(out, depth);
     out << ") then (" << endl;
     generateKami(stmt->thenStmt, depth + 1);
+    out << endl;
+    indent(out, depth);
     out << ") else (" << endl;
     generateKami(stmt->elseStmt, depth + 1);
+    out << endl;
+    indent(out, depth);
     out << ") as v; Ret v" << endl;
 }
 
@@ -107,10 +137,19 @@ void GenerateKami::generateKami(const shared_ptr<MethodDeclStmt> &stmt, int dept
 
 }
 
-void GenerateKami::generateKami(const shared_ptr<MethodDefStmt> &stmt, int depth) {
+void GenerateKami::generateKami(const shared_ptr<MethodDefStmt> &methoddef, int depth) {
     indent(out, depth);
-    out << "with Method (instancePrefix--\"" << stmt->name << "\") (* args *) (* result type *) := " << endl;
+    out << "Method (instancePrefix--\"" << methoddef->name << "\") (* args *) (* result type *) := " << endl;
     indent(out, depth); out << "(" << endl;
+    int num_stmts = methoddef->stmts.size();
+    for (int i = 0; i < num_stmts; i++) {
+        shared_ptr<Stmt> stmt = methoddef->stmts[i];
+        generateKami(stmt, depth + 1);
+        if (i < num_stmts - 1) {
+            out << ";";
+        }
+        out << endl;
+    }
     indent(out, depth); out << ")" << endl;
 }
 
@@ -119,21 +158,50 @@ void GenerateKami::generateKami(const shared_ptr<ModuleDefStmt> &moduledef, int 
     out << "Module module'" << moduledef->name << "." << endl;
     indent(out, depth + 1);
     out << "(BKMODULE {" << endl;
+
+    for (int i = 0; i < moduledef->stmts.size(); i++) {
+        if (i != 0) {
+            indent(out, depth + 1);
+            out << "with " << endl;
+        }
+        shared_ptr<Stmt> stmt = moduledef->stmts[i];
+        generateKami(stmt, depth + 1);
+        out << endl;
+    }
     indent(out, depth + 1);
     out << "})." << endl;
     out << "End module'" << moduledef->name << "." << endl;
 }
 
-void GenerateKami::generateKami(const shared_ptr<RegWriteStmt> &stmt, int depth) {
-
+void GenerateKami::generateKami(const shared_ptr<RegWriteStmt> &regwrite, int depth) {
+    indent(out, depth);
+    out << "Write \"" << regwrite->regName << " : ";
+    //FIXME: placeholder for type
+    out << "<regtype>";
+    out << " <- ";
+    generateKami(regwrite->rhs, depth+1);
 }
 
 void GenerateKami::generateKami(const shared_ptr<ReturnStmt> &stmt, int depth) {
-
+    indent(out, depth);
+    out << "Ret ";
+    generateKami(stmt->value, depth+1);
 }
 
-void GenerateKami::generateKami(const shared_ptr<RuleDefStmt> &stmt, int depth) {
-
+void GenerateKami::generateKami(const shared_ptr<RuleDefStmt> &ruledef, int depth) {
+    indent(out, depth);
+    out << "Rule (instancePrefix--\"" << ruledef->name << "\") := " << endl;
+    indent(out, depth); out << "(" << endl;
+    int num_stmts = ruledef->stmts.size();
+    for (int i = 0; i < num_stmts; i++) {
+        shared_ptr<Stmt> stmt = ruledef->stmts[i];
+        generateKami(stmt, depth + 1);
+        if (i < num_stmts - 1) {
+            out << ";";
+        }
+        out << endl;
+    }
+    indent(out, depth); out << ")" << endl;
 }
 
 void GenerateKami::generateKami(const shared_ptr<TypedefStructStmt> &stmt, int depth) {
@@ -145,7 +213,14 @@ void GenerateKami::generateKami(const shared_ptr<TypedefSynonymStmt> &stmt, int 
 }
 
 void GenerateKami::generateKami(const shared_ptr<VarBindingStmt> &stmt, int depth) {
-
+    indent(out, depth);
+    out << "LET " << stmt->name;
+    if (stmt->bsvtype) {
+        out << " : ";
+        generateKami(stmt->bsvtype);
+    }
+    out << " <- ";
+    generateKami(stmt->rhs, depth + 1);
 }
 
 void GenerateKami::generateKami(const shared_ptr<FieldExpr> &expr, int depth, int precedence) {

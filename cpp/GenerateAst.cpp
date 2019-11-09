@@ -21,10 +21,17 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExpressionContext *ctx) {
     shared_ptr<Expr> result;
     if (BSVParser::OperatorexprContext *oc = dynamic_cast<BSVParser::OperatorexprContext *>(ctx)) {
         BSVParser::BinopexprContext *binopexpr = oc->binopexpr();
-        result = expr(binopexpr);
+        return expr(binopexpr);
     } else if (BSVParser::CondexprContext *condexpr = dynamic_cast<BSVParser::CondexprContext *>(ctx)) {
-        result = expr(condexpr);
+        return expr(condexpr);
+    } else if (BSVParser::MatchesexprContext *matchesExpr = dynamic_cast<BSVParser::MatchesexprContext *>(ctx)) {
+        cerr << "Unhandled matches expr " << ctx->getText() << endl;
+        return expr(matchesExpr);
+    } else if (BSVParser::CaseexprContext *caseexpr = dynamic_cast<BSVParser::CaseexprContext *>(ctx)) {
+        cerr << "Unhandled case expr " << ctx->getText() << endl;
+        return result;
     }
+    cerr << "How did we get here: expr " << ctx->getRuleIndex() << " " << ctx->getText() << endl;
     return result;
 }
 
@@ -39,10 +46,30 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::CaseexprdefaultitemContext *ctx) {
 }
 
 std::shared_ptr<Expr> GenerateAst::expr(BSVParser::CondexprContext *ctx) {
-    shared_ptr<Expr> result(new CondExpr(expr(ctx->pred), expr(ctx->expression(0)), expr(ctx->expression(1))));
+    shared_ptr<Expr> condexpr(expr(ctx->pred));
+    shared_ptr<Expr> thenexpr(expr(ctx->expression(0)));
+    shared_ptr<Expr> elseexpr(expr(ctx->expression(1)));
+    if (!condexpr || !thenexpr || !elseexpr) {
+        cerr << "Funny cond expr: " << ctx->getText() << endl;
+        cerr << (bool)condexpr << (bool)thenexpr << (bool)elseexpr << endl;
+    }
+    shared_ptr<Expr> result(new CondExpr(condexpr, thenexpr, elseexpr));
     return result;
 }
 
+std::shared_ptr<Expr> GenerateAst::expr(BSVParser::MatchesexprContext *ctx) {
+    shared_ptr<Expr> lhs(expr(ctx->expression()));
+    string pattern = ctx->pattern()->getText();
+    vector<BSVParser::PatterncondContext *> patterncond = ctx->patterncond();
+    if (patterncond.size()) {
+        vector<shared_ptr<Expr>> exprs;
+        for (int i = 0; i < patterncond.size(); i++)
+            exprs.push_back(expr(patterncond[i]->expression()));
+        return MatchesExpr::create(lhs, pattern, exprs);
+    } else {
+        return MatchesExpr::create(lhs, pattern);
+    }
+}
 
 shared_ptr<Expr> GenerateAst::expr(BSVParser::BinopexprContext *ctx) {
     if (ctx->unopexpr()) {
@@ -60,7 +87,7 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::UnopexprContext *ctx) {
     shared_ptr<Expr> arg(expr(ctx->exprprimary()));
     if (ctx->op) {
         if (!arg)
-            cerr << "unhandled expr: " << ctx->exprprimary()->getText() << endl;
+            cerr << "unhandled unop expr: " << ctx->exprprimary()->getText() << endl;
         result.reset(new OperatorExpr(ctx->op->getText(), arg));
     } else {
         result = arg;
@@ -117,7 +144,7 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
     } else if (BSVParser::UndefinedexprContext *undef = dynamic_cast<BSVParser::UndefinedexprContext *>(ctx)) {
         return shared_ptr<Expr>(new VarExpr("Undefined"));
     } else {
-        cerr << "Unhandled expr " << ctx->getText() << endl;
+        cerr << "Unhandled expr primary " << ctx->getText() << endl;
     }
     return result;
 }
@@ -143,22 +170,22 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::PackagestmtContext *ctx) {
         return generateAst(ctx->moduledef());
     } else if (BSVParser::VarbindingContext *varbinding = ctx->varbinding()) {
         shared_ptr<Stmt> stmt = generateAst(varbinding);
-        stmt->prettyPrint(0);
+        stmt->prettyPrint(cout, 0);
         return stmt;
     } else if (BSVParser::ImportdeclContext *importdecl = ctx->importdecl()) {
         //FIXME: package specifier
         shared_ptr<Stmt> stmt(new ImportStmt(importdecl->upperCaseIdentifier(0)->getText()));
-        stmt->prettyPrint(0);
+        stmt->prettyPrint(cout, 0);
         return stmt;
     } else if (BSVParser::InterfacedeclContext *interfacedecl = ctx->interfacedecl()) {
         shared_ptr<Stmt> stmt = generateAst(interfacedecl);
-        stmt->prettyPrint(0);
+        stmt->prettyPrint(cout, 0);
         return stmt;
     } else if (BSVParser::TypedefsynonymContext *synonym = ctx->typedefsynonym()) {
         shared_ptr<BSVType> type(bsvtype(synonym->bsvtype()));
         shared_ptr<BSVType> typedeftype(bsvtype(synonym->typedeftype()));
         shared_ptr<Stmt> stmt(new TypedefSynonymStmt(typedeftype, type));
-        stmt->prettyPrint(0);
+        stmt->prettyPrint(cout, 0);
         return stmt;
     } else if (BSVParser::TypedefstructContext *def = ctx->typedefstruct()) {
         //FIXME: package name
@@ -173,8 +200,10 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::PackagestmtContext *ctx) {
             memberTypes.push_back(bsvtype(member->bsvtype()));
         }
         shared_ptr<Stmt> stmt(new TypedefStructStmt(name, structType, memberNames, memberTypes));
-        stmt->prettyPrint(0);
+        stmt->prettyPrint(cout, 0);
         return stmt;
+    } else if (BSVParser::FunctiondefContext *fcn = ctx->functiondef()) {
+        return generateAst(fcn);
     } else {
         cerr << "unhandled packagestmt" << ctx->getText() << endl;
     }
@@ -204,6 +233,32 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::InterfacedeclContext *
     return interfacedecl;
 }
 
+std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::SubinterfacedefContext *ctx) {
+    string interfaceName(ctx->lowerCaseIdentifier(0)->getText());
+    fprintf(stderr, "subinterfacedef %s\n", interfaceName.c_str());
+    shared_ptr<BSVType> interfaceType(new BSVType(ctx->bsvtype() ? ctx->bsvtype()->typeide()->name->getText() : "<Interface TBD>"));
+    vector<shared_ptr<Stmt>> ast_members;
+    vector<BSVParser::InterfacestmtContext *> members = ctx->interfacestmt();
+    for (size_t i = 0; i < members.size(); i++) {
+        BSVParser::InterfacestmtContext *member = members[i];
+        if (BSVParser::MethoddefContext *methoddef = member->methoddef()) {
+            string methodName(methoddef->lowerCaseIdentifier(0)->getText());
+            shared_ptr<BSVType> returnType(new BSVType());
+            if (methoddef->bsvtype())
+                returnType = bsvtype(methoddef->bsvtype());
+            vector<string> params;
+            vector<shared_ptr<BSVType>> paramTypes;
+            shared_ptr<Stmt> methoddecl(new MethodDeclStmt(methodName, returnType, params, paramTypes));
+            ast_members.push_back(methoddecl);
+        } else {
+            cerr << "unhandled subinterface " << member->getText() << endl;
+        }
+    }
+
+    shared_ptr<Stmt> interfacedef(new InterfaceDefStmt(interfaceName, interfaceType, ast_members));
+    return interfacedef;
+}
+
 std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ModuledefContext *ctx) {
     BSVParser::ModuleprotoContext *moduleproto = ctx->moduleproto();
     string moduleName(moduleproto->lowerCaseIdentifier()->getText());
@@ -226,11 +281,16 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ModuledefContext *ctx)
         BSVParser::ModulestmtContext *modstmt = stmts.at(i);
         if (modstmt->methoddef() != 0) {
             ast_stmts.push_back(generateAst(modstmt->methoddef()));
-	} else if (modstmt->moduleinst() != 0) {
+        } else if (modstmt->moduleinst() != 0) {
             ast_stmts.push_back(generateAst(modstmt->moduleinst()));
         } else if (modstmt->stmt() != 0) {
             BSVParser::StmtContext *stmt = modstmt->stmt();
-            ast_stmts.push_back(generateAst(stmt));
+            shared_ptr<Stmt> astStmt(generateAst(stmt));
+            if (!astStmt)
+                cerr << "Empty ast stmt for " << stmt->getText() << endl;
+            ast_stmts.push_back(astStmt);
+        } else if (BSVParser::SubinterfacedefContext *subinterfacedef = modstmt->subinterfacedef()) {
+            ast_stmts.push_back(generateAst(subinterfacedef));
         } else {
             cerr << "Unhandled module stmt: " << modstmt->getText() << endl;
         }
@@ -238,8 +298,49 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ModuledefContext *ctx)
     shared_ptr<Stmt> moduledef(new ModuleDefStmt(moduleName, interfaceType,
                                                  params, paramTypes,
                                                  ast_stmts));
-    moduledef->prettyPrint();
+    moduledef->prettyPrint(cout, 0);
     return moduledef;
+}
+
+std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::FunctiondefContext *ctx) {
+    BSVParser::FunctionprotoContext *proto = ctx->functionproto();
+    string functionName(proto->name->getText());
+    shared_ptr<BSVType> returnType;
+    vector<string> params;
+    vector<shared_ptr<BSVType>> paramTypes;
+    shared_ptr<Expr> guard;
+
+    if (proto->bsvtype())
+        returnType = bsvtype(proto->bsvtype());
+    else
+        returnType.reset(new BSVType("Void"));
+
+    if (proto->methodprotoformals()) {
+        vector<BSVParser::MethodprotoformalContext *> formals = proto->methodprotoformals()->methodprotoformal();
+        for (size_t i = 0; i < formals.size(); i++) {
+            BSVParser::MethodprotoformalContext *formal = formals.at(i);
+            params.push_back(formal->lowerCaseIdentifier()->getText());
+            if (formal->bsvtype() != nullptr) {
+                paramTypes.push_back(bsvtype(formal->bsvtype()));
+            } else {
+                fprintf(stderr, "functiondef formal with no type: %s at %s\n",
+                        formal->getText().c_str(), sourceLocation(formal).c_str());
+                paramTypes.push_back(shared_ptr<BSVType>(new BSVType()));
+
+            }
+        }
+    }
+    fprintf(stderr, "    methoddef %s\n", functionName.c_str());
+    vector<BSVParser::StmtContext *> stmts = ctx->stmt();
+    vector<shared_ptr<Stmt>> ast_stmts;
+    for (size_t i = 0; i < stmts.size(); i++) {
+        shared_ptr<Stmt> stmt(generateAst(stmts.at(i)));
+        if (!stmt)
+            cerr << "unhandled method stmt: " << stmts.at(i)->getText() << endl;
+        ast_stmts.push_back(stmt);
+    }
+    return shared_ptr<Stmt>(new FunctionDefStmt(functionName, returnType,
+                                                params, paramTypes, guard, ast_stmts));
 }
 
 std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::MethoddefContext *ctx) {
@@ -257,8 +358,9 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::MethoddefContext *ctx)
             if (formal->bsvtype() != nullptr) {
                 paramTypes.push_back(bsvtype(formal->bsvtype()));
             } else {
-                fprintf(stderr, "formal with no type: %s at %s\n",
+                fprintf(stderr, "methoddef formal with no type: %s at %s\n",
                         formal->getText().c_str(), sourceLocation(formal).c_str());
+                paramTypes.push_back(shared_ptr<BSVType>(new BSVType()));
             }
         }
     }
@@ -312,7 +414,7 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
         return generateAst(actionbinding);
     } else if (BSVParser::VarassignContext *varassign = ctx->varassign()) {
         shared_ptr<Stmt> stmt = generateAst(varassign);
-        stmt->prettyPrint(0);
+        stmt->prettyPrint(cout, 0);
         return stmt;
     } else if (BSVParser::IfstmtContext *ifstmt = ctx->ifstmt()) {
         shared_ptr<Expr> condition(expr(ifstmt->expression()));
@@ -331,6 +433,16 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
             ast_stmts.push_back(ast_stmt);
         }
         return shared_ptr<Stmt>(new BlockStmt(ast_stmts));
+    } else if (BSVParser::ActionblockContext *block = ctx->actionblock()) {
+        vector<BSVParser::StmtContext *> stmts = block->stmt();
+        vector<shared_ptr<Stmt>> ast_stmts;
+        for (size_t i = 0; i < stmts.size(); i++) {
+            shared_ptr<Stmt> ast_stmt(generateAst(stmts.at(i)));
+            if (!ast_stmt)
+                cerr << "unhandled block stmt: " << stmts.at(i)->getText() << endl;
+            ast_stmts.push_back(ast_stmt);
+        }
+        return shared_ptr<Stmt>(new BlockStmt(ast_stmts));
     } else if (BSVParser::ReturnstmtContext *ret_stmt = ctx->returnstmt()) {
         shared_ptr<Expr> val(expr(ret_stmt->expression()));
         return shared_ptr<Stmt>(new ReturnStmt(val));
@@ -339,6 +451,9 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
         return shared_ptr<Stmt>(new ExprStmt(val));
     } else if (BSVParser::RuledefContext *ruledef = ctx->ruledef()) {
         return generateAst(ruledef);
+    } else if (BSVParser::FunctiondefContext *fcn = ctx->functiondef()) {
+        cerr << "function stmt " << ctx->getText() << endl;
+        return generateAst(fcn);
     } else {
         cerr << "Unhandled stmt: " << ctx->getText() << endl;
         return shared_ptr<Stmt>();
@@ -372,6 +487,10 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ActionbindingContext *actio
     else
         varType.reset(new BSVType());
     shared_ptr<Expr> rhs(expr(actionbinding->rhs));
+
+    cout << "action binding rhs ";
+    expr(actionbinding->rhs)->prettyPrint(cout, 0); cout << endl;
+
     shared_ptr<Stmt> actionBindingStmt(new ActionBindingStmt(varType, varName, rhs));
     return actionBindingStmt;
 }
