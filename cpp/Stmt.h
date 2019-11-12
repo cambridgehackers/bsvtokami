@@ -19,6 +19,7 @@ enum StmtType {
     InvalidStmtType,
     ActionBindingStmtType,
     BlockStmtType,
+    CallStmtType,
     ExprStmtType,
     FunctionDefStmtType,
     InterfaceDeclStmtType,
@@ -30,18 +31,21 @@ enum StmtType {
     ModuleDefStmtType,
     ModuleInstStmtType,
     PackageDefStmtType,
+    RegReadStmtType,
+    RegWriteStmtType,
     ReturnStmtType,
     TypedefStructStmtType,
     TypedefSynonymStmtType,
     VarBindingStmtType,
     VarAssignStmtType,
-    RuleDefStmtType,
-    RegWriteStmtType
+    RuleDefStmtType
 };
 
 class ActionBindingStmt;
 
 class BlockStmt;
+
+class CallStmt;
 
 class ExprStmt;
 
@@ -62,6 +66,8 @@ class MethodDefStmt;
 class ModuleDefStmt;
 
 class ModuleInstStmt;
+
+class RegReadStmt;
 
 class RegWriteStmt;
 
@@ -92,6 +98,8 @@ public:
 
     virtual shared_ptr<BlockStmt> blockStmt() { return shared_ptr<BlockStmt>(); }
 
+    virtual shared_ptr<CallStmt> callStmt() { return shared_ptr<CallStmt>(); }
+
     virtual shared_ptr<ExprStmt> exprStmt() { return shared_ptr<ExprStmt>(); }
 
     virtual shared_ptr<FunctionDefStmt> functionDefStmt() { return shared_ptr<FunctionDefStmt>(); }
@@ -111,6 +119,8 @@ public:
     virtual shared_ptr<ModuleDefStmt> moduleDefStmt() { return shared_ptr<ModuleDefStmt>(); }
 
     virtual shared_ptr<ModuleInstStmt> moduleInstStmt() { return shared_ptr<ModuleInstStmt>(); }
+
+    virtual shared_ptr<RegReadStmt> regReadStmt() { return shared_ptr<RegReadStmt>(); }
 
     virtual shared_ptr<RegWriteStmt> regWriteStmt() { return shared_ptr<RegWriteStmt>(); }
 
@@ -413,6 +423,25 @@ public:
 
 };
 
+class RegReadStmt : public Stmt {
+public:
+    const string regName;
+    const shared_ptr<Expr> rhs;
+public:
+    RegReadStmt(const string &regName, const shared_ptr<Expr> &rhs);
+
+    ~RegReadStmt() override {}
+
+    void prettyPrint(ostream &out, int depth = 0) override;
+
+    virtual shared_ptr<RegReadStmt> regReadStmt() override;
+
+    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+
+    static shared_ptr<RegReadStmt> create(const string &regName, const shared_ptr<Expr> &rhs);
+
+};
+
 class RegWriteStmt : public Stmt {
 public:
     const string regName;
@@ -428,6 +457,7 @@ public:
 
     shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
 
+    static shared_ptr<RegWriteStmt> create(const string &regName, const shared_ptr<Expr> &rhs);
 };
 
 class BlockStmt : public Stmt {
@@ -494,4 +524,25 @@ public:
     const shared_ptr<Expr> expr;
 
     shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+};
+
+class CallStmt : public Stmt {
+public:
+    CallStmt(const string &name, const shared_ptr<BSVType> &interfaceType, const shared_ptr<Expr> &rhs);
+
+    ~CallStmt() override;
+
+    void prettyPrint(ostream &out, int depth) override;
+
+    virtual shared_ptr<CallStmt> callStmt() override;
+
+    shared_ptr<Stmt> rename(string prefix, LexicalScope &scope) override;
+
+    static shared_ptr<CallStmt> create(const string &name, const shared_ptr<BSVType> &interfaceType, const shared_ptr<Expr> &rhs);
+
+public:
+    const string name;
+    const shared_ptr<BSVType> interfaceType;
+    const shared_ptr<Expr> rhs;
+
 };

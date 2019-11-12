@@ -49,6 +49,8 @@ public:
 
     void generateKami(const shared_ptr<ModuleDefStmt> &stmt, int depth = 0);
 
+    void generateKami(const shared_ptr<RegReadStmt> &stmt, int depth = 0);
+
     void generateKami(const shared_ptr<RegWriteStmt> &stmt, int depth = 0);
 
     void generateKami(const shared_ptr<ReturnStmt> &stmt, int depth = 0);

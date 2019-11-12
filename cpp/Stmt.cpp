@@ -56,6 +56,40 @@ shared_ptr<Stmt> RuleDefStmt::rename(string prefix, LexicalScope &parentScope) {
     return shared_ptr<Stmt>(new RuleDefStmt(prefix + name, renamedGuard, renamedStmts));
 }
 
+RegReadStmt::RegReadStmt(const string &regName, const shared_ptr<Expr> &rhs)
+        : Stmt(RegReadStmtType), regName(regName), rhs(rhs) {
+}
+
+void RegReadStmt::prettyPrint(ostream &out, int depth) {
+    indent(out, 4 * depth);
+    out << regName << " <= ";
+    if (rhs)
+        rhs->prettyPrint(out, depth + 1);
+    else
+        out << "no_rhs";
+    out << ";" << endl;
+}
+
+shared_ptr<RegReadStmt> RegReadStmt::regReadStmt() {
+    return static_pointer_cast<RegReadStmt, Stmt>(shared_from_this());
+}
+
+shared_ptr<Stmt> RegReadStmt::rename(string prefix, LexicalScope &scope) {
+    string renamedRegName = regName;
+    string replacement = scope.lookup(regName);
+    if (replacement.size()) {
+        renamedRegName = replacement;
+    }
+    shared_ptr<Expr> renamedRHS;
+    if (rhs)
+        renamedRHS = rhs->rename(prefix, scope);
+    return RegReadStmt::create(renamedRegName, renamedRHS);
+}
+
+shared_ptr<RegReadStmt> RegReadStmt::create(const string &regName, const shared_ptr<Expr> &rhs) {
+    return shared_ptr<RegReadStmt>(new RegReadStmt(regName, rhs));
+}
+
 RegWriteStmt::RegWriteStmt(const string &regName, const shared_ptr<Expr> &rhs)
         : Stmt(RegWriteStmtType), regName(regName), rhs(rhs) {
 }
@@ -84,6 +118,10 @@ shared_ptr<Stmt> RegWriteStmt::rename(string prefix, LexicalScope &scope) {
     if (rhs)
         renamedRHS = rhs->rename(prefix, scope);
     return shared_ptr<Stmt>(new RegWriteStmt(renamedRegName, renamedRHS));
+}
+
+shared_ptr<RegWriteStmt> RegWriteStmt::create(const string &regName, const shared_ptr<Expr> &rhs) {
+    return shared_ptr<RegWriteStmt>(new RegWriteStmt(regName, rhs));
 }
 
 ActionBindingStmt::ActionBindingStmt(const shared_ptr<BSVType> &bsvtype, const string &name,

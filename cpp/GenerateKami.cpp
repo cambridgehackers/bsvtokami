@@ -64,9 +64,15 @@ void GenerateKami::generateKami(shared_ptr<Stmt> stmt, int depth) {
 
 
 void GenerateKami::generateKami(const shared_ptr<Expr> &expr, int depth, int precedence) {
-    out << "Expr" << "{ ";
-    expr->prettyPrint(out, depth);
-    out << " }";
+    if (shared_ptr<OperatorExpr> opexpr = expr->operatorExpr()) {
+        return generateKami(opexpr, depth, precedence);
+    } else if (shared_ptr<FieldExpr> fieldexpr = expr->fieldExpr()) {
+        return generateKami(fieldexpr, depth, precedence);
+    } else {
+        out << "Expr" << "{ ";
+        expr->prettyPrint(out, depth);
+        out << " }";
+    }
 }
 
 void GenerateKami::generateKami(const shared_ptr<BSVType> &bsvtype, int depth) {
@@ -113,7 +119,6 @@ void GenerateKami::generateKami(const shared_ptr<IfStmt> &stmt, int depth) {
     indent(out, depth);
     out << "If (";
     generateKami(stmt->condition, depth + 1);
-    indent(out, depth);
     out << ") then (" << endl;
     generateKami(stmt->thenStmt, depth + 1);
     out << endl;
@@ -173,6 +178,15 @@ void GenerateKami::generateKami(const shared_ptr<ModuleDefStmt> &moduledef, int 
     out << "End module'" << moduledef->name << "." << endl;
 }
 
+void GenerateKami::generateKami(const shared_ptr<RegReadStmt> &regread, int depth) {
+    indent(out, depth);
+    out << "Read \"" << regread->regName << " : ";
+    //FIXME: placeholder for type
+    out << "<regtype>";
+    out << " <- ";
+    generateKami(regread->rhs, depth + 1);
+}
+
 void GenerateKami::generateKami(const shared_ptr<RegWriteStmt> &regwrite, int depth) {
     indent(out, depth);
     out << "Write \"" << regwrite->regName << " : ";
@@ -224,7 +238,10 @@ void GenerateKami::generateKami(const shared_ptr<VarBindingStmt> &stmt, int dept
 }
 
 void GenerateKami::generateKami(const shared_ptr<FieldExpr> &expr, int depth, int precedence) {
-
+    generateKami(expr->object, depth, precedence);
+    out << " ! ";
+    out << "(* placeholdeer for type *)"; //FIXME struct type
+    out << " @. \"" << expr->fieldName << "\"";
 }
 
 void GenerateKami::generateKami(const shared_ptr<VarExpr> &expr, int depth, int precedence) {
@@ -232,7 +249,9 @@ void GenerateKami::generateKami(const shared_ptr<VarExpr> &expr, int depth, int 
 }
 
 void GenerateKami::generateKami(const shared_ptr<CallExpr> &expr, int depth, int precedence) {
-
+    out << "{ should be call statement ";
+    expr->prettyPrint(out, depth);
+    out << "}";
 }
 
 void GenerateKami::generateKami(const shared_ptr<IntConst> &expr, int depth, int precedence) {
@@ -240,7 +259,9 @@ void GenerateKami::generateKami(const shared_ptr<IntConst> &expr, int depth, int
 }
 
 void GenerateKami::generateKami(const shared_ptr<OperatorExpr> &expr, int depth, int precedence) {
-
+    generateKami(expr->lhs, depth, precedence);
+    out << " " << expr->op << " ";
+    generateKami(expr->rhs, depth, precedence);
 }
 
 void GenerateKami::generateKami(const shared_ptr<ArraySubExpr> &expr, int depth, int precedence) {
