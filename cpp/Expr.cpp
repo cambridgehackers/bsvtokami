@@ -119,11 +119,11 @@ shared_ptr<Expr> OperatorExpr::rename(string prefix, LexicalScope &scope) {
         return shared_ptr<OperatorExpr>(new OperatorExpr(op, lhs->rename(prefix, scope)));
 }
 
-MatchesExpr::MatchesExpr(const shared_ptr<Expr> &expr, const string &pattern)
+MatchesExpr::MatchesExpr(const shared_ptr<Expr> &expr, const shared_ptr<Pattern> &pattern)
         : Expr(MatchesExprType), expr(expr), pattern(pattern) {
 }
 
-MatchesExpr::MatchesExpr(const shared_ptr<Expr> &expr, const string &pattern, const vector<shared_ptr<Expr>> &patterncond)
+MatchesExpr::MatchesExpr(const shared_ptr<Expr> &expr, const shared_ptr<Pattern> &pattern, const vector<shared_ptr<Expr>> &patterncond)
     : Expr(MatchesExprType), expr(expr), pattern(pattern), patterncond(patterncond) {
 
 }
@@ -152,11 +152,11 @@ shared_ptr<Expr> MatchesExpr::rename(string prefix, LexicalScope &renames) {
     return MatchesExpr::create(expr, pattern, patterncond);
 }
 
-shared_ptr<MatchesExpr> MatchesExpr::create(const shared_ptr<Expr> &expr, const string &pattern) {
+shared_ptr<MatchesExpr> MatchesExpr::create(const shared_ptr<Expr> &expr, const shared_ptr<Pattern> &pattern) {
     return shared_ptr<MatchesExpr>(new MatchesExpr(expr, pattern));
 }
 
-shared_ptr<MatchesExpr> MatchesExpr::create(const shared_ptr<Expr> &expr, const string &pattern,
+shared_ptr<MatchesExpr> MatchesExpr::create(const shared_ptr<Expr> &expr, const shared_ptr<Pattern> &pattern,
                                       const vector<shared_ptr<Expr>> &exprs) {
     return shared_ptr<MatchesExpr>(new MatchesExpr(expr, pattern, exprs));
 }

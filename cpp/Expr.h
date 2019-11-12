@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "LexicalScope.h"
+#include "Pattern.h"
 
 using namespace std;
 
@@ -203,14 +204,13 @@ public:
 class MatchesExpr : public Expr {
 public:
     const shared_ptr<Expr> expr;
-    //const shared_ptr<Pattern> pattern;
-    const string pattern;
+    const shared_ptr<Pattern> pattern;
     const vector<shared_ptr<Expr>> patterncond;
 public:
 
-    MatchesExpr(const shared_ptr<Expr> &expr, const string &pattern);
+    MatchesExpr(const shared_ptr<Expr> &expr, const shared_ptr<Pattern> &pattern);
 
-    MatchesExpr(const shared_ptr<Expr> &expr, const string &pattern, const vector<shared_ptr<Expr>> &patterncond);
+    MatchesExpr(const shared_ptr<Expr> &expr, const shared_ptr<Pattern> &pattern, const vector<shared_ptr<Expr>> &patterncond);
 
     ~MatchesExpr() override;
 
@@ -220,8 +220,8 @@ public:
 
     shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
 
-    static shared_ptr<MatchesExpr> create(const shared_ptr<Expr> &expr, const string &pattern);
-    static shared_ptr<MatchesExpr> create(const shared_ptr<Expr> &expr, const string &pattern,
+    static shared_ptr<MatchesExpr> create(const shared_ptr<Expr> &expr, const shared_ptr<Pattern> &pattern);
+    static shared_ptr<MatchesExpr> create(const shared_ptr<Expr> &expr, const shared_ptr<Pattern> &pattern,
             const vector<shared_ptr<Expr>> &patterncond);
 
 };

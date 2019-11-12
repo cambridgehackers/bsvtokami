@@ -5,6 +5,7 @@
 
 #include "BSVType.h"
 #include "Expr.h"
+#include "Pattern.h"
 #include "Stmt.h"
 
 class GenerateAst {
@@ -52,6 +53,8 @@ public:
     std::shared_ptr<Expr> expr(BSVParser::ExprprimaryContext *ctx);
 
     std::shared_ptr<Expr> expr(BSVParser::TaggedunionexprContext *ctx);
+
+    std::shared_ptr<Pattern> generateAst(BSVParser::PatternContext *ctx);
 
     std::shared_ptr<Stmt> generateAst(BSVParser::VarbindingContext *varbinding);
 

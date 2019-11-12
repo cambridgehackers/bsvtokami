@@ -59,7 +59,7 @@ std::shared_ptr<Expr> GenerateAst::expr(BSVParser::CondexprContext *ctx) {
 
 std::shared_ptr<Expr> GenerateAst::expr(BSVParser::MatchesexprContext *ctx) {
     shared_ptr<Expr> lhs(expr(ctx->expression()));
-    string pattern = ctx->pattern()->getText();
+    shared_ptr<Pattern> pattern = generateAst(ctx->pattern());
     vector<BSVParser::PatterncondContext *> patterncond = ctx->patterncond();
     if (patterncond.size()) {
         vector<shared_ptr<Expr>> exprs;
@@ -552,6 +552,33 @@ std::shared_ptr<BSVType> GenerateAst::bsvtype(BSVParser::TypedeftypeContext *ctx
     }
     return shared_ptr<BSVType>(new BSVType(name, typeParams));
 }
+
+std::shared_ptr<Pattern> GenerateAst::generateAst(BSVParser::PatternContext *ctx) {
+    if (BSVParser::ConstantpatternContext *constPattern = ctx->constantpattern()) {
+        if (constPattern->IntLiteral()) {
+            return IntPattern::create(strtoul(ctx->getText().c_str(), 0, 0));
+        } else if (constPattern->IntPattern()) {
+            fprintf(stderr, "Unhandled int pattern: %s\n", ctx->getText().c_str());
+            return WildcardPattern::create();
+        } else {
+            fprintf(stderr, "Unhandled constant pattern: %s\n", ctx->getText().c_str());
+            return WildcardPattern::create();
+        }
+    } else if (BSVParser::TaggedunionpatternContext *taggedPattern = ctx->taggedunionpattern()) {
+        fprintf(stderr, "Unhandled tagged union pattern: %s\n", ctx->getText().c_str());
+        return WildcardPattern::create();
+    } else if (BSVParser::TuplepatternContext *tuplePattern = ctx->tuplepattern()) {
+        fprintf(stderr, "Unhandled tagged union pattern: %s\n", ctx->getText().c_str());
+        return WildcardPattern::create();
+    } else if (ctx->var) {
+        return VarPattern::create(ctx->getText());
+    } else if (ctx->pattern()) {
+        return generateAst(ctx->pattern());
+    } else {
+        return WildcardPattern::create();
+    }
+}
+
 
 string GenerateAst::sourceLocation(antlr4::ParserRuleContext *ctx) {
     antlr4::Token *start = ctx->getStart();

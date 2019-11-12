@@ -26,7 +26,7 @@ set (SOURCE
      GenerateIR.cpp GenerateIR.h
      BSVPreprocessor.cpp BSVPreprocessor.h
      GenerateKami.cpp GenerateKami.h
-        LValue.cpp LValue.h GenerateKoika.cpp GenerateKoika.h)
+        LValue.cpp LValue.h GenerateKoika.cpp GenerateKoika.h Pattern.cpp Pattern.h)
 set(CMAKE_CXX_FLAGS "-O -g -std=c++14")
 add_executable(${PROJECT_NAME} ${SOURCE})
 target_include_directories(${PROJECT_NAME}
