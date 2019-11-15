@@ -84,13 +84,13 @@ class VarBindingStmt;
 class VarAssignStmt;
 
 class Stmt : public enable_shared_from_this<Stmt> {
-protected:
-    const StmtType stmtType;
 
 public:
     Stmt(StmtType stmtType);
 
     virtual ~Stmt() {}
+
+    const StmtType stmtType;
 
     virtual void prettyPrint(ostream &out, int depth = 0) = 0;
 
