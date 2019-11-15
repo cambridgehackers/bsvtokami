@@ -42,6 +42,15 @@ void TypeChecker::setupZ3Context() {
                                                 Z3_mk_string_symbol(context, "Bozo"),
                                                 Z3_mk_string_symbol(context, "isBozo"),
                                                 0, NULL, NULL, NULL);
+    Z3_symbol function_field_names[] = {Z3_mk_string_symbol(context, "domain"), Z3_mk_string_symbol(context, "range")};
+    Z3_sort function_field_sorts[] = {NULL, NULL};
+    unsigned function_field_sort_refs[] = {0, 0};
+    Z3_constructor function_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Function"),
+                                                    Z3_mk_string_symbol(context, "isFunction"),
+                                                    2,
+                                                    function_field_names,
+                                                    function_field_sorts,
+                                                    function_field_sort_refs);
     Z3_constructor integer_con = Z3_mk_constructor(context,
                                                    Z3_mk_string_symbol(context, "Integer"),
                                                    Z3_mk_string_symbol(context, "isInteger"),
@@ -69,9 +78,8 @@ void TypeChecker::setupZ3Context() {
                                                 0, NULL, NULL, NULL);
 
 
-    //FIXME: add support for user defined types
     Z3_constructor default_constructors[] = {
-            action_con, actionvalue_con, bit_con, bool_con, bozo_con,
+            action_con, actionvalue_con, bit_con, bool_con, bozo_con, function_con,
             integer_con, real_con, reg_con, rule_con, string_con, void_con
     };
     unsigned num_default_constructors = sizeof(default_constructors) / sizeof(default_constructors[0]);
@@ -85,7 +93,7 @@ void TypeChecker::setupZ3Context() {
     for (int i = 0; i < typeDeclarationList.size(); i++) {
         std::shared_ptr<Declaration> typeDecl(typeDeclarationList[i]);
         std::string typePredicate(std::string("is_") + typeDecl->name);
-        fprintf(stderr, "User defined type %s\n", typeDecl->name.c_str());
+        fprintf(stderr, "User defined type %s predicate %s\n", typeDecl->name.c_str(), typePredicate.c_str());
         constructors[i + num_default_constructors] = Z3_mk_constructor(context,
                                                                        Z3_mk_string_symbol(context,
                                                                                            typeDecl->name.c_str()),
@@ -102,11 +110,14 @@ void TypeChecker::setupZ3Context() {
 
     for (unsigned i = 0; i < num_constructors; i++) {
         Z3_func_decl func_decl = Z3_get_datatype_sort_constructor(context, typeSort, i);
+        Z3_func_decl recognizer = Z3_get_datatype_sort_recognizer(context, typeSort, i);
         Z3_symbol name = Z3_get_decl_name(context, func_decl);
         fprintf(stderr, "Constructor %d name is %s\n", i, Z3_get_symbol_string(context, name));
         // since no default constructor for z3::func_decl, use insert with a pair
         z3::func_decl func_decl_obj = z3::func_decl(context, func_decl);
+        z3::func_decl func_recognizer_obj = z3::func_decl(context, recognizer);
         typeDecls.insert(std::pair<std::string, z3::func_decl>(Z3_get_symbol_string(context, name), func_decl_obj));
+        typeRecognizers.insert(std::pair<std::string, z3::func_decl>(Z3_get_symbol_string(context, name), func_recognizer_obj));
         fprintf(stderr, "               name is %s\n", func_decl_obj.name().str().c_str());
     }
     boolops["=="] = true;
@@ -134,12 +145,12 @@ z3::expr TypeChecker::constant(std::string name, z3::sort sort) {
 }
 
 void TypeChecker::insertExpr(antlr4::ParserRuleContext *ctx, z3::expr expr) {
-    fprintf(stderr, "  insert expr %s\n", ctx->getText().c_str());
+    cerr << "  insert expr " << ctx->getText().c_str() << endl;
     exprs.insert(std::pair<antlr4::ParserRuleContext *, z3::expr>(ctx, expr));
 }
 
 void TypeChecker::insertTracker(antlr4::ParserRuleContext *ctx, z3::expr tracker) {
-    fprintf(stderr, "  insert tracker %s\n", ctx->getText().c_str());
+    cerr << "  insert tracker " << ctx->getText().c_str() << endl;
     trackers.insert(std::pair<antlr4::ParserRuleContext *, z3::expr>(ctx, tracker));
 }
 
@@ -152,27 +163,5 @@ z3::expr TypeChecker::orExprs(std::vector<z3::expr> exprs) {
             result = (result || exprs[i]);
         }
         return result;
-    }
-}
-
-std::shared_ptr<BSVType> TypeChecker::exprToBSVType(z3::expr expr) {
-    z3::sort sort = expr.get_sort();
-    if (eq(sort, typeSort)) {
-        std::string name(expr.to_string());
-        if (expr.is_const()) {
-            std::shared_ptr<BSVType> bsvtype(new BSVType(name));
-            return bsvtype;
-        }
-        std::shared_ptr<BSVType> bsvtype(new BSVType(name));
-        if (expr.is_app()) {
-            z3::func_decl func_decl = expr.decl();
-            size_t num_args = expr.num_args();
-            for (size_t i = 0; i < num_args; i++)
-                bsvtype->params.push_back(exprToBSVType(expr.arg(i)));
-        }
-        return bsvtype;
-    } else {
-        std::shared_ptr<BSVType> bsvtype(new BSVType(expr.to_string()));
-        return bsvtype;
     }
 }

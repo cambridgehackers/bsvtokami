@@ -99,9 +99,11 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
     shared_ptr<Expr> result;
     if (BSVParser::FieldexprContext *fieldexpr = dynamic_cast<BSVParser::FieldexprContext *>(ctx)) {
         shared_ptr<Expr> object(expr(fieldexpr->exprprimary()));
-        result.reset(new FieldExpr(object, fieldexpr->field->getText()));
+        return FieldExpr::create(object, fieldexpr->field->getText());
     } else if (BSVParser::VarexprContext *varexpr = dynamic_cast<BSVParser::VarexprContext *>(ctx)) {
-        result.reset(new VarExpr(varexpr->getText()));
+        //FIXME: get type from type checker
+        shared_ptr<BSVType> varType = typeChecker->lookup(varexpr);
+        result.reset(new VarExpr(varexpr->getText(), varType));
     } else if (BSVParser::IntliteralContext *intliteral = dynamic_cast<BSVParser::IntliteralContext *>(ctx)) {
         result.reset(new IntConst(intliteral->getText()));
     } else if (BSVParser::StringliteralContext *stringliteral = dynamic_cast<BSVParser::StringliteralContext *>(ctx)) {
@@ -142,7 +144,8 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
     } else if (BSVParser::ParenexprContext *parenexpr = dynamic_cast<BSVParser::ParenexprContext *>(ctx)) {
         return expr(parenexpr->expression());
     } else if (BSVParser::UndefinedexprContext *undef = dynamic_cast<BSVParser::UndefinedexprContext *>(ctx)) {
-        return shared_ptr<Expr>(new VarExpr("Undefined"));
+        //FIXME:: get type from type checker
+        return shared_ptr<Expr>(new VarExpr("Undefined", BSVType::create("FIXME")));
     } else {
         cerr << "Unhandled expr primary " << ctx->getText() << endl;
     }
@@ -182,22 +185,22 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::PackagestmtContext *ctx) {
         stmt->prettyPrint(cout, 0);
         return stmt;
     } else if (BSVParser::TypedefsynonymContext *synonym = ctx->typedefsynonym()) {
-        shared_ptr<BSVType> type(bsvtype(synonym->bsvtype()));
-        shared_ptr<BSVType> typedeftype(bsvtype(synonym->typedeftype()));
+        shared_ptr<BSVType> type(TypeChecker::bsvtype(synonym->bsvtype()));
+        shared_ptr<BSVType> typedeftype(TypeChecker::bsvtype(synonym->typedeftype()));
         shared_ptr<Stmt> stmt(new TypedefSynonymStmt(typedeftype, type));
         stmt->prettyPrint(cout, 0);
         return stmt;
     } else if (BSVParser::TypedefstructContext *def = ctx->typedefstruct()) {
         //FIXME: package name
         string name(def->typedeftype()->typeide()->getText());
-        shared_ptr<BSVType> structType(bsvtype(def->typedeftype()));
+        shared_ptr<BSVType> structType(TypeChecker::bsvtype(def->typedeftype()));
         vector<BSVParser::StructmemberContext *> structmembers = def->structmember();
         vector<string> memberNames;
         vector<shared_ptr<BSVType>> memberTypes;
         for (size_t i = 0; i < structmembers.size(); i++) {
             BSVParser::StructmemberContext *member = structmembers[i];
             memberNames.push_back(member->lowerCaseIdentifier()->getText());
-            memberTypes.push_back(bsvtype(member->bsvtype()));
+            memberTypes.push_back(TypeChecker::bsvtype(member->bsvtype()));
         }
         shared_ptr<Stmt> stmt(new TypedefStructStmt(name, structType, memberNames, memberTypes));
         stmt->prettyPrint(cout, 0);
@@ -213,14 +216,14 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::PackagestmtContext *ctx) {
 std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::InterfacedeclContext *ctx) {
     string interfaceName(ctx->typedeftype()->typeide()->name->getText());
     fprintf(stderr, "interfacedecl %s\n", interfaceName.c_str());
-    shared_ptr<BSVType> interfaceType(bsvtype(ctx->typedeftype()));
+    shared_ptr<BSVType> interfaceType(TypeChecker::bsvtype(ctx->typedeftype()));
     vector<shared_ptr<Stmt>> ast_members;
     vector<BSVParser::InterfacememberdeclContext *> members = ctx->interfacememberdecl();
     for (size_t i = 0; i < members.size(); i++) {
         BSVParser::InterfacememberdeclContext *member = members[i];
         if (BSVParser::MethodprotoContext *methodproto = member->methodproto()) {
             string methodName(methodproto->lowerCaseIdentifier()->getText());
-            shared_ptr<BSVType> returnType(bsvtype(methodproto->bsvtype()));
+            shared_ptr<BSVType> returnType(TypeChecker::bsvtype(methodproto->bsvtype()));
             vector<string> params;
             vector<shared_ptr<BSVType>> paramTypes;
             shared_ptr<Stmt> methoddecl(new MethodDeclStmt(methodName, returnType, params, paramTypes));
@@ -245,7 +248,7 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::SubinterfacedefContext
             string methodName(methoddef->lowerCaseIdentifier(0)->getText());
             shared_ptr<BSVType> returnType(new BSVType());
             if (methoddef->bsvtype())
-                returnType = bsvtype(methoddef->bsvtype());
+                returnType = TypeChecker::bsvtype(methoddef->bsvtype());
             vector<string> params;
             vector<shared_ptr<BSVType>> paramTypes;
             shared_ptr<Stmt> methoddecl(new MethodDeclStmt(methodName, returnType, params, paramTypes));
@@ -263,7 +266,7 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ModuledefContext *ctx)
     BSVParser::ModuleprotoContext *moduleproto = ctx->moduleproto();
     string moduleName(moduleproto->lowerCaseIdentifier()->getText());
     fprintf(stderr, "moduledef %s\n", moduleName.c_str());
-    shared_ptr<BSVType> interfaceType(bsvtype(moduleproto->bsvtype()));
+    shared_ptr<BSVType> interfaceType(TypeChecker::bsvtype(moduleproto->bsvtype()));
     vector<string> params;
     vector<shared_ptr<BSVType>> paramTypes;
     BSVParser::MethodprotoformalsContext *formals = ctx->moduleproto()->methodprotoformals();
@@ -272,7 +275,7 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ModuledefContext *ctx)
         for (size_t i = 0; i < formalvec.size(); i++) {
             BSVParser::MethodprotoformalContext *formal = formalvec.at(i);
             params.push_back(formal->lowerCaseIdentifier()->getText());
-            paramTypes.push_back(bsvtype(formal->bsvtype()));
+            paramTypes.push_back(TypeChecker::bsvtype(formal->bsvtype()));
         }
     }
     vector<BSVParser::ModulestmtContext *> stmts = ctx->modulestmt();
@@ -311,7 +314,7 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::FunctiondefContext *ct
     shared_ptr<Expr> guard;
 
     if (proto->bsvtype())
-        returnType = bsvtype(proto->bsvtype());
+        returnType = TypeChecker::bsvtype(proto->bsvtype());
     else
         returnType.reset(new BSVType("Void"));
 
@@ -321,7 +324,7 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::FunctiondefContext *ct
             BSVParser::MethodprotoformalContext *formal = formals.at(i);
             params.push_back(formal->lowerCaseIdentifier()->getText());
             if (formal->bsvtype() != nullptr) {
-                paramTypes.push_back(bsvtype(formal->bsvtype()));
+                paramTypes.push_back(TypeChecker::bsvtype(formal->bsvtype()));
             } else {
                 fprintf(stderr, "functiondef formal with no type: %s at %s\n",
                         formal->getText().c_str(), sourceLocation(formal).c_str());
@@ -345,7 +348,7 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::FunctiondefContext *ct
 
 std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::MethoddefContext *ctx) {
     string methodName(ctx->lowerCaseIdentifier(0)->getText());
-    shared_ptr<BSVType> returnType(bsvtype(ctx->bsvtype()));
+    shared_ptr<BSVType> returnType(TypeChecker::bsvtype(ctx->bsvtype()));
     vector<string> params;
     vector<shared_ptr<BSVType>> paramTypes;
     shared_ptr<Expr> guard;
@@ -356,7 +359,7 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::MethoddefContext *ctx)
             BSVParser::MethodformalContext *formal = formals.at(i);
             params.push_back(formal->lowerCaseIdentifier()->getText());
             if (formal->bsvtype() != nullptr) {
-                paramTypes.push_back(bsvtype(formal->bsvtype()));
+                paramTypes.push_back(TypeChecker::bsvtype(formal->bsvtype()));
             } else {
                 fprintf(stderr, "methoddef formal with no type: %s at %s\n",
                         formal->getText().c_str(), sourceLocation(formal).c_str());
@@ -463,7 +466,7 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
 shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::VarbindingContext *varbinding) {
     shared_ptr<BSVType> varType;
     if (varbinding->t)
-        varType = bsvtype(varbinding->t);
+        varType = TypeChecker::bsvtype(varbinding->t);
     else
         varType.reset(new BSVType());
     std::vector<BSVParser::VarinitContext *> varinits = varbinding->varinit();
@@ -483,7 +486,7 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ActionbindingContext *actio
     string varName = actionbinding->lowerCaseIdentifier()->getText();
     shared_ptr<BSVType> varType;
     if (actionbinding->t)
-        varType = bsvtype(actionbinding->t);
+        varType = TypeChecker::bsvtype(actionbinding->t);
     else
         varType.reset(new BSVType());
     shared_ptr<Expr> rhs(expr(actionbinding->rhs));
@@ -508,49 +511,13 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ModuleinstContext *modulein
     string varName = moduleinst->lowerCaseIdentifier()->getText();
     shared_ptr<BSVType> varType;
     if (moduleinst->t)
-        varType = bsvtype(moduleinst->t);
+        varType = TypeChecker::bsvtype(moduleinst->t);
     else
         varType.reset(new BSVType());
     shared_ptr<Expr> rhs(expr(moduleinst->rhs));
     //FIXME: mark it as module instantiation?
     shared_ptr<Stmt> actionBindingStmt(new ActionBindingStmt(varType, varName, rhs));
     return actionBindingStmt;
-}
-
-std::shared_ptr<BSVType> GenerateAst::bsvtype(BSVParser::BsvtypeContext *ctx) {
-    if (BSVParser::TypeideContext *typeide = ctx->typeide()) {
-        //FIXME: package prefix
-        string typeName = typeide->name ? typeide->name->getText() : typeide->typevar->getText();
-        vector<BSVParser::BsvtypeContext *> params = ctx->bsvtype();
-        vector<shared_ptr<BSVType>> typeParams;
-        for (size_t i = 0; i < params.size(); i++) {
-            typeParams.push_back(bsvtype(params.at(i)));
-        }
-        return shared_ptr<BSVType>(new BSVType(typeName, typeParams));
-    } else if (ctx->var) {
-        string typeName = ctx->var->getText();
-        return shared_ptr<BSVType>(new BSVType(typeName));
-    } else if (ctx->typenat()) {
-        shared_ptr<BSVType> numericType(new BSVType(ctx->typenat()->getText(), true, false));
-        return numericType;
-    } else if (ctx->bsvtype(0)) {
-        return bsvtype(ctx->bsvtype(0));
-    }
-    cerr << "unhandled bsvtype: " << ctx->getText() << endl;
-    return shared_ptr<BSVType>(new BSVType("<fixme>"));
-}
-
-std::shared_ptr<BSVType> GenerateAst::bsvtype(BSVParser::TypedeftypeContext *ctx) {
-    string name = ctx->typeide()->upperCaseIdentifier(0)->getText();
-    vector<shared_ptr<BSVType>> typeParams;
-    if (ctx->typeformals()) {
-        vector<BSVParser::TypeformalContext *> formals = ctx->typeformals()->typeformal();
-        for (size_t i = 0; i < formals.size(); i++) {
-            BSVParser::TypeformalContext *formal = formals[i];
-            typeParams.push_back(shared_ptr<BSVType>(new BSVType(formal->typeide()->getText())));
-        }
-    }
-    return shared_ptr<BSVType>(new BSVType(name, typeParams));
 }
 
 std::shared_ptr<Pattern> GenerateAst::generateAst(BSVParser::PatternContext *ctx) {

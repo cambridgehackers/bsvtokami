@@ -41,7 +41,7 @@ int main(int argc, char *const argv[]) {
     size_t numberOfSyntaxErrors = 0;
 
     int ch;
-    int opt_type_check = 0;
+    int opt_type_check = 1;
     int opt_ast = 1;
     int opt_kami = 1;
     int opt_koika = 1;
@@ -96,12 +96,10 @@ int main(int argc, char *const argv[]) {
         if (dumptree) {
             std::cout << tree->toStringTree(&parser) << std::endl << std::endl;
         }
-        if (opt_type_check) {
-            TypeChecker *typeChecker = new TypeChecker();
-            typeChecker->visit(tree);
-        }
         if (opt_ast) {
-            GenerateAst *generateAst = new GenerateAst();
+            shared_ptr<TypeChecker> typeChecker(new TypeChecker());
+            typeChecker->visit(tree);
+            GenerateAst *generateAst = new GenerateAst(typeChecker);
             shared_ptr<PackageDefStmt> packageDef = generateAst->generateAst(tree);;
             vector<shared_ptr<Stmt>> stmts = packageDef->stmts;
             if (opt_kami) {

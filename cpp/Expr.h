@@ -8,6 +8,7 @@
 
 #include "LexicalScope.h"
 #include "Pattern.h"
+#include "BSVType.h"
 
 using namespace std;
 
@@ -95,14 +96,19 @@ public:
 
     shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
 
+    static shared_ptr<FieldExpr> create(const shared_ptr<Expr> &object, const string &fieldName) {
+        return shared_ptr<FieldExpr>(new FieldExpr(object, fieldName));
+    }
+
 };
 
 class VarExpr : public Expr {
 public:
     const string name;
     const string sourceName;
+    const shared_ptr<BSVType> bsvtype;
 public:
-    VarExpr(const string &name);
+    VarExpr(const string &name, const shared_ptr<BSVType> &bsvtype);
 
     virtual ~VarExpr();
 

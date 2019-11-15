@@ -7,10 +7,12 @@
 #include "Expr.h"
 #include "Pattern.h"
 #include "Stmt.h"
+#include "TypeChecker.h"
 
 class GenerateAst {
+    shared_ptr<TypeChecker> typeChecker;
 public:
-    GenerateAst() {}
+    GenerateAst(shared_ptr<TypeChecker> &typeChecker) : typeChecker(typeChecker)     {}
 
     std::shared_ptr<PackageDefStmt> generateAst(BSVParser::PackagedefContext *ctx);
 
@@ -25,10 +27,6 @@ public:
     std::shared_ptr<Stmt> generateAst(BSVParser::ModuledefContext *ctx);
 
     std::shared_ptr<Stmt> generateAst(BSVParser::MethoddefContext *ctx);
-
-    std::shared_ptr<BSVType> bsvtype(BSVParser::BsvtypeContext *);
-
-    std::shared_ptr<BSVType> bsvtype(BSVParser::TypedeftypeContext *);
 
     std::shared_ptr<Stmt> generateAst(BSVParser::RuledefContext *ctx);
 

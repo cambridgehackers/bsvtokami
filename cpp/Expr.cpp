@@ -21,15 +21,17 @@ shared_ptr<Expr> Expr::rename(string prefix, LexicalScope &scope) {
     return shared_ptr<Expr>();
 }
 
-VarExpr::VarExpr(const string &name)
-        : Expr(VarExprType), name(name), sourceName(name) {
+VarExpr::VarExpr(const string &name, const shared_ptr<BSVType> &bsvtype)
+        : Expr(VarExprType), name(name), sourceName(name), bsvtype(bsvtype) {
 }
 
 VarExpr::~VarExpr() {
 }
 
 void VarExpr::prettyPrint(ostream &out, int depth) {
-    out << name;
+    out << name << "(* : ";
+    bsvtype->prettyPrint(out, depth);
+    out << " *)";
 }
 
 shared_ptr<VarExpr> VarExpr::varExpr() { return static_pointer_cast<VarExpr, Expr>(shared_from_this()); }
@@ -38,7 +40,7 @@ shared_ptr<Expr> VarExpr::rename(string prefix, LexicalScope &scope) {
     string renamed = scope.lookup(name);
     if (!renamed.size())
         renamed = name;
-    return shared_ptr<VarExpr>(new VarExpr(renamed));
+    return shared_ptr<VarExpr>(new VarExpr(renamed, bsvtype));
 }
 
 IntConst::IntConst(const string &repr)
