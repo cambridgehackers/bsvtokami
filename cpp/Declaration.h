@@ -38,3 +38,26 @@ public:
 
     EnumDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype) : Declaration(name, bsvtype) {};
 };
+
+class InterfaceDeclaration : public Declaration {
+public:
+    std::vector<std::shared_ptr<Declaration> > members;
+
+    InterfaceDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype) : Declaration(name, bsvtype) {};
+};
+
+class MethodDeclaration : public Declaration {
+public:
+    MethodDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype) : Declaration(name, bsvtype) {};
+    static shared_ptr<MethodDeclaration> create(std::string name, std::shared_ptr<BSVType> bsvtype) {
+        return shared_ptr<MethodDeclaration>(new MethodDeclaration(name, bsvtype));
+    }
+};
+
+class MethodDefinition : public Declaration {
+public:
+    MethodDefinition(std::string name, std::shared_ptr<BSVType> bsvtype) : Declaration(name, bsvtype) {};
+    static shared_ptr<MethodDefinition> create(std::string name, std::shared_ptr<BSVType> bsvtype) {
+        return shared_ptr<MethodDefinition>(new MethodDefinition(name, bsvtype));
+    }
+};
