@@ -29,6 +29,7 @@ public:
     BSVType(std::string name, const std::vector<std::shared_ptr<BSVType>> &params) : name(name), kind(BSVType_Symbolic), isVar(false), params(params) {
     }
     std::string to_string();
+    bool isNumeric() { return kind == BSVType_Numeric; }
     virtual void prettyPrint(ostream &out, int depth = 0);
 
     static shared_ptr<BSVType> create() {
