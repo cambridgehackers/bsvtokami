@@ -61,3 +61,11 @@ public:
         return shared_ptr<MethodDefinition>(new MethodDefinition(name, bsvtype));
     }
 };
+
+class ModuleDefinition : public Declaration {
+public:
+    ModuleDefinition(std::string name, std::shared_ptr<BSVType> bsvtype) : Declaration(name, bsvtype) {};
+    static shared_ptr<ModuleDefinition> create(std::string name, std::shared_ptr<BSVType> bsvtype) {
+        return shared_ptr<ModuleDefinition>(new ModuleDefinition(name, bsvtype));
+    }
+};
