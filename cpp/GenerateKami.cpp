@@ -180,11 +180,11 @@ void GenerateKami::generateKami(const shared_ptr<ModuleDefStmt> &moduledef, int 
 
 void GenerateKami::generateKami(const shared_ptr<RegReadStmt> &regread, int depth) {
     indent(out, depth);
-    out << "Read \"" << regread->regName << " : ";
+    out << "Read " << regread->var << " : ";
     //FIXME: placeholder for type
     out << "<regtype>";
     out << " <- ";
-    generateKami(regread->rhs, depth + 1);
+    out << "\"" << regread->regName << "\"";
 }
 
 void GenerateKami::generateKami(const shared_ptr<RegWriteStmt> &regwrite, int depth) {

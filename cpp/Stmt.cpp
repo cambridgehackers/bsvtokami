@@ -56,18 +56,15 @@ shared_ptr<Stmt> RuleDefStmt::rename(string prefix, LexicalScope &parentScope) {
     return shared_ptr<Stmt>(new RuleDefStmt(prefix + name, renamedGuard, renamedStmts));
 }
 
-RegReadStmt::RegReadStmt(const string &regName, const shared_ptr<Expr> &rhs)
-        : Stmt(RegReadStmtType), regName(regName), rhs(rhs) {
+RegReadStmt::RegReadStmt(const string &regName, const string &var, const shared_ptr<BSVType> &varType)
+        : Stmt(RegReadStmtType), regName(regName), var(var), varType(varType) {
 }
 
 void RegReadStmt::prettyPrint(ostream &out, int depth) {
     indent(out, 4 * depth);
-    out << regName << " <= ";
-    if (rhs)
-        rhs->prettyPrint(out, depth + 1);
-    else
-        out << "no_rhs";
-    out << ";" << endl;
+    out << var << " : ";
+    varType->prettyPrint(out, depth);
+    out << " = (* reg read *)" << regName << ";" << endl;
 }
 
 shared_ptr<RegReadStmt> RegReadStmt::regReadStmt() {
@@ -81,13 +78,12 @@ shared_ptr<Stmt> RegReadStmt::rename(string prefix, LexicalScope &scope) {
         renamedRegName = replacement;
     }
     shared_ptr<Expr> renamedRHS;
-    if (rhs)
-        renamedRHS = rhs->rename(prefix, scope);
-    return RegReadStmt::create(renamedRegName, renamedRHS);
+    //FIXME renamed var
+    return RegReadStmt::create(renamedRegName, var, varType);
 }
 
-shared_ptr<RegReadStmt> RegReadStmt::create(const string &regName, const shared_ptr<Expr> &rhs) {
-    return shared_ptr<RegReadStmt>(new RegReadStmt(regName, rhs));
+shared_ptr<RegReadStmt> RegReadStmt::create(const string &regName, const string &var, const shared_ptr<BSVType> &varType) {
+    return make_shared<RegReadStmt>(regName, var, varType);
 }
 
 RegWriteStmt::RegWriteStmt(const string &regName, const shared_ptr<Expr> &rhs)

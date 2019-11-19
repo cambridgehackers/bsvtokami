@@ -48,10 +48,9 @@ class ArraySubExpr;
 class EnumUnionStructExpr;
 
 class Expr : public enable_shared_from_this<Expr> {
-protected:
-    ExprType exprType;
-
 public:
+    const ExprType exprType;
+
     Expr(ExprType exprType);
 
     virtual ~Expr();

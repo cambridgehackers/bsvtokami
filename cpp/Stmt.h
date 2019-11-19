@@ -426,9 +426,10 @@ public:
 class RegReadStmt : public Stmt {
 public:
     const string regName;
-    const shared_ptr<Expr> rhs;
+    const string var;
+    const shared_ptr<BSVType> varType;
 public:
-    RegReadStmt(const string &regName, const shared_ptr<Expr> &rhs);
+    RegReadStmt(const string &regName, const string &var, const shared_ptr<BSVType> &varType);
 
     ~RegReadStmt() override {}
 
@@ -438,7 +439,7 @@ public:
 
     shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
 
-    static shared_ptr<RegReadStmt> create(const string &regName, const shared_ptr<Expr> &rhs);
+    static shared_ptr<RegReadStmt> create(const string &regName, const string &var, const shared_ptr<BSVType> &varType);
 
 };
 

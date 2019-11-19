@@ -25,6 +25,7 @@
 #include "GenerateKoika.h"
 #include "GenerateIR.h"
 #include "Inliner.h"
+#include "SimplifyAst.h"
 #include "TypeChecker.h"
 
 using namespace antlr4;
@@ -102,6 +103,10 @@ int main(int argc, char *const argv[]) {
             GenerateAst *generateAst = new GenerateAst(typeChecker);
             shared_ptr<PackageDefStmt> packageDef = generateAst->generateAst(tree);;
             vector<shared_ptr<Stmt>> stmts = packageDef->stmts;
+            SimplifyAst *simplifier = new SimplifyAst();
+            vector<shared_ptr<Stmt>> simplifiedStmts;
+            simplifier->simplify(stmts, simplifiedStmts);
+            stmts = simplifiedStmts;
             if (opt_kami) {
                 ::mkdir("kami", 0755);
 
