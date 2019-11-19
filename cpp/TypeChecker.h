@@ -45,6 +45,7 @@ public:
     shared_ptr<BSVType> lookup(antlr4::ParserRuleContext *ctx) {
         if (exprTypes.find(ctx) != exprTypes.cend())
             return exprTypes.find(ctx)->second;
+        cerr << "no entry for " << ctx->getText() << " " << ctx << endl;
         return BSVType::create("FIXME");
     }
 
@@ -115,6 +116,7 @@ protected:
 
     virtual antlrcpp::Any visitPackagestmt(BSVParser::PackagestmtContext *ctx) override {
         setupZ3Context();
+        cerr << "visitPackagestmt: " << ctx->getText() << endl;
         return visitChildren(ctx);
     }
 
@@ -124,13 +126,18 @@ protected:
     }
 
     virtual antlrcpp::Any visitInterfacedecl(BSVParser::InterfacedeclContext *ctx) override {
-        BSVParser::TypedeftypeContext *typedeftype = ctx->typedeftype();
-        string name(typedeftype->getText());
-        shared_ptr<BSVType> bsvtype(new BSVType(name));
-        shared_ptr<InterfaceDeclaration> decl(new InterfaceDeclaration(name, bsvtype));
+        shared_ptr<BSVType> interfaceType(bsvtype(ctx->typedeftype()));
+        string name(interfaceType->name);
+
+        int arity = interfaceType->params.size();
+
+        cerr << "interface type : ";
+        interfaceType->prettyPrint(cerr);
+        cerr << " arity " << arity << endl;
+
+        shared_ptr<InterfaceDeclaration> decl(new InterfaceDeclaration(name, interfaceType));
         typeDeclarationList.push_back(decl);
         typeDeclaration[name] = decl;
-        cerr << "unhandled visitInterfacedecl: " << name << endl;
 
         auto members = ctx->interfacememberdecl();
         for (int i = 0; i < members.size(); i++) {
@@ -270,18 +277,17 @@ protected:
         auto it = exprs.find(ctx);
         if (it != exprs.end())
             return it->second;
-        fprintf(stderr, "        Visiting action binding %s\n", ctx->getText().c_str());
+        fprintf(stderr, "        TypeChecker visiting action binding %s\n", ctx->getText().c_str());
 
         string varname(ctx->var->getText().c_str());
-        z3::expr typesym = visit(ctx->t);
+        z3::expr typeExpr = visit(ctx->t);
         z3::expr varsym = context.constant(context.str_symbol(varname.c_str()), typeSort);
-        string rhsname(varname + string("$rhs"));
+        string rhsname(varname + string("$abrhs"));
         z3::expr rhstype = context.constant(rhsname.c_str(), typeSort);
-        z3::func_decl reg_decl = typeDecls.find("Reg")->second;
 
-
-        solver.add(typesym == varsym);
-        solver.add((varsym == rhstype) || (varsym == reg_decl(rhstype)));
+        cerr << "action binding constraint " << (typeExpr == varsym) << endl;
+        solver.add(typeExpr == varsym);
+        //solver.add(varsym == rhstype);
 
         // handle reg dereference here ?
 
@@ -298,8 +304,16 @@ protected:
 
         string module_name = ctx->moduleproto()->name->getText();
         fprintf(stderr, "tc ModuleDef %s\n", module_name.c_str());
+        shared_ptr<BSVType> moduleType(bsvtype(ctx->moduleproto()->bsvtype()));
+        shared_ptr<ModuleDefinition> moduleDefinition = ModuleDefinition::create(module_name, moduleType);
+        declaration[module_name] = moduleDefinition;
+        declarationList.push_back(moduleDefinition);
+
         solver.push();
-        antlrcpp::Any result = visitChildren(ctx);
+        vector<BSVParser::ModulestmtContext *> stmts = ctx->modulestmt();
+        for (int i = 0; i < stmts.size(); i++) {
+            visit(stmts[i]);
+        }
         z3::check_result checked = solver.check();
         fprintf(stderr, "  Type checking module %s: %s\n", module_name.c_str(), check_result_name[checked]);
         if (checked == z3::sat) {
@@ -327,7 +341,7 @@ protected:
             }
         }
         solver.pop();
-        return result;
+        return moduleDefinition;
     }
 
     virtual antlrcpp::Any visitModuleproto(BSVParser::ModuleprotoContext *ctx) override {
@@ -345,20 +359,41 @@ protected:
     virtual antlrcpp::Any visitMethoddef(BSVParser::MethoddefContext *ctx) override {
         fprintf(stderr, "    tc MethodDef %s\n", ctx->name->getText().c_str());
         shared_ptr<BSVType> methodType = bsvtype(ctx);
+        if (ctx->methodformals() != NULL) {
+            visit(ctx->methodformals());
+        }
         if (ctx->methodcond() != NULL) {
             z3::expr condtype = visit(ctx->methodcond());
         }
+        vector<BSVParser::StmtContext *> stmts = ctx->stmt();
+        for (int i = 0; i < stmts.size(); i++) {
+            visit(stmts[i]);
+            //FIXME: check return type
+        }
+        if (ctx->expression()) {
+            z3::expr returnExpr = visit(ctx->expression());
+            //FIXME: check return type
+            //solver.add(returnExpr == returnType);
+        }
+
         return new MethodDefinition(ctx->name->getText(), methodType);
     }
 
     virtual antlrcpp::Any visitMethodformals(BSVParser::MethodformalsContext *ctx) override {
-        assert(0);
+        vector<BSVParser::MethodformalContext *> formals = ctx->methodformal();
+        for (int i = 0; i < formals.size(); i++) {
+            visit(formals[i]);
+        }
         return 0;
     }
 
-    virtual antlrcpp::Any visitMethodformal(BSVParser::MethodformalContext *ctx) override {
-        assert(0);
-        return 0;
+    virtual antlrcpp::Any visitMethodformal(BSVParser::MethodformalContext *formal) override {
+        z3::expr typeExpr = visit(formal->bsvtype());
+        z3::expr formalExpr = context.constant(context.str_symbol(formal->lowerCaseIdentifier()->getText().c_str()), typeSort);
+        solver.add(formalExpr == typeExpr);
+        cerr << "visitMethodFormal: " << formal->lowerCaseIdentifier()->getText() << " constraint " << (formalExpr == typeExpr) << endl;
+        insertExpr(formal, formalExpr);
+        return formalExpr;
     }
 
     virtual antlrcpp::Any visitMethodcond(BSVParser::MethodcondContext *ctx) override {
@@ -414,10 +449,30 @@ protected:
     }
 
     virtual antlrcpp::Any visitVarassign(BSVParser::VarassignContext *ctx) override {
+        z3::expr lhsExpr = visit(ctx->lvalue(0));
+        z3::expr rhsExpr = visit(ctx->expression());
+        //FIXME: module instance or action binding
+        solver.add(lhsExpr == rhsExpr);
         return visitChildren(ctx);
     }
 
     virtual antlrcpp::Any visitLvalue(BSVParser::LvalueContext *ctx) override {
+        if (BSVParser::ExprprimaryContext *lhs = ctx->exprprimary()) {
+            z3::expr lhsExpr = visit(lhs);
+            if (ctx->index != NULL) {
+                // lvalue [ index ]
+            } else if (ctx->lowerCaseIdentifier()) {
+                // lvalue . field
+            } else {
+                // lvalue [ msb : lsb ]
+            }
+        } else {
+            BSVParser::LowerCaseIdentifierContext *id = ctx->lowerCaseIdentifier();
+            //FIXME
+            z3::expr varExpr = context.constant(context.str_symbol(id->getText().c_str()), typeSort);
+            return varExpr;
+        }
+        assert(0);
         return visitChildren(ctx);
     }
 
@@ -425,15 +480,17 @@ protected:
         auto it = exprs.find(ctx);
         if (it != exprs.end())
             return it->second;
-        fprintf(stderr, "        Visiting bsvtype %s\n", ctx->getText().c_str());
 
-        z3::expr bsvtype(context);
+        z3::expr bsvtype_expr(context);
+        shared_ptr<BSVType> bbb(bsvtype(ctx));
+        cerr << "typechecker::visitBsvtype " << ctx->getText() << " bbb ";
+        bbb->prettyPrint(cerr);
+        cerr << endl;
 
-        if (ctx->typeide() != NULL) {
+        if (!bbb->isNumeric()) {
             BSVParser::TypeideContext *typeide = ctx->typeide();
-
             if (typeide != NULL) {
-                string name = (typeide->name != NULL) ? typeide->name->getText() : typeide->typevar->getText();
+                string name = bbb->name;
                 auto jt = typeDecls.find(name);
                 if (jt != typeDecls.end()) {
                     z3::func_decl decl = jt->second;
@@ -441,40 +498,41 @@ protected:
                     int numArgs = typeArgs.size();
                     switch (numArgs) {
                         case 0:
-                            bsvtype = decl();
+                            bsvtype_expr = decl();
                             break;
                         case 1: {
                             z3::expr t0 = visit(typeArgs[0]);
-                            bsvtype = decl(t0);
+                            cerr << "func_decl " << decl << " t0 " << t0 << endl;
+                            bsvtype_expr = decl(t0);
                         }
                             break;
                         case 2: {
                             z3::expr t0 = visit(typeArgs[0]);
                             z3::expr t1 = visit(typeArgs[1]);
-                            bsvtype = decl(t0, t1);
+                            bsvtype_expr = decl(t0, t1);
                         }
                             break;
                         default:
                             fprintf(stderr, "Too many type arguments: %d\n", numArgs);
                     }
                 } else {
-                    cerr << "unhandled bsvtype not in typeDecls " << ctx->getText() << endl;
+                    cerr << "unhandled bsvtype_expr not in typeDecls " << bbb->name << endl;
                     z3::func_decl bozoDecl = typeDecls.find("Bozo")->second;
-                    bsvtype = bozoDecl();
+                    bsvtype_expr = bozoDecl();
                 }
             }
         } else if (ctx->typenat() != NULL) {
             return context.int_val((int) strtol(ctx->getText().c_str(), NULL, 0));
         } else {
-            fprintf(stderr, "Unhandled bsvtype %s\n", ctx->getText().c_str());
+            fprintf(stderr, "Unhandled bsvtype_expr %s\n", ctx->getText().c_str());
         }
 
         solver.push();
         fprintf(stderr, "        check(%s) %s\n", ctx->getText().c_str(), check_result_name[solver.check()]);
         solver.pop();
 
-        insertExpr(ctx, bsvtype);
-        return bsvtype;
+        insertExpr(ctx, bsvtype_expr);
+        return bsvtype_expr;
     }
 
     virtual antlrcpp::Any visitTypeide(BSVParser::TypeideContext *ctx) override {
@@ -547,8 +605,11 @@ protected:
 
         solver.add(leftsym == rightsym);
         solver.push();
-        fprintf(stderr, "        check(%s) %s\n", ctx->getText().c_str(), check_result_name[solver.check()]);
+        cerr << "  checking " << ctx->getText() << endl;
+        cerr << solver << endl;
+        cerr << "        check(" << ctx->getText() << ") " << check_result_name[solver.check()] << endl;
         solver.pop();
+
 
 
         string opstr(ctx->op->getText());
@@ -574,9 +635,11 @@ protected:
     }
 
     virtual antlrcpp::Any visitUnopexpr(BSVParser::UnopexprContext *ctx) override {
-        fprintf(stderr, "        Visit unop %s\n", ctx->getText().c_str());
+        //FIXME: Check for op
         BSVParser::ExprprimaryContext *ep = ctx->exprprimary();
-        return visit(ep);
+        z3::expr unopExpr = visit(ep);
+        cerr << " visit unop " << ctx->getText() << " " << unopExpr << endl;
+        return unopExpr;
     }
 
     virtual antlrcpp::Any visitBitconcat(BSVParser::BitconcatContext *ctx) override {
@@ -587,11 +650,13 @@ protected:
         auto it = exprs.find(ctx);
         if (it != exprs.end())
             return it->second;
-        fprintf(stderr, "        Visiting var expr %s\n", ctx->getText().c_str());
+        cerr << "        Visiting var expr " <<  ctx->getText().c_str() << " " << ctx << endl;
 
         string varname(ctx->getText());
         string rhsname(varname + string("$rhs"));
-        z3::expr sym = context.constant(context.str_symbol(rhsname.c_str()), typeSort);
+        z3::expr varExpr = context.constant(context.str_symbol(varname.c_str()), typeSort);
+        z3::expr rhsExpr = context.constant(context.str_symbol(rhsname.c_str()), typeSort);
+
         if (enumtag.find(varname) != enumtag.end()) {
             z3::expr var = context.constant(context.str_symbol(varname.c_str()), typeSort);
             vector<z3::expr> exprs;
@@ -599,15 +664,21 @@ protected:
                 shared_ptr<Declaration> decl(it->second);
                 fprintf(stderr, "Tag %s of type %s\n", varname.c_str(), decl->name.c_str());
                 z3::func_decl type_decl = typeDecls.find(decl->name)->second;
-                exprs.push_back(sym == type_decl());
+                exprs.push_back(rhsExpr == type_decl());
             }
             z3::expr tracker(freshConstant("$track", boolSort));
             insertTracker(ctx, tracker);
 
             solver.add(orExprs(exprs), tracker);
+        } else {
+            // variable
+            z3::func_decl reg_decl = typeDecls.find("Reg")->second;
+            z3::expr regExpr = reg_decl(rhsExpr);
+            solver.add(varExpr == regExpr || varExpr == rhsExpr);
         }
-        insertExpr(ctx, sym);
-        return sym;
+        insertExpr(ctx, rhsExpr);
+        cerr << "visit var expr " << ctx->getText() << " rhs expr " << rhsExpr << " ctx " << ctx << endl;
+        return rhsExpr;
     }
 
     virtual antlrcpp::Any visitBlockexpr(BSVParser::BlockexprContext *ctx) override {
@@ -665,7 +736,7 @@ protected:
         z3::expr exprtype = visit(ctx->exprprimary());
         string fieldname = ctx->field->getText();
 
-        cerr << "Visit field expr " << fieldname << endl;
+        cerr << "Visit field expr " << fieldname << " exprtype " << exprtype << endl;
 
         z3::expr sym = context.constant(context.str_symbol(fieldname.c_str()), typeSort);
 
@@ -673,10 +744,22 @@ protected:
 
         for (auto it = memberDeclaration.find(fieldname); it != memberDeclaration.end() && it->first == fieldname; ++it) {
             shared_ptr<Declaration> decl(it->second);
-            cerr << "    " << fieldname << " belongs to type " << decl->name << endl;
+            cerr << "    field " << fieldname << " belongs to type " << decl->name << endl;
             //FIXME continue here
             z3::func_decl type_decl = typeDecls.find(decl->name)->second;
-            exprs.push_back(sym == type_decl());
+            z3::expr type_expr = freshConstant("_ph_", typeSort);
+            switch (type_decl.arity()) {
+                case 0: {
+                    type_expr = type_decl();
+                } break;
+                case 1: {
+                    z3::expr type_var = freshConstant("_var_", typeSort);
+                    type_expr = type_decl(type_var);
+                } break;
+                default:
+                    cerr << "Unhandled type arity " << type_decl;
+            }
+            exprs.push_back(sym == type_expr);
         }
         z3::expr tracker(freshConstant("$track", boolSort));
         insertTracker(ctx, tracker);
@@ -731,7 +814,13 @@ protected:
     }
 
     virtual antlrcpp::Any visitRegwrite(BSVParser::RegwriteContext *ctx) override {
-        return visitChildren(ctx);
+        z3::expr rhsExpr = visit(ctx->rhs);
+        z3::expr lhsExpr = visit(ctx->lhs);
+        z3::func_decl reg_decl = typeDecls.find("Reg")->second;
+        z3::expr regExpr = reg_decl(rhsExpr);
+        solver.add(lhsExpr == regExpr);
+        cerr << "visit regwrite << " << (lhsExpr == regExpr) << endl;
+        return lhsExpr;
     }
 
     virtual antlrcpp::Any visitStmt(BSVParser::StmtContext *ctx) override {
@@ -980,6 +1069,7 @@ public:
             //FIXME: Action methods
             return returnType;
         }
+
     }
 
 };

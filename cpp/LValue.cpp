@@ -31,28 +31,28 @@ shared_ptr<struct LValue> VarLValue::rename(string prefix, LexicalScope &scope)
     }
 }
 
-FieldLValue::FieldLValue(const shared_ptr<LValue> &lhs, const string &field)
-: LValue(FieldLValueType), lhs(lhs), field(field) {
+FieldLValue::FieldLValue(const shared_ptr<Expr> &obj, const string &field)
+: LValue(FieldLValueType), obj(obj), field(field) {
 
 }
 
 FieldLValue::~FieldLValue() {}
 void FieldLValue::prettyPrint(ostream &out, int depth) {
-    lhs->prettyPrint(out, depth);
+    obj->prettyPrint(out, depth);
     cout << "." << field;
 }
 
 shared_ptr<struct LValue> FieldLValue::rename(string prefix, LexicalScope &scope)
 {
-    return shared_ptr<LValue>(new FieldLValue(lhs->rename(prefix, scope), field));
+    return shared_ptr<LValue>(new FieldLValue(obj->rename(prefix, scope), field));
 }
 
-shared_ptr<LValue> FieldLValue::create(shared_ptr<LValue> lhs, string fieldname) {
-    return shared_ptr<LValue>(new FieldLValue(lhs, fieldname));
+shared_ptr<LValue> FieldLValue::create(shared_ptr<Expr> obj, string fieldname) {
+    return shared_ptr<LValue>(new FieldLValue(obj, fieldname));
 }
 
-ArraySubLValue::ArraySubLValue(const shared_ptr<LValue> &lhs, const shared_ptr<Expr> &index)
-: LValue(ArraySubLValueType), lhs(lhs), index(index) {
+ArraySubLValue::ArraySubLValue(const shared_ptr<Expr> &array, const shared_ptr<Expr> &index)
+: LValue(ArraySubLValueType), array(array), index(index) {
 
 }
 
@@ -61,29 +61,29 @@ ArraySubLValue::~ArraySubLValue() {
 }
 
 void ArraySubLValue::prettyPrint(ostream &out, int depth) {
-    lhs->prettyPrint(out, depth);
+    array->prettyPrint(out, depth);
     cout << "[";
     index->prettyPrint(out, depth);
     cout << "]";
 }
 
 shared_ptr<struct LValue> ArraySubLValue::rename(string prefix, LexicalScope &scope) {
-    return create(lhs->rename(prefix, scope), index->rename(prefix, scope));
+    return create(array->rename(prefix, scope), index->rename(prefix, scope));
 }
 
-shared_ptr<LValue> ArraySubLValue::create(shared_ptr<LValue> lhs, const shared_ptr<Expr> &index) {
-    return shared_ptr<LValue>(new ArraySubLValue(lhs, index));
+shared_ptr<LValue> ArraySubLValue::create(shared_ptr<Expr> array, const shared_ptr<Expr> &index) {
+    return shared_ptr<LValue>(new ArraySubLValue(array, index));
 }
 
-RangeSelLValue::RangeSelLValue(const shared_ptr<LValue> &lhs, const shared_ptr<Expr> &msb, const shared_ptr<Expr> &lsb)
-: LValue(RangeSelLValueType), lhs(lhs), msb(msb), lsb(lsb) {
+RangeSelLValue::RangeSelLValue(const shared_ptr<Expr> &bitarray, const shared_ptr<Expr> &msb, const shared_ptr<Expr> &lsb)
+: LValue(RangeSelLValueType), bitarray(bitarray), msb(msb), lsb(lsb) {
 
 }
 
 RangeSelLValue::~RangeSelLValue(){}
 
 void RangeSelLValue::prettyPrint(ostream &out, int depth) {
-    lhs->prettyPrint(out, depth);
+    bitarray->prettyPrint(out, depth);
     cout << "[";
     msb->prettyPrint(out, depth);
     cout << " : ";
@@ -92,9 +92,9 @@ void RangeSelLValue::prettyPrint(ostream &out, int depth) {
 }
 
 shared_ptr<struct LValue> RangeSelLValue::rename(string prefix, LexicalScope &scope) {
-    return create(lhs->rename(prefix, scope), msb->rename(prefix, scope), lsb->rename(prefix, scope));
+    return create(bitarray->rename(prefix, scope), msb->rename(prefix, scope), lsb->rename(prefix, scope));
 }
 
-shared_ptr<LValue> RangeSelLValue::create(shared_ptr<LValue> lhs, const shared_ptr<Expr> &msb, const shared_ptr<Expr> &lsb) {
-    return shared_ptr<LValue>(new RangeSelLValue(lhs, msb, lsb));
+shared_ptr<LValue> RangeSelLValue::create(shared_ptr<Expr> bitarray, const shared_ptr<Expr> &msb, const shared_ptr<Expr> &lsb) {
+    return shared_ptr<LValue>(new RangeSelLValue(bitarray, msb, lsb));
 }

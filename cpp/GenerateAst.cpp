@@ -3,8 +3,8 @@
 using namespace std;
 
 std::shared_ptr<LValue> GenerateAst::lvalue(BSVParser::LvalueContext *lhs) {
-    if (lhs->lvalue() != nullptr) {
-        shared_ptr<LValue> lhsLValue(lvalue(lhs->lvalue()));
+    if (lhs->exprprimary() != nullptr) {
+        shared_ptr<Expr> lhsLValue(expr(lhs->exprprimary()));
         if (lhs->index != nullptr) {
             return ArraySubLValue::create(lhsLValue, expr(lhs->index));
         } else if (lhs->msb != nullptr) {

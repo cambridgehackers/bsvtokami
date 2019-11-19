@@ -79,7 +79,8 @@ void TypeChecker::setupZ3Context() {
 
 
     Z3_constructor default_constructors[] = {
-            action_con, actionvalue_con, bit_con, bool_con, bozo_con, function_con,
+            bozo_con,
+            action_con, actionvalue_con, bit_con, bool_con, function_con,
             integer_con, real_con, reg_con, rule_con, string_con, void_con
     };
     unsigned num_default_constructors = sizeof(default_constructors) / sizeof(default_constructors[0]);
@@ -92,15 +93,27 @@ void TypeChecker::setupZ3Context() {
 
     for (int i = 0; i < typeDeclarationList.size(); i++) {
         std::shared_ptr<Declaration> typeDecl(typeDeclarationList[i]);
+        std::shared_ptr<BSVType> interfaceType(typeDecl->bsvtype);
+        int arity = interfaceType->params.size();
         std::string typePredicate(std::string("is_") + typeDecl->name);
-        fprintf(stderr, "User defined type %s predicate %s\n", typeDecl->name.c_str(), typePredicate.c_str());
+        fprintf(stderr, "User defined type %s predicate %s arity %d\n", typeDecl->name.c_str(), typePredicate.c_str(), arity);
+
+        Z3_symbol *param_symbols = new Z3_symbol[arity];
+        Z3_sort *param_sorts = new Z3_sort[arity]; //(Z3_sort *)malloc(sizeof(Z3_sort) * arity);
+        unsigned *sort_refs = new unsigned[arity];
+        for (int j = 0; j < arity; j++) {
+            shared_ptr<BSVType> paramType = interfaceType->params[j];
+            param_symbols[j] = Z3_mk_string_symbol(context, paramType->name.c_str());
+            param_sorts[j] = (paramType->kind == BSVType_Numeric) ? Z3_mk_int_sort(context) : (Z3_sort)NULL;
+            sort_refs[j] = 0;
+        }
         constructors[i + num_default_constructors] = Z3_mk_constructor(context,
                                                                        Z3_mk_string_symbol(context,
                                                                                            typeDecl->name.c_str()),
                                                                        Z3_mk_string_symbol(context,
                                                                                            typePredicate.c_str()),
                 //FIXME type parameters
-                                                                       0, NULL, NULL, NULL);
+                                                                       arity, param_symbols, param_sorts, sort_refs);
     }
 
     fprintf(stderr, "Defining typeSort\n");
