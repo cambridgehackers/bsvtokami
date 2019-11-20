@@ -37,6 +37,8 @@ void GenerateKami::generateKami(shared_ptr<Stmt> stmt, int depth) {
         generateKami(blockStmt, depth);
     } else if (shared_ptr<ExprStmt> exprStmt = stmt->exprStmt()) {
         generateKami(exprStmt, depth);
+    } else if (shared_ptr<FunctionDefStmt> functionDefStmt = stmt->functionDefStmt()) {
+        generateKami(functionDefStmt, depth);
     } else if (shared_ptr<IfStmt> ifStmt = stmt->ifStmt()) {
         generateKami(ifStmt, depth);
     } else if (shared_ptr<ImportStmt> importStmt = stmt->importStmt()) {
@@ -59,6 +61,10 @@ void GenerateKami::generateKami(shared_ptr<Stmt> stmt, int depth) {
         generateKami(typedefStructStmt, depth);
     } else if (shared_ptr<TypedefSynonymStmt> typedefSynonymStmt = stmt->typedefSynonymStmt()) {
         generateKami(typedefSynonymStmt, depth);
+    } else if (shared_ptr<VarAssignStmt> varAssignStmt = stmt->varAssignStmt()) {
+        cerr << "unhandled kami VarAssignStmt" << endl;
+    } else {
+        assert(0);
     }
 }
 
@@ -115,6 +121,23 @@ void GenerateKami::generateKami(const shared_ptr<ExprStmt> &stmt, int depth) {
     generateKami(stmt->expr, depth + 1);
 }
 
+
+void GenerateKami::generateKami(const shared_ptr<FunctionDefStmt> &functiondef, int depth) {
+    indent(out, depth);
+    out << "Function (instancePrefix--\"" << functiondef->name << "\") (* args *) (* result type *) := " << endl;
+    indent(out, depth); out << "(" << endl;
+    int num_stmts = functiondef->stmts.size();
+    for (int i = 0; i < num_stmts; i++) {
+        shared_ptr<Stmt> stmt = functiondef->stmts[i];
+        generateKami(stmt, depth + 1);
+        if (i < num_stmts - 1) {
+            out << ";";
+        }
+        out << endl;
+    }
+    indent(out, depth); out << ")" << endl;
+}
+
 void GenerateKami::generateKami(const shared_ptr<IfStmt> &stmt, int depth) {
     indent(out, depth);
     out << "If (";
@@ -124,7 +147,10 @@ void GenerateKami::generateKami(const shared_ptr<IfStmt> &stmt, int depth) {
     out << endl;
     indent(out, depth);
     out << ") else (" << endl;
-    generateKami(stmt->elseStmt, depth + 1);
+    if (stmt->elseStmt)
+        generateKami(stmt->elseStmt, depth + 1);
+    else
+        out << "Retv";
     out << endl;
     indent(out, depth);
     out << ") as v; Ret v" << endl;
@@ -233,8 +259,10 @@ void GenerateKami::generateKami(const shared_ptr<VarBindingStmt> &stmt, int dept
         out << " : ";
         generateKami(stmt->bsvtype);
     }
-    out << " <- ";
-    generateKami(stmt->rhs, depth + 1);
+    if (stmt->rhs) {
+        out << " <- ";
+        generateKami(stmt->rhs, depth + 1);
+    }
 }
 
 void GenerateKami::generateKami(const shared_ptr<FieldExpr> &expr, int depth, int precedence) {

@@ -123,6 +123,15 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
             exprs.push_back(expr(args.at(i)));
         }
         result.reset(new CallExpr(function, exprs));
+    } else if (BSVParser::SyscallexprContext *syscallexpr = dynamic_cast<BSVParser::SyscallexprContext *>(ctx)) {
+        //FIXME: placeholder type for $display etc.
+        shared_ptr<VarExpr> function = make_shared<VarExpr>(syscallexpr->fcn->getText(), make_shared<BSVType>());
+        vector<BSVParser::ExpressionContext *> args = syscallexpr->expression();
+        vector<shared_ptr<Expr>> exprs;
+        for (size_t i = 0; i < args.size(); i++) {
+            exprs.push_back(expr(args.at(i)));
+        }
+        result.reset(new CallExpr(function, exprs));
     } else if (BSVParser::TaggedunionexprContext *unionexpr = dynamic_cast<BSVParser::TaggedunionexprContext *>(ctx)) {
         string tag = unionexpr->upperCaseIdentifier(0)->getText();
         vector<string> keys;
@@ -446,6 +455,10 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
             ast_stmts.push_back(ast_stmt);
         }
         return shared_ptr<Stmt>(new BlockStmt(ast_stmts));
+    } else if (BSVParser::PatternbindingContext *patternBinding = ctx->patternbinding()) {
+        shared_ptr<Expr> val(expr(patternBinding->expression()));
+        shared_ptr<Pattern> pat = generateAst(patternBinding->pattern());
+        return make_shared<PatternMatchStmt>(pat, patternBinding->op->getText(), val);
     } else if (BSVParser::ReturnstmtContext *ret_stmt = ctx->returnstmt()) {
         shared_ptr<Expr> val(expr(ret_stmt->expression()));
         return shared_ptr<Stmt>(new ReturnStmt(val));
@@ -479,6 +492,7 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::VarbindingContext *varbindi
         return shared_ptr<Stmt>(new VarBindingStmt(varType, varName, rhs));
     }
     //FIXME: how to make multiple bindings?
+    assert(0);
     return shared_ptr<Stmt>();
 }
 
@@ -544,6 +558,7 @@ std::shared_ptr<Pattern> GenerateAst::generateAst(BSVParser::PatternContext *ctx
     } else {
         return WildcardPattern::create();
     }
+    assert(0);
 }
 
 

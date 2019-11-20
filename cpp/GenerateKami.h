@@ -37,6 +37,8 @@ public:
 
     void generateKami(const shared_ptr<ExprStmt> &stmt, int depth = 0);
 
+    void generateKami(const shared_ptr<FunctionDefStmt> &functiondef, int depth = 0);
+
     void generateKami(const shared_ptr<IfStmt> &stmt, int depth = 0);
 
     void generateKami(const shared_ptr<ImportStmt> &stmt, int depth = 0);

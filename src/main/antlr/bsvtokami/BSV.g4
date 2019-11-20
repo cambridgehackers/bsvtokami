@@ -31,14 +31,14 @@ EscapedOperator :
     ;
 
 lowerCaseIdentifier :
-    LowerCaseIdentifier | EscapedOperator | DollarIdentifier
+    LowerCaseIdentifier | EscapedOperator
     ;
 
 upperCaseIdentifier :
     UpperCaseIdentifier
     ;
 
-anyidentifier : lowerCaseIdentifier | upperCaseIdentifier | DollarIdentifier ;
+anyidentifier : lowerCaseIdentifier | upperCaseIdentifier ;
 
 exportdecl :
     'export' exportitem (',' exportitem)* ';'
@@ -180,7 +180,7 @@ methodcond :
     ;
 subinterfacedef :
     'interface' upperCaseIdentifier lowerCaseIdentifier ';' (interfacestmt)* 'endinterface' (':' lowerCaseIdentifier)?
-    | 'interface' bsvtype? lowerCaseIdentifier '=' expression ';'
+    | 'interface' upperCaseIdentifier? lowerCaseIdentifier '=' expression ';'
     ;
 ruledef :
     attributeinstance* 'rule' name=lowerCaseIdentifier rulecond? ';' stmt* 'endrule' (':' lowerCaseIdentifier)?
@@ -212,9 +212,9 @@ varassign :
     ;
 lvalue :
     lowerCaseIdentifier
-    | lvalue '.' lowerCaseIdentifier
-    | lvalue '[' index=expression ']'
-    | lvalue '[' msb=expression ':' lsb=expression ']'
+    | exprprimary '.' lowerCaseIdentifier
+    | exprprimary '[' index=expression ']'
+    | exprprimary '[' msb=expression ':' lsb=expression ']'
     ;
 bsvtype :
     typeide ('#' '(' bsvtype (',' bsvtype)* ')')?
@@ -277,6 +277,7 @@ exprprimary :
     | '{' expression (',' expression)* '}' #bitconcat
     | array=exprprimary '[' msb=expression ((':' lsb=expression) | (':+' lsb=expression))? ']' #arraysub
     | fcn=exprprimary '(' (expression (',' expression)*)? ')' #callexpr
+    | fcn=DollarIdentifier '(' (expression (',' expression)*)? ')' #syscallexpr
     | 'clocked_by' exprprimary #clockedbyexpr
     | 'reset_by' exprprimary #resetbyexpr
     | bsvtype '’' ( ('{' expression (',' expression)* '}' ) | ( '(' expression ')' ) ) #typeassertionexpr

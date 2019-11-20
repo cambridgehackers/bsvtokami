@@ -150,6 +150,30 @@ shared_ptr<Stmt> ActionBindingStmt::rename(string prefix, LexicalScope &scope) {
     return shared_ptr<Stmt>(new ActionBindingStmt(bsvtype, renamedVar, renamedRHS));
 }
 
+void PatternMatchStmt::prettyPrint(ostream &out, int depth) {
+    indent(out, 4 * depth);
+    out << "{";
+    pattern->prettyPrint(out, depth+1);
+    out << "}";
+    if (rhs) {
+        out << op;
+        rhs->prettyPrint(out, depth + 1);
+    }
+    out << ";" << endl;
+}
+
+shared_ptr<PatternMatchStmt> PatternMatchStmt::patternMatchStmt() {
+    return static_pointer_cast<PatternMatchStmt, Stmt>(shared_from_this());
+}
+
+shared_ptr<Stmt> PatternMatchStmt::rename(string prefix, LexicalScope &scope) {
+    shared_ptr<Expr> renamedRHS;
+    if (rhs)
+        renamedRHS = rhs->rename(prefix, scope);
+    //scope.bind(name, renamedVar);
+    return make_shared<PatternMatchStmt>(pattern, op, renamedRHS);
+}
+
 VarBindingStmt::VarBindingStmt(const shared_ptr<BSVType> &bsvtype, const string &name,
                                const shared_ptr<Expr> &rhs)
         : Stmt(VarBindingStmtType), bsvtype(bsvtype), name(name), rhs(rhs) {

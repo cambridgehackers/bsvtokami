@@ -41,9 +41,9 @@ module Empty mkMain();
       started <= 1;
    endrule
    rule rl_display;
-      let v = gcd.result();
-      dv <= v;
-      finish();
+      //let v = gcd.result();
+      //dv <= v;
+      $finish();
    endrule
 endmodule
 

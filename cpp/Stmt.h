@@ -31,6 +31,7 @@ enum StmtType {
     ModuleDefStmtType,
     ModuleInstStmtType,
     PackageDefStmtType,
+    PatternMatchStmtType,
     RegReadStmtType,
     RegWriteStmtType,
     ReturnStmtType,
@@ -66,6 +67,8 @@ class MethodDefStmt;
 class ModuleDefStmt;
 
 class ModuleInstStmt;
+
+class PatternMatchStmt;
 
 class RegReadStmt;
 
@@ -119,6 +122,8 @@ public:
     virtual shared_ptr<ModuleDefStmt> moduleDefStmt() { return shared_ptr<ModuleDefStmt>(); }
 
     virtual shared_ptr<ModuleInstStmt> moduleInstStmt() { return shared_ptr<ModuleInstStmt>(); }
+
+    virtual shared_ptr<PatternMatchStmt> patternMatchStmt() { return shared_ptr<PatternMatchStmt>(); }
 
     virtual shared_ptr<RegReadStmt> regReadStmt() { return shared_ptr<RegReadStmt>(); }
 
@@ -418,6 +423,25 @@ public:
     void prettyPrint(ostream &out, int depth = 0) override;
 
     shared_ptr<VarBindingStmt> varBindingStmt() override;
+
+    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+
+};
+
+class PatternMatchStmt : public Stmt {
+public:
+    const shared_ptr<Pattern> pattern;
+    const string op; // '=' or '<-'
+    const shared_ptr<Expr> rhs;
+public:
+    PatternMatchStmt(const shared_ptr<Pattern> &pattern, const string &op,
+            const shared_ptr<Expr> &rhs) : Stmt(PatternMatchStmtType), pattern(pattern), op(op), rhs(rhs) {}
+
+    ~PatternMatchStmt() override {}
+
+    void prettyPrint(ostream &out, int depth = 0) override;
+
+    shared_ptr<PatternMatchStmt> patternMatchStmt() override;
 
     shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
 

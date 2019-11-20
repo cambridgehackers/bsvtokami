@@ -6,7 +6,7 @@
 
 void
 SimplifyAst::simplify(const vector<shared_ptr<struct Stmt>> &stmts, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
-    cerr << "simplify stmts" << endl;
+    //cerr << "simplify stmts" << endl;
     for (int i = 0; i < stmts.size(); i++) {
         simplify(stmts[i], simplifiedStmts);
     }
@@ -58,6 +58,9 @@ void SimplifyAst::simplify(const shared_ptr<struct Stmt> &stmt, vector<shared_pt
             return;
         case PackageDefStmtType:
             simplifiedStmts.push_back(stmt);
+            return;
+        case PatternMatchStmtType:
+            simplify(stmt->patternMatchStmt(), simplifiedStmts);
             return;
         case RegReadStmtType:
             simplify(stmt->regReadStmt(), simplifiedStmts);
@@ -113,6 +116,10 @@ void SimplifyAst::simplify(const shared_ptr<ExprStmt> &stmt, vector<shared_ptr<s
     simplifiedStmts.push_back(stmt);
 }
 
+void SimplifyAst::simplify(const shared_ptr<FunctionDefStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
+    simplifiedStmts.push_back(stmt);
+}
+
 void SimplifyAst::simplify(const shared_ptr<IfStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
     simplifiedStmts.push_back(stmt);
 }
@@ -123,6 +130,11 @@ void SimplifyAst::simplify(const shared_ptr<ImportStmt> &stmt, vector<shared_ptr
 
 void
 SimplifyAst::simplify(const shared_ptr<InterfaceDeclStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
+    simplifiedStmts.push_back(stmt);
+}
+
+void
+SimplifyAst::simplify(const shared_ptr<InterfaceDefStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
     simplifiedStmts.push_back(stmt);
 }
 
@@ -147,12 +159,16 @@ SimplifyAst::simplify(const shared_ptr<ModuleDefStmt> &moduleDef, vector<shared_
     simplifiedStmts.push_back(newModuleDef);
 }
 
+void SimplifyAst::simplify(const shared_ptr<PatternMatchStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
+    simplifiedStmts.push_back(stmt);
+}
+
 void SimplifyAst::simplify(const shared_ptr<RegReadStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
     simplifiedStmts.push_back(stmt);
 }
 
 void SimplifyAst::simplify(const shared_ptr<RegWriteStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
-    cerr << "simplify regwrite stmt " << stmt->regName << endl;
+    //cerr << "simplify regwrite stmt " << stmt->regName << endl;
     shared_ptr<Expr> simplifiedRhs = simplify(stmt->rhs, simplifiedStmts);
     simplifiedStmts.push_back(make_shared<RegWriteStmt>(stmt->regName, simplifiedRhs));
 }
@@ -179,6 +195,10 @@ SimplifyAst::simplify(const shared_ptr<TypedefSynonymStmt> &stmt, vector<shared_
     simplifiedStmts.push_back(stmt);
 }
 
+void SimplifyAst::simplify(const shared_ptr<VarAssignStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
+    simplifiedStmts.push_back(stmt);
+}
+
 void SimplifyAst::simplify(const shared_ptr<VarBindingStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
     simplifiedStmts.push_back(stmt);
 }
@@ -191,7 +211,9 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
             shared_ptr<ArraySubExpr> opexpr = expr->arraySubExpr();
             shared_ptr<Expr> array = simplify(opexpr->array, simplifiedStmts);
             shared_ptr<Expr> msb = simplify(opexpr->msb, simplifiedStmts);
-            shared_ptr<Expr> lsb = simplify(opexpr->lsb, simplifiedStmts);
+            shared_ptr<Expr> lsb;
+            if (opexpr->lsb)
+                lsb = simplify(opexpr->lsb, simplifiedStmts);
             shared_ptr<ArraySubExpr> simplifiedExpr = make_shared<ArraySubExpr>(array, msb, lsb);
             return simplifiedExpr;
         }

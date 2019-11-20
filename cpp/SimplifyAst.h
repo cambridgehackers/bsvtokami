@@ -38,17 +38,23 @@ public:
 
     void simplify(const shared_ptr<ExprStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
+    void simplify(const shared_ptr<FunctionDefStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
+
     void simplify(const shared_ptr<IfStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
     void simplify(const shared_ptr<ImportStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
     void simplify(const shared_ptr<InterfaceDeclStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
+    void simplify(const shared_ptr<InterfaceDefStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
+
     void simplify(const shared_ptr<MethodDeclStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
     void simplify(const shared_ptr<MethodDefStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
     void simplify(const shared_ptr<ModuleDefStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
+
+    void simplify(const shared_ptr<PatternMatchStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
     void simplify(const shared_ptr<RegReadStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
@@ -61,6 +67,8 @@ public:
     void simplify(const shared_ptr<TypedefStructStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
     void simplify(const shared_ptr<TypedefSynonymStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
+
+    void simplify(const shared_ptr<VarAssignStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
     void simplify(const shared_ptr<VarBindingStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 

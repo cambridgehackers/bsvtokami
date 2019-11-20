@@ -168,6 +168,7 @@ void TypeChecker::insertTracker(antlr4::ParserRuleContext *ctx, z3::expr tracker
 }
 
 z3::expr TypeChecker::orExprs(std::vector<z3::expr> exprs) {
+    assert(exprs.size() > 0);
     if (exprs.size() == 1) {
         return exprs.at(0);
     } else {
