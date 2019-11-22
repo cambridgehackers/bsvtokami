@@ -32,6 +32,7 @@ enum StmtType {
     ModuleInstStmtType,
     PackageDefStmtType,
     PatternMatchStmtType,
+    RegisterStmtType,
     RegReadStmtType,
     RegWriteStmtType,
     ReturnStmtType,
@@ -69,6 +70,8 @@ class ModuleDefStmt;
 class ModuleInstStmt;
 
 class PatternMatchStmt;
+
+class RegisterStmt;
 
 class RegReadStmt;
 
@@ -124,6 +127,8 @@ public:
     virtual shared_ptr<ModuleInstStmt> moduleInstStmt() { return shared_ptr<ModuleInstStmt>(); }
 
     virtual shared_ptr<PatternMatchStmt> patternMatchStmt() { return shared_ptr<PatternMatchStmt>(); }
+
+    virtual shared_ptr<RegisterStmt> registerStmt() { return shared_ptr<RegisterStmt>(); }
 
     virtual shared_ptr<RegReadStmt> regReadStmt() { return shared_ptr<RegReadStmt>(); }
 
@@ -447,6 +452,24 @@ public:
 
 };
 
+class RegisterStmt : public Stmt {
+public:
+    const string regName;
+    const shared_ptr<BSVType> elementType;
+public:
+    RegisterStmt(const string &regName, const shared_ptr<BSVType> &elementType)
+    : Stmt(RegisterStmtType), regName(regName), elementType(elementType) {};
+
+    ~RegisterStmt() override {}
+
+    void prettyPrint(ostream &out, int depth = 0) override;
+
+    virtual shared_ptr<RegisterStmt> registerStmt() override;
+
+    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+
+};
+
 class RegReadStmt : public Stmt {
 public:
     const string regName;
@@ -553,17 +576,16 @@ public:
 
 class CallStmt : public Stmt {
 public:
-    CallStmt(const string &name, const shared_ptr<BSVType> &interfaceType, const shared_ptr<Expr> &rhs);
+    CallStmt(const string &name, const shared_ptr<BSVType> &interfaceType, const shared_ptr<Expr> &rhs)
+    : Stmt(CallStmtType), name(name), interfaceType(interfaceType), rhs(rhs) {}
 
-    ~CallStmt() override;
+    ~CallStmt() override {};
 
     void prettyPrint(ostream &out, int depth) override;
 
     virtual shared_ptr<CallStmt> callStmt() override;
 
     shared_ptr<Stmt> rename(string prefix, LexicalScope &scope) override;
-
-    static shared_ptr<CallStmt> create(const string &name, const shared_ptr<BSVType> &interfaceType, const shared_ptr<Expr> &rhs);
 
 public:
     const string name;

@@ -56,6 +56,20 @@ shared_ptr<Stmt> RuleDefStmt::rename(string prefix, LexicalScope &parentScope) {
     return shared_ptr<Stmt>(new RuleDefStmt(prefix + name, renamedGuard, renamedStmts));
 }
 
+void RegisterStmt::prettyPrint(ostream &out, int depth) {
+    out << "Register" << regName << " : ";
+    elementType->prettyPrint(out, depth);
+    out << ";" << endl;
+}
+
+shared_ptr<RegisterStmt> RegisterStmt::registerStmt() {
+    return static_pointer_cast<RegisterStmt, Stmt>(shared_from_this());
+}
+
+shared_ptr<struct Stmt> RegisterStmt::rename(string prefix, LexicalScope &scope) {
+    return make_shared<RegisterStmt>(regName, elementType);
+}
+
 RegReadStmt::RegReadStmt(const string &regName, const string &var, const shared_ptr<BSVType> &varType)
         : Stmt(RegReadStmtType), regName(regName), var(var), varType(varType) {
 }
@@ -500,6 +514,22 @@ shared_ptr<struct Stmt> BlockStmt::rename(string prefix, LexicalScope &parentSco
     return shared_ptr<Stmt>(new BlockStmt(renamedStmts));
 }
 
+void CallStmt::prettyPrint(ostream &out, int depth) {
+    indent(out, 4 * depth);
+    out << "Call" << name << " : ";
+    interfaceType->prettyPrint(out, depth);
+    out << " <- ";
+    rhs->prettyPrint(out, depth + 1);
+    out << endl;
+}
+
+shared_ptr<CallStmt> CallStmt::callStmt() { return static_pointer_cast<CallStmt, Stmt>(shared_from_this()); }
+
+shared_ptr<Stmt> CallStmt::rename(string prefix, LexicalScope &scope)
+{
+    cerr << "FIXME: unhandled CallStmt::rename" << endl;
+    return make_shared<CallStmt>(name, interfaceType, rhs);
+}
 
 void ReturnStmt::prettyPrint(ostream &out, int depth) {
     indent(out, 4 * depth);

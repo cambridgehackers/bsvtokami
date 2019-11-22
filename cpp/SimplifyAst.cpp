@@ -62,6 +62,9 @@ void SimplifyAst::simplify(const shared_ptr<struct Stmt> &stmt, vector<shared_pt
         case PatternMatchStmtType:
             simplify(stmt->patternMatchStmt(), simplifiedStmts);
             return;
+        case RegisterStmtType:
+            simplify(stmt->registerStmt(), simplifiedStmts);
+            return;
         case RegReadStmtType:
             simplify(stmt->regReadStmt(), simplifiedStmts);
             return;
@@ -100,7 +103,48 @@ SimplifyAst::simplify(const shared_ptr<ActionBindingStmt> &stmt, vector<shared_p
             registers[regname] = bsvtype->params[0];
         }
     }
-    simplifiedStmts.push_back(stmt);
+    shared_ptr<Expr> expr = stmt->rhs;
+    if (actionContext) {
+        switch (expr->exprType) {
+            case CallExprType: {
+                simplifiedStmts.push_back(make_shared<CallStmt>(stmt->name, stmt->bsvtype, stmt->rhs));
+            }
+                break;
+            case VarExprType:
+            case FieldExprType: {
+                vector<shared_ptr<Expr>> args;
+                simplifiedStmts.push_back(make_shared<CallStmt>(stmt->name, stmt->bsvtype,
+                                                                make_shared<CallExpr>(stmt->rhs, args)));
+            }
+                break;
+            default:
+                simplifiedStmts.push_back(stmt);
+        }
+    } else {
+        switch (expr->exprType) {
+            case CallExprType: {
+                if (stmt->bsvtype->name == "Reg") {
+                    shared_ptr<BSVType> elementType = stmt->bsvtype->params[0];
+                    simplifiedStmts.push_back(make_shared<RegisterStmt>(stmt->name, elementType));
+                } else {
+                    simplifiedStmts.push_back(make_shared<CallStmt>(stmt->name, stmt->bsvtype, stmt->rhs));
+                }
+            } break;
+            case VarExprType: {
+                if (stmt->bsvtype->name == "Reg") {
+                    shared_ptr<BSVType> elementType = stmt->bsvtype->params[0];
+                    simplifiedStmts.push_back(make_shared<RegisterStmt>(stmt->name, elementType));
+                } else {
+                    vector<shared_ptr<Expr>> args;
+                    simplifiedStmts.push_back(make_shared<CallStmt>(stmt->name, stmt->bsvtype,
+                                                                    make_shared<CallExpr>(stmt->rhs, args)));
+                }
+            }
+                break;
+            default:
+                simplifiedStmts.push_back(stmt);
+        }
+    }
 }
 
 void SimplifyAst::simplify(const shared_ptr<BlockStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
@@ -112,12 +156,33 @@ void SimplifyAst::simplify(const shared_ptr<BlockStmt> &stmt, vector<shared_ptr<
     simplifiedStmts.push_back(newblockstmt);
 }
 
-void SimplifyAst::simplify(const shared_ptr<ExprStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
-    simplifiedStmts.push_back(stmt);
+void SimplifyAst::simplify(const shared_ptr<ExprStmt> &exprStmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
+    shared_ptr<Expr> expr = exprStmt->expr;
+    switch (expr->exprType) {
+        case CallExprType: {
+            simplifiedStmts.push_back(make_shared<CallStmt>("unused", make_shared<BSVType>("Void"), expr));
+        } break;
+        case FieldExprType: // fall through
+        case VarExprType: {
+            vector<shared_ptr<Expr>> args;
+            simplifiedStmts.push_back(make_shared<CallStmt>("unused", make_shared<BSVType>("Void"),
+                    make_shared<CallExpr>(expr, args)));
+        } break;
+        default:
+            cerr << "Unhandled expr stmt: " << expr->exprType << "{" << endl;
+            expr->prettyPrint(cerr);
+            cerr << "}" << endl;
+            simplifiedStmts.push_back(exprStmt);
+    }
 }
 
 void SimplifyAst::simplify(const shared_ptr<FunctionDefStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
+    bool enclosingActionContext = actionContext;
+    actionContext = true;
+
     simplifiedStmts.push_back(stmt);
+
+    actionContext = enclosingActionContext;
 }
 
 void SimplifyAst::simplify(const shared_ptr<IfStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
@@ -143,7 +208,12 @@ void SimplifyAst::simplify(const shared_ptr<MethodDeclStmt> &stmt, vector<shared
 }
 
 void SimplifyAst::simplify(const shared_ptr<MethodDefStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
+    bool enclosingActionContext = actionContext;
+    actionContext = true;
+
     simplifiedStmts.push_back(stmt);
+
+    actionContext = enclosingActionContext;
 }
 
 void
@@ -160,6 +230,7 @@ SimplifyAst::simplify(const shared_ptr<ModuleDefStmt> &moduleDef, vector<shared_
 }
 
 void SimplifyAst::simplify(const shared_ptr<PatternMatchStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
+    //FIXME: replace with VarBindingStmt, etc
     simplifiedStmts.push_back(stmt);
 }
 
@@ -179,10 +250,15 @@ void SimplifyAst::simplify(const shared_ptr<ReturnStmt> &stmt, vector<shared_ptr
 }
 
 void SimplifyAst::simplify(const shared_ptr<RuleDefStmt> &ruleDef, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
+    bool enclosingActionContext = actionContext;
+    actionContext = true;
+
     vector<shared_ptr<Stmt>> ruleSimplifiedStmts;
     simplify(ruleDef->stmts, ruleSimplifiedStmts);
     shared_ptr<RuleDefStmt> newRuleDef = make_shared<RuleDefStmt>(ruleDef->name, ruleDef->guard, ruleSimplifiedStmts);
     simplifiedStmts.push_back(newRuleDef);
+
+    actionContext = enclosingActionContext;
 }
 
 void
@@ -236,6 +312,17 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
             shared_ptr<OperatorExpr> opexpr = expr->operatorExpr();
             shared_ptr<Expr> lhs = simplify(opexpr->lhs, simplifiedStmts);
             shared_ptr<Expr> rhs = simplify(opexpr->rhs, simplifiedStmts);
+            if (!lhs) {
+                cerr << "null lhs after simplify ";
+                opexpr->lhs->prettyPrint(cerr);
+                cerr << endl;
+            }
+            if (!rhs) {
+                cerr << "null rhs after simplify ";
+                opexpr->rhs->prettyPrint(cerr);
+                cerr << endl;
+            }
+            return opexpr;
             shared_ptr<OperatorExpr> simplifiedExpr = make_shared<OperatorExpr>(opexpr->op, lhs, rhs);
             return simplifiedExpr;
         }
