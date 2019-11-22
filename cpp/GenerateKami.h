@@ -18,6 +18,7 @@ using namespace std;
 class GenerateKami {
     string filename;
     ofstream out;
+    bool actionContext;
 
 public:
     GenerateKami();

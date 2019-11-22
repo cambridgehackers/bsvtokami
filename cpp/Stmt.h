@@ -69,6 +69,8 @@ class ModuleDefStmt;
 
 class ModuleInstStmt;
 
+class PackageDefStmt;
+
 class PatternMatchStmt;
 
 class RegisterStmt;
@@ -126,6 +128,8 @@ public:
 
     virtual shared_ptr<ModuleInstStmt> moduleInstStmt() { return shared_ptr<ModuleInstStmt>(); }
 
+    virtual shared_ptr<PackageDefStmt> packageDefStmt() { return shared_ptr<PackageDefStmt>(); }
+
     virtual shared_ptr<PatternMatchStmt> patternMatchStmt() { return shared_ptr<PatternMatchStmt>(); }
 
     virtual shared_ptr<RegisterStmt> registerStmt() { return shared_ptr<RegisterStmt>(); }
@@ -172,9 +176,9 @@ public:
 
     virtual shared_ptr<TypedefSynonymStmt> typedefSynonymStmt() override;
 
-private:
-    shared_ptr<BSVType> typedeftype; // type being defined
-    shared_ptr<BSVType> type;
+public:
+    const shared_ptr<BSVType> typedeftype; // type being defined
+    const shared_ptr<BSVType> type;
 };
 
 class TypedefStructStmt : public Stmt {
@@ -236,8 +240,8 @@ public:
 
     shared_ptr<Stmt> lookup(const string &name);
     const vector<shared_ptr<Stmt>> stmts;
-private:
-    string name;
+
+    const string name;
     map<string, shared_ptr<Stmt>> bindings;
 };
 
