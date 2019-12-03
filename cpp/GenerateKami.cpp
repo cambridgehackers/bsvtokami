@@ -112,16 +112,71 @@ void GenerateKami::generateKami(shared_ptr<Stmt> stmt, int depth) {
 }
 
 void GenerateKami::generateKami(const shared_ptr<Expr> &expr, int depth, int precedence) {
-    if (shared_ptr<OperatorExpr> opexpr = expr->operatorExpr()) {
-        generateKami(opexpr, depth, precedence);
-    } else if (shared_ptr<CallExpr> callExpr = expr->callExpr()) {
-        generateKami(callExpr, depth, precedence);
-    } else if (shared_ptr<FieldExpr> fieldexpr = expr->fieldExpr()) {
-        generateKami(fieldexpr, depth, precedence);
-    } else {
-        out << "Expr " << expr->exprType << " { ";
-        expr->prettyPrint(out, depth);
-        out << " }";
+    switch (expr->exprType) {
+        case InvalidExprType:
+            return;
+        case ArraySubExprType: {
+            shared_ptr<ArraySubExpr> arraySubExpr = expr->arraySubExpr();
+            generateKami(arraySubExpr->array, depth+1, 0);
+            out << " @[ ";
+            generateKami(arraySubExpr->index, depth + 1, 0);
+            out << " ]";
+        } return;
+        case BitSelExprType: {
+            shared_ptr<BitSelExpr> bitSelExpr = expr->bitSelExpr();
+            assert(bitSelExpr->lsb);
+            generateKami(bitSelExpr->value, depth+1, 0);
+            out << " @[ ";
+            generateKami(bitSelExpr->msb, depth + 1, 0);
+            out << " : ";
+            generateKami(bitSelExpr->lsb, depth + 1, 0);
+            out << " ]";
+            out << " $width"; // fixme
+        } return;
+        case CallExprType:
+            generateKami(expr->callExpr(), depth, precedence);
+            return;
+        case CondExprType: {
+            shared_ptr<CondExpr> condExpr = expr->condExpr();
+            out << endl;
+            indent(out, depth);
+            out << "(IF ";
+            generateKami(condExpr->cond, depth + 1);
+            out << " then ";
+            generateKami(condExpr->thenExpr, depth + 1);
+            out << " else ";
+            generateKami(condExpr->elseExpr, depth + 1);
+            out << ")";
+        } return;
+        case EnumUnionStructExprType: {
+            shared_ptr<EnumUnionStructExpr> tagExpr = expr->enumUnionStructExpr();
+            out << "(* tagged *)" << tagExpr->tag;
+        } return;
+        case FieldExprType:
+            generateKami(expr->fieldExpr(), depth, precedence);
+            return;
+        case IntConstType:
+            out << expr->intConst()->value;
+            return;
+        case OperatorExprType:
+            generateKami(expr->operatorExpr(), depth, precedence);
+            return;
+        case VarExprType:
+            out << "(* var expr ";
+            expr->varExpr()->bsvtype->prettyPrint(out, depth);
+            out << " *)";
+            out << expr->varExpr()->name;
+            return;
+        case CaseExprType:
+        case MatchesExprType:
+            out << "Unflattened " << expr->exprType << " { ";
+            expr->prettyPrint(out, depth);
+            out << " }";
+            break;
+        case StringConstType:
+            out << "Unimplemented " << expr->exprType << " { ";
+            expr->prettyPrint(out, depth);
+            out << " }";
     }
 }
 
@@ -162,7 +217,7 @@ void GenerateKami::generateKami(const shared_ptr<BlockStmt> &blockstmt, int dept
         shared_ptr<Stmt> stmt = blockstmt->stmts[i];
         generateKami(stmt, depth + 1);
         if (i < num_stmts - 1) {
-            out << ";" << endl;
+            //out << ";" << endl;
         }
     }
 }
@@ -197,11 +252,11 @@ void GenerateKami::generateKami(const shared_ptr<FunctionDefStmt> &functiondef, 
         shared_ptr<Stmt> stmt = functiondef->stmts[i];
         generateKami(stmt, depth + 1);
         if (i < num_stmts - 1) {
-            out << ";";
+            //out << ";";
         }
         out << endl;
     }
-    indent(out, depth); out << ")%kami_action" << endl;
+    indent(out, depth); out << ")%kami_action." << endl;
 }
 
 void GenerateKami::generateKami(const shared_ptr<IfStmt> &stmt, int depth) {
@@ -243,7 +298,7 @@ void GenerateKami::generateKami(const shared_ptr<MethodDefStmt> &methoddef, int 
         shared_ptr<Stmt> stmt = methoddef->stmts[i];
         generateKami(stmt, depth + 1);
         if (i < num_stmts - 1) {
-            out << ";";
+            //out << ";";
         }
         out << endl;
     }
@@ -294,7 +349,7 @@ void GenerateKami::generateKami(const shared_ptr<RegReadStmt> &regread, int dept
 
 void GenerateKami::generateKami(const shared_ptr<RegWriteStmt> &regwrite, int depth) {
     indent(out, depth);
-    out << "Write \"" << regwrite->regName << " : ";
+    out << "Write \"" << regwrite->regName << "\" : ";
     //FIXME: placeholder for type
     out << "<regtype>";
     out << " <- ";
@@ -319,7 +374,7 @@ void GenerateKami::generateKami(const shared_ptr<RuleDefStmt> &ruledef, int dept
         shared_ptr<Stmt> stmt = ruledef->stmts[i];
         generateKami(stmt, depth + 1);
         if (i < num_stmts - 1) {
-            out << ";";
+            //out << ";";
         }
         out << endl;
     }
@@ -366,6 +421,7 @@ void GenerateKami::generateKami(const shared_ptr<VarBindingStmt> &stmt, int dept
             out << " <- ";
             generateKami(stmt->rhs, depth + 1);
         }
+        out << " ;";
     }
 }
 
@@ -381,14 +437,23 @@ void GenerateKami::generateKami(const shared_ptr<VarExpr> &expr, int depth, int 
 }
 
 void GenerateKami::generateKami(const shared_ptr<CallExpr> &expr, int depth, int precedence) {
-    expr->function->prettyPrint(out, depth);
+    shared_ptr<Expr> functionExpr = expr->function;
+    if (functionExpr->exprType == FieldExprType) {
+        shared_ptr<FieldExpr> fieldExpr = functionExpr->fieldExpr();
+        shared_ptr<VarExpr> varExpr = fieldExpr->object->varExpr();
+        out << "\"";
+        fieldExpr->object->prettyPrint(out, 0);
+        out << "." << fieldExpr->fieldName << "\"";
+    } else {
+        generateKami(functionExpr, depth, precedence);
+    }
     out << "( ";
     for (int i = 0; i < expr->args.size(); i++) {
         if (i > 0)
             out << ", ";
         expr->args[i]->prettyPrint(out, depth + 1);
     }
-    out << " ) ;" << endl;
+    out << " )";
 }
 
 void GenerateKami::generateKami(const shared_ptr<IntConst> &expr, int depth, int precedence) {
@@ -406,15 +471,21 @@ void GenerateKami::generateKami(const shared_ptr<OperatorExpr> &expr, int depth,
 }
 
 void GenerateKami::generateKami(const shared_ptr<ArraySubExpr> &expr, int depth, int precedence) {
-    if (expr->lsb) {
+    out << "( ";
+    generateKami(expr->array, depth + 1, precedence);
+    out << " ! (* array sub *) ";
+    generateKami(expr->index, depth + 1, precedence);
+    out << " )";
+}
 
-    } else {
-        out << "( ";
-        generateKami(expr->array, depth + 1, precedence);
-        out << " ! (* array sub *) ";
-        generateKami(expr->msb, depth + 1, precedence);
-        out << " )";
-    }
+void GenerateKami::generateKami(const shared_ptr<BitSelExpr> &expr, int depth, int precedence) {
+    out << "( ";
+    generateKami(expr->value, depth + 1, precedence);
+    out << " ! (* array sub *) ";
+    generateKami(expr->msb, depth + 1, precedence);
+    out << " , ";
+    generateKami(expr->lsb, depth + 1, precedence);
+    out << " )";
 }
 
 void GenerateKami::generateKami(const shared_ptr<EnumUnionStructExpr> &expr, int depth, int precedence) {

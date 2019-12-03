@@ -138,7 +138,7 @@ void MatchesExpr::prettyPrint(ostream &out, int depth) {
     expr->prettyPrint(out, depth);
     out << " matches ";
     //fixme: string
-    out << pattern;
+    pattern->prettyPrint(out, depth + 1);
     for (int i = 0; i < patterncond.size(); i++) {
         out << " &&& ";
         patterncond[i]->prettyPrint(out, depth);
@@ -243,8 +243,8 @@ shared_ptr<Expr> EnumUnionStructExpr::rename(string prefix, LexicalScope &scope)
 }
 
 
-ArraySubExpr::ArraySubExpr(const shared_ptr<Expr> &array, const shared_ptr<Expr> &msb,
-                           const shared_ptr<Expr> &lsb) : Expr(ArraySubExprType), array(array), msb(msb), lsb(lsb) {}
+ArraySubExpr::ArraySubExpr(const shared_ptr<Expr> &array, const shared_ptr<Expr> &index)
+: Expr(ArraySubExprType), array(array), index(index) {}
 
 ArraySubExpr::~ArraySubExpr() {
 
@@ -253,11 +253,7 @@ ArraySubExpr::~ArraySubExpr() {
 void ArraySubExpr::prettyPrint(ostream &out, int depth) {
     array->prettyPrint(out, depth + 1);
     out << "[";
-    msb->prettyPrint(out, depth + 1);
-    if (lsb) {
-        out << " : ";
-        lsb->prettyPrint(out, depth + 1);
-    }
+    index->prettyPrint(out, depth + 1);
     out << "]";
 }
 
@@ -267,8 +263,33 @@ shared_ptr<ArraySubExpr> ArraySubExpr::arraySubExpr() {
 
 shared_ptr<Expr> ArraySubExpr::rename(string prefix, LexicalScope &scope) {
     return shared_ptr<ArraySubExpr>(new ArraySubExpr(array->rename(prefix, scope),
-                                                     msb->rename(prefix, scope),
-                                                     lsb->rename(prefix, scope)));
+                                                     index->rename(prefix, scope)));
+}
+
+BitSelExpr::BitSelExpr(const shared_ptr<Expr> &value, const shared_ptr<Expr> &msb, const shared_ptr<Expr> &lsb)
+        : Expr(BitSelExprType), value(value), msb(msb), lsb(lsb) {}
+
+BitSelExpr::~BitSelExpr() {
+
+}
+
+void BitSelExpr::prettyPrint(ostream &out, int depth) {
+    value->prettyPrint(out, depth + 1);
+    out << "[";
+    msb->prettyPrint(out, depth + 1);
+    out << " : ";
+    lsb->prettyPrint(out, depth + 1);
+    out << "]";
+}
+
+shared_ptr<BitSelExpr> BitSelExpr::bitSelExpr() {
+    return static_pointer_cast<BitSelExpr, Expr>(shared_from_this());
+}
+
+shared_ptr<Expr> BitSelExpr::rename(string prefix, LexicalScope &scope) {
+    return shared_ptr<BitSelExpr>(new BitSelExpr(value->rename(prefix, scope),
+                                                 msb->rename(prefix, scope),
+                                                 lsb->rename(prefix, scope)));
 }
 
 StringConst::StringConst(const string &repr)

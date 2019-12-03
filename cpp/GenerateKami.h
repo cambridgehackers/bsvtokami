@@ -83,6 +83,8 @@ public:
 
     void generateKami(const shared_ptr<ArraySubExpr> &expr, int depth = 0, int precedence = 0);
 
+    void generateKami(const shared_ptr<BitSelExpr> &expr, int depth, int precedence);
+
     void generateKami(const shared_ptr<EnumUnionStructExpr> &expr, int depth = 0, int precedence = 0);
 
 

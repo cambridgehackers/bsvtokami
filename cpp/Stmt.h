@@ -313,7 +313,8 @@ public:
 
 class MethodDefStmt : public Stmt {
 public:
-    MethodDefStmt(const string &name, const shared_ptr<BSVType> &returnType,
+    MethodDefStmt(const string &name,
+                  const shared_ptr<BSVType> &returnType,
                   const vector<string> &params,
                   const vector<shared_ptr<BSVType>> &paramTypes,
                   const shared_ptr<Expr> &guard,

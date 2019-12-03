@@ -350,11 +350,7 @@ void GenerateIR::generateIR(const shared_ptr<OperatorExpr> &expr, int depth, int
 void GenerateIR::generateIR(const shared_ptr<ArraySubExpr> &expr, int depth, int level) {
     generateIR(expr->array, depth, 0);
     out << "[";
-    generateIR(expr->msb, depth, 0);
-    if (expr->lsb) {
-        out << ",";
-        generateIR(expr->lsb, depth, 0);
-    }
+    generateIR(expr->index, depth, 0);
     out << "]";
 }
 

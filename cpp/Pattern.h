@@ -35,6 +35,8 @@ class IntPattern : public Pattern {
 public:
     const int value;
     IntPattern(int value) : value(value) {}
+    IntPattern(const string &value) : value(stol(value, 0, 0)) {}
+
     ~IntPattern() {}
 
     virtual shared_ptr<IntPattern> intPattern() override { return static_pointer_cast<IntPattern, Pattern>(shared_from_this()); }

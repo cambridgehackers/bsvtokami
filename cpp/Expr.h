@@ -15,6 +15,7 @@ using namespace std;
 enum ExprType {
     InvalidExprType,
     ArraySubExprType,
+    BitSelExprType,
     VarExprType,
     IntConstType,
     StringConstType,
@@ -30,6 +31,8 @@ enum ExprType {
 class FieldExpr;
 
 class VarExpr;
+
+class BitSelExpr;
 
 class CallExpr;
 
@@ -56,6 +59,8 @@ public:
     virtual ~Expr();
 
     virtual void prettyPrint(ostream &out, int depth = 0) = 0;
+
+    virtual shared_ptr<BitSelExpr> bitSelExpr() { return shared_ptr<BitSelExpr>(); }
 
     virtual shared_ptr<FieldExpr> fieldExpr() { return shared_ptr<FieldExpr>(); }
 
@@ -233,8 +238,7 @@ public:
 
 class ArraySubExpr : public Expr {
 public:
-    ArraySubExpr(const shared_ptr<Expr> &array, const shared_ptr<Expr> &msb,
-                 const shared_ptr<Expr> &lsb);
+    ArraySubExpr(const shared_ptr<Expr> &array, const shared_ptr<Expr> &index);
 
     virtual ~ArraySubExpr();
 
@@ -244,6 +248,24 @@ public:
 
 public:
     const shared_ptr<Expr> array;
+    const shared_ptr<Expr> index;
+
+    shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
+};
+
+class BitSelExpr : public Expr {
+public:
+    BitSelExpr(const shared_ptr<Expr> &value, const shared_ptr<Expr> &msb,
+                 const shared_ptr<Expr> &lsb);
+
+    virtual ~BitSelExpr();
+
+    void prettyPrint(ostream &out, int depth) override;
+
+    shared_ptr<BitSelExpr> bitSelExpr() override;
+
+public:
+    const shared_ptr<Expr> value;
     const shared_ptr<Expr> msb;
     const shared_ptr<Expr> lsb;
 

@@ -111,10 +111,12 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
     } else if (BSVParser::ArraysubContext *arraysub = dynamic_cast<BSVParser::ArraysubContext *>(ctx)) {
         shared_ptr<Expr> array(expr(arraysub->array));
         shared_ptr<Expr> msb(expr(arraysub->msb));
-        shared_ptr<Expr> lsb;
-        if (arraysub->lsb)
-            lsb = expr(arraysub->lsb);
-        result.reset(new ArraySubExpr(array, msb, lsb));
+        if (arraysub->lsb) {
+            shared_ptr<Expr> lsb(expr(arraysub->lsb));
+            return make_shared<BitSelExpr>(array, msb, lsb);
+        } else {
+            return make_shared<ArraySubExpr>(array, msb);
+        }
     } else if (BSVParser::CallexprContext *callexpr = dynamic_cast<BSVParser::CallexprContext *>(ctx)) {
         shared_ptr<Expr> function(expr(callexpr->fcn));
         vector<BSVParser::ExpressionContext *> args = callexpr->expression();
@@ -154,7 +156,7 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
         return expr(parenexpr->expression());
     } else if (BSVParser::UndefinedexprContext *undef = dynamic_cast<BSVParser::UndefinedexprContext *>(ctx)) {
         //FIXME:: get type from type checker
-        return shared_ptr<Expr>(new VarExpr("Undefined", BSVType::create("FIXME")));
+        return shared_ptr<Expr>(new VarExpr("Undefined", make_shared<BSVType>()));
     } else {
         cerr << "Unhandled expr primary " << ctx->getText() << endl;
     }
@@ -539,18 +541,21 @@ std::shared_ptr<Pattern> GenerateAst::generateAst(BSVParser::PatternContext *ctx
         if (constPattern->IntLiteral()) {
             return IntPattern::create(strtoul(ctx->getText().c_str(), 0, 0));
         } else if (constPattern->IntPattern()) {
-            fprintf(stderr, "Unhandled int pattern: %s\n", ctx->getText().c_str());
-            return WildcardPattern::create();
+            return make_shared<IntPattern>(ctx->getText());
         } else {
             fprintf(stderr, "Unhandled constant pattern: %s\n", ctx->getText().c_str());
             return WildcardPattern::create();
         }
     } else if (BSVParser::TaggedunionpatternContext *taggedPattern = ctx->taggedunionpattern()) {
-        fprintf(stderr, "Unhandled tagged union pattern: %s\n", ctx->getText().c_str());
-        return WildcardPattern::create();
+        fprintf(stderr, "checkme tagged union pattern: %s\n", ctx->getText().c_str());
+        return make_shared<TaggedPattern>(ctx->getText());
     } else if (BSVParser::TuplepatternContext *tuplePattern = ctx->tuplepattern()) {
         fprintf(stderr, "Unhandled tagged union pattern: %s\n", ctx->getText().c_str());
-        return WildcardPattern::create();
+        vector<BSVParser::PatternContext *>patterns = ctx->tuplepattern()->pattern();
+        vector<shared_ptr<Pattern>> ast_patterns;
+        for (int i = 0; i < patterns.size(); i++)
+            ast_patterns.push_back(generateAst(patterns[i]));
+        return make_shared<TuplePattern>(ast_patterns);
     } else if (ctx->var) {
         return VarPattern::create(ctx->getText());
     } else if (ctx->pattern()) {

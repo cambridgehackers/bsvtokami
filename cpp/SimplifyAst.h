@@ -28,6 +28,8 @@ public:
 
     void simplify(const shared_ptr<struct Stmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
+    shared_ptr<struct Stmt> simplifySubstatement(const shared_ptr<struct Stmt> &stmt);
+
     shared_ptr<Expr> simplify(const shared_ptr<Expr> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
     void simplify(const shared_ptr<BSVType> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
@@ -72,19 +74,24 @@ public:
 
     void simplify(const shared_ptr<VarBindingStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
-    void simplify(const shared_ptr<FieldExpr> &expr, int precedence = 0);
+    shared_ptr<Expr>  simplify(const shared_ptr<FieldExpr> &expr, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
-    void simplify(const shared_ptr<VarExpr> &expr, int precedence = 0);
+    shared_ptr<Expr>  simplify(const shared_ptr<VarExpr> &expr, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
-    void simplify(const shared_ptr<CallExpr> &expr, int precedence = 0);
+    shared_ptr<Expr>  simplify(const shared_ptr<CallExpr> &expr, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
-    void simplify(const shared_ptr<IntConst> &expr, int precedence = 0);
+    shared_ptr<Expr>  simplify(const shared_ptr<IntConst> &expr, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
-    void simplify(const shared_ptr<OperatorExpr> &expr, int precedence = 0);
+    shared_ptr<Expr> simplify(const shared_ptr<MatchesExpr> &matchesExpr, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
-    void simplify(const shared_ptr<ArraySubExpr> &expr, int precedence = 0);
+    shared_ptr<Expr>  simplify(const shared_ptr<OperatorExpr> &expr, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
-    void simplify(const shared_ptr<EnumUnionStructExpr> &expr, int precedence = 0);
+    shared_ptr<Expr>  simplify(const shared_ptr<ArraySubExpr> &expr, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
+
+    shared_ptr<Expr>  simplify(const shared_ptr<EnumUnionStructExpr> &expr, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
+
+    shared_ptr<Expr>  matchPattern(const shared_ptr<Pattern> &pattern, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
+
 
 };
 
