@@ -181,10 +181,7 @@ void GenerateKami::generateKami(const shared_ptr<Expr> &expr, int depth, int pre
             generateKami(expr->operatorExpr(), depth, precedence);
             return;
         case VarExprType:
-            out << "(* var expr ";
-            expr->varExpr()->bsvtype->prettyPrint(out, depth);
-            out << " *)";
-            out << expr->varExpr()->name;
+            generateKami(expr->varExpr(), depth, precedence);
             return;
         case CaseExprType:
         case MatchesExprType:
@@ -202,7 +199,12 @@ void GenerateKami::generateKami(const shared_ptr<Expr> &expr, int depth, int pre
 void GenerateKami::generateKami(const shared_ptr<BSVType> &bsvtype, int depth) {
     if (bsvtype->params.size())
         out << "(";
-    out << bsvtype->name;
+    if (bsvtype->name == "Action")
+        out << "Void";
+    else if (bsvtype->name == "ActionValue")
+        generateKami(bsvtype->params[0]);
+    else
+        out << bsvtype->name;
     if (bsvtype->params.size()) {
         for (int i = 0; i < bsvtype->params.size(); i++) {
             out << " ";
@@ -311,7 +313,21 @@ void GenerateKami::generateKami(const shared_ptr<MethodDeclStmt> &stmt, int dept
 
 void GenerateKami::generateKami(const shared_ptr<MethodDefStmt> &methoddef, int depth) {
     indent(out, depth);
-    out << "Method (instancePrefix--\"" << methoddef->name << "\") (* args *) (* result type *) := " << endl;
+    out << "Method (instancePrefix--\"" << methoddef->name << "\")";
+    if (methoddef->params.size() == 0) {
+        out << " ()";
+    } else {
+        for (int i = 0; i < methoddef->params.size(); i++) {
+            out << " (";
+            out << methoddef->params[i];
+            out << " : ";
+            generateKami(methoddef->paramTypes[i], depth + 1);
+            out << ")";
+        }
+    }
+    out << " : ";
+    generateKami(methoddef->returnType, depth + 1);
+    out << " := " << endl;
     indent(out, depth); out << "(" << endl;
     int num_stmts = methoddef->stmts.size();
     for (int i = 0; i < num_stmts; i++) {
@@ -463,7 +479,7 @@ void GenerateKami::generateKami(const shared_ptr<FieldExpr> &expr, int depth, in
 }
 
 void GenerateKami::generateKami(const shared_ptr<VarExpr> &expr, int depth, int precedence) {
-    out << expr->name;
+    out << "#" << expr->name;
 }
 
 void GenerateKami::generateKami(const shared_ptr<CallExpr> &expr, int depth, int precedence) {
