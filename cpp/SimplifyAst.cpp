@@ -332,7 +332,7 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
             if (registers.find(varExpr->name) != registers.cend()) {
                 shared_ptr<BSVType> elementType = registers.find(varExpr->name)->second;
                 cerr << "simplify var expr reading reg " << varExpr->name << endl;
-                string valName = varExpr->name + "$val";
+                string valName = varExpr->name + "_val";
                 shared_ptr<RegReadStmt> regRead = make_shared<RegReadStmt>(varExpr->name, valName, elementType);
                 simplifiedStmts.push_back(regRead);
                 return make_shared<VarExpr>(valName, elementType);
