@@ -113,7 +113,7 @@ int main(int argc, char *const argv[]) {
                 string kamiFileName("kami/");
                 char buffer[4096];
                 kamiFileName += string(::basename_r(inputFileName.c_str(), buffer));
-                kamiFileName += string(".kami");
+                kamiFileName += string(".v");
                 GenerateKami *generateKami = new GenerateKami();
                 generateKami->open(kamiFileName);
                 generateKami->generateStmts(stmts);
