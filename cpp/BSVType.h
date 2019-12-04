@@ -42,4 +42,19 @@ public:
         return shared_ptr<BSVType>(new BSVType(name, params));
     }
 
+    static shared_ptr<BSVType> create(std::string name, const std::shared_ptr<BSVType> &param0) {
+        vector<shared_ptr<BSVType>> params;
+        params.push_back(param0);
+        return make_shared<BSVType>(name, params);
+    }
+
+    static shared_ptr<BSVType> create(std::string name,
+            const std::shared_ptr<BSVType> &param0,
+            const std::shared_ptr<BSVType> &param1) {
+        vector<shared_ptr<BSVType>> params;
+        params.push_back(param0);
+        params.push_back(param1);
+        return make_shared<BSVType>(name, params);
+    }
+
 };
