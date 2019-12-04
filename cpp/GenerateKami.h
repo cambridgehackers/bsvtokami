@@ -19,6 +19,7 @@ class GenerateKami {
     string filename;
     ofstream out;
     bool actionContext;
+    bool containsReturn; // a bit of a hack
 
 public:
     GenerateKami();

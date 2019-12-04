@@ -426,6 +426,7 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
         if (!regType->isVar && regType->name == "Reg") {
             elementType = regType->params[0];
         } else {
+            cerr << "(* Unhandled RegWrite element type for regwrite: " << ctx->getText() << "*)" << endl;
             elementType = BSVType::create("Bit", BSVType::create("32", BSVType_Numeric, false));
         }
         return make_shared<RegWriteStmt>(regName, elementType, rhs);

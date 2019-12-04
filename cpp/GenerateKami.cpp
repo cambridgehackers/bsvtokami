@@ -5,7 +5,7 @@
 #include "GenerateKami.h"
 
 
-GenerateKami::GenerateKami() {
+GenerateKami::GenerateKami() : containsReturn(false) {
 
 }
 
@@ -286,13 +286,22 @@ void GenerateKami::generateKami(const shared_ptr<IfStmt> &stmt, int depth) {
     out << "If (";
     generateKami(stmt->condition, depth + 1);
     out << ") then (" << endl;
+
+    containsReturn = false;
     generateKami(stmt->thenStmt, depth + 1);
+    if (!containsReturn)
+        out << "Retv";
     out << endl;
+
     indent(out, depth);
     out << ") else (" << endl;
-    if (stmt->elseStmt)
+    if (stmt->elseStmt) {
+        containsReturn = false;
+
         generateKami(stmt->elseStmt, depth + 1);
-    else
+        if (!containsReturn)
+            out << "Retv";
+    } else
         out << "Retv";
     out << endl;
     indent(out, depth);
@@ -338,7 +347,11 @@ void GenerateKami::generateKami(const shared_ptr<MethodDefStmt> &methoddef, int 
         }
         out << endl;
     }
-    indent(out, depth + 1); out << "Retv " << endl;
+    
+    if (!containsReturn) {
+        indent(out, depth + 1);
+        out << "Retv " << endl;
+    }
     indent(out, depth); out << ")" << endl;
 }
 
@@ -402,6 +415,8 @@ void GenerateKami::generateKami(const shared_ptr<RegWriteStmt> &regwrite, int de
 }
 
 void GenerateKami::generateKami(const shared_ptr<ReturnStmt> &stmt, int depth) {
+    containsReturn = true;
+
     indent(out, depth);
     out << "Ret ";
     generateKami(stmt->value, depth+1);
