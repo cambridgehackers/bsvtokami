@@ -369,11 +369,10 @@ void GenerateKami::generateKami(const shared_ptr<RegisterStmt> &registerStmt, in
 }
 void GenerateKami::generateKami(const shared_ptr<RegReadStmt> &regread, int depth) {
     indent(out, depth);
-    out << "Read " << "\"" << regread->regName << "\"" << " : ";
-    //FIXME: placeholder for type
+    out << "Read "<< regread->var << " : ";
     generateKami(regread->varType, depth + 1);
-    out << " <- ";
-    out << regread->var << " ;";
+    out << " <- \"" << regread->regName << "\"";
+    out << " ;";
 }
 
 void GenerateKami::generateKami(const shared_ptr<RegWriteStmt> &regwrite, int depth) {
