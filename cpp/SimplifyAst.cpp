@@ -267,7 +267,7 @@ void SimplifyAst::simplify(const shared_ptr<RegReadStmt> &stmt, vector<shared_pt
 void SimplifyAst::simplify(const shared_ptr<RegWriteStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
     //cerr << "simplify regwrite stmt " << stmt->regName << endl;
     shared_ptr<Expr> simplifiedRhs = simplify(stmt->rhs, simplifiedStmts);
-    simplifiedStmts.push_back(make_shared<RegWriteStmt>(stmt->regName, simplifiedRhs));
+    simplifiedStmts.push_back(make_shared<RegWriteStmt>(stmt->regName, stmt->elementType, simplifiedRhs));
 }
 
 void SimplifyAst::simplify(const shared_ptr<ReturnStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {

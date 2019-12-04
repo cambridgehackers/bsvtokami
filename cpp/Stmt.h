@@ -498,9 +498,10 @@ public:
 class RegWriteStmt : public Stmt {
 public:
     const string regName;
+    const shared_ptr<BSVType> elementType;
     const shared_ptr<Expr> rhs;
 public:
-    RegWriteStmt(const string &regName, const shared_ptr<Expr> &rhs);
+    RegWriteStmt(const string &regName, const shared_ptr<BSVType> &elementType, const shared_ptr<Expr> &rhs);
 
     ~RegWriteStmt() override {}
 
@@ -509,8 +510,6 @@ public:
     virtual shared_ptr<RegWriteStmt> regWriteStmt() override;
 
     shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
-
-    static shared_ptr<RegWriteStmt> create(const string &regName, const shared_ptr<Expr> &rhs);
 };
 
 class BlockStmt : public Stmt {

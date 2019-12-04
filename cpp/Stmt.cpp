@@ -100,8 +100,8 @@ shared_ptr<RegReadStmt> RegReadStmt::create(const string &regName, const string 
     return make_shared<RegReadStmt>(regName, var, varType);
 }
 
-RegWriteStmt::RegWriteStmt(const string &regName, const shared_ptr<Expr> &rhs)
-        : Stmt(RegWriteStmtType), regName(regName), rhs(rhs) {
+RegWriteStmt::RegWriteStmt(const string &regName, const shared_ptr<BSVType> &elementType, const shared_ptr<Expr> &rhs)
+        : Stmt(RegWriteStmtType), regName(regName), elementType(elementType), rhs(rhs) {
 }
 
 void RegWriteStmt::prettyPrint(ostream &out, int depth) {
@@ -127,11 +127,7 @@ shared_ptr<Stmt> RegWriteStmt::rename(string prefix, LexicalScope &scope) {
     shared_ptr<Expr> renamedRHS;
     if (rhs)
         renamedRHS = rhs->rename(prefix, scope);
-    return shared_ptr<Stmt>(new RegWriteStmt(renamedRegName, renamedRHS));
-}
-
-shared_ptr<RegWriteStmt> RegWriteStmt::create(const string &regName, const shared_ptr<Expr> &rhs) {
-    return shared_ptr<RegWriteStmt>(new RegWriteStmt(regName, rhs));
+    return make_shared<RegWriteStmt>(renamedRegName, elementType, renamedRHS);
 }
 
 ActionBindingStmt::ActionBindingStmt(const shared_ptr<BSVType> &bsvtype, const string &name,

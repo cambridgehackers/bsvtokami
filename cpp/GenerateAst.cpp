@@ -421,7 +421,14 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
     if (BSVParser::RegwriteContext *regwrite = ctx->regwrite()) {
         string regName(regwrite->lhs->getText());
         shared_ptr<Expr> rhs(expr(regwrite->rhs));
-        return shared_ptr<Stmt>(new RegWriteStmt(regName, rhs));
+        shared_ptr<BSVType> regType = typeChecker->lookup(regwrite->rhs);
+        shared_ptr<BSVType> elementType;
+        if (!regType->isVar && regType->name == "Reg") {
+            elementType = regType->params[0];
+        } else {
+            elementType = BSVType::create("Bit", BSVType::create("32", BSVType_Numeric, false));
+        }
+        return make_shared<RegWriteStmt>(regName, elementType, rhs);
     } else if (BSVParser::VarbindingContext *varbinding = ctx->varbinding()) {
         return generateAst(varbinding);
     } else if (BSVParser::ActionbindingContext *actionbinding = ctx->actionbinding()) {

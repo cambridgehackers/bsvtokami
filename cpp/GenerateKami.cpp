@@ -13,6 +13,25 @@ void GenerateKami::open(const string &filename) {
     this->filename = filename;
     cerr << "Opening Kami file " << filename << endl;
     out.open(filename);
+
+    string prelude[] = {
+            "Require Import Bool String List.",
+            "Require Import Lib.CommonTactics Lib.ilist Lib.Word.",
+            "Require Import Lib.Struct Lib.FMap Lib.StringEq Lib.Indexer.",
+            "Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.Renaming Kami.Wf.",
+            "Require Import Kami.Renaming Kami.Inline Kami.InlineFacts.",
+            "Require Import Kami.Decomposition Kami.Notations Kami.Tactics.",
+            "Require Import Kami.PrimFifo.",
+            "",
+            "Require Import Ex.MemTypes.",
+            "",
+            "Set Implicit Arguments.",
+            "Open Scope string.",
+            ""
+    };
+    for (size_t i = 0; i < sizeof(prelude) / sizeof(string); i++) {
+        out << prelude[i] << endl;
+    }
 }
 
 void GenerateKami::close() {
@@ -181,16 +200,17 @@ void GenerateKami::generateKami(const shared_ptr<Expr> &expr, int depth, int pre
 }
 
 void GenerateKami::generateKami(const shared_ptr<BSVType> &bsvtype, int depth) {
+    if (bsvtype->params.size())
+        out << "(";
     out << bsvtype->name;
     if (bsvtype->params.size()) {
-        out << "(";
         for (int i = 0; i < bsvtype->params.size(); i++) {
-            if (i > 0)
-                out << ", ";
+            out << " ";
             generateKami(bsvtype->params[i], depth);
         }
-        out << ")";
     }
+    if (bsvtype->params.size())
+        out << ")";
 }
 
 void GenerateKami::generateKami(const shared_ptr<ActionBindingStmt> &actionbinding, int depth) {
@@ -302,6 +322,7 @@ void GenerateKami::generateKami(const shared_ptr<MethodDefStmt> &methoddef, int 
         }
         out << endl;
     }
+    indent(out, depth + 1); out << "Retv " << endl;
     indent(out, depth); out << ")" << endl;
 }
 
@@ -311,8 +332,13 @@ void GenerateKami::generateKami(const shared_ptr<ModuleDefStmt> &moduledef, int 
 
     indent(out, depth);
     out << "Module module'" << moduledef->name << "." << endl;
+    indent(out, depth);
+    out << "  Section section'" << moduledef->name << "." << endl;
+
     indent(out, depth + 1);
-    out << "(BKMODULE {" << endl;
+    out << "Variable instancePrefix : string." << endl;
+    indent(out, depth + 1);
+    out << "Definition " << moduledef->name << " := " << "(MODULE {" << endl;
 
     for (int i = 0; i < moduledef->stmts.size(); i++) {
         if (i != 0) {
@@ -325,6 +351,9 @@ void GenerateKami::generateKami(const shared_ptr<ModuleDefStmt> &moduledef, int 
     }
     indent(out, depth + 1);
     out << "})." << endl;
+
+    indent(out, depth);
+    out << "  End section'" << moduledef->name << "." << endl;
     out << "End module'" << moduledef->name << "." << endl;
 
     actionContext = enclosingActionContext;
@@ -340,20 +369,21 @@ void GenerateKami::generateKami(const shared_ptr<RegisterStmt> &registerStmt, in
 }
 void GenerateKami::generateKami(const shared_ptr<RegReadStmt> &regread, int depth) {
     indent(out, depth);
-    out << "Read " << regread->var << " : ";
+    out << "Read " << "\"" << regread->regName << "\"" << " : ";
     //FIXME: placeholder for type
-    out << "<regtype>";
+    generateKami(regread->varType, depth + 1);
     out << " <- ";
-    out << "\"" << regread->regName << "\"";
+    out << regread->var << " ;";
 }
 
 void GenerateKami::generateKami(const shared_ptr<RegWriteStmt> &regwrite, int depth) {
     indent(out, depth);
     out << "Write \"" << regwrite->regName << "\" : ";
     //FIXME: placeholder for type
-    out << "<regtype>";
+    out << "Bit 32";
     out << " <- ";
     generateKami(regwrite->rhs, depth+1);
+    out << " ;";
 }
 
 void GenerateKami::generateKami(const shared_ptr<ReturnStmt> &stmt, int depth) {
@@ -378,6 +408,7 @@ void GenerateKami::generateKami(const shared_ptr<RuleDefStmt> &ruledef, int dept
         }
         out << endl;
     }
+    indent(out, depth + 1); out << "Retv " << endl;
     indent(out, depth); out << ")" << endl;
 
     actionContext = enclosingActionContext;
