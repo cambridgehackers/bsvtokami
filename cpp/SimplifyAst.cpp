@@ -359,7 +359,6 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
                     cerr << endl;
                 }
             }
-            return opexpr;
             shared_ptr<OperatorExpr> simplifiedExpr = make_shared<OperatorExpr>(opexpr->op, lhs, rhs);
             return simplifiedExpr;
         }
