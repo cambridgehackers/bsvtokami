@@ -28,7 +28,24 @@ public:
     void close();
 
     void generateStmts(std::vector<shared_ptr<struct Stmt>> vector);
-    void generateKami(shared_ptr<struct Stmt> stmt, int depth = 0);
+
+    void generateModuleStmt(const shared_ptr<struct Stmt> &stmt, int depth = 0);
+
+    void generateModuleStmt(const shared_ptr<ActionBindingStmt> &actionbinding, int depth = 0);
+
+    void generateModuleStmt(const shared_ptr<CallStmt> &actionbinding, int depth = 0);
+
+    void generateModuleStmt(const shared_ptr<MethodDefStmt> &methoddef, int depth = 0);
+
+    void generateModuleStmt(const shared_ptr<RegisterStmt> &registerStmt, int depth = 0);
+
+    void generateModuleStmt(const shared_ptr<RuleDefStmt> &stmt, int depth = 0);
+
+    void generateModuleStmt(const shared_ptr<VarBindingStmt> &stmt, int depth = 0);
+
+    void generateKami(const shared_ptr<struct Stmt> &stmt, int depth = 0);
+
+    void generateCoqType(const shared_ptr<BSVType> &bsvtype, int depth = 0);
 
     void generateKami(const shared_ptr<BSVType> &stmt, int depth = 0);
 
@@ -50,19 +67,13 @@ public:
 
     void generateKami(const shared_ptr<MethodDeclStmt> &stmt, int depth = 0);
 
-    void generateKami(const shared_ptr<MethodDefStmt> &stmt, int depth = 0);
-
     void generateKami(const shared_ptr<ModuleDefStmt> &stmt, int depth = 0);
-
-    void generateKami(const shared_ptr<RegisterStmt> &registerStmt, int depth = 0);
 
     void generateKami(const shared_ptr<RegReadStmt> &stmt, int depth = 0);
 
     void generateKami(const shared_ptr<RegWriteStmt> &stmt, int depth = 0);
 
     void generateKami(const shared_ptr<ReturnStmt> &stmt, int depth = 0);
-
-    void generateKami(const shared_ptr<RuleDefStmt> &stmt, int depth = 0);
 
     void generateKami(const shared_ptr<TypedefStructStmt> &stmt, int depth = 0);
 
@@ -88,6 +99,9 @@ public:
 
     void generateKami(const shared_ptr<EnumUnionStructExpr> &expr, int depth = 0, int precedence = 0);
 
+    void generateMethodName(const shared_ptr<Expr> &expr);
+
+    string callStmtFunctionName(const shared_ptr<CallStmt> &callStmt);
 
 };
 
