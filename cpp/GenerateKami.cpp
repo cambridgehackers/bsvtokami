@@ -469,6 +469,7 @@ void GenerateKami::generateKami(const shared_ptr<MethodDeclStmt> &stmt, int dept
 void GenerateKami::generateKami(const shared_ptr<ModuleDefStmt> &moduledef, int depth) {
     bool enclosingActionContext = actionContext;
     actionContext = true;
+    instanceNames.clear();
 
     indent(out, depth);
     out << "Module module'" << moduledef->name << "." << endl;
@@ -489,6 +490,7 @@ void GenerateKami::generateKami(const shared_ptr<ModuleDefStmt> &moduledef, int 
         const shared_ptr<Stmt> &stmt = moduledef->stmts[i];
         if (stmt->stmtType == CallStmtType) {
             shared_ptr<CallStmt> callStmt = stmt->callStmt();
+            instanceNames[callStmt->name] = callStmt->name;
             indent(out, depth + 1);
             out << "Definition " << callStmt->name << " : string := instancePrefix -- \"" << callStmt->name << "\"." << endl;
         }
@@ -622,7 +624,11 @@ void GenerateKami::generateMethodName(const shared_ptr<Expr> &expr) {
         } break;
         case VarExprType: {
             shared_ptr<VarExpr> varExpr = expr->varExpr();
-            out << varExpr->name;
+            if (instanceNames[varExpr->name].size()) {
+                out << varExpr->name;
+            } else {
+                out << "\"" << varExpr->name << "\"";
+            }
         } break;
         default:
             out << "(* unhandled function name *) ";

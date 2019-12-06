@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <map>
 #include <memory>
 #include <string>
 #include "BSVType.h"
@@ -18,6 +19,7 @@ using namespace std;
 class GenerateKami {
     string filename;
     ofstream out;
+    map<string,string> instanceNames;
     bool actionContext;
     bool containsReturn; // a bit of a hack
 
