@@ -143,6 +143,12 @@ void TypeChecker::setupZ3Context() {
     boolops["||"] = true;
 }
 
+string TypeChecker::freshString(std::string name) {
+    char uniq_name[128];
+    snprintf(uniq_name, sizeof(uniq_name), "%s-%d", name.c_str(), nameCount++);
+    return string(uniq_name);
+}
+
 z3::symbol TypeChecker::freshName(std::string name) {
     char uniq_name[128];
     snprintf(uniq_name, sizeof(uniq_name), "%s-%d", name.c_str(), nameCount++);
@@ -162,9 +168,12 @@ void TypeChecker::insertExpr(antlr4::ParserRuleContext *ctx, z3::expr expr) {
     exprs.insert(std::pair<antlr4::ParserRuleContext *, z3::expr>(ctx, expr));
 }
 
-void TypeChecker::insertTracker(antlr4::ParserRuleContext *ctx, z3::expr tracker) {
+void TypeChecker::addConstraint(z3::expr constraint, const string &trackerPrefix, antlr4::ParserRuleContext *ctx) {
     cerr << "  insert tracker " << ctx->getText().c_str() << endl;
-    trackers.insert(std::pair<antlr4::ParserRuleContext *, z3::expr>(ctx, tracker));
+    string trackerName(freshString(trackerPrefix));
+
+    solver.add(constraint, trackerName.c_str());
+    trackers.insert(std::pair<string, antlr4::ParserRuleContext *>(trackerName, ctx));
 }
 
 z3::expr TypeChecker::orExprs(std::vector<z3::expr> exprs) {

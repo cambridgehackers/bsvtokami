@@ -53,8 +53,10 @@ class EnumUnionStructExpr;
 class Expr : public enable_shared_from_this<Expr> {
 public:
     const ExprType exprType;
+    const shared_ptr<BSVType> bsvtype;
 
     Expr(ExprType exprType);
+    Expr(ExprType exprType, const shared_ptr<BSVType> &bsvtype);
 
     virtual ~Expr();
 
@@ -110,7 +112,6 @@ class VarExpr : public Expr {
 public:
     const string name;
     const string sourceName;
-    const shared_ptr<BSVType> bsvtype;
 public:
     VarExpr(const string &name, const shared_ptr<BSVType> &bsvtype);
 

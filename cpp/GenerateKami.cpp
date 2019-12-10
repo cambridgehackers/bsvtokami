@@ -601,7 +601,22 @@ void GenerateKami::generateKami(const shared_ptr<CallExpr> &expr, int depth, int
     shared_ptr<Expr> functionExpr = expr->function;
     out << "(MethodSig (";
     generateMethodName(functionExpr);
-    out << ") () : Void) ";
+    out << ")";
+    if (expr->args.size()) {
+        for (int i = 0; i < expr->args.size(); i++) {
+
+            out << " (";
+            if (expr->args[i]->bsvtype) {
+                generateKami(expr->args[i]->bsvtype, depth + 1);
+            } else {
+                out << "_";
+            }
+            out << ")";
+        }
+    } else {
+        out << " ()";
+    }
+    out << " : Void) ";
 
     if (expr->args.size()) {
         for (int i = 0; i < expr->args.size(); i++) {

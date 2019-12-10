@@ -12,6 +12,10 @@ Expr::Expr(ExprType exprType)
         : exprType(exprType) {
 }
 
+Expr::Expr(ExprType exprType, const shared_ptr<BSVType> &bsvtype)
+        : exprType(exprType), bsvtype(bsvtype) {
+}
+
 Expr::~Expr() {
 }
 
@@ -22,7 +26,7 @@ shared_ptr<Expr> Expr::rename(string prefix, LexicalScope &scope) {
 }
 
 VarExpr::VarExpr(const string &name, const shared_ptr<BSVType> &bsvtype)
-        : Expr(VarExprType), name(name), sourceName(name), bsvtype(bsvtype) {
+        : Expr(VarExprType, bsvtype), name(name), sourceName(name) {
 }
 
 VarExpr::~VarExpr() {

@@ -20,7 +20,7 @@ class TypeChecker : public BSVBaseVisitor {
     z3::context context;
     z3::solver solver;
     map<antlr4::ParserRuleContext *, z3::expr> exprs;
-    map<antlr4::ParserRuleContext *, z3::expr> trackers;
+    map<string, antlr4::ParserRuleContext *> trackers;
     map<antlr4::ParserRuleContext *, shared_ptr<BSVType>> exprTypes;
     map<string, z3::func_decl> typeDecls;
     map<string, z3::func_decl> typeRecognizers;
@@ -40,19 +40,26 @@ class TypeChecker : public BSVBaseVisitor {
 public:
     TypeChecker()
             : context(), solver(context), typeSort(context), intSort(context), boolSort(context), nameCount(100) {
+        //solver.set("produce-unsat-cores", true);
+        z3::params p(context);
+        // enable unsat core tracking
+        p.set("unsat_core", true);
+        solver.set(p);
     }
 
     shared_ptr<BSVType> lookup(antlr4::ParserRuleContext *ctx) {
         if (exprTypes.find(ctx) != exprTypes.cend())
             return exprTypes.find(ctx)->second;
-        cerr << "no entry for " << ctx->getText() << " " << ctx << endl;
-        return BSVType::create("FIXME");
+        cerr << "no entry for " << ctx->getText() << " " << ctx->getText() << endl;
+        return BSVType::create("NOENT");
     }
 
 private:
     static const char *check_result_name[];
 
     void setupZ3Context();
+
+    string freshString(string name);
 
     z3::symbol freshName(string name);
 
@@ -62,7 +69,7 @@ private:
 
     void insertExpr(antlr4::ParserRuleContext *ctx, z3::expr expr);
 
-    void insertTracker(antlr4::ParserRuleContext *ctx, z3::expr tracker);
+    void addConstraint(z3::expr constraint, const string &trackerPrefix, antlr4::ParserRuleContext *ctx);
 
     z3::expr orExprs(vector<z3::expr> exprs);
 
@@ -156,7 +163,7 @@ protected:
     }
 
     virtual antlrcpp::Any visitMethodproto(BSVParser::MethodprotoContext *ctx) override {
-        fprintf(stderr, "Visit method proto %s\n", ctx->getText().c_str());
+        cerr << "Visit method proto " << ctx->getText() << endl;
         shared_ptr<BSVType> methodType = bsvtype(ctx);
         return (Declaration *)new MethodDeclaration(ctx->name->getText(), methodType);
     }
@@ -165,8 +172,17 @@ protected:
         return visitChildren(ctx);
     }
 
-    virtual antlrcpp::Any visitMethodprotoformal(BSVParser::MethodprotoformalContext *ctx) override {
-        return visitChildren(ctx);
+    virtual antlrcpp::Any visitMethodprotoformal(BSVParser::MethodprotoformalContext *formal) override {
+        z3::expr formalExpr = context.constant(context.str_symbol(formal->name->getText().c_str()), typeSort);
+        if (formal->bsvtype()) {
+            z3::expr typeExpr = visit(formal->bsvtype());
+            addConstraint(formalExpr == typeExpr, "mpf", formal);
+            cerr << "method proto formal constraint: " << (formalExpr == typeExpr) << endl;
+        } else {
+            cerr << "visitMethodprotoFormal: fixme no type " << formal->name->getText() << endl;
+        }
+        insertExpr(formal, formalExpr);
+        return formalExpr;
     }
 
     virtual antlrcpp::Any visitSubinterfacedecl(BSVParser::SubinterfacedeclContext *ctx) override {
@@ -264,11 +280,11 @@ protected:
             z3::expr lhsexpr = visit(varinit->var);
             if (ctx->t) {
                 z3::expr bsvtypeExpr = visit(ctx->t);
-                solver.add(lhsexpr == bsvtypeExpr);
+                addConstraint(lhsexpr == bsvtypeExpr, "varbindingt", varinit);
             }
             cerr << "visit VarInit rhs " << varinit->rhs->getText() << endl;
             z3::expr rhsexpr = visit(varinit->rhs);
-            solver.add(lhsexpr == rhsexpr);
+            addConstraint(lhsexpr == rhsexpr, "varinit", varinit);
         }
         return visitChildren(ctx);
     }
@@ -286,10 +302,10 @@ protected:
         if (ctx->t) {
             z3::expr typeExpr = visit(ctx->t);
             cerr << "action binding constraint " << (typeExpr == varsym) << endl;
-            solver.add(typeExpr == varsym);
+            addConstraint(typeExpr == varsym, "actionbindingt", ctx);
         }
         z3::expr rhstype = visit(ctx->rhs);
-        solver.add(rhstype == varsym);
+        addConstraint(rhstype == varsym, "actionbinding", ctx);
 
         insertExpr(ctx, varsym);
         return varsym;
@@ -310,12 +326,16 @@ protected:
         declarationList.push_back(moduleDefinition);
 
         solver.push();
+
+        visit(ctx->moduleproto());
+
         vector<BSVParser::ModulestmtContext *> stmts = ctx->modulestmt();
         for (int i = 0; i < stmts.size(); i++) {
             visit(stmts[i]);
         }
         z3::check_result checked = solver.check();
         fprintf(stderr, "  Type checking module %s: %s\n", module_name.c_str(), check_result_name[checked]);
+        cerr << solver << endl;
         if (checked == z3::sat) {
             z3::model mod = solver.get_model();
             cerr << "model: " << mod << endl;
@@ -330,14 +350,13 @@ protected:
                     cerr << "exception" << endl;
                 }
             }
-            for (auto it = trackers.cbegin(); it != trackers.cend(); ++it) {
-                z3::expr e = it->second;
-                try {
-                    z3::expr v = mod.eval(e, true);
-                    cerr << e << " evaluates to " << v << endl;
-                } catch (const exception &e) {
-                    cerr << "exception" << endl;
-                }
+        } else {
+            z3::expr_vector unsat_core = solver.unsat_core();
+            cerr << "unsat_core " << unsat_core << endl;
+            cerr << "unsat_core.size " << unsat_core.size() << endl;
+            for (int i = 0; i < unsat_core.size(); i++) {
+                z3::expr e = unsat_core[i];
+                cerr << e << endl;
             }
         }
         solver.pop();
@@ -345,6 +364,8 @@ protected:
     }
 
     virtual antlrcpp::Any visitModuleproto(BSVParser::ModuleprotoContext *ctx) override {
+        if (ctx->methodprotoformals())
+            visit(ctx->methodprotoformals());
         return visitChildren(ctx);
     }
 
@@ -391,7 +412,8 @@ protected:
         z3::expr formalExpr = context.constant(context.str_symbol(formal->lowerCaseIdentifier()->getText().c_str()), typeSort);
         if (formal->bsvtype()) {
             z3::expr typeExpr = visit(formal->bsvtype());
-            solver.add(formalExpr == typeExpr);
+            addConstraint(formalExpr == typeExpr, "methodformalt", formal);
+            cerr << "method formal constraint: " << (formalExpr == typeExpr) << endl;
         } else {
             cerr << "visitMethodFormal: fixme no type " << formal->lowerCaseIdentifier()->getText() << endl;
         }
@@ -402,7 +424,7 @@ protected:
     virtual antlrcpp::Any visitMethodcond(BSVParser::MethodcondContext *ctx) override {
         z3::expr condtype = visit(ctx->expression());
         z3::func_decl boolcon = typeDecls.find("Bool")->second;
-        solver.add(condtype == boolcon());
+        addConstraint(condtype == boolcon(), "methodcond", ctx);
         return condtype;
     }
 
@@ -436,7 +458,7 @@ protected:
     virtual antlrcpp::Any visitRulecond(BSVParser::RulecondContext *ctx) override {
         z3::expr condtype = visit(ctx->expression());
         z3::func_decl boolcon = typeDecls.find("Bool")->second;
-        solver.add(condtype == boolcon());
+        addConstraint(condtype == boolcon(), "rulecond", ctx);
         insertExpr(ctx, condtype);
         return condtype;
     }
@@ -465,7 +487,7 @@ protected:
         z3::expr lhsExpr = visit(ctx->lvalue(0));
         z3::expr rhsExpr = visit(ctx->expression());
         //FIXME: module instance or action binding
-        solver.add(lhsExpr == rhsExpr);
+        addConstraint(lhsExpr == rhsExpr, "varassign", ctx);
         return visitChildren(ctx);
     }
 
@@ -493,10 +515,8 @@ protected:
             }
             exprs.push_back(sym == type_expr);
         }
-        z3::expr tracker(freshConstant("$track", boolSort));
-        insertTracker(ctx, tracker);
         if (exprs.size())
-            solver.add(orExprs(exprs), tracker);
+            addConstraint(orExprs(exprs), "fieldval", ctx);
 
         z3::expr fieldexpr = constant(fieldname, typeSort);
         insertExpr(ctx, fieldexpr);
@@ -576,9 +596,11 @@ protected:
             fprintf(stderr, "Unhandled bsvtype_expr %s\n", ctx->getText().c_str());
         }
 
-        solver.push();
-        fprintf(stderr, "        check(%s) %s\n", ctx->getText().c_str(), check_result_name[solver.check()]);
-        solver.pop();
+        if (0) {
+            solver.push();
+            fprintf(stderr, "        check(%s) %s\n", ctx->getText().c_str(), check_result_name[solver.check()]);
+            solver.pop();
+        }
 
         insertExpr(ctx, bsvtype_expr);
         return bsvtype_expr;
@@ -611,10 +633,10 @@ protected:
 
                 if (item->pattern() != NULL) {
                     z3::expr itemtype = visit(item->pattern());
-                    solver.add(exprtype == itemtype);
+                    addConstraint(exprtype == itemtype, "caseitem", item);
                 }
                 z3::expr bodytype = visit(item->body);
-                solver.add(casetype == bodytype);
+                addConstraint(casetype == bodytype, "casebody", item->body);
             }
         }
         return casetype;
@@ -652,12 +674,14 @@ protected:
         z3::expr leftsym = visit(ctx->left);
         z3::expr rightsym = visit(ctx->right);
 
-        solver.add(leftsym == rightsym);
-        solver.push();
-        cerr << "  checking " << ctx->getText() << endl;
-        //cerr << solver << endl;
-        cerr << "        check(" << ctx->getText() << ") " << check_result_name[solver.check()] << endl;
-        solver.pop();
+        addConstraint(leftsym == rightsym, "binop", ctx);
+        if (0) {
+            solver.push();
+            cerr << "  checking " << ctx->getText() << endl;
+            //cerr << solver << endl;
+            cerr << "        check(" << ctx->getText() << ") " << check_result_name[solver.check()] << endl;
+            solver.pop();
+        }
 
 
 
@@ -669,14 +693,14 @@ protected:
         if (boolops.find(opstr) != boolops.end()) {
             fprintf(stderr, "Bool expr %s\n", ctx->getText().c_str());
             z3::func_decl Bool = typeDecls.find("Bool")->second;
-            solver.add(binopsym == Bool());
+            addConstraint(binopsym == Bool(), "binboolop", ctx);
         } else {
             fprintf(stderr, "Bit expr %s\n", ctx->getText().c_str());
             z3::func_decl Bit = typeDecls.find("Bit")->second;
             string exprsz(opstr);
             exprsz.append(string("sz"));
             z3::expr exprszsym = context.constant(exprsz.c_str(), intSort);
-            solver.add(binopsym == Bit(exprszsym));
+            addConstraint(binopsym == Bit(exprszsym), "binbitop", ctx);
         }
 
         insertExpr(ctx, binopsym);
@@ -705,6 +729,9 @@ protected:
         cerr << "        Visiting var expr " <<  ctx->getText().c_str() << " " << ctx << endl;
 
         string varname(ctx->getText());
+        if (varname.substr(0, 2) == "mk") {
+            varname = freshString(varname);
+        }
         string rhsname(varname + string("$rhs"));
         z3::expr varExpr = context.constant(context.str_symbol(varname.c_str()), typeSort);
         z3::expr rhsExpr = context.constant(context.str_symbol(rhsname.c_str()), typeSort);
@@ -718,15 +745,13 @@ protected:
                 z3::func_decl type_decl = typeDecls.find(decl->name)->second;
                 exprs.push_back(rhsExpr == type_decl());
             }
-            z3::expr tracker(freshConstant("$track", boolSort));
-            insertTracker(ctx, tracker);
 
-            solver.add(orExprs(exprs), tracker);
+            addConstraint(orExprs(exprs), "enumtag", ctx);
         } else {
             // variable
             z3::func_decl reg_decl = typeDecls.find("Reg")->second;
             z3::expr regExpr = reg_decl(rhsExpr);
-            solver.add(varExpr == regExpr || varExpr == rhsExpr);
+            addConstraint(varExpr == regExpr || varExpr == rhsExpr, "varexpr", ctx);
         }
         insertExpr(ctx, rhsExpr);
         cerr << "visit var expr " << ctx->getText() << " rhs expr " << rhsExpr << " ctx " << ctx << endl;
@@ -749,12 +774,16 @@ protected:
         z3::expr sym = context.constant(freshName("intlit"), typeSort);
         z3::expr width = context.constant(freshName("ilitsz"), intSort);
 
-        solver.add((sym == typeDecls.at("Integer")())
-                   || (sym == typeDecls.at("Bit")(width)));
+        addConstraint((sym == typeDecls.at("Integer")())
+                      || (sym == typeDecls.at("Bit")(width)),
+                      "intlit",
+                      ctx);
 
-        solver.push();
-        fprintf(stderr, "        check() %s\n", check_result_name[solver.check()]);
-        solver.pop();
+        if (0) {
+            solver.push();
+            fprintf(stderr, "        check() %s\n", check_result_name[solver.check()]);
+            solver.pop();
+        }
 
         insertExpr(ctx, sym);
         return sym;
@@ -818,10 +847,11 @@ protected:
             }
             exprs.push_back(sym == type_expr);
         }
-        z3::expr tracker(freshConstant("$track", boolSort));
-        insertTracker(ctx, tracker);
-        if (exprs.size())
-            solver.add(orExprs(exprs), tracker);
+        //z3::expr tracker(freshConstant("$track", boolSort));
+        //insertTracker(ctx, tracker);
+        if (exprs.size()) {
+            addConstraint(orExprs(exprs), "fieldexpr", ctx);
+        }
 
         z3::expr fieldexpr = constant(fieldname, typeSort);
         insertExpr(ctx, fieldexpr);
@@ -838,7 +868,12 @@ protected:
     }
 
     virtual antlrcpp::Any visitCallexpr(BSVParser::CallexprContext *ctx) override {
-        //fixme parameters
+        cerr << "visit call expr " << ctx->getText() << endl;
+        vector<BSVParser::ExpressionContext *> args = ctx->expression();
+        for (int i = 0; i < args.size(); i++) {
+            //FIXME check parameters
+            visit(args[i]);
+        }
         return visit(ctx->fcn);
     }
 
@@ -865,10 +900,8 @@ protected:
             z3::func_decl type_decl = typeDecls.find(decl->name)->second;
             exprs.push_back(exprsym == type_decl());
         }
-        z3::expr tracker(freshConstant("$track", boolSort));
-        insertTracker(ctx, tracker);
         if (exprs.size())
-            solver.add(orExprs(exprs), tracker);
+            addConstraint(orExprs(exprs), "tunionexpr", ctx);
         else
             cerr << "No enum definitions for expr " << ctx->getText() << endl;
         return exprsym;
@@ -905,7 +938,8 @@ protected:
         z3::expr lhsExpr = visit(ctx->lhs);
         z3::func_decl reg_decl = typeDecls.find("Reg")->second;
         z3::expr regExpr = reg_decl(rhsExpr);
-        solver.add(lhsExpr == regExpr);
+        string tracker(freshString("regwrite"));
+        addConstraint(lhsExpr == regExpr, "regwrite", ctx);
         cerr << "visit regwrite << " << (lhsExpr == regExpr) << endl;
         return lhsExpr;
     }
@@ -986,10 +1020,8 @@ protected:
                 z3::func_decl type_decl = typeDecls.find(decl->name)->second;
                 exprs.push_back(patsym == type_decl());
             }
-            z3::expr tracker(freshConstant("$track", boolSort));
-            insertTracker(ctx, tracker);
 
-            solver.add(orExprs(exprs), tracker);
+            addConstraint(orExprs(exprs), "tunionpat", ctx);
 
             z3::expr patexpr = constant(patname, typeSort);
             insertExpr(ctx, patexpr);
