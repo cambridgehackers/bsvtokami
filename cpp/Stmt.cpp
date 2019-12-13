@@ -87,9 +87,9 @@ shared_ptr<RegReadStmt> RegReadStmt::regReadStmt() {
 
 shared_ptr<Stmt> RegReadStmt::rename(string prefix, LexicalScope &scope) {
     string renamedRegName = regName;
-    string replacement = scope.lookup(regName);
-    if (replacement.size()) {
-        renamedRegName = replacement;
+    shared_ptr<Declaration> decl = scope.lookup(regName);
+    if (decl) {
+        renamedRegName = decl->name;
     }
     shared_ptr<Expr> renamedRHS;
     //FIXME renamed var
@@ -120,9 +120,9 @@ shared_ptr<RegWriteStmt> RegWriteStmt::regWriteStmt() {
 
 shared_ptr<Stmt> RegWriteStmt::rename(string prefix, LexicalScope &scope) {
     string renamedRegName = regName;
-    string replacement = scope.lookup(regName);
-    if (replacement.size()) {
-        renamedRegName = replacement;
+    shared_ptr<Declaration> decl = scope.lookup(regName);
+    if (decl) {
+        renamedRegName = decl->name;
     }
     shared_ptr<Expr> renamedRHS;
     if (rhs)
@@ -156,7 +156,7 @@ shared_ptr<Stmt> ActionBindingStmt::rename(string prefix, LexicalScope &scope) {
     rhs->prettyPrint(cerr, 4);
     if (rhs)
         renamedRHS = rhs->rename(prefix, scope);
-    scope.bind(name, renamedVar);
+    scope.bind(name, make_shared<Declaration>(renamedVar, bsvtype));
     return shared_ptr<Stmt>(new ActionBindingStmt(bsvtype, renamedVar, renamedRHS));
 }
 
@@ -186,7 +186,13 @@ shared_ptr<Stmt> PatternMatchStmt::rename(string prefix, LexicalScope &scope) {
 
 VarBindingStmt::VarBindingStmt(const shared_ptr<BSVType> &bsvtype, const string &name,
                                const shared_ptr<Expr> &rhs)
-        : Stmt(VarBindingStmtType), bsvtype(bsvtype), name(name), rhs(rhs) {
+        : Stmt(VarBindingStmtType), bsvtype(bsvtype), name(name), bindingType(LocalBindingType), rhs(rhs) {
+
+}
+
+VarBindingStmt::VarBindingStmt(const shared_ptr<BSVType> &bsvtype, const string &name, BindingType bindingType,
+                               const shared_ptr<Expr> &rhs)
+        : Stmt(VarBindingStmtType), bsvtype(bsvtype), name(name), bindingType(bindingType), rhs(rhs) {
 
 }
 
@@ -210,7 +216,7 @@ shared_ptr<Stmt> VarBindingStmt::rename(string prefix, LexicalScope &scope) {
     shared_ptr<Expr> renamedRHS;
     if (rhs)
         renamedRHS = rhs->rename(prefix, scope);
-    scope.bind(name, renamedVar);
+    scope.bind(name, make_shared<Declaration>(renamedVar, bsvtype, bindingType));
     return shared_ptr<Stmt>(new VarBindingStmt(bsvtype, renamedVar, renamedRHS));
 }
 
@@ -409,7 +415,7 @@ shared_ptr<Stmt> ModuleDefStmt::rename(string prefix, LexicalScope &parentScope)
     for (size_t i = 0; i < params.size(); i++) {
         string renamedParam(prefix + params[i]);
         renamedParams.push_back(renamedParam);
-        scope.bind(params[i], renamedParam);
+        scope.bind(params[i], make_shared<Declaration>(renamedParam, paramTypes[i], ModuleParamBindingType));
     }
     for (size_t i = 0; i < stmts.size(); i++) {
         cerr << "renaming stmt" << endl;

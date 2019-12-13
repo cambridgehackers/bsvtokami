@@ -41,10 +41,9 @@ void VarExpr::prettyPrint(ostream &out, int depth) {
 shared_ptr<VarExpr> VarExpr::varExpr() { return static_pointer_cast<VarExpr, Expr>(shared_from_this()); }
 
 shared_ptr<Expr> VarExpr::rename(string prefix, LexicalScope &scope) {
-    string renamed = scope.lookup(name);
-    if (!renamed.size())
-        renamed = name;
-    return shared_ptr<VarExpr>(new VarExpr(renamed, bsvtype));
+    shared_ptr<Declaration> decl = scope.lookup(name);
+    string newname = (decl) ? decl->name : name;
+    return shared_ptr<VarExpr>(new VarExpr(newname, bsvtype));
 }
 
 IntConst::IntConst(const string &repr)

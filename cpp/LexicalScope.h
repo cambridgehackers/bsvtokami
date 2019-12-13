@@ -4,15 +4,21 @@
 #include <memory>
 #include <string>
 
+#include "Declaration.h"
+
 using namespace std;
 
 class LexicalScope {
-  map<string,string> bindings;
-  const LexicalScope *parent;
- public:
-  LexicalScope() : parent(0) {}
-  LexicalScope(const LexicalScope *parent) : parent(parent) {}
-  ~LexicalScope() {}
-  string lookup(const string &name) const;
-  void bind(const string &name, const string &value);
+    map<string, shared_ptr<Declaration>> bindings;
+    const LexicalScope *parent;
+public:
+    LexicalScope(const LexicalScope *parent = nullptr) : parent(parent) {}
+
+    ~LexicalScope() {}
+
+    bool isGlobal() { return parent == NULL; }
+
+    shared_ptr<Declaration> lookup(const string &name) const;
+
+    void bind(const string &name, const shared_ptr<Declaration> &value);
 };

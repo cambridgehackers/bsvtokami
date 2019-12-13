@@ -9,6 +9,7 @@
 using namespace std;
 
 #include "BSVType.h"
+#include "Declaration.h"
 #include "Expr.h"
 #include "LValue.h"
 #include "LexicalScope.h"
@@ -423,9 +424,12 @@ class VarBindingStmt : public Stmt {
 public:
     const shared_ptr<BSVType> bsvtype;
     const string name;
+    const BindingType bindingType;
     const shared_ptr<Expr> rhs;
 public:
     VarBindingStmt(const shared_ptr<BSVType> &bsvtype, const string &name,
+                   const shared_ptr<Expr> &rhs);
+    VarBindingStmt(const shared_ptr<BSVType> &bsvtype, const string &name, BindingType bindingType,
                    const shared_ptr<Expr> &rhs);
 
     ~VarBindingStmt() override {}

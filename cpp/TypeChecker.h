@@ -8,8 +8,10 @@
 #include "z3++.h"
 #include "z3_api.h"
 #include "z3.h"
+
 #include "BSVBaseVisitor.h"
 #include "Declaration.h"
+#include "LexicalScope.h"
 
 using namespace std;
 
@@ -33,6 +35,7 @@ class TypeChecker : public BSVBaseVisitor {
     map<string, shared_ptr<Declaration> > typeDeclaration;
     multimap<string, shared_ptr<Declaration> > enumtag;
     multimap<string, shared_ptr<Declaration> > memberDeclaration;
+    LexicalScope *lexicalScope;
 
     vector<shared_ptr<Declaration> > subdeclaration;
     shared_ptr<Declaration> parentDecl;
@@ -45,6 +48,7 @@ public:
         // enable unsat core tracking
         p.set("unsat_core", true);
         solver.set(p);
+        lexicalScope = new LexicalScope();
     }
 
     shared_ptr<BSVType> lookup(antlr4::ParserRuleContext *ctx) {

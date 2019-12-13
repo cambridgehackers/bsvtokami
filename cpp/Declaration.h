@@ -1,3 +1,4 @@
+#pragma once
 
 #include <string>
 #include <map>
@@ -22,12 +23,22 @@ class UnionDeclaration;
 
 class UnionMemberDeclaration;
 
+
+enum BindingType {
+    GlobalBindingType,
+    ModuleParamBindingType,
+    MethodParamBindingTYpe,
+    LocalBindingType
+};
+
 class Declaration {
 public:
     const std::string name;
     const std::shared_ptr<BSVType> bsvtype;
+    const BindingType bindingType;
 
-    Declaration(std::string name, std::shared_ptr<BSVType> bsvtype) : name(name), bsvtype(bsvtype) {};
+    Declaration(std::string name, std::shared_ptr<BSVType> bsvtype, const BindingType bt = LocalBindingType)
+    : name(name), bsvtype(bsvtype), bindingType(bt) {};
 
     virtual ~Declaration() {}
 };
@@ -36,14 +47,16 @@ class EnumDeclaration : public Declaration {
 public:
     std::vector<std::shared_ptr<EnumElementDeclaration> > tags;
 
-    EnumDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype) : Declaration(name, bsvtype) {};
+    EnumDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype)
+    : Declaration(name, bsvtype, GlobalBindingType) {};
 };
 
 class InterfaceDeclaration : public Declaration {
 public:
     std::vector<std::shared_ptr<Declaration> > members;
 
-    InterfaceDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype) : Declaration(name, bsvtype) {};
+    InterfaceDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype)
+    : Declaration(name, bsvtype, GlobalBindingType) {};
 };
 
 class MethodDeclaration : public Declaration {

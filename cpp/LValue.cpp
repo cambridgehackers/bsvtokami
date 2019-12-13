@@ -23,9 +23,9 @@ void VarLValue::prettyPrint(ostream &out, int depth) {
 shared_ptr<struct LValue> VarLValue::rename(string prefix, LexicalScope &scope)
 {
     //FIXME:
-    string binding = scope.lookup(name);
-    if (binding.size()) {
-        return shared_ptr<struct LValue>(new VarLValue(binding));
+    shared_ptr<Declaration> binding = scope.lookup(name);
+    if (binding) {
+        return shared_ptr<struct LValue>(new VarLValue(binding->name));
     } else {
         return shared_ptr<struct LValue>(new VarLValue(name));
     }
