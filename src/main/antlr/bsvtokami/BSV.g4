@@ -152,10 +152,16 @@ moduledef :
     ;
 moduleproto :
 /* MIT BSV module proto */
-    'module' moduleinterface=bsvtype name=lowerCaseIdentifier '(' methodprotoformals? ')' ';'
+    'module' moduleinterface=bsvtype name=lowerCaseIdentifier '(' moduleprotoformals? ')' ';'
 /* Classic BSV module proto */
     | 'module' name=lowerCaseIdentifier '(' moduleinterface=bsvtype ')' ';'
-    | 'module' name=lowerCaseIdentifier '#' '(' methodprotoformals? ')' '(' moduleinterface=bsvtype ')' ';'
+    | 'module' name=lowerCaseIdentifier '#' '(' moduleprotoformals? ')' '(' moduleinterface=bsvtype ')' ';'
+    ;
+moduleprotoformals :
+    moduleprotoformal (',' moduleprotoformal)*
+    ;
+moduleprotoformal :
+    attributeinstance* bsvtype? name=lowerCaseIdentifier
     ;
 modulestmt :
     methoddef

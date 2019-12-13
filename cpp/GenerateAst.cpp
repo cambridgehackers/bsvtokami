@@ -250,7 +250,7 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::InterfacedeclContext *
 std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::SubinterfacedefContext *ctx) {
     string interfaceName(ctx->lowerCaseIdentifier(0)->getText());
     fprintf(stderr, "subinterfacedef %s\n", interfaceName.c_str());
-    shared_ptr<BSVType> interfaceType(new BSVType(ctx->bsvtype() ? ctx->bsvtype()->typeide()->name->getText() : "<Interface TBD>"));
+    shared_ptr<BSVType> interfaceType(new BSVType(ctx->lowerCaseIdentifier(0) ? ctx->lowerCaseIdentifier(0)->getText() : "<Interface TBD>"));
     vector<shared_ptr<Stmt>> ast_members;
     vector<BSVParser::InterfacestmtContext *> members = ctx->interfacestmt();
     for (size_t i = 0; i < members.size(); i++) {
@@ -280,11 +280,11 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ModuledefContext *ctx)
     shared_ptr<BSVType> interfaceType(TypeChecker::bsvtype(moduleproto->bsvtype()));
     vector<string> params;
     vector<shared_ptr<BSVType>> paramTypes;
-    BSVParser::MethodprotoformalsContext *formals = ctx->moduleproto()->methodprotoformals();
+    BSVParser::ModuleprotoformalsContext *formals = ctx->moduleproto()->moduleprotoformals();
     if (formals) {
-        vector<BSVParser::MethodprotoformalContext *> formalvec = formals->methodprotoformal();
+        vector<BSVParser::ModuleprotoformalContext *> formalvec = formals->moduleprotoformal();
         for (size_t i = 0; i < formalvec.size(); i++) {
-            BSVParser::MethodprotoformalContext *formal = formalvec.at(i);
+            BSVParser::ModuleprotoformalContext *formal = formalvec.at(i);
             params.push_back(formal->lowerCaseIdentifier()->getText());
             paramTypes.push_back(TypeChecker::bsvtype(formal->bsvtype()));
         }

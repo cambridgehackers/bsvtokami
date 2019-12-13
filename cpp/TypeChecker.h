@@ -77,6 +77,13 @@ private:
 
     z3::expr orExprs(vector<z3::expr> exprs);
 
+    void pushScope() {
+        lexicalScope = new LexicalScope(lexicalScope);
+    }
+    void popScope() {
+        lexicalScope = lexicalScope->parent;
+    }
+
 protected:
 
     virtual antlrcpp::Any visitPackagedef(BSVParser::PackagedefContext *ctx) override {
@@ -177,7 +184,9 @@ protected:
     }
 
     virtual antlrcpp::Any visitMethodprotoformal(BSVParser::MethodprotoformalContext *formal) override {
-        z3::expr formalExpr = context.constant(context.str_symbol(formal->name->getText().c_str()), typeSort);
+        string formalName = formal->name->getText();
+        z3::expr formalExpr = context.constant(context.str_symbol(formalName.c_str()), typeSort);
+
         if (formal->bsvtype()) {
             z3::expr typeExpr = visit(formal->bsvtype());
             addConstraint(formalExpr == typeExpr, "mpf", formal);
@@ -278,9 +287,14 @@ protected:
     }
 
     virtual antlrcpp::Any visitVarbinding(BSVParser::VarbindingContext *ctx) override {
+        BindingType bindingType = lexicalScope->isGlobal() ? GlobalBindingType : LocalBindingType;
         vector<BSVParser::VarinitContext *> varinits = ctx->varinit();
         for (size_t i = 0; i < varinits.size(); i++) {
             BSVParser::VarinitContext *varinit = varinits[i];
+            string varName = varinit->var->getText();
+            shared_ptr<Declaration> varDecl = make_shared<Declaration>(varName, make_shared<BSVType>(), bindingType);
+            lexicalScope->bind(varName, varDecl);
+
             z3::expr lhsexpr = visit(varinit->var);
             if (ctx->t) {
                 z3::expr bsvtypeExpr = visit(ctx->t);
@@ -321,6 +335,7 @@ protected:
 
     virtual antlrcpp::Any visitModuledef(BSVParser::ModuledefContext *ctx) override {
         setupZ3Context();
+        pushScope();
 
         string module_name = ctx->moduleproto()->name->getText();
         fprintf(stderr, "tc ModuleDef %s\n", module_name.c_str());
@@ -364,12 +379,13 @@ protected:
             }
         }
         solver.pop();
+        popScope();
         return moduleDefinition;
     }
 
     virtual antlrcpp::Any visitModuleproto(BSVParser::ModuleprotoContext *ctx) override {
-        if (ctx->methodprotoformals())
-            visit(ctx->methodprotoformals());
+        if (ctx->moduleprotoformals())
+            visit(ctx->moduleprotoformals());
         return visitChildren(ctx);
     }
 
@@ -383,6 +399,7 @@ protected:
 
     virtual antlrcpp::Any visitMethoddef(BSVParser::MethoddefContext *ctx) override {
         fprintf(stderr, "    tc MethodDef %s\n", ctx->name->getText().c_str());
+        pushScope();
         shared_ptr<BSVType> methodType = bsvtype(ctx);
         if (ctx->methodformals() != NULL) {
             visit(ctx->methodformals());
@@ -401,6 +418,7 @@ protected:
             //solver.add(returnExpr == returnType);
         }
 
+        popScope();
         return new MethodDefinition(ctx->name->getText(), methodType);
     }
 
