@@ -6,10 +6,10 @@ const char *TypeChecker::check_result_name[] = {
 };
 
 void TypeChecker::setupModuleFunctionConstructors() {
-    const string constructorNames[] = { "Module", "Function" };
-    for (int c = 0; c < 2; c++) {
+    const string constructorNames[] = { "Function" };
+    for (int c = 0; c < sizeof(constructorNames) / sizeof(constructorNames[0]); c++) {
         string constructorPrefix = constructorNames[c];
-        for (int arity = 1; arity < 6; arity++) {
+        for (int arity = 1; arity < 20; arity++) {
             string constructorName = constructorPrefix + to_string(arity);
             vector<shared_ptr<BSVType>> paramTypes;
             for (int p = 0; p < arity; p++) {
@@ -70,6 +70,15 @@ void TypeChecker::setupZ3Context() {
                                                     function_field_names,
                                                     function_field_sorts,
                                                     function_field_sort_refs);
+    Z3_symbol module_field_names[] = {Z3_mk_string_symbol(context, "interface") };
+    Z3_sort module_field_sorts[] = {NULL, NULL};
+    unsigned module_field_sort_refs[] = {0, 0};
+    Z3_constructor module_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Module"),
+                                                    Z3_mk_string_symbol(context, "ismodule"),
+                                                    1,
+                                                    module_field_names,
+                                                    module_field_sorts,
+                                                    module_field_sort_refs);
     Z3_constructor integer_con = Z3_mk_constructor(context,
                                                    Z3_mk_string_symbol(context, "Integer"),
                                                    Z3_mk_string_symbol(context, "isInteger"),
@@ -99,7 +108,7 @@ void TypeChecker::setupZ3Context() {
 
     Z3_constructor default_constructors[] = {
             bozo_con,
-            action_con, actionvalue_con, bit_con, bool_con, function_con,
+            action_con, actionvalue_con, bit_con, bool_con, function_con, module_con,
             integer_con, real_con, reg_con, rule_con, string_con, void_con
     };
     unsigned num_default_constructors = sizeof(default_constructors) / sizeof(default_constructors[0]);

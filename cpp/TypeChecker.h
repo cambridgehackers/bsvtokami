@@ -95,6 +95,7 @@ protected:
 
     virtual antlrcpp::Any visitPackagedef(BSVParser::PackagedefContext *ctx) override {
         size_t numelts = ctx->packagestmt().size();
+
         for (size_t i = 0; i < numelts; i++) {
             visit(ctx->packagestmt().at(i));
         }
@@ -335,14 +336,15 @@ protected:
         lexicalScope->bind(varname, make_shared<Declaration>(varname, make_shared<BSVType>(), bindingType));
         z3::expr varsym = context.constant(context.str_symbol(varname.c_str()), typeSort);
 
-        if (ctx->t) {
-            z3::expr typeExpr = visit(ctx->t);
-            cerr << "action binding constraint " << (typeExpr == varsym) << endl;
-            addConstraint(typeExpr == varsym, "actionbindingt", ctx);
+        if (ctx->bsvtype()) {
+            z3::expr interfaceType = visit(ctx->bsvtype());
+            cerr << "action binding constraint " << (interfaceType == varsym) << endl;
+            addConstraint(interfaceType == varsym, "actionbindingt", ctx);
         }
         z3::expr rhstype = visit(ctx->rhs);
-        addConstraint(rhstype == varsym, "actionbinding", ctx);
-
+        z3::expr lhstype = instantiateType("Module", varsym);
+        addConstraint(lhstype == rhstype, "actionbinding", ctx);
+        cerr << "action binding rhs constraint " << (lhstype == rhstype) << endl;
         insertExpr(ctx, varsym);
         return varsym;
     }
@@ -372,9 +374,10 @@ protected:
 
         visit(ctx->moduleproto());
 
-        vector<BSVParser::ModulestmtContext *> stmts = ctx->modulestmt();
-        for (int i = 0; i < stmts.size(); i++) {
-            visit(stmts[i]);
+        //vector<BSVParser::ModulestmtContext *> stmts = ctx->modulestmt();
+        for (int i = 0; ctx->modulestmt(i); i++) {
+            cerr << "module stmt " << ctx->modulestmt(i)->getText() << endl;
+            visit(ctx->modulestmt(i));
         }
         z3::check_result checked = solver.check();
         fprintf(stderr, "  Type checking module %s: %s\n", module_name.c_str(), check_result_name[checked]);
@@ -410,15 +413,21 @@ protected:
     virtual antlrcpp::Any visitModuleproto(BSVParser::ModuleprotoContext *ctx) override {
         if (ctx->moduleprotoformals())
             visit(ctx->moduleprotoformals());
-        z3::expr_vector formal_types(context);
-        if (ctx->moduleprotoformals())
+        z3::expr_vector moduleInterfaceParams(context);
+        moduleInterfaceParams.push_back(visit(ctx->moduleinterface));
+        z3::expr moduleInterface = instantiateType("Module", moduleInterfaceParams);
+        if (ctx->moduleprotoformals()) {
+            z3::expr_vector formal_types(context);
             formal_types = visit(ctx->moduleprotoformals());
-        formal_types.push_back(visit(ctx->moduleinterface));
-        string constructorName = "Module" + to_string(formal_types.size());
-        z3::func_decl constructorDecl = typeDecls.find(constructorName)->second;
-        z3::expr moduleProtoType = instantiateType(constructorDecl, formal_types);
-        cerr << "module proto type " << ctx->name->getText() << " z3::expr " << moduleProtoType << endl;
-        return moduleProtoType;
+            formal_types.push_back(moduleInterface);
+            string constructorName = "Function" + to_string(formal_types.size());
+            z3::func_decl constructorDecl = typeDecls.find(constructorName)->second;
+            z3::expr moduleProtoType = instantiateType(constructorDecl, formal_types);
+            cerr << "module proto type " << ctx->name->getText() << " z3::expr " << moduleProtoType << endl;
+            return moduleProtoType;
+        } else {
+            return moduleInterface;
+        }
     }
 
     virtual antlrcpp::Any visitModuleprotoformals(BSVParser::ModuleprotoformalsContext *ctx) override {
@@ -578,6 +587,7 @@ protected:
     }
 
     virtual antlrcpp::Any visitVarassign(BSVParser::VarassignContext *ctx) override {
+        cerr << "var assign " << ctx->getText() << endl;
         z3::expr lhsExpr = visit(ctx->lvalue(0));
         z3::expr rhsExpr = visit(ctx->expression());
         //FIXME: module instance or action binding
@@ -834,9 +844,11 @@ protected:
         }
         if (!varDecl || varDecl->bindingType == GlobalBindingType) {
             cerr << "visiting global var " << varname << " at " << sourceLocation(ctx) << endl;
-            varDecl->bsvtype->prettyPrint(cerr);
-            cerr << endl;
-            return bsvTypeToExpr(varDecl->bsvtype);
+            if (varDecl && varDecl->bsvtype) {
+                varDecl->bsvtype->prettyPrint(cerr);
+                cerr << endl;
+                return bsvTypeToExpr(varDecl->bsvtype);
+            }
         }
 
         string rhsname(varname + string("$rhs"));
@@ -997,8 +1009,8 @@ protected:
     }
 
     virtual antlrcpp::Any visitCallexpr(BSVParser::CallexprContext *ctx) override {
-        cerr << "visit call expr " << ctx->getText() << (actionContext ? " side effect " : " constructor ") << endl;
         vector<BSVParser::ExpressionContext *> args = ctx->expression();
+        cerr << "visit call expr " << ctx->getText() << (actionContext ? " side effect " : " constructor ") << " arity " << args.size() << endl;
         z3::expr fcn_expr = visit(ctx->fcn);
         z3::expr_vector arg_exprs(context);
         for (int i = 0; i < args.size(); i++) {
@@ -1006,10 +1018,14 @@ protected:
             z3::expr arg_expr = visit(args[i]);
             arg_exprs.push_back(arg_expr);
         }
-        string constructorName = (actionContext ? "Function" : "Module") + to_string(args.size() + 1);
+        string constructorName = "Function" + to_string(args.size() + 1);
+        if (typeDecls.find(constructorName) == typeDecls.cend()) {
+            cerr << "No constructor found for " << constructorName << endl;
+        }
         z3::func_decl constructorDecl = typeDecls.find(constructorName)->second;
         z3::expr instance_expr = freshConstant((actionContext ? "rstT" : "mkinstance"), typeSort);
         arg_exprs.push_back(instance_expr);
+        cerr << "instantiate " << constructorName << " arity " << arg_exprs.size()  << " constructor " << constructorDecl << endl;
         z3::expr result_expr = instantiateType(constructorDecl, arg_exprs);
         addConstraint(result_expr == fcn_expr, ctx->fcn->getText(), ctx);
         return instance_expr;
@@ -1331,16 +1347,18 @@ public:
     }
 
     static shared_ptr<BSVType> bsvtype(BSVParser::ModuleprotoContext *ctx) {
-        shared_ptr<BSVType> moduleInterface = bsvtype(ctx->moduleinterface);
+        shared_ptr<BSVType> moduleInterface = make_shared<BSVType>("Module", bsvtype(ctx->moduleinterface));
         vector<shared_ptr<BSVType>> paramTypes;
         if (ctx->moduleprotoformals()) {
             vector<BSVParser::ModuleprotoformalContext *> moduleprotoformal = ctx->moduleprotoformals()->moduleprotoformal();
             for (int i = 0; i < moduleprotoformal.size(); i++)
                 paramTypes.push_back(bsvtype(moduleprotoformal[i]));
+            paramTypes.push_back(moduleInterface);
+            string moduleConstructorName = "Function" + to_string(paramTypes.size());
+            return make_shared<BSVType>(moduleConstructorName, paramTypes);
+        } else {
+            return moduleInterface;
         }
-        paramTypes.push_back(moduleInterface);
-        string moduleConstructorName = "Module" + to_string(paramTypes.size());
-        return make_shared<BSVType>(moduleConstructorName, paramTypes);
     }
 
     static shared_ptr<BSVType> bsvtype(BSVParser::ModuleprotoformalContext *ctx) {
@@ -1354,6 +1372,20 @@ public:
             cerr << "Unhandled type arity " << params.size() << " for type " << type_decl << endl;
 
         return type_decl(params);
+    }
+
+    z3::expr instantiateType(const string &type_name, const z3::expr_vector &params) {
+        z3::func_decl type_decl = typeDecls.find(type_name)->second;
+        if (type_decl.arity() != params.size())
+            cerr << "Unhandled type arity " << params.size() << " for type " << type_decl << endl;
+
+        return type_decl(params);
+    }
+
+    z3::expr instantiateType(const string &type_name, const z3::expr &param0) {
+        z3::expr_vector params(context);
+        params.push_back(param0);
+        return instantiateType(type_name, params);
     }
 
     z3::expr bsvTypeToExpr(shared_ptr<BSVType> bsvtype, map<string,string> &varmapping) {
