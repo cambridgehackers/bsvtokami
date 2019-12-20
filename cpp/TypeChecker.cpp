@@ -5,6 +5,25 @@ const char *TypeChecker::check_result_name[] = {
         "unsat", "sat", "unknown"
 };
 
+void TypeChecker::setupModuleFunctionConstructors() {
+    const string constructorNames[] = { "Module", "Function" };
+    for (int c = 0; c < 2; c++) {
+        string constructorPrefix = constructorNames[c];
+        for (int arity = 1; arity < 6; arity++) {
+            string constructorName = constructorPrefix + to_string(arity);
+            vector<shared_ptr<BSVType>> paramTypes;
+            for (int p = 0; p < arity; p++) {
+                paramTypes.push_back(make_shared<BSVType>());
+            }
+            shared_ptr<BSVType> interfaceType = make_shared<BSVType>(constructorName, paramTypes);
+            std::shared_ptr<Declaration> constructorDecl = make_shared<Declaration>(constructorName, interfaceType,
+                                                                                    GlobalBindingType);
+            typeDeclarationList.push_back(constructorDecl);
+            typeDeclaration[constructorName] = constructorDecl;
+        }
+    }
+}
+
 void TypeChecker::setupZ3Context() {
     exprs.clear();
     trackers.clear();
@@ -187,4 +206,12 @@ z3::expr TypeChecker::orExprs(std::vector<z3::expr> exprs) {
         }
         return result;
     }
+}
+
+
+string TypeChecker::sourceLocation(antlr4::ParserRuleContext *ctx) {
+    antlr4::Token *start = ctx->getStart();
+    string filename = start->getTokenSource()->getSourceName();
+    size_t line = start->getLine();
+    return filename + ":" + to_string(line);
 }

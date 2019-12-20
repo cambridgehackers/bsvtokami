@@ -5,13 +5,19 @@
 #include <memory>
 #include "BSVType.h"
 
+using namespace std;
+
 class Declaration;
 
 class EnumDeclaration;
 
 class EnumElementDeclaration;
 
+class InterfaceDeclaration;
+
 class MethodDeclaration;
+
+class MethodDefinition;
 
 class ModuleDeclaration;
 
@@ -27,18 +33,23 @@ class UnionMemberDeclaration;
 enum BindingType {
     GlobalBindingType,
     ModuleParamBindingType,
-    MethodParamBindingTYpe,
+    MethodParamBindingType,
     LocalBindingType
 };
 
-class Declaration {
+class Declaration : public enable_shared_from_this<Declaration> {
 public:
     const std::string name;
     const std::shared_ptr<BSVType> bsvtype;
     const BindingType bindingType;
+    shared_ptr<Declaration> parent;
 
     Declaration(std::string name, std::shared_ptr<BSVType> bsvtype, const BindingType bt = LocalBindingType)
     : name(name), bsvtype(bsvtype), bindingType(bt) {};
+
+    virtual shared_ptr<InterfaceDeclaration> interfaceDeclaration() { return shared_ptr<InterfaceDeclaration>(); }
+    virtual shared_ptr<MethodDeclaration> methodDeclaration() { return shared_ptr<MethodDeclaration>(); }
+    virtual shared_ptr<MethodDefinition> methodDefinition() { return shared_ptr<MethodDefinition>(); }
 
     virtual ~Declaration() {}
 };
@@ -57,27 +68,27 @@ public:
 
     InterfaceDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype)
     : Declaration(name, bsvtype, GlobalBindingType) {};
+    virtual shared_ptr<InterfaceDeclaration> interfaceDeclaration() { return static_pointer_cast<InterfaceDeclaration, Declaration>(shared_from_this()); }
+
 };
 
 class MethodDeclaration : public Declaration {
 public:
     MethodDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype) : Declaration(name, bsvtype) {};
-    static shared_ptr<MethodDeclaration> create(std::string name, std::shared_ptr<BSVType> bsvtype) {
-        return shared_ptr<MethodDeclaration>(new MethodDeclaration(name, bsvtype));
-    }
+    virtual shared_ptr<MethodDeclaration> methodDeclaration() override { return static_pointer_cast<MethodDeclaration, Declaration>(shared_from_this()); }
+
 };
 
 class MethodDefinition : public Declaration {
 public:
     MethodDefinition(std::string name, std::shared_ptr<BSVType> bsvtype) : Declaration(name, bsvtype) {};
-    static shared_ptr<MethodDefinition> create(std::string name, std::shared_ptr<BSVType> bsvtype) {
-        return shared_ptr<MethodDefinition>(new MethodDefinition(name, bsvtype));
-    }
+    virtual shared_ptr<MethodDefinition> methodDefinition() override { return static_pointer_cast<MethodDefinition, Declaration>(shared_from_this()); }
+
 };
 
 class ModuleDefinition : public Declaration {
 public:
-    ModuleDefinition(std::string name, std::shared_ptr<BSVType> bsvtype) : Declaration(name, bsvtype) {};
+    ModuleDefinition(std::string name, std::shared_ptr<BSVType> bsvtype) : Declaration(name, bsvtype, GlobalBindingType) {};
     static shared_ptr<ModuleDefinition> create(std::string name, std::shared_ptr<BSVType> bsvtype) {
         return shared_ptr<ModuleDefinition>(new ModuleDefinition(name, bsvtype));
     }
