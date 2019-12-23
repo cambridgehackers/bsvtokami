@@ -23,6 +23,7 @@ public:
 
     void bind(const string &name, const shared_ptr<Declaration> &value);
     void import(const shared_ptr<LexicalScope> &scope);
+    void visit(DeclarationVisitor &visitor);
 
     shared_ptr<LexicalScope> parent;
 };

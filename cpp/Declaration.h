@@ -19,7 +19,7 @@ class MethodDeclaration;
 
 class MethodDefinition;
 
-class ModuleDeclaration;
+class ModuleDefinition;
 
 class StructDeclaration;
 
@@ -39,6 +39,19 @@ enum BindingType {
     LocalBindingType
 };
 
+class DeclarationVisitor {
+public:
+    // called for all declarations
+    virtual void visitDeclaration(const shared_ptr<Declaration> &declaration) {}
+    virtual void visitEnumDeclaration(const shared_ptr<EnumDeclaration> &decl) {}
+    virtual void visitInterfaceDeclaration(const shared_ptr<InterfaceDeclaration> &decl) {}
+    virtual void visitMethodDeclaration(const shared_ptr<MethodDeclaration> &decl) {}
+    virtual void visitModuleDefinition(const shared_ptr<ModuleDefinition> &decl) {}
+    virtual void visitStructDeclaration(const shared_ptr<StructDeclaration> &decl) {}
+    virtual void visitTypeSynonymDeclaration(const shared_ptr<TypeSynonymDeclaration> &decl) {}
+    virtual void visitUnionDeclaration(const shared_ptr<UnionDeclaration> &decl) {}
+};
+
 class Declaration : public enable_shared_from_this<Declaration> {
 public:
     const std::string name;
@@ -55,9 +68,14 @@ public:
         }
     };
 
+    virtual shared_ptr<EnumDeclaration> enumDeclaration() { return shared_ptr<EnumDeclaration>(); }
     virtual shared_ptr<InterfaceDeclaration> interfaceDeclaration() { return shared_ptr<InterfaceDeclaration>(); }
+    virtual shared_ptr<ModuleDefinition> moduleDefinition() { return shared_ptr<ModuleDefinition>(); }
     virtual shared_ptr<MethodDeclaration> methodDeclaration() { return shared_ptr<MethodDeclaration>(); }
     virtual shared_ptr<MethodDefinition> methodDefinition() { return shared_ptr<MethodDefinition>(); }
+    virtual shared_ptr<StructDeclaration> structDeclaration() { return shared_ptr<StructDeclaration>(); }
+    virtual shared_ptr<TypeSynonymDeclaration> typeSynonymDeclaration() { return shared_ptr<TypeSynonymDeclaration>(); }
+    virtual shared_ptr<UnionDeclaration> unionDeclaration() { return shared_ptr<UnionDeclaration>(); }
 
     const vector<bool> numericTypeParams() {
         return numericTypeParamVector;
@@ -71,10 +89,12 @@ private:
 
 class EnumDeclaration : public Declaration {
 public:
-    std::vector<std::shared_ptr<EnumElementDeclaration> > tags;
+    std::vector<std::shared_ptr<Declaration> > tags;
 
     EnumDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype)
     : Declaration(name, bsvtype, GlobalBindingType) {};
+    virtual shared_ptr<EnumDeclaration> enumDeclaration() { return static_pointer_cast<EnumDeclaration, Declaration>(shared_from_this()); }
+
 };
 
 class InterfaceDeclaration : public Declaration {
@@ -107,6 +127,16 @@ public:
     static shared_ptr<ModuleDefinition> create(std::string name, std::shared_ptr<BSVType> bsvtype) {
         return shared_ptr<ModuleDefinition>(new ModuleDefinition(name, bsvtype));
     }
+    virtual shared_ptr<ModuleDefinition> moduleDefinition() { return static_pointer_cast<ModuleDefinition, Declaration>(shared_from_this()); }
+};
+
+class StructDeclaration : public Declaration {
+public:
+    std::vector<std::shared_ptr<Declaration> > members;
+
+    StructDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype)
+            : Declaration(name, bsvtype, GlobalBindingType) {};
+    virtual shared_ptr<StructDeclaration> structDeclaration() { return static_pointer_cast<StructDeclaration, Declaration>(shared_from_this()); }
 };
 
 class TypeSynonymDeclaration : public Declaration {
@@ -115,4 +145,13 @@ public:
 public:
     TypeSynonymDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype, std::shared_ptr<BSVType> typedeftype)
     : Declaration(name, bsvtype, GlobalBindingType), typedeftype(typedeftype) {};
+};
+
+class UnionDeclaration : public Declaration {
+public:
+    std::vector<std::shared_ptr<Declaration> > members;
+
+    UnionDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype)
+            : Declaration(name, bsvtype, GlobalBindingType) {};
+    virtual shared_ptr<UnionDeclaration> unionDeclaration() { return static_pointer_cast<UnionDeclaration, Declaration>(shared_from_this()); }
 };

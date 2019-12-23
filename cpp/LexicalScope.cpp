@@ -25,3 +25,26 @@ void LexicalScope::import(const shared_ptr<LexicalScope> &scope)
         bind(it->first, it->second);
     }
 }
+
+void LexicalScope::visit(DeclarationVisitor &visitor) {
+    cerr << "lexical scope visit " << name << endl;
+    for (auto it = bindings.cbegin(); it != bindings.cend(); ++it) {
+        shared_ptr<Declaration> decl = it->second;
+        cerr << "   lexical scope visit " << decl->name << endl;
+        visitor.visitDeclaration(decl);
+        if (decl->enumDeclaration())
+            visitor.visitEnumDeclaration(decl->enumDeclaration());
+        else if (decl->interfaceDeclaration())
+            visitor.visitInterfaceDeclaration(decl->interfaceDeclaration());
+        else if (decl->methodDeclaration())
+            visitor.visitMethodDeclaration(decl->methodDeclaration());
+        else if (decl->moduleDefinition())
+            visitor.visitModuleDefinition(decl->moduleDefinition());
+        else if (decl->structDeclaration())
+            visitor.visitStructDeclaration(decl->structDeclaration());
+        else if (decl->typeSynonymDeclaration())
+            visitor.visitTypeSynonymDeclaration(decl->typeSynonymDeclaration());
+        else if (decl->unionDeclaration())
+            visitor.visitUnionDeclaration(decl->unionDeclaration());
+    }
+}

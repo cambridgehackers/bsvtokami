@@ -15,6 +15,26 @@
 
 using namespace std;
 
+class PackageContext {
+public:
+    vector<shared_ptr<Declaration> > declarationList;
+    vector<shared_ptr<Declaration> > typeDeclarationList;
+    map<string, shared_ptr<Declaration> > declaration;
+    map<string, shared_ptr<Declaration> > typeDeclaration;
+    multimap<string, shared_ptr<Declaration> > enumtag;
+    multimap<string, shared_ptr<Declaration> > memberDeclaration;
+
+    void import(const shared_ptr<LexicalScope> &scope);
+
+    void visitEnumDeclaration(const shared_ptr<EnumDeclaration> &decl);
+    void visitInterfaceDeclaration(const shared_ptr<InterfaceDeclaration> &decl);
+    void visitMethodDeclaration(const shared_ptr<MethodDeclaration> &decl);
+    void visitModuleDefinition(const shared_ptr<ModuleDefinition> &decl);
+    void visitStructDeclaration(const shared_ptr<StructDeclaration> &decl);
+    void visitTypeSynonymDeclaration(const shared_ptr<TypeSynonymDeclaration> &decl);
+    void visitUnionDeclaration(const shared_ptr<UnionDeclaration> &decl);
+};
+
 /**
  * Static analyzer of BSV package
  */
@@ -32,15 +52,10 @@ class TypeChecker : public BSVBaseVisitor {
     z3::sort typeSort, intSort, boolSort;
 
     map<string, bool> boolops;
-    vector<shared_ptr<Declaration> > declarationList;
-    vector<shared_ptr<Declaration> > typeDeclarationList;
-    map<string, shared_ptr<Declaration> > declaration;
-    map<string, shared_ptr<Declaration> > typeDeclaration;
-    multimap<string, shared_ptr<Declaration> > enumtag;
-    multimap<string, shared_ptr<Declaration> > memberDeclaration;
 
     shared_ptr<LexicalScope> lexicalScope;
     map<string, shared_ptr<LexicalScope>> packageScopes;
+    shared_ptr<PackageContext> currentContext;
 
     bool actionContext;
     shared_ptr<Declaration> parentDecl;
@@ -56,6 +71,7 @@ public:
         p.set("unsat_core", true);
         solver.set(p);
         lexicalScope = make_shared<LexicalScope>("<global>");
+        currentContext = make_shared<PackageContext>();
         setupModuleFunctionConstructors();
     }
 
@@ -148,6 +164,8 @@ protected:
         string pkgName = ctx->upperCaseIdentifier(0)->getText();
         cerr << "importing package " << pkgName << endl;
         analyzePackage(pkgName);
+        shared_ptr<LexicalScope> pkgScope = packageScopes[pkgName];
+        currentContext->import(pkgScope);
         return freshConstant(__FUNCTION__, typeSort);
     }
 
@@ -174,15 +192,16 @@ protected:
         cerr << " arity " << arity << endl;
 
         shared_ptr<InterfaceDeclaration> decl(new InterfaceDeclaration(name, interfaceType));
-        typeDeclarationList.push_back(decl);
-        typeDeclaration[name] = decl;
+        currentContext->typeDeclarationList.push_back(decl);
+        currentContext->typeDeclaration[name] = decl;
+        lexicalScope->bind(name, decl);
 
         auto members = ctx->interfacememberdecl();
         for (int i = 0; i < members.size(); i++) {
             shared_ptr<Declaration> memberDecl((Declaration *) visitInterfacememberdecl(members[i]));
 
             cerr << " subinterface decl " << memberDecl->name << endl;
-            memberDeclaration.emplace(memberDecl->name, memberDecl);
+            currentContext->memberDeclaration.emplace(memberDecl->name, memberDecl);
             memberDecl->parent = decl;
             decl->members.push_back(memberDecl);
         }
@@ -258,8 +277,9 @@ protected:
         cerr << "visit typedef synonym " << typedeftype->name << endl;
         shared_ptr<TypeSynonymDeclaration> synonymDecl = make_shared<TypeSynonymDeclaration>(typedeftype->name,
                                                                                              lhstype, typedeftype);
-        typeDeclaration[typedeftype->name] = synonymDecl;
-        typeDeclarationList.push_back(synonymDecl);
+        currentContext->typeDeclaration[typedeftype->name] = synonymDecl;
+        currentContext->typeDeclarationList.push_back(synonymDecl);
+        lexicalScope->bind(typedeftype->name, synonymDecl);
 
         return synonymDecl;
     }
@@ -268,9 +288,10 @@ protected:
         BSVParser::UpperCaseIdentifierContext *id = ctx->upperCaseIdentifier();
         string name(id->getText());
         shared_ptr<BSVType> bsvtype(new BSVType(name));
-        shared_ptr<Declaration> decl(new Declaration(name, bsvtype));
+        shared_ptr<Declaration> decl(new EnumDeclaration(name, bsvtype));
         parentDecl = decl;
-        typeDeclaration[name] = decl;
+        currentContext->typeDeclaration[name] = decl;
+        lexicalScope->bind(name, decl);
 
         size_t numelts = ctx->typedefenumelement().size();
         for (size_t i = 0; i < numelts; i++) {
@@ -292,7 +313,7 @@ protected:
         shared_ptr<BSVType> bsvtype(new BSVType(name));
         shared_ptr<Declaration> decl(new Declaration(name, bsvtype));
         //declarationList.push_back(decl);
-        enumtag.insert(make_pair(name, parentDecl));
+        currentContext->enumtag.insert(make_pair(name, parentDecl));
         return decl;
     }
 
@@ -301,8 +322,9 @@ protected:
         string name(typedeftype->getText());
         shared_ptr<BSVType> bsvtype(new BSVType(name));
         shared_ptr<Declaration> decl(new Declaration(name, bsvtype));
-        typeDeclarationList.push_back(decl);
-        typeDeclaration[name] = decl;
+        currentContext->typeDeclarationList.push_back(decl);
+        currentContext->typeDeclaration[name] = decl;
+        lexicalScope->bind(name, decl);
         return decl;
     }
 
@@ -431,8 +453,8 @@ protected:
 
         // declare the module in the global scope
         shared_ptr<ModuleDefinition> moduleDefinition = ModuleDefinition::create(module_name, moduleType);
-        declaration[module_name] = moduleDefinition;
-        declarationList.push_back(moduleDefinition);
+        currentContext->declaration[module_name] = moduleDefinition;
+        currentContext->declarationList.push_back(moduleDefinition);
         lexicalScope->bind(module_name, moduleDefinition);
 
         // then setup the scope for the body of the module
@@ -687,8 +709,8 @@ protected:
 
         z3::expr sym = context.constant(context.str_symbol(fieldname.c_str()), typeSort);
         vector<z3::expr> exprs;
-        for (auto it = memberDeclaration.find(fieldname);
-             it != memberDeclaration.end() && it->first == fieldname; ++it) {
+        for (auto it = currentContext->memberDeclaration.find(fieldname);
+             it != currentContext->memberDeclaration.end() && it->first == fieldname; ++it) {
             shared_ptr<Declaration> memberDecl(it->second);
             shared_ptr<Declaration> interfaceDecl(memberDecl->parent);
             cerr << "    field " << fieldname << " belongs to type " << interfaceDecl->name << endl;
@@ -952,10 +974,10 @@ protected:
         z3::expr rhsExpr = context.constant(context.str_symbol(rhsname.c_str()), typeSort);
 
 
-        if (enumtag.find(varname) != enumtag.end()) {
+        if (currentContext->enumtag.find(varname) != currentContext->enumtag.end()) {
             z3::expr var = context.constant(context.str_symbol(varname.c_str()), typeSort);
             vector<z3::expr> exprs;
-            for (auto it = enumtag.find(varname); it != enumtag.end() && it->first == varname; ++it) {
+            for (auto it = currentContext->enumtag.find(varname); it != currentContext->enumtag.end() && it->first == varname; ++it) {
                 shared_ptr<Declaration> decl(it->second);
                 fprintf(stderr, "Tag %s of type %s\n", varname.c_str(), decl->name.c_str());
                 z3::func_decl type_decl = typeDecls.find(decl->name)->second;
@@ -1047,8 +1069,8 @@ protected:
         vector<z3::expr> exprs;
         z3::expr fieldexpr = freshConstant(fieldname, typeSort);
 
-        for (auto it = memberDeclaration.find(fieldname);
-             it != memberDeclaration.end() && it->first == fieldname; ++it) {
+        for (auto it = currentContext->memberDeclaration.find(fieldname);
+             it != currentContext->memberDeclaration.end() && it->first == fieldname; ++it) {
             shared_ptr<Declaration> memberDecl(it->second);
             shared_ptr<Declaration> parentDecl(memberDecl->parent);
             cerr << "    field " << fieldname << " belongs to type " << parentDecl->name << endl;
@@ -1148,11 +1170,14 @@ protected:
         z3::expr exprsym = context.constant(context.str_symbol(exprname.c_str()), typeSort);
 
         vector<z3::expr> exprs;
-        for (auto it = enumtag.find(tagname); it != enumtag.end() && it->first == tagname; ++it) {
+        for (auto it = currentContext->enumtag.find(tagname); it != currentContext->enumtag.end() && it->first == tagname; ++it) {
             shared_ptr<Declaration> decl(it->second);
-            fprintf(stderr, "Tag exprprimary %s of type %s\n", tagname.c_str(), decl->name.c_str());
-            z3::func_decl type_decl = typeDecls.find(decl->name)->second;
-            exprs.push_back(exprsym == type_decl());
+            bool foundDecl = typeDecls.find(decl->name) != typeDecls.cend();
+            cerr << "Tag exprprimary " << tagname << " of type " << decl->name << (foundDecl ? " found" : " not found") << endl;
+            if (foundDecl) {
+                z3::func_decl type_decl = typeDecls.find(decl->name)->second;
+                exprs.push_back(exprsym == type_decl());
+            }
         }
         if (exprs.size())
             addConstraint(orExprs(exprs), "tunionexpr", ctx);
@@ -1268,7 +1293,7 @@ protected:
             z3::expr patsym = context.constant(context.str_symbol(patname.c_str()), typeSort);
 
             vector<z3::expr> exprs;
-            for (auto it = enumtag.find(tagname); it != enumtag.end() && it->first == tagname; ++it) {
+            for (auto it = currentContext->enumtag.find(tagname); it != currentContext->enumtag.end() && it->first == tagname; ++it) {
                 shared_ptr<Declaration> decl(it->second);
                 fprintf(stderr, "Tag pattern %s of type %s\n", tagname.c_str(), decl->name.c_str());
                 z3::func_decl type_decl = typeDecls.find(decl->name)->second;

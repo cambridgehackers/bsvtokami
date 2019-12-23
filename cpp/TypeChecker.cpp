@@ -26,12 +26,78 @@ string TypeChecker::searchIncludePath(const string &pkgName)
     return string();
 }
 
+void PackageContext::import(const shared_ptr<LexicalScope> &scope) {
+    class PackageContextVisitor : public DeclarationVisitor {
+        PackageContext *pc;
+    public:
+        PackageContextVisitor(PackageContext *pc) : pc(pc) {}
+        void visitEnumDeclaration(const shared_ptr<EnumDeclaration> &decl) override {
+            pc->visitEnumDeclaration(decl);
+        }
+        void visitInterfaceDeclaration(const shared_ptr<InterfaceDeclaration> &decl) override {
+            pc->visitInterfaceDeclaration(decl);
+        }
+        void visitMethodDeclaration(const shared_ptr<MethodDeclaration> &decl) override {
+            pc->visitMethodDeclaration(decl);
+        }
+        void visitModuleDefinition(const shared_ptr<ModuleDefinition> &decl) override {
+            pc->visitModuleDefinition(decl);
+        }
+        void visitStructDeclaration(const shared_ptr<StructDeclaration> &decl) override{
+            pc->visitStructDeclaration(decl);
+        }
+        void visitTypeSynonymDeclaration(const shared_ptr<TypeSynonymDeclaration> &decl) override {
+            pc->visitTypeSynonymDeclaration(decl);
+        }
+        void visitUnionDeclaration(const shared_ptr<UnionDeclaration> &decl) override {
+            pc->visitUnionDeclaration(decl);
+        }
+    } pcv(this);
+    scope->visit(pcv);
+}
+
+void PackageContext::visitEnumDeclaration(const shared_ptr<EnumDeclaration> &decl) {
+    for (int i = 0; i < decl->tags.size(); i++) {
+        shared_ptr<Declaration> tagdecl = decl->tags[i];
+        enumtag.insert(make_pair(tagdecl->name, tagdecl->parent));
+    }
+}
+void PackageContext::visitInterfaceDeclaration(const shared_ptr<InterfaceDeclaration> &decl) {
+    typeDeclarationList.push_back(decl);
+    typeDeclaration[decl->name] = decl;
+    for (auto it = decl->members.cbegin(); it != decl->members.cend(); ++it) {
+        shared_ptr<Declaration> memberDecl = *it;
+        memberDeclaration.emplace(memberDecl->name, memberDecl);
+    }
+}
+
+void PackageContext::visitMethodDeclaration(const shared_ptr<MethodDeclaration> &decl) {
+    assert(0);
+}
+
+void PackageContext::visitModuleDefinition(const shared_ptr<ModuleDefinition> &decl) {
+    declaration[decl->name] = decl;
+    declarationList.push_back(decl);
+}
+
+void PackageContext::visitStructDeclaration(const shared_ptr<StructDeclaration> &decl) {
+    assert(0);
+}
+void PackageContext::visitTypeSynonymDeclaration(const shared_ptr<TypeSynonymDeclaration> &decl) {
+    assert(0);
+}
+void PackageContext::visitUnionDeclaration(const shared_ptr<UnionDeclaration> &decl) {
+    assert(0);
+}
+
+
 BSVParser::PackagedefContext *TypeChecker::analyzePackage(const string &packageName) {
     if (packageScopes.find(packageName) != packageScopes.cend())
         return nullptr;
 
     cerr << "analyze package " << packageName << endl;
-    shared_ptr<LexicalScope> currentScope = lexicalScope;
+    shared_ptr<PackageContext> previousContext = currentContext;
+    shared_ptr<LexicalScope> previousScope = lexicalScope;
     lexicalScope = make_shared<LexicalScope>(packageName);
 
     //string inputFileName(argv[i]);
@@ -54,8 +120,9 @@ BSVParser::PackagedefContext *TypeChecker::analyzePackage(const string &packageN
 
     visit(tree);
 
-    currentScope->import(lexicalScope);
-    lexicalScope = currentScope;
+    previousScope->import(lexicalScope);
+    lexicalScope = previousScope;
+    currentContext = previousContext;
     return tree;
 }
 
@@ -73,8 +140,8 @@ void TypeChecker::setupModuleFunctionConstructors() {
             std::shared_ptr<Declaration> constructorDecl = make_shared<Declaration>(constructorName, interfaceType,
                                                                                     GlobalBindingType);
             cerr << "adding constructor: " << constructorName << endl;
-            typeDeclarationList.push_back(constructorDecl);
-            typeDeclaration[constructorName] = constructorDecl;
+            currentContext->typeDeclarationList.push_back(constructorDecl);
+            currentContext->typeDeclaration[constructorName] = constructorDecl;
         }
     }
 }
@@ -212,14 +279,14 @@ void TypeChecker::setupZ3Context() {
     };
     unsigned num_default_constructors = sizeof(default_constructors) / sizeof(default_constructors[0]);
     // constructors for user-defined types
-    unsigned num_constructors = num_default_constructors + typeDeclarationList.size();
+    unsigned num_constructors = num_default_constructors + currentContext->typeDeclarationList.size();
     Z3_constructor *constructors = new Z3_constructor[num_constructors];
 
     for (int i = 0; i < num_default_constructors; i++)
         constructors[i] = default_constructors[i];
 
-    for (int i = 0; i < typeDeclarationList.size(); i++) {
-        std::shared_ptr<Declaration> typeDecl(typeDeclarationList[i]);
+    for (int i = 0; i < currentContext->typeDeclarationList.size(); i++) {
+        std::shared_ptr<Declaration> typeDecl(currentContext->typeDeclarationList[i]);
         std::shared_ptr<BSVType> interfaceType(typeDecl->bsvtype);
         int arity = interfaceType->params.size();
         std::string typePredicate(std::string("is_") + typeDecl->name);
