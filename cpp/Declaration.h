@@ -29,6 +29,8 @@ class UnionDeclaration;
 
 class UnionMemberDeclaration;
 
+class TypeSynonymDeclaration;
+
 
 enum BindingType {
     GlobalBindingType,
@@ -105,4 +107,12 @@ public:
     static shared_ptr<ModuleDefinition> create(std::string name, std::shared_ptr<BSVType> bsvtype) {
         return shared_ptr<ModuleDefinition>(new ModuleDefinition(name, bsvtype));
     }
+};
+
+class TypeSynonymDeclaration : public Declaration {
+public:
+    const shared_ptr<BSVType> typedeftype;
+public:
+    TypeSynonymDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype, std::shared_ptr<BSVType> typedeftype)
+    : Declaration(name, bsvtype, GlobalBindingType), typedeftype(typedeftype) {};
 };

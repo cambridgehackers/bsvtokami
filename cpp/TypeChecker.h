@@ -253,7 +253,15 @@ protected:
     }
 
     virtual antlrcpp::Any visitTypedefsynonym(BSVParser::TypedefsynonymContext *ctx) override {
-        return visitChildren(ctx);
+        shared_ptr<BSVType> lhstype = bsvtype(ctx->bsvtype());
+        shared_ptr<BSVType> typedeftype = bsvtype(ctx->typedeftype());
+        cerr << "visit typedef synonym " << typedeftype->name << endl;
+        shared_ptr<TypeSynonymDeclaration> synonymDecl = make_shared<TypeSynonymDeclaration>(typedeftype->name,
+                                                                                             lhstype, typedeftype);
+        typeDeclaration[typedeftype->name] = synonymDecl;
+        typeDeclarationList.push_back(synonymDecl);
+
+        return synonymDecl;
     }
 
     virtual antlrcpp::Any visitTypedefenum(BSVParser::TypedefenumContext *ctx) override {
