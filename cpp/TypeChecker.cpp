@@ -1,13 +1,67 @@
 
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include "BSVPreprocessor.h"
 #include "TypeChecker.h"
 
 const char *TypeChecker::check_result_name[] = {
         "unsat", "sat", "unknown"
 };
 
+
+string TypeChecker::searchIncludePath(const string &pkgName)
+{
+    for (int i = 0; i < includePath.size(); i++) {
+        string candidate = includePath[i] + "/" + pkgName + ".bsv";
+        int fd = open(candidate.c_str(), O_RDONLY);
+        //cerr << "  candidate " << candidate << " fd " << fd << endl;
+        if (fd >= 0) {
+            close(fd);
+            return candidate;
+        }
+    }
+    return string();
+}
+
+BSVParser::PackagedefContext *TypeChecker::analyzePackage(const string &packageName) {
+    if (packageScopes.find(packageName) != packageScopes.cend())
+        return nullptr;
+
+    cerr << "analyze package " << packageName << endl;
+    shared_ptr<LexicalScope> currentScope = lexicalScope;
+    lexicalScope = make_shared<LexicalScope>(packageName);
+
+    //string inputFileName(argv[i]);
+    string inputFileName = searchIncludePath(packageName);
+    BSVPreprocessor preprocessor(inputFileName);
+    CommonTokenStream tokens((TokenSource * ) & preprocessor);
+
+    tokens.fill();
+    bool dumptokens = false;
+    if (dumptokens) {
+        for (auto token : tokens.getTokens()) {
+            std::cout << token->toString() << std::endl;
+        }
+    }
+
+    BSVParser parser(&tokens);
+    //parser.addErrorListener(&ConsoleErrorListener::INSTANCE);
+    BSVParser::PackagedefContext *tree = parser.packagedef();
+    packageScopes[packageName] = lexicalScope;
+
+    visit(tree);
+
+    currentScope->import(lexicalScope);
+    lexicalScope = currentScope;
+    return tree;
+}
+
 void TypeChecker::setupModuleFunctionConstructors() {
     const string constructorNames[] = { "Function" };
-    for (int c = 0; c < sizeof(constructorNames) / sizeof(constructorNames[0]); c++) {
+    for (int c = 0; c < 1; c++) {
         string constructorPrefix = constructorNames[c];
         for (int arity = 1; arity < 20; arity++) {
             string constructorName = constructorPrefix + to_string(arity);
@@ -18,6 +72,7 @@ void TypeChecker::setupModuleFunctionConstructors() {
             shared_ptr<BSVType> interfaceType = make_shared<BSVType>(constructorName, paramTypes);
             std::shared_ptr<Declaration> constructorDecl = make_shared<Declaration>(constructorName, interfaceType,
                                                                                     GlobalBindingType);
+            cerr << "adding constructor: " << constructorName << endl;
             typeDeclarationList.push_back(constructorDecl);
             typeDeclaration[constructorName] = constructorDecl;
         }
@@ -45,7 +100,7 @@ void TypeChecker::setupZ3Context() {
                                                        actionvalue_field_sorts,
                                                        actionvalue_field_sort_refs);
     Z3_symbol bit_field_names[] = {Z3_mk_string_symbol(context, "width")};
-    Z3_sort bit_field_sorts[] = {intSort};
+    Z3_sort bit_field_sorts[] = {0};
     unsigned bit_field_sort_refs[] = {0};
     Z3_constructor bit_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Bit"),
                                                Z3_mk_string_symbol(context, "isBit"),
@@ -70,6 +125,17 @@ void TypeChecker::setupZ3Context() {
                                                     function_field_names,
                                                     function_field_sorts,
                                                     function_field_sort_refs);
+
+    Z3_symbol int_field_names[] = {Z3_mk_string_symbol(context, "width")};
+    Z3_sort int_field_sorts[] = {0};
+    unsigned int_field_sort_refs[] = {0};
+    Z3_constructor int_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Int"),
+                                               Z3_mk_string_symbol(context, "isInt"),
+                                               1,
+                                               int_field_names,
+                                               int_field_sorts,
+                                               int_field_sort_refs);
+
     Z3_symbol module_field_names[] = {Z3_mk_string_symbol(context, "interface") };
     Z3_sort module_field_sorts[] = {NULL, NULL};
     unsigned module_field_sort_refs[] = {0, 0};
@@ -79,6 +145,17 @@ void TypeChecker::setupZ3Context() {
                                                     module_field_names,
                                                     module_field_sorts,
                                                     module_field_sort_refs);
+
+    Z3_symbol numeric_field_names[] = {Z3_mk_string_symbol(context, "elt")};
+    Z3_sort numeric_field_sorts[] = {intSort};
+    unsigned numeric_field_sort_refs[] = {0};
+    Z3_constructor numeric_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Numeric"),
+                                               Z3_mk_string_symbol(context, "isNumeric"),
+                                               1,
+                                               numeric_field_names,
+                                               numeric_field_sorts,
+                                               numeric_field_sort_refs);
+
     Z3_constructor integer_con = Z3_mk_constructor(context,
                                                    Z3_mk_string_symbol(context, "Integer"),
                                                    Z3_mk_string_symbol(context, "isInteger"),
@@ -101,6 +178,28 @@ void TypeChecker::setupZ3Context() {
     Z3_constructor string_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "String"),
                                                   Z3_mk_string_symbol(context, "isString"),
                                                   0, NULL, NULL, NULL);
+
+
+    Z3_symbol uint_field_names[] = {Z3_mk_string_symbol(context, "width")};
+    Z3_sort uint_field_sorts[] = {0};
+    unsigned uint_field_sort_refs[] = {0};
+    Z3_constructor uint_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "UInt"),
+                                               Z3_mk_string_symbol(context, "isUInt"),
+                                               1,
+                                               uint_field_names,
+                                               uint_field_sorts,
+                                               uint_field_sort_refs);
+
+    Z3_symbol vector_field_names[] = {Z3_mk_string_symbol(context, "size"), Z3_mk_string_symbol(context, "elt_type")};
+    Z3_sort vector_field_sorts[] = {NULL, NULL};
+    unsigned vector_field_sort_refs[] = {0, 0};
+    Z3_constructor vector_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Vector"),
+                                               Z3_mk_string_symbol(context, "isVector"),
+                                               2,
+                                               vector_field_names,
+                                               vector_field_sorts,
+                                               vector_field_sort_refs);
+
     Z3_constructor void_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Void"),
                                                 Z3_mk_string_symbol(context, "isVoid"),
                                                 0, NULL, NULL, NULL);
@@ -108,8 +207,8 @@ void TypeChecker::setupZ3Context() {
 
     Z3_constructor default_constructors[] = {
             bozo_con,
-            action_con, actionvalue_con, bit_con, bool_con, function_con, module_con,
-            integer_con, real_con, reg_con, rule_con, string_con, void_con
+            action_con, actionvalue_con, bit_con, bool_con, function_con, int_con, module_con,
+            integer_con, real_con, reg_con, rule_con, string_con, uint_con, vector_con, void_con, numeric_con
     };
     unsigned num_default_constructors = sizeof(default_constructors) / sizeof(default_constructors[0]);
     // constructors for user-defined types
@@ -132,7 +231,7 @@ void TypeChecker::setupZ3Context() {
         for (int j = 0; j < arity; j++) {
             shared_ptr<BSVType> paramType = interfaceType->params[j];
             param_symbols[j] = Z3_mk_string_symbol(context, paramType->name.c_str());
-            param_sorts[j] = (paramType->kind == BSVType_Numeric) ? Z3_mk_int_sort(context) : (Z3_sort)NULL;
+            param_sorts[j] = (Z3_sort)NULL;
             sort_refs[j] = 0;
         }
         constructors[i + num_default_constructors] = Z3_mk_constructor(context,
@@ -144,7 +243,6 @@ void TypeChecker::setupZ3Context() {
                                                                        arity, param_symbols, param_sorts, sort_refs);
     }
 
-    fprintf(stderr, "Defining typeSort\n");
     typeSort = z3::sort(context, Z3_mk_datatype(context, Z3_mk_string_symbol(context, "BSVType"),
                                                 num_constructors,
                                                 constructors));
@@ -153,13 +251,13 @@ void TypeChecker::setupZ3Context() {
         Z3_func_decl func_decl = Z3_get_datatype_sort_constructor(context, typeSort, i);
         Z3_func_decl recognizer = Z3_get_datatype_sort_recognizer(context, typeSort, i);
         Z3_symbol name = Z3_get_decl_name(context, func_decl);
-        fprintf(stderr, "Constructor %d name is %s\n", i, Z3_get_symbol_string(context, name));
+        //fprintf(stderr, "Constructor %d name is %s\n", i, Z3_get_symbol_string(context, name));
         // since no default constructor for z3::func_decl, use insert with a pair
         z3::func_decl func_decl_obj = z3::func_decl(context, func_decl);
         z3::func_decl func_recognizer_obj = z3::func_decl(context, recognizer);
         typeDecls.insert(std::pair<std::string, z3::func_decl>(Z3_get_symbol_string(context, name), func_decl_obj));
         typeRecognizers.insert(std::pair<std::string, z3::func_decl>(Z3_get_symbol_string(context, name), func_recognizer_obj));
-        fprintf(stderr, "               name is %s\n", func_decl_obj.name().str().c_str());
+        //fprintf(stderr, "               name is %s\n", func_decl_obj.name().str().c_str());
     }
     boolops["=="] = true;
     boolops["!="] = true;
