@@ -122,6 +122,11 @@ protected:
     virtual antlrcpp::Any visitPackagedef(BSVParser::PackagedefContext *ctx) override {
         size_t numelts = ctx->packagestmt().size();
 
+        cerr << "importing Prelude " << endl;
+        analyzePackage("Prelude");
+        shared_ptr<LexicalScope> pkgScope = packageScopes["Prelude"];
+        currentContext->import(pkgScope);
+
         for (size_t i = 0; i < numelts; i++) {
             visit(ctx->packagestmt().at(i));
         }
