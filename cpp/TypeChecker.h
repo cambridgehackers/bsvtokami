@@ -82,6 +82,8 @@ public:
         return BSVType::create("NOENT");
     }
 
+    shared_ptr<BSVType> dereferenceType(const shared_ptr<BSVType> &bsvtype);
+
     BSVParser::PackagedefContext *analyzePackage(const string &packageName);
 
 private:
@@ -769,64 +771,12 @@ protected:
         if (it != exprs.end())
             return it->second;
 
-        z3::expr bsvtype_expr(context);
         shared_ptr<BSVType> bbb(bsvtype(ctx));
         cerr << "typechecker::visitBsvtype " << ctx->getText() << " bbb ";
         bbb->prettyPrint(cerr);
         cerr << endl;
 
-        if (!bbb->isNumeric()) {
-            BSVParser::TypeideContext *typeide = ctx->typeide();
-            if (typeide != NULL) {
-                if (typeide->name) {
-                    string name = bbb->name;
-                    auto jt = typeDecls.find(name);
-                    if (jt != typeDecls.end()) {
-                        z3::func_decl decl = jt->second;
-                        vector<BSVParser::BsvtypeContext *> typeArgs = ctx->bsvtype();
-                        int numArgs = typeArgs.size();
-                        switch (numArgs) {
-                            case 0:
-                                bsvtype_expr = decl();
-                                break;
-                            case 1: {
-                                z3::expr t0 = visit(typeArgs[0]);
-                                cerr << "func_decl " << decl << " t0 " << t0 << endl;
-                                bsvtype_expr = decl(t0);
-                            }
-                                break;
-                            case 2: {
-                                z3::expr t0 = visit(typeArgs[0]);
-                                z3::expr t1 = visit(typeArgs[1]);
-                                cerr << "func_decl " << decl << " t0 " << t0 << " t1 " << t1 << endl;
-                                bsvtype_expr = decl(t0, t1);
-                            }
-                                break;
-                            default:
-                                fprintf(stderr, "Too many type arguments: %d\n", numArgs);
-                        }
-                    } else {
-                        cerr << "unhandled bsvtype_expr not in typeDecls " << bbb->name << " bozo " << endl;
-                        z3::func_decl bozoDecl = typeDecls.find("Bozo")->second;
-                        bsvtype_expr = bozoDecl();
-                    }
-                } else {
-                    string name = typeide->typevar->getText();
-                    //FIXME: numeric?
-                    bsvtype_expr = constant(name, typeSort);
-                }
-            }
-        } else if (ctx->typenat() != NULL) {
-            return instantiateType("Numeric", context.int_val((int) strtol(ctx->getText().c_str(), NULL, 0)));
-        } else {
-            fprintf(stderr, "Unhandled bsvtype_expr %s\n", ctx->getText().c_str());
-        }
-
-        if (0) {
-            solver.push();
-            fprintf(stderr, "        check(%s) %s\n", ctx->getText().c_str(), check_result_name[solver.check()]);
-            solver.pop();
-        }
+        z3::expr bsvtype_expr = bsvTypeToExpr(bbb);
 
         insertExpr(ctx, bsvtype_expr);
         return bsvtype_expr;
@@ -1104,6 +1054,11 @@ protected:
             if (interfaceDecl && methodDecl) {
                 shared_ptr<BSVType> interfaceType = interfaceDecl->bsvtype;
                 shared_ptr<BSVType> methodType = methodDecl->bsvtype;
+                cerr << "interface method ";
+                interfaceType->prettyPrint(cerr);
+                cerr << " method ";
+                methodType->prettyPrint(cerr);
+                cerr << endl;
                 map<string,string> freshTypeVars;
                 z3::expr interfaceExpr = bsvTypeToExpr(interfaceType, freshTypeVars);
                 z3::expr methodExpr = bsvTypeToExpr(methodType, freshTypeVars);
@@ -1567,7 +1522,10 @@ public:
             for (int i = 0; i < bsvtype->params.size(); i++) {
                 arg_exprs.push_back(bsvTypeToExpr(bsvtype->params[i], varmapping));
             }
-            cerr << " looking up type constructor for " << bsvtype->name << endl;
+            bool foundDecl = typeDecls.find(bsvtype->name) != typeDecls.cend();
+            cerr << " looking up type constructor for " << bsvtype->name
+                 << (foundDecl ? " found" : " missing")
+                 << endl;
             z3::func_decl typeDecl = typeDecls.find(bsvtype->name)->second;
             return instantiateType(typeDecl, arg_exprs);
         }
@@ -1575,6 +1533,7 @@ public:
 
     z3::expr bsvTypeToExpr(shared_ptr<BSVType> bsvtype) {
         map<string,string> varmapping;
-        return bsvTypeToExpr(bsvtype, varmapping);
+        shared_ptr<BSVType> derefType = dereferenceType(bsvtype);
+        return bsvTypeToExpr(derefType, varmapping);
     }
 };

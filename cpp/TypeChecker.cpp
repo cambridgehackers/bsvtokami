@@ -382,6 +382,21 @@ z3::expr TypeChecker::orExprs(std::vector<z3::expr> exprs) {
     }
 }
 
+shared_ptr<BSVType> TypeChecker::dereferenceType(const shared_ptr<BSVType> &bsvtype) {
+    if (!bsvtype->isVar && !bsvtype->isNumeric()) {
+        auto it = currentContext->declaration.find(bsvtype->name);
+        if (it == currentContext->declaration.cend())
+            return bsvtype;
+        shared_ptr<Declaration> decl = it->second;
+        shared_ptr<TypeSynonymDeclaration> synonymDecl = decl->typeSynonymDeclaration();
+        if (synonymDecl) {
+            cerr << "dereferencing bsvtype " << bsvtype->name << " arity " << bsvtype->params.size() << endl;
+            assert(synonymDecl->typedeftype->params.size() == 0);
+            return dereferenceType(synonymDecl->bsvtype);
+        }
+    }
+    return bsvtype;
+}
 
 string TypeChecker::sourceLocation(antlr4::ParserRuleContext *ctx) {
     antlr4::Token *start = ctx->getStart();
