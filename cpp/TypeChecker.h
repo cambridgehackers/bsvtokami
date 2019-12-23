@@ -325,34 +325,68 @@ protected:
     }
 
     virtual antlrcpp::Any visitTypedefstruct(BSVParser::TypedefstructContext *ctx) override {
-        BSVParser::TypedeftypeContext *typedeftype = ctx->typedeftype();
-        string name(typedeftype->getText());
-        shared_ptr<BSVType> bsvtype(new BSVType(name));
-        shared_ptr<Declaration> decl(new Declaration(name, bsvtype));
-        currentContext->typeDeclarationList.push_back(decl);
-        currentContext->typeDeclaration[name] = decl;
+        shared_ptr<BSVType> typedeftype(bsvtype(ctx->typedeftype()));
+        string name = typedeftype->name;
+        cerr << "visit typedef struct " << name << endl;
+        shared_ptr<StructDeclaration> structDecl(new StructDeclaration(name, typedeftype));
+        for (int i = 0; ctx->structmember(i); i++) {
+            shared_ptr<Declaration> subdecl = visit(ctx->structmember(i));
+            structDecl->members.push_back(subdecl);
+        }
+        currentContext->visitStructDeclaration(structDecl);
+        shared_ptr<Declaration> decl = structDecl;
         lexicalScope->bind(name, decl);
         return decl;
     }
 
     virtual antlrcpp::Any visitTypedeftaggedunion(BSVParser::TypedeftaggedunionContext *ctx) override {
-        return visitChildren(ctx);
+        shared_ptr<BSVType> typedeftype(bsvtype(ctx->typedeftype()));
+        string name = typedeftype->name;
+        shared_ptr<UnionDeclaration> unionDecl(new UnionDeclaration(name, typedeftype));
+        cerr << "visit typedef union " << name << endl;
+        for (int i = 0; ctx->unionmember(i); i++) {
+            shared_ptr<Declaration> subdecl = visit(ctx->unionmember(i));
+            unionDecl->members.push_back(subdecl);
+        }
+        currentContext->visitUnionDeclaration(unionDecl);
+        shared_ptr<Declaration> decl = unionDecl;
+        lexicalScope->bind(name, decl);
+        return decl;
     }
 
     virtual antlrcpp::Any visitStructmember(BSVParser::StructmemberContext *ctx) override {
-        return visitChildren(ctx);
-    }
+        string name(ctx->lowerCaseIdentifier()->getText());
+        if (ctx->bsvtype()) {
+            shared_ptr<BSVType> bbb(bsvtype(ctx->bsvtype()));
+            return make_shared<Declaration>(name, bbb);
+        } else if (ctx->subunion()) {
+            assert(0);
+        } else {
+            assert(0);
+        }    }
 
     virtual antlrcpp::Any visitUnionmember(BSVParser::UnionmemberContext *ctx) override {
-        return visitChildren(ctx);
+        string name(ctx->upperCaseIdentifier()->getText());
+        if (ctx->bsvtype()) {
+            shared_ptr<BSVType> bbb(bsvtype(ctx->bsvtype()));
+            return make_shared<Declaration>(name, bbb);
+        } else if (ctx->subunion()) {
+            assert(0);
+        } else if (ctx->substruct()) {
+            assert(0);
+        } else {
+            assert(0);
+        }
     }
 
     virtual antlrcpp::Any visitSubstruct(BSVParser::SubstructContext *ctx) override {
-        return visitChildren(ctx);
+        assert(0);
+        return nullptr;
     }
 
     virtual antlrcpp::Any visitSubunion(BSVParser::SubunionContext *ctx) override {
-        return visitChildren(ctx);
+        assert(0);
+        return nullptr;
     }
 
     virtual antlrcpp::Any visitDerives(BSVParser::DerivesContext *ctx) override {

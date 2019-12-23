@@ -81,13 +81,26 @@ void PackageContext::visitModuleDefinition(const shared_ptr<ModuleDefinition> &d
 }
 
 void PackageContext::visitStructDeclaration(const shared_ptr<StructDeclaration> &decl) {
-    assert(0);
+    typeDeclarationList.push_back(decl);
+    typeDeclaration[decl->name] = decl;
+    for (int i = 0; i < decl->members.size(); i++) {
+        shared_ptr<Declaration> member = decl->members[i];
+        memberDeclaration.insert(make_pair(member->name, member));
+    }
 }
+
 void PackageContext::visitTypeSynonymDeclaration(const shared_ptr<TypeSynonymDeclaration> &decl) {
     assert(0);
 }
+
 void PackageContext::visitUnionDeclaration(const shared_ptr<UnionDeclaration> &decl) {
-    assert(0);
+    cerr << "package context union " << decl->name << endl;
+    typeDeclarationList.push_back(decl);
+    typeDeclaration[decl->name] = decl;
+    for (int i = 0; i < decl->members.size(); i++) {
+        shared_ptr<Declaration> member = decl->members[i];
+        memberDeclaration.insert(make_pair(member->name, member));
+    }
 }
 
 

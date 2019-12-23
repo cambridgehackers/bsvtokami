@@ -23,11 +23,7 @@ class ModuleDefinition;
 
 class StructDeclaration;
 
-class StructMemberDeclaration;
-
 class UnionDeclaration;
-
-class UnionMemberDeclaration;
 
 class TypeSynonymDeclaration;
 
