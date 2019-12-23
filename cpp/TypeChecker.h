@@ -944,7 +944,16 @@ protected:
     }
 
     virtual antlrcpp::Any visitBitconcat(BSVParser::BitconcatContext *ctx) override {
-        return visitChildren(ctx);
+        z3::expr bitwidth = freshConstant("bitconcat", intSort);
+        for (int i = 0; ctx->expression(i); i++) {
+            BSVParser::ExpressionContext *expr = ctx->expression(i);
+            z3::expr z3expr = visit(expr);
+            z3::expr exprwidth = freshConstant("bitexprwidth", intSort);
+            z3::expr bitexpr = instantiateType("Bit", instantiateType("Numeric", exprwidth));
+            addConstraint(bitexpr == z3expr, "trkbitconcat", ctx);
+        }
+        //FIXME: add up the exprwidths
+        return instantiateType("Bit", instantiateType("Numeric", bitwidth));
     }
 
     virtual antlrcpp::Any visitVarexpr(BSVParser::VarexprContext *ctx) override {
