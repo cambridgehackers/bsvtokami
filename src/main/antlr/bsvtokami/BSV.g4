@@ -58,6 +58,8 @@ packagestmt :
     | typedefenum
     | typedefstruct
     | typedeftaggedunion
+    | typeclassdecl
+    | typeclassinstance
     | externcimport
     | varbinding
     | functiondef
@@ -77,7 +79,7 @@ interfacememberdecl :
     ;
 
 methodproto :
-    attributeinstance* 'method' bsvtype name=lowerCaseIdentifier ('(' methodprotoformals? ')')? ';'
+    attributeinstance* 'method' bsvtype name=lowerCaseIdentifier ('(' methodprotoformals? ')')? provisos? ';'
     ;
 methodprotoformals :
     methodprotoformal (',' methodprotoformal)*
@@ -111,7 +113,7 @@ typedefstruct :
     attributeinstance* 'typedef' 'struct' '{' (structmember)* '}' typedeftype derives? ';'
     ;
 typedeftaggedunion :
-    attributeinstance* 'typedef' 'union' '{' (unionmember)* '}' typedeftype derives? ';'
+    attributeinstance* 'typedef' 'union' 'tagged'? '{' (unionmember)* '}' typedeftype derives? ';'
     ;
 structmember :
     bsvtype lowerCaseIdentifier ';'
@@ -126,7 +128,7 @@ substruct :
     'struct' '{' (structmember)* '}'
     ;
 subunion :
-    'union' '{' (unionmember)* '}'
+    'union' 'tagged'? '{' (unionmember)* '}'
     ;
 derives :
     'deriving' '(' typeide (',' typeide)* ')'
@@ -146,6 +148,39 @@ actionbinding:
     ;
 patternbinding:
     attributeinstance* 'match' pattern op=('<-'|'=') rhs=expression ';'
+    ;
+typeclassdecl :
+    attributeinstance* 'typeclass' typeclasside typeformals provisos? typedepends? ';' overloadeddecl* 'endtypeclass' (':' typeclasside)?
+    ;
+typeclasside :
+    upperCaseIdentifier
+    ;
+typedepends :
+    'dependencies' '(' typedepend (',' typedepend)* ')'
+    ;
+typedepend :
+    typelist 'determines' typelist
+    ;
+typelist :
+    typeide
+    | '(' typeide (',' typeide)* ')'
+    ;
+overloadeddecl :
+    attributeinstance*
+    ( functionproto ';'
+    | moduleproto
+    | varbinding )
+    ;
+tctype : bsvtype | functionproto ;
+typeclassinstance :
+    attributeinstance*
+    'instance' typeclasside '#' '(' tctype (',' tctype)* ')' provisos? ';'
+    overloadeddef* 'endinstance' (':' typeclasside)?
+    ;
+overloadeddef :
+    varassign
+    | functiondef
+    | moduledef
     ;
 moduledef :
     attributeinstance* moduleproto (modulestmt)* 'endmodule' (':' lowerCaseIdentifier)?
@@ -171,7 +206,7 @@ modulestmt :
     | stmt
     ;
 methoddef :
-    'method' bsvtype? name=lowerCaseIdentifier ('(' methodformals? ')')? methodcond? ';' (stmt)* 'endmethod' (':' lowerCaseIdentifier)?
+    'method' bsvtype? name=lowerCaseIdentifier ('(' methodformals? ')')? provisos? methodcond? ';' (stmt)* 'endmethod' (':' lowerCaseIdentifier)?
     | 'method' bsvtype? name=lowerCaseIdentifier ('(' methodformals? ')')? methodcond? '=' expression ';'
     ;
 methodformals :
@@ -200,7 +235,7 @@ functiondef :
     | functionproto '=' expression ';'
     ;
 functionproto :
-    'function' bsvtype? name=lowerCaseIdentifier ('(' methodprotoformals? ')')?
+    'function' bsvtype? name=lowerCaseIdentifier ('(' methodprotoformals? ')')? provisos?
     ;
 externcimport :
     'import' '"BDPI"' (lowerCaseIdentifier '=')? 'function' bsvtype lowerCaseIdentifier '(' externcfuncargs? ')' ';'
@@ -412,6 +447,12 @@ attributeinstance :
     ;
 attrspec :
     attrname=anyidentifier ('=' expression)?
+    ;
+provisos :
+    'provisos' '(' proviso (',' proviso)* ')'
+    ;
+proviso :
+    (pkg=upperCaseIdentifier '::')? var=upperCaseIdentifier '#' '(' bsvtype (',' bsvtype)* ')'
     ;
 
 WS : [ \f\n\r\t]+ -> skip ;

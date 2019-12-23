@@ -366,6 +366,44 @@ protected:
         return visitChildren(ctx);
     }
 
+    virtual antlrcpp::Any visitTypeclassdecl(BSVParser::TypeclassdeclContext *ctx) override {
+        cerr << "visit type class decl " << ctx->typeclasside(0)->getText() << " at " << sourceLocation(ctx) << endl;
+        return nullptr;
+    }
+
+    virtual antlrcpp::Any visitTypeclasside(BSVParser::TypeclassideContext *ctx) override {
+        return visitChildren(ctx);
+    }
+
+    virtual antlrcpp::Any visitTypedepends(BSVParser::TypedependsContext *ctx) override {
+        return visitChildren(ctx);
+    }
+
+    virtual antlrcpp::Any visitTypedepend(BSVParser::TypedependContext *ctx) override {
+        return visitChildren(ctx);
+    }
+
+    virtual antlrcpp::Any visitTypelist(BSVParser::TypelistContext *ctx) override {
+        return visitChildren(ctx);
+    }
+
+    virtual antlrcpp::Any visitOverloadeddecl(BSVParser::OverloadeddeclContext *ctx) override {
+        return visitChildren(ctx);
+    }
+
+    virtual antlrcpp::Any visitTctype(BSVParser::TctypeContext *ctx) override {
+        return visitChildren(ctx);
+    }
+
+    virtual antlrcpp::Any visitTypeclassinstance(BSVParser::TypeclassinstanceContext *ctx) override {
+        cerr << "visit typeclass instance at " << sourceLocation(ctx) << endl;
+        return nullptr;
+    }
+
+    virtual antlrcpp::Any visitOverloadeddef(BSVParser::OverloadeddefContext *ctx) override {
+        return visitChildren(ctx);
+    }
+
     virtual antlrcpp::Any visitModuledef(BSVParser::ModuledefContext *ctx) override {
 
         string module_name = ctx->moduleproto()->name->getText();
