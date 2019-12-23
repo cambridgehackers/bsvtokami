@@ -153,7 +153,8 @@ protected:
 
     virtual antlrcpp::Any visitPackagestmt(BSVParser::PackagestmtContext *ctx) override {
         setupZ3Context();
-        cerr << "visitPackagestmt: " << ctx->getText() << endl;
+        cerr << "visitPackagestmt at " << sourceLocation(ctx) << endl;
+        cerr << "                    " << ctx->getText() << endl;
         return visitChildren(ctx);
     }
 
@@ -190,7 +191,11 @@ protected:
 
     virtual antlrcpp::Any visitInterfacememberdecl(BSVParser::InterfacememberdeclContext *ctx) override {
         cerr << "visitInterfacememberdecl: " << ctx->getText() << endl;
-        return visitChildren(ctx);
+        if (ctx->methodproto())
+            return visit(ctx->methodproto());
+        else if (ctx->subinterfacedecl())
+            return visit(ctx->subinterfacedecl());
+        return nullptr;
     }
 
     virtual antlrcpp::Any visitMethodproto(BSVParser::MethodprotoContext *ctx) override {
@@ -228,7 +233,11 @@ protected:
     }
 
     virtual antlrcpp::Any visitSubinterfacedecl(BSVParser::SubinterfacedeclContext *ctx) override {
-        return visitChildren(ctx);
+        cerr << "visit subinterfacedecl " << ctx->getText() << endl;
+        string name(ctx->lowerCaseIdentifier()->getText());
+        shared_ptr<BSVType> subinterfaceType(bsvtype(ctx->bsvtype()));
+        Declaration *subinterfaceDecl = new InterfaceDeclaration(name, subinterfaceType);
+        return subinterfaceDecl;
     }
 
     virtual antlrcpp::Any visitTypedeftype(BSVParser::TypedeftypeContext *ctx) override {
