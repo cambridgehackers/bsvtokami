@@ -1046,7 +1046,11 @@ protected:
     }
 
     virtual antlrcpp::Any visitInterfaceexpr(BSVParser::InterfaceexprContext *ctx) override {
-        return visitChildren(ctx);
+        z3::expr interfaceExpr = visit(ctx->bsvtype());
+        for (int i = 0; ctx->interfacestmt(i); i++) {
+            visit(ctx->interfacestmt(i));
+        }
+        return interfaceExpr;
     }
 
     virtual antlrcpp::Any visitCallexpr(BSVParser::CallexprContext *ctx) override {
