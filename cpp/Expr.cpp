@@ -19,7 +19,7 @@ Expr::Expr(ExprType exprType, const shared_ptr<BSVType> &bsvtype)
 Expr::~Expr() {
 }
 
-shared_ptr<Expr> Expr::rename(string prefix, LexicalScope &scope) {
+shared_ptr<Expr> Expr::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     cerr << "Unhandled rename";
     prettyPrint(cout, 4);
     return shared_ptr<Expr>();
@@ -40,8 +40,8 @@ void VarExpr::prettyPrint(ostream &out, int depth) {
 
 shared_ptr<VarExpr> VarExpr::varExpr() { return static_pointer_cast<VarExpr, Expr>(shared_from_this()); }
 
-shared_ptr<Expr> VarExpr::rename(string prefix, LexicalScope &scope) {
-    shared_ptr<Declaration> decl = scope.lookup(name);
+shared_ptr<Expr> VarExpr::rename(string prefix, shared_ptr<LexicalScope> &scope) {
+    shared_ptr<Declaration> decl = scope->lookup(name);
     string newname = (decl) ? decl->name : name;
     return shared_ptr<VarExpr>(new VarExpr(newname, bsvtype));
 }
@@ -85,7 +85,7 @@ void IntConst::prettyPrint(ostream &out, int depth) {
 
 shared_ptr<IntConst> IntConst::intConst() { return static_pointer_cast<IntConst, Expr>(shared_from_this()); }
 
-shared_ptr<Expr> IntConst::rename(string prefix, LexicalScope &scope) {
+shared_ptr<Expr> IntConst::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     return shared_ptr<IntConst>(new IntConst(repr));
 }
 
@@ -117,7 +117,7 @@ shared_ptr<OperatorExpr> OperatorExpr::operatorExpr() {
     return static_pointer_cast<OperatorExpr, Expr>(shared_from_this());
 }
 
-shared_ptr<Expr> OperatorExpr::rename(string prefix, LexicalScope &scope) {
+shared_ptr<Expr> OperatorExpr::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     if (rhs)
         return shared_ptr<OperatorExpr>(new OperatorExpr(op, lhs->rename(prefix, scope), rhs->rename(prefix, scope)));
     else
@@ -152,7 +152,7 @@ shared_ptr<MatchesExpr> MatchesExpr::matchesExpr() {
     return static_pointer_cast<MatchesExpr, Expr>(shared_from_this());
 }
 
-shared_ptr<Expr> MatchesExpr::rename(string prefix, LexicalScope &renames) {
+shared_ptr<Expr> MatchesExpr::rename(string prefix, shared_ptr<LexicalScope> &renames) {
     //FIXME: implement
     return MatchesExpr::create(expr, pattern, patterncond);
 }
@@ -181,7 +181,7 @@ void FieldExpr::prettyPrint(ostream &out, int depth) {
 
 shared_ptr<FieldExpr> FieldExpr::fieldExpr() { return static_pointer_cast<FieldExpr, Expr>(shared_from_this()); }
 
-shared_ptr<Expr> FieldExpr::rename(string prefix, LexicalScope &scope) {
+shared_ptr<Expr> FieldExpr::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     return shared_ptr<FieldExpr>(new FieldExpr(object->rename(prefix, scope), fieldName));
 }
 
@@ -210,7 +210,7 @@ void CallExpr::prettyPrint(ostream &out, int depth) {
 
 shared_ptr<CallExpr> CallExpr::callExpr() { return static_pointer_cast<CallExpr, Expr>(shared_from_this()); }
 
-shared_ptr<Expr> CallExpr::rename(string prefix, LexicalScope &scope) {
+shared_ptr<Expr> CallExpr::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     vector<shared_ptr<Expr>> renamedArgs;
     for (size_t i = 0; i < args.size(); i++)
         renamedArgs.push_back(args[i]->rename(prefix, scope));
@@ -238,7 +238,7 @@ shared_ptr<EnumUnionStructExpr> EnumUnionStructExpr::enumUnionStructExpr() {
     return static_pointer_cast<EnumUnionStructExpr, Expr>(shared_from_this());
 }
 
-shared_ptr<Expr> EnumUnionStructExpr::rename(string prefix, LexicalScope &scope) {
+shared_ptr<Expr> EnumUnionStructExpr::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     vector<shared_ptr<Expr>> renamedVals;
     for (size_t i = 0; i < vals.size(); i++)
         renamedVals.push_back(vals[i]->rename(prefix, scope));
@@ -264,7 +264,7 @@ shared_ptr<ArraySubExpr> ArraySubExpr::arraySubExpr() {
     return static_pointer_cast<ArraySubExpr, Expr>(shared_from_this());
 }
 
-shared_ptr<Expr> ArraySubExpr::rename(string prefix, LexicalScope &scope) {
+shared_ptr<Expr> ArraySubExpr::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     return shared_ptr<ArraySubExpr>(new ArraySubExpr(array->rename(prefix, scope),
                                                      index->rename(prefix, scope)));
 }
@@ -289,7 +289,7 @@ shared_ptr<BitSelExpr> BitSelExpr::bitSelExpr() {
     return static_pointer_cast<BitSelExpr, Expr>(shared_from_this());
 }
 
-shared_ptr<Expr> BitSelExpr::rename(string prefix, LexicalScope &scope) {
+shared_ptr<Expr> BitSelExpr::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     return shared_ptr<BitSelExpr>(new BitSelExpr(value->rename(prefix, scope),
                                                  msb->rename(prefix, scope),
                                                  lsb->rename(prefix, scope)));
@@ -310,7 +310,7 @@ void StringConst::prettyPrint(ostream &out, int depth) {
 
 shared_ptr<StringConst> StringConst::stringConst() { return static_pointer_cast<StringConst, Expr>(shared_from_this()); }
 
-shared_ptr<Expr> StringConst::rename(string prefix, LexicalScope &scope) {
+shared_ptr<Expr> StringConst::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     return shared_ptr<StringConst>(new StringConst(repr));
 }
 
@@ -337,7 +337,7 @@ shared_ptr<CondExpr> CondExpr::condExpr() {
     return static_pointer_cast<CondExpr, Expr>(shared_from_this());
 }
 
-shared_ptr<Expr> CondExpr::rename(string prefix, LexicalScope &renames) {
+shared_ptr<Expr> CondExpr::rename(string prefix, shared_ptr<LexicalScope> &renames) {
     return shared_ptr<CondExpr>(new CondExpr(cond->rename(prefix, renames),
                                              thenExpr->rename(prefix, renames),
                                              elseExpr->rename(prefix, renames)));

@@ -84,7 +84,7 @@ public:
 
     virtual shared_ptr<EnumUnionStructExpr> enumUnionStructExpr() { return shared_ptr<EnumUnionStructExpr>(); }
 
-    virtual shared_ptr<Expr> rename(string prefix, LexicalScope &renames);
+    virtual shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames);
 };
 
 class FieldExpr : public Expr {
@@ -100,7 +100,7 @@ public:
 
     shared_ptr<FieldExpr> fieldExpr() override;
 
-    shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
+    shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
 
     static shared_ptr<FieldExpr> create(const shared_ptr<Expr> &object, const string &fieldName) {
         return shared_ptr<FieldExpr>(new FieldExpr(object, fieldName));
@@ -121,7 +121,7 @@ public:
 
     shared_ptr<VarExpr> varExpr() override;
 
-    shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
+    shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
 };
 
 
@@ -138,7 +138,7 @@ public:
 
     virtual shared_ptr<CallExpr> callExpr() override;
 
-    shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
+    shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
 };
 
 class CondExpr : public Expr {
@@ -156,7 +156,7 @@ public:
 
     virtual shared_ptr<CondExpr> condExpr() override;
 
-    shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
+    shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
 };
 
 class IntConst : public Expr {
@@ -174,7 +174,7 @@ public:
 
     shared_ptr<IntConst> intConst() override;
 
-    shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
+    shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
 };
 
 class StringConst : public Expr {
@@ -189,7 +189,7 @@ public:
 
     shared_ptr<StringConst> stringConst() override;
 
-    shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
+    shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
 };
 
 class OperatorExpr : public Expr {
@@ -209,7 +209,7 @@ public:
 
     shared_ptr<OperatorExpr> operatorExpr() override;
 
-    shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
+    shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
 };
 
 class MatchesExpr : public Expr {
@@ -229,7 +229,7 @@ public:
 
     shared_ptr<MatchesExpr> matchesExpr() override;
 
-    shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
+    shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
 
     static shared_ptr<MatchesExpr> create(const shared_ptr<Expr> &expr, const shared_ptr<Pattern> &pattern);
     static shared_ptr<MatchesExpr> create(const shared_ptr<Expr> &expr, const shared_ptr<Pattern> &pattern,
@@ -251,7 +251,7 @@ public:
     const shared_ptr<Expr> array;
     const shared_ptr<Expr> index;
 
-    shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
+    shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
 };
 
 class BitSelExpr : public Expr {
@@ -270,7 +270,7 @@ public:
     const shared_ptr<Expr> msb;
     const shared_ptr<Expr> lsb;
 
-    shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
+    shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
 };
 
 class EnumUnionStructExpr : public Expr {
@@ -284,7 +284,7 @@ public:
 
     shared_ptr<EnumUnionStructExpr> enumUnionStructExpr() override;
 
-    shared_ptr<Expr> rename(string prefix, LexicalScope &renames) override;
+    shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
 
 public:
     const string tag;

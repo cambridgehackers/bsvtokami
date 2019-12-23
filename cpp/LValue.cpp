@@ -20,10 +20,10 @@ void VarLValue::prettyPrint(ostream &out, int depth) {
     cout << name;
 }
 
-shared_ptr<struct LValue> VarLValue::rename(string prefix, LexicalScope &scope)
+shared_ptr<struct LValue> VarLValue::rename(string prefix, shared_ptr<LexicalScope> &scope)
 {
     //FIXME:
-    shared_ptr<Declaration> binding = scope.lookup(name);
+    shared_ptr<Declaration> binding = scope->lookup(name);
     if (binding) {
         return shared_ptr<struct LValue>(new VarLValue(binding->name));
     } else {
@@ -42,7 +42,7 @@ void FieldLValue::prettyPrint(ostream &out, int depth) {
     cout << "." << field;
 }
 
-shared_ptr<struct LValue> FieldLValue::rename(string prefix, LexicalScope &scope)
+shared_ptr<struct LValue> FieldLValue::rename(string prefix, shared_ptr<LexicalScope> &scope)
 {
     return shared_ptr<LValue>(new FieldLValue(obj->rename(prefix, scope), field));
 }
@@ -67,7 +67,7 @@ void ArraySubLValue::prettyPrint(ostream &out, int depth) {
     cout << "]";
 }
 
-shared_ptr<struct LValue> ArraySubLValue::rename(string prefix, LexicalScope &scope) {
+shared_ptr<struct LValue> ArraySubLValue::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     return create(array->rename(prefix, scope), index->rename(prefix, scope));
 }
 
@@ -91,7 +91,7 @@ void RangeSelLValue::prettyPrint(ostream &out, int depth) {
     cout << "]";
 }
 
-shared_ptr<struct LValue> RangeSelLValue::rename(string prefix, LexicalScope &scope) {
+shared_ptr<struct LValue> RangeSelLValue::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     return create(bitarray->rename(prefix, scope), msb->rename(prefix, scope), lsb->rename(prefix, scope));
 }
 

@@ -45,13 +45,26 @@ public:
     shared_ptr<Declaration> parent;
 
     Declaration(std::string name, std::shared_ptr<BSVType> bsvtype, const BindingType bt = LocalBindingType)
-    : name(name), bsvtype(bsvtype), bindingType(bt) {};
+    : name(name), bsvtype(bsvtype), bindingType(bt) {
+        if (bsvtype) {
+            for (int i = 0; i < bsvtype->params.size(); i++) {
+                numericTypeParamVector.push_back(bsvtype->params[i]->isNumeric());
+            }
+        }
+    };
 
     virtual shared_ptr<InterfaceDeclaration> interfaceDeclaration() { return shared_ptr<InterfaceDeclaration>(); }
     virtual shared_ptr<MethodDeclaration> methodDeclaration() { return shared_ptr<MethodDeclaration>(); }
     virtual shared_ptr<MethodDefinition> methodDefinition() { return shared_ptr<MethodDefinition>(); }
 
+    const vector<bool> numericTypeParams() {
+        return numericTypeParamVector;
+    }
+
     virtual ~Declaration() {}
+
+private:
+    vector<bool> numericTypeParamVector;
 };
 
 class EnumDeclaration : public Declaration {

@@ -9,9 +9,11 @@
 using namespace std;
 
 class LexicalScope {
+    const string name;
     map<string, shared_ptr<Declaration>> bindings;
 public:
-    LexicalScope(LexicalScope *parent = nullptr) : parent(parent) {}
+    LexicalScope(const string &name) : name(name), parent() {}
+    LexicalScope(const string &name, shared_ptr<LexicalScope> &parent) : name(name), parent(parent) {}
 
     ~LexicalScope() {}
 
@@ -20,6 +22,7 @@ public:
     shared_ptr<Declaration> lookup(const string &name) const;
 
     void bind(const string &name, const shared_ptr<Declaration> &value);
+    void import(const shared_ptr<LexicalScope> &scope);
 
-    LexicalScope *parent;
+    shared_ptr<LexicalScope> parent;
 };

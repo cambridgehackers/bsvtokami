@@ -32,7 +32,7 @@ shared_ptr<ModuleDefStmt> Inliner::processModuleDef(const shared_ptr<ModuleDefSt
                     if (ct != constructors.cend()) {
                         cerr << "inlining module " << instanceName << " constructor " << varExpr->name << endl;
                         shared_ptr<ModuleDefStmt> constructorDef = ct->second;
-                        LexicalScope scope;
+                        shared_ptr<LexicalScope> scope(make_shared<LexicalScope>(moduleDef->name));
                         string prefix;
                         shared_ptr<Stmt> renamedStmt = constructorDef->rename(varExpr->name + "$", scope);
                         constructorDef = renamedStmt->moduleDefStmt();
@@ -75,7 +75,7 @@ vector<shared_ptr<Stmt>> Inliner::processStmt(const shared_ptr<Stmt> &stmt)
                     if (ct != constructors.cend()) {
                         cerr << "inlining module " << instanceName << " constructor " << varExpr->name << endl;
                         shared_ptr<ModuleDefStmt> constructorDef = ct->second;
-                        LexicalScope scope;
+                        shared_ptr<LexicalScope> scope(make_shared<LexicalScope>(constructorDef->name));
                         string prefix;
                         shared_ptr<Stmt> renamedStmt = constructorDef->rename(varExpr->name + "$", scope);
                         constructorDef = renamedStmt->moduleDefStmt();

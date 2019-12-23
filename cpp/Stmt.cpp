@@ -14,7 +14,7 @@ Stmt::Stmt(StmtType stmtType)
         : stmtType(stmtType) {
 }
 
-shared_ptr<Stmt> Stmt::rename(string prefix, LexicalScope &scope) {
+shared_ptr<Stmt> Stmt::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     return shared_ptr<Stmt>();
 }
 
@@ -44,8 +44,8 @@ shared_ptr<RuleDefStmt> RuleDefStmt::ruleDefStmt() {
     return static_pointer_cast<RuleDefStmt, Stmt>(shared_from_this());
 }
 
-shared_ptr<Stmt> RuleDefStmt::rename(string prefix, LexicalScope &parentScope) {
-    LexicalScope scope(parentScope);
+shared_ptr<Stmt> RuleDefStmt::rename(string prefix, shared_ptr<LexicalScope> &parentScope) {
+    shared_ptr<LexicalScope> scope(make_shared<LexicalScope>(name, parentScope));
     shared_ptr<Expr> renamedGuard;
     if (guard)
         renamedGuard = guard->rename(prefix, parentScope);
@@ -66,7 +66,7 @@ shared_ptr<RegisterStmt> RegisterStmt::registerStmt() {
     return static_pointer_cast<RegisterStmt, Stmt>(shared_from_this());
 }
 
-shared_ptr<struct Stmt> RegisterStmt::rename(string prefix, LexicalScope &scope) {
+shared_ptr<struct Stmt> RegisterStmt::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     return make_shared<RegisterStmt>(regName, elementType);
 }
 
@@ -85,9 +85,9 @@ shared_ptr<RegReadStmt> RegReadStmt::regReadStmt() {
     return static_pointer_cast<RegReadStmt, Stmt>(shared_from_this());
 }
 
-shared_ptr<Stmt> RegReadStmt::rename(string prefix, LexicalScope &scope) {
+shared_ptr<Stmt> RegReadStmt::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     string renamedRegName = regName;
-    shared_ptr<Declaration> decl = scope.lookup(regName);
+    shared_ptr<Declaration> decl = scope->lookup(regName);
     if (decl) {
         renamedRegName = decl->name;
     }
@@ -118,9 +118,9 @@ shared_ptr<RegWriteStmt> RegWriteStmt::regWriteStmt() {
     return static_pointer_cast<RegWriteStmt, Stmt>(shared_from_this());
 }
 
-shared_ptr<Stmt> RegWriteStmt::rename(string prefix, LexicalScope &scope) {
+shared_ptr<Stmt> RegWriteStmt::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     string renamedRegName = regName;
-    shared_ptr<Declaration> decl = scope.lookup(regName);
+    shared_ptr<Declaration> decl = scope->lookup(regName);
     if (decl) {
         renamedRegName = decl->name;
     }
@@ -149,14 +149,14 @@ shared_ptr<ActionBindingStmt>
 ActionBindingStmt::actionBindingStmt() { return static_pointer_cast<ActionBindingStmt, Stmt>(shared_from_this()); }
 
 
-shared_ptr<Stmt> ActionBindingStmt::rename(string prefix, LexicalScope &scope) {
+shared_ptr<Stmt> ActionBindingStmt::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     string renamedVar = prefix + name;
     shared_ptr<Expr> renamedRHS;
     cerr << "Renaming action binding" << endl;
     rhs->prettyPrint(cerr, 4);
     if (rhs)
         renamedRHS = rhs->rename(prefix, scope);
-    scope.bind(name, make_shared<Declaration>(renamedVar, bsvtype));
+    scope->bind(name, make_shared<Declaration>(renamedVar, bsvtype));
     return shared_ptr<Stmt>(new ActionBindingStmt(bsvtype, renamedVar, renamedRHS));
 }
 
@@ -176,11 +176,11 @@ shared_ptr<PatternMatchStmt> PatternMatchStmt::patternMatchStmt() {
     return static_pointer_cast<PatternMatchStmt, Stmt>(shared_from_this());
 }
 
-shared_ptr<Stmt> PatternMatchStmt::rename(string prefix, LexicalScope &scope) {
+shared_ptr<Stmt> PatternMatchStmt::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     shared_ptr<Expr> renamedRHS;
     if (rhs)
         renamedRHS = rhs->rename(prefix, scope);
-    //scope.bind(name, renamedVar);
+    //scope->bind(name, renamedVar);
     return make_shared<PatternMatchStmt>(pattern, op, renamedRHS);
 }
 
@@ -211,12 +211,12 @@ shared_ptr<VarBindingStmt> VarBindingStmt::varBindingStmt() {
     return static_pointer_cast<VarBindingStmt, Stmt>(shared_from_this());
 }
 
-shared_ptr<Stmt> VarBindingStmt::rename(string prefix, LexicalScope &scope) {
+shared_ptr<Stmt> VarBindingStmt::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     string renamedVar = prefix + name;
     shared_ptr<Expr> renamedRHS;
     if (rhs)
         renamedRHS = rhs->rename(prefix, scope);
-    scope.bind(name, make_shared<Declaration>(renamedVar, bsvtype, bindingType));
+    scope->bind(name, make_shared<Declaration>(renamedVar, bsvtype, bindingType));
     return shared_ptr<Stmt>(new VarBindingStmt(bsvtype, renamedVar, renamedRHS));
 }
 
@@ -238,7 +238,7 @@ shared_ptr<VarAssignStmt> VarAssignStmt::varAssignStmt() {
     return static_pointer_cast<VarAssignStmt, Stmt>(shared_from_this());
 }
 
-shared_ptr<struct Stmt> VarAssignStmt::rename(string prefix, LexicalScope &scope) {
+shared_ptr<struct Stmt> VarAssignStmt::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     shared_ptr<LValue> newLHS; //FIXME
     return shared_ptr<Stmt>(new VarAssignStmt(newLHS, op, rhs->rename(prefix, scope)));
 }
@@ -280,8 +280,8 @@ shared_ptr<FunctionDefStmt> FunctionDefStmt::functionDefStmt(){
     return static_pointer_cast<FunctionDefStmt, Stmt>(shared_from_this());
 }
 
-shared_ptr<Stmt> FunctionDefStmt::rename(string prefix, LexicalScope &parentScope) {
-    LexicalScope scope(parentScope);
+shared_ptr<Stmt> FunctionDefStmt::rename(string prefix, shared_ptr<LexicalScope> &parentScope) {
+    shared_ptr<LexicalScope> scope(make_shared<LexicalScope>(name, parentScope));
     shared_ptr<Expr> renamedGuard;
     if (guard)
         renamedGuard = guard->rename(prefix, parentScope);
@@ -355,8 +355,8 @@ shared_ptr<MethodDefStmt> MethodDefStmt::methodDefStmt() {
     return static_pointer_cast<MethodDefStmt, Stmt>(shared_from_this());
 }
 
-shared_ptr<Stmt> MethodDefStmt::rename(string prefix, LexicalScope &parentScope) {
-    LexicalScope scope(parentScope);
+shared_ptr<Stmt> MethodDefStmt::rename(string prefix, shared_ptr<LexicalScope> &parentScope) {
+    shared_ptr<LexicalScope> scope(make_shared<LexicalScope>(name, parentScope));
     shared_ptr<Expr> renamedGuard;
     if (guard)
         renamedGuard = guard->rename(prefix, parentScope);
@@ -407,15 +407,15 @@ shared_ptr<ModuleDefStmt> ModuleDefStmt::moduleDefStmt() {
     return static_pointer_cast<ModuleDefStmt, Stmt>(shared_from_this());
 }
 
-shared_ptr<Stmt> ModuleDefStmt::rename(string prefix, LexicalScope &parentScope) {
-    LexicalScope scope(&parentScope);
+shared_ptr<Stmt> ModuleDefStmt::rename(string prefix, shared_ptr<LexicalScope> &parentScope) {
+    shared_ptr<LexicalScope> scope(make_shared<LexicalScope>(name, parentScope));
     vector<string> renamedParams;
     vector<shared_ptr<Stmt>> renamedStmts;
     //FIXME: rename module?
     for (size_t i = 0; i < params.size(); i++) {
         string renamedParam(prefix + params[i]);
         renamedParams.push_back(renamedParam);
-        scope.bind(params[i], make_shared<Declaration>(renamedParam, paramTypes[i], ModuleParamBindingType));
+        scope->bind(params[i], make_shared<Declaration>(renamedParam, paramTypes[i], ModuleParamBindingType));
     }
     for (size_t i = 0; i < stmts.size(); i++) {
         cerr << "renaming stmt" << endl;
@@ -444,7 +444,7 @@ shared_ptr<ModuleInstStmt> ModuleInstStmt::moduleInstStmt() {
     return static_pointer_cast<ModuleInstStmt, Stmt>(shared_from_this());
 }
 
-shared_ptr<Stmt> ModuleInstStmt::rename(string prefix, LexicalScope &scope) {
+shared_ptr<Stmt> ModuleInstStmt::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     //FIXME:
     return create(name, interfaceType, rhs->rename(prefix, scope));
 }
@@ -478,7 +478,7 @@ void IfStmt::prettyPrint(ostream &out, int depth) {
 
 shared_ptr<IfStmt> IfStmt::ifStmt() { return static_pointer_cast<IfStmt, Stmt>(shared_from_this()); }
 
-shared_ptr<struct Stmt> IfStmt::rename(string prefix, LexicalScope &scope) {
+shared_ptr<struct Stmt> IfStmt::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     if (elseStmt)
         return shared_ptr<Stmt>(new IfStmt(condition->rename(prefix, scope),
                                            thenStmt->rename(prefix, scope),
@@ -507,8 +507,8 @@ void BlockStmt::prettyPrint(ostream &out, int depth) {
 
 shared_ptr<BlockStmt> BlockStmt::blockStmt() { return static_pointer_cast<BlockStmt, Stmt>(shared_from_this()); }
 
-shared_ptr<struct Stmt> BlockStmt::rename(string prefix, LexicalScope &parentScope) {
-    LexicalScope scope(&parentScope);
+shared_ptr<struct Stmt> BlockStmt::rename(string prefix, shared_ptr<LexicalScope> &parentScope) {
+    shared_ptr<LexicalScope> scope(make_shared<LexicalScope>("block", parentScope));
     vector<shared_ptr<Stmt>> renamedStmts;
     for (size_t i = 0; i < stmts.size(); i++) {
         renamedStmts.push_back(stmts[i]->rename(prefix, scope));
@@ -527,7 +527,7 @@ void CallStmt::prettyPrint(ostream &out, int depth) {
 
 shared_ptr<CallStmt> CallStmt::callStmt() { return static_pointer_cast<CallStmt, Stmt>(shared_from_this()); }
 
-shared_ptr<Stmt> CallStmt::rename(string prefix, LexicalScope &scope)
+shared_ptr<Stmt> CallStmt::rename(string prefix, shared_ptr<LexicalScope> &scope)
 {
     cerr << "FIXME: unhandled CallStmt::rename" << endl;
     return make_shared<CallStmt>(name, interfaceType, rhs);
@@ -542,7 +542,7 @@ void ReturnStmt::prettyPrint(ostream &out, int depth) {
 
 shared_ptr<ReturnStmt> ReturnStmt::returnStmt() { return static_pointer_cast<ReturnStmt, Stmt>(shared_from_this()); }
 
-shared_ptr<struct Stmt> ReturnStmt::rename(string prefix, LexicalScope &scope) {
+shared_ptr<struct Stmt> ReturnStmt::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     return shared_ptr<Stmt>(new ReturnStmt(value->rename(prefix, scope)));
 }
 
@@ -554,7 +554,7 @@ void ExprStmt::prettyPrint(ostream &out, int depth) {
 
 shared_ptr<ExprStmt> ExprStmt::exprStmt() { return static_pointer_cast<ExprStmt, Stmt>(shared_from_this()); }
 
-shared_ptr<struct Stmt> ExprStmt::rename(string prefix, LexicalScope &scope) {
+shared_ptr<struct Stmt> ExprStmt::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     return shared_ptr<Stmt>(new ExprStmt(expr->rename(prefix, scope)));
 }
 

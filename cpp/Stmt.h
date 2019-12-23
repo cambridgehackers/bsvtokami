@@ -151,7 +151,7 @@ public:
 
     virtual shared_ptr<VarAssignStmt> varAssignStmt() { return shared_ptr<VarAssignStmt>(); };
 
-    virtual shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope);
+    virtual shared_ptr<struct Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope);
 };
 
 class ImportStmt : public Stmt {
@@ -259,7 +259,7 @@ public:
 
     virtual shared_ptr<ModuleDefStmt> moduleDefStmt() override;
 
-    shared_ptr<Stmt> rename(string prefix, LexicalScope &scope) override;
+    shared_ptr<Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 
 public:
     const string name;
@@ -301,7 +301,7 @@ public:
 
     virtual shared_ptr<ModuleInstStmt> moduleInstStmt() override;
 
-    shared_ptr<Stmt> rename(string prefix, LexicalScope &scope) override;
+    shared_ptr<Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 
     static shared_ptr<ModuleInstStmt> create(const string &name, const shared_ptr<BSVType> &interfaceType, const shared_ptr<Expr> &rhs);
 
@@ -327,7 +327,7 @@ public:
 
     virtual shared_ptr<MethodDefStmt> methodDefStmt() override;
 
-    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+    shared_ptr<struct Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 
 public:
     const string name;
@@ -352,7 +352,7 @@ public:
 
     virtual shared_ptr<FunctionDefStmt> functionDefStmt() override;
 
-    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+    shared_ptr<struct Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 
 public:
     const string name;
@@ -378,7 +378,7 @@ public:
 
     virtual shared_ptr<RuleDefStmt> ruleDefStmt() override;
 
-    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+    shared_ptr<struct Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 
 };
 
@@ -398,7 +398,7 @@ public:
 
     virtual shared_ptr<ActionBindingStmt> actionBindingStmt() override;
 
-    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+    shared_ptr<struct Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 
 };
 
@@ -416,7 +416,7 @@ public:
 
     shared_ptr<VarAssignStmt> varAssignStmt() override;
 
-    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+    shared_ptr<struct Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 
 };
 
@@ -438,7 +438,7 @@ public:
 
     shared_ptr<VarBindingStmt> varBindingStmt() override;
 
-    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+    shared_ptr<struct Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 
 };
 
@@ -457,7 +457,7 @@ public:
 
     shared_ptr<PatternMatchStmt> patternMatchStmt() override;
 
-    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+    shared_ptr<struct Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 
 };
 
@@ -475,7 +475,7 @@ public:
 
     virtual shared_ptr<RegisterStmt> registerStmt() override;
 
-    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+    shared_ptr<struct Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 
 };
 
@@ -493,7 +493,7 @@ public:
 
     virtual shared_ptr<RegReadStmt> regReadStmt() override;
 
-    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+    shared_ptr<struct Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 
     static shared_ptr<RegReadStmt> create(const string &regName, const string &var, const shared_ptr<BSVType> &varType);
 
@@ -513,7 +513,7 @@ public:
 
     virtual shared_ptr<RegWriteStmt> regWriteStmt() override;
 
-    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+    shared_ptr<struct Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 };
 
 class BlockStmt : public Stmt {
@@ -528,7 +528,7 @@ public:
 
     const vector<shared_ptr<Stmt>> stmts;
 
-    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+    shared_ptr<struct Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 
 };
 
@@ -547,7 +547,7 @@ public:
     const shared_ptr<Stmt> thenStmt;
     const shared_ptr<Stmt> elseStmt;
 
-    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+    shared_ptr<struct Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 
 };
 
@@ -563,7 +563,7 @@ public:
 
     const shared_ptr<Expr> value;
 
-    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+    shared_ptr<struct Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 
 };
 
@@ -579,7 +579,7 @@ public:
 
     const shared_ptr<Expr> expr;
 
-    shared_ptr<struct Stmt> rename(string prefix, LexicalScope &scope) override;
+    shared_ptr<struct Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 };
 
 class CallStmt : public Stmt {
@@ -593,7 +593,7 @@ public:
 
     virtual shared_ptr<CallStmt> callStmt() override;
 
-    shared_ptr<Stmt> rename(string prefix, LexicalScope &scope) override;
+    shared_ptr<Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 
 public:
     const string name;

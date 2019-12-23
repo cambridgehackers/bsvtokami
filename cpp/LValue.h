@@ -29,7 +29,7 @@ public:
     virtual ~LValue() {}
 
     virtual void prettyPrint(ostream &out, int depth) = 0;
-    virtual shared_ptr<struct LValue> rename(string prefix, LexicalScope &scope) = 0;
+    virtual shared_ptr<struct LValue> rename(string prefix, shared_ptr<LexicalScope> &scope) = 0;
 
 };
 
@@ -40,7 +40,7 @@ public:
     explicit VarLValue(const string &name);
     virtual ~VarLValue();
     virtual void prettyPrint(ostream &out, int depth);
-    virtual shared_ptr<struct LValue> rename(string prefix, LexicalScope &scope);
+    virtual shared_ptr<struct LValue> rename(string prefix, shared_ptr<LexicalScope> &scope);
 };
 
 class ArraySubLValue : public LValue {
@@ -51,7 +51,7 @@ public:
     explicit ArraySubLValue(const shared_ptr<Expr> &array, const shared_ptr<Expr> &index);
     virtual ~ArraySubLValue();
     virtual void prettyPrint(ostream &out, int depth);
-    virtual shared_ptr<struct LValue> rename(string prefix, LexicalScope &scope);
+    virtual shared_ptr<struct LValue> rename(string prefix, shared_ptr<LexicalScope> &scope);
 
     static shared_ptr<LValue> create(shared_ptr<Expr> array, const shared_ptr<Expr> &index);
 };
@@ -67,7 +67,7 @@ public:
     explicit RangeSelLValue(const shared_ptr<Expr> &bitarray, const shared_ptr<Expr> &msb, const shared_ptr<Expr> &lsb);
     virtual ~RangeSelLValue();
     virtual void prettyPrint(ostream &out, int depth);
-    virtual shared_ptr<struct LValue> rename(string prefix, LexicalScope &scope);
+    virtual shared_ptr<struct LValue> rename(string prefix, shared_ptr<LexicalScope> &scope);
 
     static shared_ptr<LValue> create(shared_ptr<Expr> bitarray, const shared_ptr<Expr> &msb, const shared_ptr<Expr> &lsb);
 };
@@ -79,7 +79,7 @@ public:
     explicit FieldLValue(const shared_ptr<Expr> &obj, const string &field);
     virtual ~FieldLValue();
     virtual void prettyPrint(ostream &out, int depth);
-    virtual shared_ptr<struct LValue> rename(string prefix, LexicalScope &scope);
+    virtual shared_ptr<struct LValue> rename(string prefix, shared_ptr<LexicalScope> &scope);
 
     static shared_ptr<LValue> create(shared_ptr<Expr> obj, string basicString);
 };

@@ -49,7 +49,9 @@ int main(int argc, char *const argv[]) {
     int opt_ir = 0;
     int opt_inline = 0;
     string opt_rename;
-    while ((ch = getopt(argc, argv, "Iair:t")) != -1) {
+    vector<string> includePath;
+
+    while ((ch = getopt(argc, argv, "I:air:t")) != -1) {
         switch (ch) {
             case 'a':
                 opt_ast = 1;
@@ -64,7 +66,8 @@ int main(int argc, char *const argv[]) {
                 opt_koika = 1;
                 break;
             case 'I':
-                opt_inline = 1;
+                cerr << "include " << optarg << endl;
+                includePath.push_back(optarg);
                 break;
             case 'r':
                 opt_rename = string(optarg);
@@ -98,7 +101,7 @@ int main(int argc, char *const argv[]) {
             std::cout << tree->toStringTree(&parser) << std::endl << std::endl;
         }
         if (opt_ast) {
-            shared_ptr<TypeChecker> typeChecker(new TypeChecker());
+            shared_ptr<TypeChecker> typeChecker(new TypeChecker(includePath));
             typeChecker->visit(tree);
             GenerateAst *generateAst = new GenerateAst(typeChecker);
             shared_ptr<PackageDefStmt> packageDef = generateAst->generateAst(tree);;
@@ -142,7 +145,7 @@ int main(int argc, char *const argv[]) {
                 for (size_t i = 0; i < stmts.size(); i++) {
                     shared_ptr<Stmt> stmt = stmts[i];
                     if (stmt && stmt->moduleDefStmt()) {
-                        LexicalScope scope;
+                        shared_ptr<LexicalScope> scope(make_shared<LexicalScope>("rename"));
                         shared_ptr<Stmt> renamedStmt = stmt->rename(opt_rename, scope);
                         renamedStmt->prettyPrint(cout, 0);
                     }
