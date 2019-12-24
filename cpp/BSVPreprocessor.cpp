@@ -14,9 +14,25 @@ BSVPreprocessor::BSVPreprocessor(string inputFileName) {
     tokenSources.push_back(lexer);
     condStack.push_back(true);
     validStack.push_back(true);
+    defines["BSVTOKAMI"] = "BSVTOKAMI";
 }
 
 BSVPreprocessor::~BSVPreprocessor() {}
+
+void BSVPreprocessor::define(const vector<string> &definitions) {
+    for (int i = 0; i < definitions.size(); i++) {
+        //FIXME, split on =
+        define(definitions[i]);
+    }
+}
+
+void BSVPreprocessor::define(const string &varname) {
+    defines[varname] = varname;
+}
+
+void BSVPreprocessor::define(const string &varname, const string &varval) {
+    defines[varname] = varval;
+}
 
 unique_ptr<Token> BSVPreprocessor::nextToken() {
     while (1) {
@@ -26,13 +42,22 @@ unique_ptr<Token> BSVPreprocessor::nextToken() {
             if (text == "`ifdef" || text == "`ifndef") {
                 // consume one
                 token = tokenSources.back()->nextToken();
+                string varName = token->getText();
                 //fprintf(stderr, "%s %s\n", text.c_str(), token->getText().c_str());
-                bool key_defined = true; //FIXME
+                bool key_defined = (defines.find(varName) != defines.cend());
                 condStack.push_back(key_defined);
                 if (text == ("`ifdef"))
                     validStack.push_back(condStack.back() && validStack.back());
                 else
                     validStack.push_back(!condStack.back() && validStack.back());
+            } else if (text == "`elsif") {
+                token = tokenSources.back()->nextToken();
+                string varName = token->getText();
+                bool key_defined = (defines.find(varName) != defines.cend());
+                condStack.pop_back();
+                condStack.push_back(key_defined);
+                validStack.pop_back();
+                validStack.push_back(condStack.back() && validStack.back());
             } else if (text == "`else") {
                 bool topcond = condStack.back();
                 condStack.pop_back();

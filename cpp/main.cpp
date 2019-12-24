@@ -50,11 +50,15 @@ int main(int argc, char *const argv[]) {
     int opt_inline = 0;
     string opt_rename;
     vector<string> includePath;
+    vector<string> definitions;
 
-    while ((ch = getopt(argc, argv, "I:air:t")) != -1) {
+    while ((ch = getopt(argc, argv, "D:I:air:t")) != -1) {
         switch (ch) {
             case 'a':
                 opt_ast = 1;
+                break;
+            case 'D':
+                definitions.push_back(optarg);
                 break;
             case 'i':
                 opt_ir = 1;
@@ -84,6 +88,7 @@ int main(int argc, char *const argv[]) {
         string inputFileName(argv[i]);
         std::cerr << "Parsing file -1- " << inputFileName << std::endl;
         BSVPreprocessor preprocessor(inputFileName);
+        preprocessor.define(definitions);
         CommonTokenStream tokens((TokenSource *) &preprocessor);
 
         tokens.fill();
@@ -101,7 +106,7 @@ int main(int argc, char *const argv[]) {
             std::cout << tree->toStringTree(&parser) << std::endl << std::endl;
         }
         if (opt_ast) {
-            shared_ptr<TypeChecker> typeChecker(new TypeChecker(includePath));
+            shared_ptr<TypeChecker> typeChecker(new TypeChecker(includePath, definitions));
             typeChecker->visit(tree);
             GenerateAst *generateAst = new GenerateAst(typeChecker);
             shared_ptr<PackageDefStmt> packageDef = generateAst->generateAst(tree);;

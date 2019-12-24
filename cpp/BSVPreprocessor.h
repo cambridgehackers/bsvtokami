@@ -24,6 +24,10 @@ public:
     BSVPreprocessor(string inputFileName);
     ~BSVPreprocessor();
 
+    void define(const vector<string> &definitions);
+    void define(const string &varname);
+    void define(const string &varname, const string &varval);
+
     unique_ptr<Token> nextToken() override;
 
     size_t getLine() const override;

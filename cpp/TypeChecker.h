@@ -61,10 +61,13 @@ class TypeChecker : public BSVBaseVisitor {
     shared_ptr<Declaration> parentDecl;
     int nameCount;
     const vector<string> includePath;
+    const vector<string> definitions;
+
 public:
-    TypeChecker(const vector<string> &includePath)
+    TypeChecker(const vector<string> &includePath, const vector<string> &definitions)
             : context(), solver(context), typeSort(context), intSort(context), boolSort(context), nameCount(100),
-              actionContext(false), includePath(includePath) {
+              actionContext(false),
+              includePath(includePath), definitions(definitions) {
         //solver.set("produce-unsat-cores", true);
         z3::params p(context);
         // enable unsat core tracking

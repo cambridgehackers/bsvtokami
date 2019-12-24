@@ -116,6 +116,7 @@ BSVParser::PackagedefContext *TypeChecker::analyzePackage(const string &packageN
     //string inputFileName(argv[i]);
     string inputFileName = searchIncludePath(packageName);
     BSVPreprocessor preprocessor(inputFileName);
+    preprocessor.define(definitions);
     CommonTokenStream tokens((TokenSource * ) & preprocessor);
 
     tokens.fill();
