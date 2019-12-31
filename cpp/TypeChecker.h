@@ -122,6 +122,18 @@ private:
 
 protected:
 
+    void addDeclaration(BSVParser::PackagestmtContext *pkgstmt);
+    void addDeclaration(BSVParser::InterfacedeclContext *interfacedecl);
+    void addDeclaration(BSVParser::FunctiondefContext *functiondef);
+    void addDeclaration(BSVParser::ModuledefContext *moduledef);
+    void addDeclaration(BSVParser::TypeclassdeclContext *typeclassdecl);
+    void addDeclaration(BSVParser::TypeclassinstanceContext *typeclassinstance);
+    void addDeclaration(BSVParser::TypedefenumContext *enumdef);
+    void addDeclaration(BSVParser::TypedefstructContext *structdef);
+    void addDeclaration(BSVParser::TypedefsynonymContext *synonymdef);
+    void addDeclaration(BSVParser::TypedeftaggedunionContext *uniondef);
+    void addDeclaration(BSVParser::VarbindingContext *varbinding);
+
     virtual antlrcpp::Any visitPackagedef(BSVParser::PackagedefContext *ctx) override {
         size_t numelts = ctx->packagestmt().size();
 
@@ -129,6 +141,13 @@ protected:
         analyzePackage("Prelude");
         shared_ptr<LexicalScope> pkgScope = packageScopes["Prelude"];
         currentContext->import(pkgScope);
+
+        if (ctx->packagedecl())
+            visit(ctx->packagedecl());
+
+        for (size_t i = 0; i < numelts; i++) {
+            addDeclaration(ctx->packagestmt().at(i));
+        }
 
         for (size_t i = 0; i < numelts; i++) {
             visit(ctx->packagestmt().at(i));
@@ -192,29 +211,7 @@ protected:
     }
 
     virtual antlrcpp::Any visitInterfacedecl(BSVParser::InterfacedeclContext *ctx) override {
-        shared_ptr<BSVType> interfaceType(bsvtype(ctx->typedeftype()));
-        string name(interfaceType->name);
-
-        int arity = interfaceType->params.size();
-
-        cerr << "interface type : ";
-        interfaceType->prettyPrint(cerr);
-        cerr << " arity " << arity << endl;
-
-        shared_ptr<InterfaceDeclaration> decl(new InterfaceDeclaration(name, interfaceType));
-        currentContext->typeDeclarationList.push_back(decl);
-        currentContext->typeDeclaration[name] = decl;
-        lexicalScope->bind(name, decl);
-
-        auto members = ctx->interfacememberdecl();
-        for (int i = 0; i < members.size(); i++) {
-            shared_ptr<Declaration> memberDecl((Declaration *) visitInterfacememberdecl(members[i]));
-
-            cerr << " subinterface decl " << memberDecl->name << endl;
-            currentContext->memberDeclaration.emplace(memberDecl->name, memberDecl);
-            memberDecl->parent = decl;
-            decl->members.push_back(memberDecl);
-        }
+        // handled by addDeclaration now
         return freshConstant(__FUNCTION__, typeSort);
     }
 
@@ -282,40 +279,11 @@ protected:
     }
 
     virtual antlrcpp::Any visitTypedefsynonym(BSVParser::TypedefsynonymContext *ctx) override {
-        shared_ptr<BSVType> lhstype = bsvtype(ctx->bsvtype());
-        shared_ptr<BSVType> typedeftype = bsvtype(ctx->typedeftype());
-        cerr << "visit typedef synonym " << typedeftype->name << endl;
-        shared_ptr<TypeSynonymDeclaration> synonymDecl = make_shared<TypeSynonymDeclaration>(typedeftype->name,
-                                                                                             lhstype, typedeftype);
-        currentContext->typeDeclaration[typedeftype->name] = synonymDecl;
-        currentContext->typeDeclarationList.push_back(synonymDecl);
-        lexicalScope->bind(typedeftype->name, synonymDecl);
-
-        return synonymDecl;
+        return nullptr;
     }
 
     virtual antlrcpp::Any visitTypedefenum(BSVParser::TypedefenumContext *ctx) override {
-        BSVParser::UpperCaseIdentifierContext *id = ctx->upperCaseIdentifier();
-        string name(id->getText());
-        shared_ptr<BSVType> bsvtype(new BSVType(name));
-        shared_ptr<Declaration> decl(new EnumDeclaration(name, bsvtype));
-        parentDecl = decl;
-        currentContext->typeDeclaration[name] = decl;
-        currentContext->typeDeclarationList.push_back(decl);
-        lexicalScope->bind(name, decl);
-
-        size_t numelts = ctx->typedefenumelement().size();
-        for (size_t i = 0; i < numelts; i++) {
-            BSVParser::TypedefenumelementContext *elt = ctx->typedefenumelement().at(i);
-            fprintf(stderr, "elt %p\n", elt);
-            if (elt) {
-                fprintf(stderr, "elt %s\n", elt->getText().c_str());
-
-                visit(elt);
-            }
-        }
-
-        return decl;
+        return nullptr;
     }
 
     virtual antlrcpp::Any visitTypedefenumelement(BSVParser::TypedefenumelementContext *ctx) override {
@@ -329,33 +297,11 @@ protected:
     }
 
     virtual antlrcpp::Any visitTypedefstruct(BSVParser::TypedefstructContext *ctx) override {
-        shared_ptr<BSVType> typedeftype(bsvtype(ctx->typedeftype()));
-        string name = typedeftype->name;
-        cerr << "visit typedef struct " << name << endl;
-        shared_ptr<StructDeclaration> structDecl(new StructDeclaration(name, typedeftype));
-        for (int i = 0; ctx->structmember(i); i++) {
-            shared_ptr<Declaration> subdecl = visit(ctx->structmember(i));
-            structDecl->members.push_back(subdecl);
-        }
-        currentContext->visitStructDeclaration(structDecl);
-        shared_ptr<Declaration> decl = structDecl;
-        lexicalScope->bind(name, decl);
-        return decl;
+        return nullptr;
     }
 
     virtual antlrcpp::Any visitTypedeftaggedunion(BSVParser::TypedeftaggedunionContext *ctx) override {
-        shared_ptr<BSVType> typedeftype(bsvtype(ctx->typedeftype()));
-        string name = typedeftype->name;
-        shared_ptr<UnionDeclaration> unionDecl(new UnionDeclaration(name, typedeftype));
-        cerr << "visit typedef union " << name << endl;
-        for (int i = 0; ctx->unionmember(i); i++) {
-            shared_ptr<Declaration> subdecl = visit(ctx->unionmember(i));
-            unionDecl->members.push_back(subdecl);
-        }
-        currentContext->visitUnionDeclaration(unionDecl);
-        shared_ptr<Declaration> decl = unionDecl;
-        lexicalScope->bind(name, decl);
-        return decl;
+        return nullptr;
     }
 
     virtual antlrcpp::Any visitStructmember(BSVParser::StructmemberContext *ctx) override {
@@ -713,11 +659,17 @@ protected:
             setupZ3Context();
             solver.push();
         }
+        bool wasActionContext = actionContext;
+        string functionName = ctx->functionproto()->name->getText();
+        pushScope(functionName);
+        actionContext = true;
+
         visitChildren(ctx);
+
+        popScope();
+        actionContext = wasActionContext;
         if (lexicalScope->isGlobal()) {
             solver.pop();
-        } else {
-            assert(0);
         }
         return nullptr;
     }
@@ -1095,7 +1047,13 @@ protected:
              it != currentContext->memberDeclaration.end() && it->first == fieldname; ++it) {
             shared_ptr<Declaration> memberDecl(it->second);
             shared_ptr<Declaration> parentDecl(memberDecl->parent);
-            cerr << "    field " << fieldname << " belongs to type " << parentDecl->name << endl;
+            cerr << "    field " << fieldname << " member decl " << memberDecl->name;
+            if (parentDecl) {
+                cerr << " belongs to type " << parentDecl->name << endl;
+            } else {
+                cerr << " missing parentDecl" << endl;
+                assert(0);
+            }
             //FIXME continue here
             z3::func_decl type_decl = typeDecls.find(parentDecl->name)->second;
             z3::expr type_expr = freshConstant("_ph_", typeSort);
@@ -1533,7 +1491,7 @@ public:
 
     z3::expr instantiateType(z3::func_decl type_decl, const z3::expr_vector &params) {
         if (type_decl.arity() != params.size())
-            cerr << "Unhandled type arity " << params.size() << " for type " << type_decl << endl;
+            cerr << "Mismatched params length " << params.size() << " for type " << type_decl << " expected " << type_decl.arity() << endl;
 
         return type_decl(params);
     }

@@ -90,7 +90,8 @@ void PackageContext::visitStructDeclaration(const shared_ptr<StructDeclaration> 
 }
 
 void PackageContext::visitTypeSynonymDeclaration(const shared_ptr<TypeSynonymDeclaration> &decl) {
-    assert(0);
+    typeDeclarationList.push_back(decl);
+    typeDeclaration[decl->name] = decl;
 }
 
 void PackageContext::visitUnionDeclaration(const shared_ptr<UnionDeclaration> &decl) {
@@ -441,3 +442,145 @@ string TypeChecker::sourceLocation(antlr4::ParserRuleContext *ctx) {
     size_t line = start->getLine();
     return filename + ":" + to_string(line);
 }
+
+void TypeChecker::addDeclaration(BSVParser::PackagestmtContext *pkgstmt) {
+    if (pkgstmt->interfacedecl()) {
+        addDeclaration(pkgstmt->interfacedecl());
+    } else if (pkgstmt->functiondef()) {
+        addDeclaration(pkgstmt->functiondef());
+    } else if (pkgstmt->moduledef()) {
+        addDeclaration(pkgstmt->moduledef());
+    } else if (pkgstmt->typeclassdecl()) {
+        addDeclaration(pkgstmt->typeclassdecl());
+    } else if (pkgstmt->typeclassinstance()) {
+        addDeclaration(pkgstmt->typeclassinstance());
+    } else if (pkgstmt->typedefenum()) {
+        addDeclaration(pkgstmt->typedefenum());
+    } else if (pkgstmt->typedefstruct()) {
+        addDeclaration(pkgstmt->typedefstruct());
+    } else if (pkgstmt->typedefsynonym()) {
+        addDeclaration(pkgstmt->typedefsynonym());
+    } else if (pkgstmt->typedeftaggedunion()) {
+        addDeclaration(pkgstmt->typedeftaggedunion());
+    } else if (pkgstmt->varbinding()) {
+        addDeclaration(pkgstmt->varbinding());
+    } else if (pkgstmt->importdecl()) {
+        // handled later?
+    } else if (pkgstmt->exportdecl()) {
+        // handled later?
+    } else {
+        cerr << "addDeclaration: unhandled package stmt at " << sourceLocation(pkgstmt) << endl;
+        assert(0);
+    }
+}
+
+void TypeChecker::addDeclaration(BSVParser::InterfacedeclContext *ctx) {
+    shared_ptr<BSVType> interfaceType(bsvtype(ctx->typedeftype()));
+    string name(interfaceType->name);
+
+    int arity = interfaceType->params.size();
+
+    cerr << "add decl interface type : ";
+    interfaceType->prettyPrint(cerr);
+    cerr << " arity " << arity << endl;
+
+    shared_ptr<InterfaceDeclaration> decl(new InterfaceDeclaration(name, interfaceType));
+    currentContext->typeDeclarationList.push_back(decl);
+    currentContext->typeDeclaration[name] = decl;
+    lexicalScope->bind(name, decl);
+
+    auto members = ctx->interfacememberdecl();
+    for (int i = 0; i < members.size(); i++) {
+        shared_ptr<Declaration> memberDecl((Declaration *) visitInterfacememberdecl(members[i]));
+
+        cerr << " subinterface decl " << memberDecl->name << endl;
+        currentContext->memberDeclaration.emplace(memberDecl->name, memberDecl);
+        memberDecl->parent = decl;
+        decl->members.push_back(memberDecl);
+    }
+}
+
+void TypeChecker::addDeclaration(BSVParser::FunctiondefContext *functiondef) {
+
+}
+
+void TypeChecker::addDeclaration(BSVParser::ModuledefContext *module) {
+
+}
+
+void TypeChecker::addDeclaration(BSVParser::TypeclassdeclContext *typeclassdecl) {
+    cerr << "visit type class decl " << typeclassdecl->typeclasside(0)->getText() << " at " << sourceLocation(typeclassdecl) << endl;
+}
+
+void TypeChecker::addDeclaration(BSVParser::TypeclassinstanceContext *typeclassinstance) {
+    cerr << "visit typeclass instance at " << sourceLocation(typeclassinstance) << endl;
+}
+
+void TypeChecker::addDeclaration(BSVParser::TypedefenumContext *ctx) {
+    BSVParser::UpperCaseIdentifierContext *id = ctx->upperCaseIdentifier();
+    string name(id->getText());
+    shared_ptr<BSVType> bsvtype(new BSVType(name));
+    shared_ptr<Declaration> decl(new EnumDeclaration(name, bsvtype));
+    parentDecl = decl;
+    currentContext->typeDeclaration[name] = decl;
+    currentContext->typeDeclarationList.push_back(decl);
+    lexicalScope->bind(name, decl);
+
+    size_t numelts = ctx->typedefenumelement().size();
+    for (size_t i = 0; i < numelts; i++) {
+        BSVParser::TypedefenumelementContext *elt = ctx->typedefenumelement().at(i);
+        fprintf(stderr, "elt %p\n", elt);
+        if (elt) {
+            fprintf(stderr, "elt %s\n", elt->getText().c_str());
+
+            visit(elt);
+        }
+    }
+}
+
+void TypeChecker::addDeclaration(BSVParser::TypedefstructContext *structdef) {
+    shared_ptr<BSVType> typedeftype(bsvtype(structdef->typedeftype()));
+    string name = typedeftype->name;
+    cerr << "visit typedef struct " << name << endl;
+    shared_ptr<StructDeclaration> structDecl(new StructDeclaration(name, typedeftype));
+    for (int i = 0; structdef->structmember(i); i++) {
+        shared_ptr<Declaration> subdecl = visit(structdef->structmember(i));
+        structDecl->members.push_back(subdecl);
+        subdecl->parent = structDecl;
+    }
+    currentContext->visitStructDeclaration(structDecl);
+    shared_ptr<Declaration> decl = structDecl;
+    lexicalScope->bind(name, decl);
+}
+
+void TypeChecker::addDeclaration(BSVParser::TypedefsynonymContext *synonymdef) {
+    shared_ptr<BSVType> lhstype = bsvtype(synonymdef->bsvtype());
+    shared_ptr<BSVType> typedeftype = bsvtype(synonymdef->typedeftype());
+    cerr << "visit typedef synonym " << typedeftype->name << endl;
+    shared_ptr<TypeSynonymDeclaration> synonymDecl = make_shared<TypeSynonymDeclaration>(typedeftype->name,
+                                                                                         lhstype, typedeftype);
+    currentContext->typeDeclaration[typedeftype->name] = synonymDecl;
+    currentContext->typeDeclarationList.push_back(synonymDecl);
+    lexicalScope->bind(typedeftype->name, synonymDecl);
+}
+
+void TypeChecker::addDeclaration(BSVParser::TypedeftaggedunionContext *uniondef) {
+    shared_ptr<BSVType> typedeftype(bsvtype(uniondef->typedeftype()));
+    string name = typedeftype->name;
+    shared_ptr<UnionDeclaration> unionDecl(new UnionDeclaration(name, typedeftype));
+    cerr << "visit typedef union " << name << endl;
+    for (int i = 0; uniondef->unionmember(i); i++) {
+        shared_ptr<Declaration> subdecl = visit(uniondef->unionmember(i));
+        unionDecl->members.push_back(subdecl);
+    }
+    currentContext->visitUnionDeclaration(unionDecl);
+    shared_ptr<Declaration> decl = unionDecl;
+    lexicalScope->bind(name, decl);
+}
+
+
+void TypeChecker::addDeclaration(BSVParser::VarbindingContext *varbinding) {
+
+}
+
+
