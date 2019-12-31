@@ -360,6 +360,33 @@ function Tuple4#(t1, t2, t3, t4) tuple4(t1 x1, t2 x2, t3 x3, t4 x4);
    return Tuple4 { tpl_1: x1, tpl_2: x2, tpl_3: x3, tpl_4: x4 };
 endfunction
 
+typedef struct {
+		t1 tpl_1;
+		t2 tpl_2;
+		t3 tpl_3;
+		t4 tpl_4;
+		t5 tpl_5;
+   } Tuple5#(type t1, type t2, type t3, type t4, type t5) deriving (Bits);
+
+(* nogen *)
+function Tuple5#(t1, t2, t3, t4, t5) tuple5(t1 x1, t2 x2, t3 x3, t4 x4, t5 x5);
+   return Tuple5 { tpl_1: x1, tpl_2: x2, tpl_3: x3, tpl_4: x4, tpl_5: x5 };
+endfunction
+
+typedef struct {
+		t1 tpl_1;
+		t2 tpl_2;
+		t3 tpl_3;
+		t4 tpl_4;
+		t5 tpl_5;
+		t6 tpl_6;
+   } Tuple6#(type t1, type t2, type t3, type t4, type t5, type t6) deriving (Bits);
+
+(* nogen *)
+function Tuple6#(t1, t2, t3, t4, t5, t6) tuple5(t1 x1, t2 x2, t3 x3, t4 x4, t5 x5, t6 x6);
+   return Tuple5 { tpl_1: x1, tpl_2: x2, tpl_3: x3, tpl_4: x4, tpl_5: x5, tpl_6: x6 };
+endfunction
+
 typeclass TupleSelector#(type t, type t1, type t2, type t3, type t4);
    function t1 tpl_1(t tpl);
    function t2 tpl_2(t tpl);
@@ -467,5 +494,9 @@ typedef union tagged {
 File stdin = tagged MCD 0;
 File stdout = tagged MCD 1;
 File stderr = tagged MCD 2;
+
+typedef struct {
+
+} Fmt;
 
 endpackage
