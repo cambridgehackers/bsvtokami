@@ -301,6 +301,7 @@ protected:
         shared_ptr<Declaration> decl(new EnumDeclaration(name, bsvtype));
         parentDecl = decl;
         currentContext->typeDeclaration[name] = decl;
+        currentContext->typeDeclarationList.push_back(decl);
         lexicalScope->bind(name, decl);
 
         size_t numelts = ctx->typedefenumelement().size();
@@ -398,6 +399,10 @@ protected:
 
     virtual antlrcpp::Any visitVarbinding(BSVParser::VarbindingContext *ctx) override {
         BindingType bindingType = lexicalScope->isGlobal() ? GlobalBindingType : LocalBindingType;
+        if (lexicalScope->isGlobal()) {
+            setupZ3Context();
+            solver.push();
+        }
         vector<BSVParser::VarinitContext *> varinits = ctx->varinit();
         for (size_t i = 0; i < varinits.size(); i++) {
             BSVParser::VarinitContext *varinit = varinits[i];
@@ -417,6 +422,9 @@ protected:
             } else {
                 cerr << "varinit with no rhs " << varinit->getText() << endl;
             }
+        }
+        if (lexicalScope->isGlobal()) {
+            solver.pop();
         }
         return nullptr;
     }
@@ -701,7 +709,17 @@ protected:
     }
 
     virtual antlrcpp::Any visitFunctiondef(BSVParser::FunctiondefContext *ctx) override {
-        return visitChildren(ctx);
+        if (lexicalScope->isGlobal()) {
+            setupZ3Context();
+            solver.push();
+        }
+        visitChildren(ctx);
+        if (lexicalScope->isGlobal()) {
+            solver.pop();
+        } else {
+            assert(0);
+        }
+        return nullptr;
     }
 
     virtual antlrcpp::Any visitFunctionproto(BSVParser::FunctionprotoContext *ctx) override {
@@ -817,8 +835,11 @@ protected:
         cerr << "typechecker::visitBsvtype " << ctx->getText() << " bbb ";
         bbb->prettyPrint(cerr);
         cerr << endl;
-
-        z3::expr bsvtype_expr = bsvTypeToExpr(bbb);
+        shared_ptr<BSVType> derefType = dereferenceType(bbb);
+        cerr << "    deref type ";
+        derefType->prettyPrint(cerr);
+        cerr << endl;
+        z3::expr bsvtype_expr = bsvTypeToExpr(derefType);
 
         insertExpr(ctx, bsvtype_expr);
         return bsvtype_expr;
@@ -1565,10 +1586,14 @@ public:
                 arg_exprs.push_back(bsvTypeToExpr(bsvtype->params[i], varmapping));
             }
             bool foundDecl = typeDecls.find(bsvtype->name) != typeDecls.cend();
+            bool found2 = currentContext->typeDeclaration.find(bsvtype->name) != currentContext->typeDeclaration.cend();
+
             cerr << " looking up type constructor for " << bsvtype->name
                  << (foundDecl ? " found" : " missing")
+                 << (found2 ? " found2" : " missing2")
                  << endl;
             z3::func_decl typeDecl = typeDecls.find(bsvtype->name)->second;
+            cerr << " typeDecl " << typeDecl << endl;
             return instantiateType(typeDecl, arg_exprs);
         }
     }

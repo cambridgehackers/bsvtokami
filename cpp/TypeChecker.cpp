@@ -397,19 +397,42 @@ z3::expr TypeChecker::orExprs(std::vector<z3::expr> exprs) {
 }
 
 shared_ptr<BSVType> TypeChecker::dereferenceType(const shared_ptr<BSVType> &bsvtype) {
-    if (!bsvtype->isVar && !bsvtype->isNumeric()) {
-        auto it = currentContext->declaration.find(bsvtype->name);
-        if (it == currentContext->declaration.cend())
-            return bsvtype;
+    if (bsvtype->isVar || bsvtype->isNumeric())
+        return bsvtype;
+
+    shared_ptr<BSVType> derefType = bsvtype;
+    auto it = currentContext->typeDeclaration.find(bsvtype->name);
+    if (it != currentContext->typeDeclaration.cend()) {
         shared_ptr<Declaration> decl = it->second;
         shared_ptr<TypeSynonymDeclaration> synonymDecl = decl->typeSynonymDeclaration();
+        //cerr << "dereferencing bsvtype " << bsvtype->name << " found " << decl->name << endl;
         if (synonymDecl) {
             cerr << "dereferencing bsvtype " << bsvtype->name << " arity " << bsvtype->params.size() << endl;
             assert(synonymDecl->typedeftype->params.size() == 0);
-            return dereferenceType(synonymDecl->bsvtype);
+            derefType = synonymDecl->bsvtype;
+            if (derefType->isNumeric())
+                return derefType;
+            vector<shared_ptr<BSVType>> derefParams;
+            for (int i = 0; i < derefType->params.size(); i++)
+                derefParams.push_back(dereferenceType(derefType->params[i]));
+            derefType = dereferenceType(make_shared<BSVType>(derefType->name, derefParams));
+        } else {
+
+            if (bsvtype->params.size() == 0)
+                return bsvtype;
+
+            vector<shared_ptr<BSVType>> derefParams;
+            for (int i = 0; i < bsvtype->params.size(); i++)
+                derefParams.push_back(dereferenceType(bsvtype->params[i]));
+            derefType = make_shared<BSVType>(bsvtype->name, derefParams);
         }
     }
-    return bsvtype;
+    if (derefType->name == "TLog")
+        cerr << "computed type " << derefType->name << " kind " << derefType->kind << " numeric " << derefType->isNumeric() << " constant " << derefType->isConstant() << endl;
+    if (derefType->isNumeric() && derefType->isConstant())
+        return derefType->eval();
+
+    return derefType;
 }
 
 string TypeChecker::sourceLocation(antlr4::ParserRuleContext *ctx) {
