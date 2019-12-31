@@ -406,11 +406,11 @@ shared_ptr<BSVType> TypeChecker::dereferenceType(const shared_ptr<BSVType> &bsvt
     if (it != currentContext->typeDeclaration.cend()) {
         shared_ptr<Declaration> decl = it->second;
         shared_ptr<TypeSynonymDeclaration> synonymDecl = decl->typeSynonymDeclaration();
-        //cerr << "dereferencing bsvtype " << bsvtype->name << " found " << decl->name << endl;
+        cerr << "dereferencing bsvtype " << bsvtype->name << " found " << decl->name << endl;
         if (synonymDecl) {
             cerr << "dereferencing bsvtype " << bsvtype->name << " arity " << bsvtype->params.size() << endl;
-            assert(synonymDecl->typedeftype->params.size() == 0);
-            derefType = synonymDecl->bsvtype;
+            assert(synonymDecl->bsvtype->params.size() == 0);
+            derefType = synonymDecl->lhstype;
             if (derefType->isNumeric())
                 return derefType;
             vector<shared_ptr<BSVType>> derefParams;

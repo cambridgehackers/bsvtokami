@@ -137,10 +137,10 @@ public:
 
 class TypeSynonymDeclaration : public Declaration {
 public:
-    const shared_ptr<BSVType> typedeftype;
+    const shared_ptr<BSVType> lhstype;
 public:
-    TypeSynonymDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype, std::shared_ptr<BSVType> typedeftype)
-    : Declaration(name, bsvtype, GlobalBindingType), typedeftype(typedeftype) {};
+    TypeSynonymDeclaration(std::string name, std::shared_ptr<BSVType> lhstype, std::shared_ptr<BSVType> bsvtype)
+    : Declaration(name, bsvtype, GlobalBindingType), lhstype(lhstype) {};
     virtual shared_ptr<TypeSynonymDeclaration> typeSynonymDeclaration() { return static_pointer_cast<TypeSynonymDeclaration, Declaration>(shared_from_this()); }
 
 };
