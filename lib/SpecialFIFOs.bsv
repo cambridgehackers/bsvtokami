@@ -53,6 +53,15 @@ export mkSizedDFIFOF;
 export mkSizedBypassFIFOF;
 export mkBypassFIFOLevel;
 
+interface SCounter;
+   method Action incr;
+   method Action decr;
+   method Bool isEq(Integer n);
+   method Action setNext (b value, Vector#(n, Reg#(b)) as);
+   method Action set (b value, Vector#(n, Reg#(b)) as);
+   method Action clear;
+endinterface
+
 // ================================================================
 // 1-element "pipeline FIFO"
 // It's a 1-element FIFO (register with Valid/Invalid tag bit), where
@@ -85,7 +94,7 @@ module mkPipelineFIFOF (FIFOF#(a))
 
    // STATE ----------------
 
-   Reg#(Maybe#(a)) rv[3] <- mkCReg(3, tagged Invalid);
+   Vector#(3, Reg#(Maybe#(a))) rv <- mkCReg(3, tagged Invalid);
 
    // INTERFACE ----------------
 
@@ -146,7 +155,7 @@ module mkBypassFIFOF (FIFOF#(a))
 
    // STATE ----------------
 
-   Reg#(Maybe#(a)) rv[3] <- mkCReg(3, tagged Invalid);
+   Vector#(3, Reg#(Maybe#(a))) rv <- mkCReg(3, tagged Invalid);
 
    // INTERFACE ----------------
 
@@ -253,15 +262,6 @@ module mkSizedDFIFOF#(Integer n, a dflt) (FIFOF#(a))
       cntr.clear;
    endmethod
 endmodule
-
-interface SCounter;
-   method Action incr;
-   method Action decr;
-   method Bool isEq(Integer n);
-   method Action setNext (b value, Vector#(n, Reg#(b)) as);
-   method Action set (b value, Vector#(n, Reg#(b)) as);
-   method Action clear;
-endinterface
 
 `ifdef BSVTOKAMI
 (* nogen *)
