@@ -73,7 +73,10 @@ unique_ptr<Token> BSVPreprocessor::nextToken() {
                 if (!validStack.back())
                     continue;
                 string filename = findIncludeFile(include);
-
+            } else if (text == "`define") {
+                token = tokenSources.back()->nextToken();
+                string varName = token->getText();
+                defines[varName] = varName;
             } else {
                 fprintf(stderr, "Unhandled preprocessor token %s\n", text.c_str());
             }
