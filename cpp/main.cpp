@@ -86,7 +86,11 @@ int main(int argc, char *const argv[]) {
 
     for (int i = optind; i < argc; i++) {
         string inputFileName(argv[i]);
-        std::cerr << "Parsing file -1- " << inputFileName << std::endl;
+        char buffer[4096];
+        string input_basename(::basename_r(inputFileName.c_str(), buffer));
+        long dotpos = input_basename.find_first_of('.');
+        string packageName = input_basename.substr(0, dotpos);
+        std::cerr << "Parsing file -1- " << inputFileName << " package " << packageName << std::endl;
         BSVPreprocessor preprocessor(inputFileName);
         preprocessor.define(definitions);
         CommonTokenStream tokens((TokenSource *) &preprocessor);
@@ -106,12 +110,12 @@ int main(int argc, char *const argv[]) {
             std::cout << tree->toStringTree(&parser) << std::endl << std::endl;
         }
         if (opt_ast) {
-            shared_ptr<TypeChecker> typeChecker(new TypeChecker(includePath, definitions));
+            shared_ptr<TypeChecker> typeChecker(new TypeChecker(packageName, includePath, definitions));
             typeChecker->visit(tree);
-            GenerateAst *generateAst = new GenerateAst(typeChecker);
+            GenerateAst *generateAst = new GenerateAst(packageName, typeChecker);
             shared_ptr<PackageDefStmt> packageDef = generateAst->generateAst(tree);;
             vector<shared_ptr<Stmt>> stmts = packageDef->stmts;
-            SimplifyAst *simplifier = new SimplifyAst();
+            SimplifyAst *simplifier = new SimplifyAst(packageName);
             vector<shared_ptr<Stmt>> simplifiedStmts;
             simplifier->simplify(stmts, simplifiedStmts);
             stmts = simplifiedStmts;
@@ -120,7 +124,7 @@ int main(int argc, char *const argv[]) {
 
                 string kamiFileName("kami/");
                 char buffer[4096];
-                kamiFileName += string(::basename_r(inputFileName.c_str(), buffer));
+                kamiFileName += packageName;
                 kamiFileName += string(".v");
                 GenerateKami *generateKami = new GenerateKami();
                 generateKami->open(kamiFileName);
@@ -152,7 +156,7 @@ int main(int argc, char *const argv[]) {
                     if (stmt && stmt->moduleDefStmt()) {
                         shared_ptr<LexicalScope> scope(make_shared<LexicalScope>("rename"));
                         shared_ptr<Stmt> renamedStmt = stmt->rename(opt_rename, scope);
-                        renamedStmt->prettyPrint(cout, 0);
+                        //renamedStmt->prettyPrint(cout, 0);
                     }
                 }
             }
@@ -160,7 +164,7 @@ int main(int argc, char *const argv[]) {
                 Inliner *inliner = new Inliner();
                 vector<shared_ptr<Stmt>> inlinedStmts = inliner->processPackage(stmts);
                 for (size_t i = 0; i < inlinedStmts.size(); i++) {
-                    inlinedStmts[i]->prettyPrint(cout, 0);
+                    //inlinedStmts[i]->prettyPrint(cout, 0);
                 }
             }
         }

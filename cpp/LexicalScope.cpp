@@ -21,16 +21,16 @@ void LexicalScope::import(const shared_ptr<LexicalScope> &scope)
 {
     for (auto it = scope->bindings.cbegin(); it != scope->bindings.cend(); ++it) {
         //FIXME only if no conflicts
-        cerr << "Importing " << scope->name << "::" << it->first << endl;
+        //cerr << "Importing " << scope->name << "::" << it->first << endl;
         bind(it->first, it->second);
     }
 }
 
 void LexicalScope::visit(DeclarationVisitor &visitor) {
-    cerr << "lexical scope visit " << name << endl;
+    //cerr << "lexical scope visit " << name << endl;
     for (auto it = bindings.cbegin(); it != bindings.cend(); ++it) {
         shared_ptr<Declaration> decl = it->second;
-        cerr << "   lexical scope visit " << decl->name << endl;
+        //cerr << "   lexical scope visit " << decl->name << endl;
         visitor.visitDeclaration(decl);
         if (decl->enumDeclaration())
             visitor.visitEnumDeclaration(decl->enumDeclaration());

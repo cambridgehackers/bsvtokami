@@ -6,7 +6,7 @@
 
 void
 SimplifyAst::simplify(const vector<shared_ptr<struct Stmt>> &stmts, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
-    //cerr << "simplify stmts" << endl;
+    //logstream << "simplify stmts" << endl;
     for (int i = 0; i < stmts.size(); i++) {
         simplify(stmts[i], simplifiedStmts);
     }
@@ -114,7 +114,7 @@ SimplifyAst::simplify(const shared_ptr<ActionBindingStmt> &stmt, vector<shared_p
         shared_ptr<BSVType> bsvtype = stmt->bsvtype;
         if (bsvtype->name == "Reg") {
             string regname = stmt->name;
-            cerr << "regname " << regname << endl;
+            logstream << "regname " << regname << endl;
             registers[regname] = bsvtype->params[0];
         }
     }
@@ -167,7 +167,7 @@ void SimplifyAst::simplify(const shared_ptr<BlockStmt> &stmt, vector<shared_ptr<
         simplify(stmt->stmts[i], simplifiedStmts);
     }
     shared_ptr<Stmt> newblockstmt(new BlockStmt(simplifiedStmts));
-    cerr << "simplified block stmt" << endl;
+    logstream << "simplified block stmt" << endl;
     simplifiedStmts.push_back(newblockstmt);
 }
 
@@ -184,9 +184,9 @@ void SimplifyAst::simplify(const shared_ptr<ExprStmt> &exprStmt, vector<shared_p
                     make_shared<CallExpr>(expr, args)));
         } break;
         default:
-            cerr << "Unhandled expr stmt: " << expr->exprType << "{" << endl;
-            expr->prettyPrint(cerr);
-            cerr << "}" << endl;
+            logstream << "Unhandled expr stmt: " << expr->exprType << "{" << endl;
+            expr->prettyPrint(logstream);
+            logstream << "}" << endl;
             simplifiedStmts.push_back(exprStmt);
     }
 }
@@ -248,9 +248,9 @@ SimplifyAst::simplify(const shared_ptr<ModuleDefStmt> &moduleDef, vector<shared_
     simplify(moduleDef->stmts, simplifiedModuleStmts);
     shared_ptr<Stmt> newModuleDef(new ModuleDefStmt(moduleDef->name, moduleDef->interfaceType,
                                                     moduleDef->params, moduleDef->paramTypes, simplifiedModuleStmts));
-    cerr << "simplify moduledef " << moduleDef->name << endl;
-    newModuleDef->prettyPrint(cerr, 0);
-    cerr << endl;
+    logstream << "simplify moduledef " << moduleDef->name << endl;
+    newModuleDef->prettyPrint(logstream, 0);
+    logstream << endl;
     simplifiedStmts.push_back(newModuleDef);
 }
 
@@ -265,7 +265,7 @@ void SimplifyAst::simplify(const shared_ptr<RegReadStmt> &stmt, vector<shared_pt
 }
 
 void SimplifyAst::simplify(const shared_ptr<RegWriteStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
-    //cerr << "simplify regwrite stmt " << stmt->regName << endl;
+    //logstream << "simplify regwrite stmt " << stmt->regName << endl;
     shared_ptr<Expr> simplifiedRhs = simplify(stmt->rhs, simplifiedStmts);
     simplifiedStmts.push_back(make_shared<RegWriteStmt>(stmt->regName, stmt->elementType, simplifiedRhs));
 }
@@ -331,7 +331,7 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
             shared_ptr<VarExpr> varExpr = expr->varExpr();
             if (registers.find(varExpr->name) != registers.cend()) {
                 shared_ptr<BSVType> elementType = registers.find(varExpr->name)->second;
-                cerr << "simplify var expr reading reg " << varExpr->name << endl;
+                logstream << "simplify var expr reading reg " << varExpr->name << endl;
                 string valName = varExpr->name + "_val";
                 shared_ptr<RegReadStmt> regRead = make_shared<RegReadStmt>(varExpr->name, valName, elementType);
                 simplifiedStmts.push_back(regRead);
@@ -347,25 +347,25 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
             shared_ptr<Expr> lhs = simplify(opexpr->lhs, simplifiedStmts);
             shared_ptr<Expr> rhs;
             if (!lhs) {
-                cerr << "null lhs after simplify ";
-                opexpr->lhs->prettyPrint(cerr);
-                cerr << endl;
+                logstream << "null lhs after simplify ";
+                opexpr->lhs->prettyPrint(logstream);
+                logstream << endl;
             }
             if (opexpr->rhs) {
                 rhs = simplify(opexpr->rhs, simplifiedStmts);
                 if (!rhs) {
-                    cerr << "null rhs after simplify ";
-                    opexpr->rhs->prettyPrint(cerr);
-                    cerr << endl;
+                    logstream << "null rhs after simplify ";
+                    opexpr->rhs->prettyPrint(logstream);
+                    logstream << endl;
                 }
             }
             shared_ptr<OperatorExpr> simplifiedExpr = make_shared<OperatorExpr>(opexpr->op, lhs, rhs);
             return simplifiedExpr;
         }
         case CallExprType: {
-            cerr << "FIXME: simplify call expr: ";
-            expr->prettyPrint(cerr, 0);
-            cerr << endl;
+            logstream << "FIXME: simplify call expr: ";
+            expr->prettyPrint(logstream, 0);
+            logstream << endl;
             return expr;
         }
         case FieldExprType: {
@@ -390,9 +390,9 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
             return simplifiedExpr;
         }
         case EnumUnionStructExprType:
-            cerr << "FIXME: simplify expr: " << endl;
-            expr->prettyPrint(cerr, 0);
-            cerr << endl;
+            logstream << "FIXME: simplify expr: " << endl;
+            expr->prettyPrint(logstream, 0);
+            logstream << endl;
             return expr;
     }
     return expr;

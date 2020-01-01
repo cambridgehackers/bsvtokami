@@ -7,7 +7,9 @@
 
 #include <map>
 #include <memory>
+#include <iostream>
 #include <string>
+#include <fstream>
 
 #include "BSVType.h"
 #include "Expr.h"
@@ -16,11 +18,12 @@
 using namespace std;
 
 class SimplifyAst {
+    ofstream logstream;
     map<string, shared_ptr<BSVType>> registers; // maps name to the element type of the register
     bool actionContext = false;
 
 public:
-    SimplifyAst() {}
+    SimplifyAst(const string &packageName) : logstream(string("kami/") + packageName + string(".simpl.txt"), ostream::out) {}
 
     ~SimplifyAst() {}
 

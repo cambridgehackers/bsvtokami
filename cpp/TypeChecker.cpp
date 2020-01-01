@@ -7,6 +7,11 @@
 #include "BSVPreprocessor.h"
 #include "TypeChecker.h"
 
+PackageContext::PackageContext(const string &packageName)
+    : packageName(packageName), logstream(string("kami/") + packageName + string(".sema.log"), ostream::out) {
+
+}
+
 const char *TypeChecker::check_result_name[] = {
         "unsat", "sat", "unknown"
 };
@@ -17,7 +22,7 @@ string TypeChecker::searchIncludePath(const string &pkgName)
     for (int i = 0; i < includePath.size(); i++) {
         string candidate = includePath[i] + "/" + pkgName + ".bsv";
         int fd = open(candidate.c_str(), O_RDONLY);
-        //cerr << "  candidate " << candidate << " fd " << fd << endl;
+        //logstream << "  candidate " << candidate << " fd " << fd << endl;
         if (fd >= 0) {
             close(fd);
             return candidate;
@@ -95,7 +100,7 @@ void PackageContext::visitTypeSynonymDeclaration(const shared_ptr<TypeSynonymDec
 }
 
 void PackageContext::visitUnionDeclaration(const shared_ptr<UnionDeclaration> &decl) {
-    cerr << "package context union " << decl->name << endl;
+    logstream << "package context union " << decl->name << endl;
     typeDeclarationList.push_back(decl);
     typeDeclaration[decl->name] = decl;
     for (int i = 0; i < decl->members.size(); i++) {
@@ -109,13 +114,19 @@ BSVParser::PackagedefContext *TypeChecker::analyzePackage(const string &packageN
     if (packageScopes.find(packageName) != packageScopes.cend())
         return nullptr;
 
-    cerr << "analyze package " << packageName << endl;
+    currentContext->logstream << "analyze package " << packageName << endl;
+
     shared_ptr<PackageContext> previousContext = currentContext;
     shared_ptr<LexicalScope> previousScope = lexicalScope;
     lexicalScope = make_shared<LexicalScope>(packageName);
+    //currentContext = make_shared<PackageContext>();
+    //currentContext->packageName = packageName;
 
     //string inputFileName(argv[i]);
     string inputFileName = searchIncludePath(packageName);
+    if (inputFileName.size() == 0)
+        cerr << "No file found for import " << packageName << endl;
+    cerr << "Parsing imported file \"" << inputFileName << "\"" << endl;
     BSVPreprocessor preprocessor(inputFileName);
     preprocessor.define(definitions);
     CommonTokenStream tokens((TokenSource * ) & preprocessor);
@@ -154,7 +165,7 @@ void TypeChecker::setupModuleFunctionConstructors() {
             shared_ptr<BSVType> interfaceType = make_shared<BSVType>(constructorName, paramTypes);
             std::shared_ptr<Declaration> constructorDecl = make_shared<Declaration>(constructorName, interfaceType,
                                                                                     GlobalBindingType);
-            cerr << "adding constructor: " << constructorName << endl;
+            currentContext->logstream << "adding constructor: " << constructorName << endl;
             currentContext->typeDeclarationList.push_back(constructorDecl);
             currentContext->typeDeclaration[constructorName] = constructorDecl;
         }
@@ -305,7 +316,7 @@ void TypeChecker::setupZ3Context() {
         std::shared_ptr<BSVType> interfaceType(typeDecl->bsvtype);
         int arity = interfaceType->params.size();
         std::string typePredicate(std::string("is_") + typeDecl->name);
-        fprintf(stderr, "User defined type %s predicate %s arity %d\n", typeDecl->name.c_str(), typePredicate.c_str(), arity);
+        //fprintf(stderr, "User defined type %s predicate %s arity %d\n", typeDecl->name.c_str(), typePredicate.c_str(), arity);
 
         Z3_symbol *param_symbols = new Z3_symbol[arity];
         Z3_sort *param_sorts = new Z3_sort[arity]; //(Z3_sort *)malloc(sizeof(Z3_sort) * arity);
@@ -372,12 +383,12 @@ z3::expr TypeChecker::constant(std::string name, z3::sort sort) {
 }
 
 void TypeChecker::insertExpr(antlr4::ParserRuleContext *ctx, z3::expr expr) {
-    cerr << "  insert expr " << ctx->getText().c_str() << endl;
+    currentContext->logstream << "  insert expr " << ctx->getText().c_str() << endl;
     exprs.insert(std::pair<antlr4::ParserRuleContext *, z3::expr>(ctx, expr));
 }
 
 void TypeChecker::addConstraint(z3::expr constraint, const string &trackerPrefix, antlr4::ParserRuleContext *ctx) {
-    cerr << "  insert tracker " << ctx->getText().c_str() << endl;
+    currentContext->logstream << "  insert tracker " << ctx->getText().c_str() << endl;
     string trackerName(freshString(trackerPrefix));
 
     solver.add(constraint, trackerName.c_str());
@@ -406,9 +417,9 @@ shared_ptr<BSVType> TypeChecker::dereferenceType(const shared_ptr<BSVType> &bsvt
     if (it != currentContext->typeDeclaration.cend()) {
         shared_ptr<Declaration> decl = it->second;
         shared_ptr<TypeSynonymDeclaration> synonymDecl = decl->typeSynonymDeclaration();
-        cerr << "dereferencing bsvtype " << bsvtype->name << " found " << decl->name << endl;
+        currentContext->logstream << "dereferencing bsvtype " << bsvtype->name << " found " << decl->name << endl;
         if (synonymDecl) {
-            cerr << "dereferencing bsvtype " << bsvtype->name << " arity " << bsvtype->params.size() << endl;
+            currentContext->logstream << "dereferencing bsvtype " << bsvtype->name << " arity " << bsvtype->params.size() << endl;
             assert(synonymDecl->bsvtype->params.size() == 0);
             derefType = synonymDecl->lhstype;
             if (derefType->isNumeric())
@@ -429,7 +440,7 @@ shared_ptr<BSVType> TypeChecker::dereferenceType(const shared_ptr<BSVType> &bsvt
         }
     }
     if (derefType->name == "TLog")
-        cerr << "computed type " << derefType->name << " kind " << derefType->kind << " numeric " << derefType->isNumeric() << " constant " << derefType->isConstant() << endl;
+        currentContext->logstream << "computed type " << derefType->name << " kind " << derefType->kind << " numeric " << derefType->isNumeric() << " constant " << derefType->isConstant() << endl;
     if (derefType->isNumeric() && derefType->isConstant())
         return derefType->eval();
 
@@ -469,7 +480,7 @@ void TypeChecker::addDeclaration(BSVParser::PackagestmtContext *pkgstmt) {
     } else if (pkgstmt->exportdecl()) {
         // handled later?
     } else {
-        cerr << "addDeclaration: unhandled package stmt at " << sourceLocation(pkgstmt) << endl;
+        currentContext->logstream << "addDeclaration: unhandled package stmt at " << sourceLocation(pkgstmt) << endl;
         assert(0);
     }
 }
@@ -480,9 +491,9 @@ void TypeChecker::addDeclaration(BSVParser::InterfacedeclContext *ctx) {
 
     int arity = interfaceType->params.size();
 
-    cerr << "add decl interface type : ";
-    interfaceType->prettyPrint(cerr);
-    cerr << " arity " << arity << endl;
+    currentContext->logstream << "add decl interface type : ";
+    interfaceType->prettyPrint(currentContext->logstream);
+    currentContext->logstream << " arity " << arity << endl;
 
     shared_ptr<InterfaceDeclaration> decl(new InterfaceDeclaration(name, interfaceType));
     currentContext->typeDeclarationList.push_back(decl);
@@ -493,7 +504,7 @@ void TypeChecker::addDeclaration(BSVParser::InterfacedeclContext *ctx) {
     for (int i = 0; i < members.size(); i++) {
         shared_ptr<Declaration> memberDecl((Declaration *) visitInterfacememberdecl(members[i]));
 
-        cerr << " subinterface decl " << memberDecl->name << endl;
+        currentContext->logstream << " subinterface decl " << memberDecl->name << endl;
         currentContext->memberDeclaration.emplace(memberDecl->name, memberDecl);
         memberDecl->parent = decl;
         decl->members.push_back(memberDecl);
@@ -509,11 +520,11 @@ void TypeChecker::addDeclaration(BSVParser::ModuledefContext *module) {
 }
 
 void TypeChecker::addDeclaration(BSVParser::TypeclassdeclContext *typeclassdecl) {
-    cerr << "visit type class decl " << typeclassdecl->typeclasside(0)->getText() << " at " << sourceLocation(typeclassdecl) << endl;
+    currentContext->logstream << "visit type class decl " << typeclassdecl->typeclasside(0)->getText() << " at " << sourceLocation(typeclassdecl) << endl;
 }
 
 void TypeChecker::addDeclaration(BSVParser::TypeclassinstanceContext *typeclassinstance) {
-    cerr << "visit typeclass instance at " << sourceLocation(typeclassinstance) << endl;
+    currentContext->logstream << "visit typeclass instance at " << sourceLocation(typeclassinstance) << endl;
 }
 
 void TypeChecker::addDeclaration(BSVParser::TypedefenumContext *ctx) {
@@ -529,10 +540,8 @@ void TypeChecker::addDeclaration(BSVParser::TypedefenumContext *ctx) {
     size_t numelts = ctx->typedefenumelement().size();
     for (size_t i = 0; i < numelts; i++) {
         BSVParser::TypedefenumelementContext *elt = ctx->typedefenumelement().at(i);
-        fprintf(stderr, "elt %p\n", elt);
         if (elt) {
-            fprintf(stderr, "elt %s\n", elt->getText().c_str());
-
+            currentContext->logstream << "enum elt " << elt->getText() << endl;
             visit(elt);
         }
     }
@@ -541,7 +550,7 @@ void TypeChecker::addDeclaration(BSVParser::TypedefenumContext *ctx) {
 void TypeChecker::addDeclaration(BSVParser::TypedefstructContext *structdef) {
     shared_ptr<BSVType> typedeftype(bsvtype(structdef->typedeftype()));
     string name = typedeftype->name;
-    cerr << "visit typedef struct " << name << endl;
+    currentContext->logstream << "visit typedef struct " << name << endl;
     shared_ptr<StructDeclaration> structDecl(new StructDeclaration(name, typedeftype));
     for (int i = 0; structdef->structmember(i); i++) {
         shared_ptr<Declaration> subdecl = visit(structdef->structmember(i));
@@ -556,7 +565,7 @@ void TypeChecker::addDeclaration(BSVParser::TypedefstructContext *structdef) {
 void TypeChecker::addDeclaration(BSVParser::TypedefsynonymContext *synonymdef) {
     shared_ptr<BSVType> lhstype = bsvtype(synonymdef->bsvtype());
     shared_ptr<BSVType> typedeftype = bsvtype(synonymdef->typedeftype());
-    cerr << "visit typedef synonym " << typedeftype->name << endl;
+    currentContext->logstream << "visit typedef synonym " << typedeftype->name << endl;
     shared_ptr<TypeSynonymDeclaration> synonymDecl = make_shared<TypeSynonymDeclaration>(typedeftype->name,
                                                                                          lhstype, typedeftype);
     currentContext->typeDeclaration[typedeftype->name] = synonymDecl;
@@ -568,7 +577,7 @@ void TypeChecker::addDeclaration(BSVParser::TypedeftaggedunionContext *uniondef)
     shared_ptr<BSVType> typedeftype(bsvtype(uniondef->typedeftype()));
     string name = typedeftype->name;
     shared_ptr<UnionDeclaration> unionDecl(new UnionDeclaration(name, typedeftype));
-    cerr << "visit typedef union " << name << endl;
+    currentContext->logstream << "visit typedef union " << name << endl;
     for (int i = 0; uniondef->unionmember(i); i++) {
         shared_ptr<Declaration> subdecl = visit(uniondef->unionmember(i));
         unionDecl->members.push_back(subdecl);

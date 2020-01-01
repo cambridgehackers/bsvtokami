@@ -1,4 +1,6 @@
 
+#include <fstream>
+#include <iostream>
 #include <memory>
 
 #include <BSVParser.h>
@@ -11,8 +13,10 @@
 
 class GenerateAst {
     shared_ptr<TypeChecker> typeChecker;
+    ofstream logstream;
 public:
-    GenerateAst(shared_ptr<TypeChecker> &typeChecker) : typeChecker(typeChecker)     {}
+    GenerateAst(const string &packageName, shared_ptr<TypeChecker> &typeChecker)
+        : typeChecker(typeChecker), logstream(string("kami/") + packageName + string(".ast.log"), ostream::out) {}
 
     std::shared_ptr<PackageDefStmt> generateAst(BSVParser::PackagedefContext *ctx);
 
