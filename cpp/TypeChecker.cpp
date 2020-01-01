@@ -130,6 +130,7 @@ BSVParser::PackagedefContext *TypeChecker::analyzePackage(const string &packageN
     string inputFileName = searchIncludePath(packageName);
     if (inputFileName.size() == 0)
         cerr << "No file found for import " << packageName << endl;
+    assert(inputFileName.size());
     cerr << "Parsing imported file \"" << inputFileName << "\"" << endl;
     BSVPreprocessor preprocessor(inputFileName);
     preprocessor.define(definitions);
@@ -196,6 +197,17 @@ void TypeChecker::setupZ3Context() {
                                                        actionvalue_field_names,
                                                        actionvalue_field_sorts,
                                                        actionvalue_field_sort_refs);
+
+    Z3_symbol array_field_names[] = {Z3_mk_string_symbol(context, "elt_type")};
+    Z3_sort array_field_sorts[] = {NULL};
+    unsigned array_field_sort_refs[] = {0};
+    Z3_constructor array_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Array"),
+                                                  Z3_mk_string_symbol(context, "isArray"),
+                                                  1,
+                                                  array_field_names,
+                                                  array_field_sorts,
+                                                  array_field_sort_refs);
+
     Z3_symbol bit_field_names[] = {Z3_mk_string_symbol(context, "width")};
     Z3_sort bit_field_sorts[] = {0};
     unsigned bit_field_sort_refs[] = {0};
@@ -304,7 +316,7 @@ void TypeChecker::setupZ3Context() {
 
     Z3_constructor default_constructors[] = {
             bozo_con,
-            action_con, actionvalue_con, bit_con, bool_con, function_con, int_con, module_con,
+            action_con, actionvalue_con, array_con, bit_con, bool_con, function_con, int_con, module_con,
             integer_con, real_con, reg_con, rule_con, string_con, uint_con, vector_con, void_con, numeric_con
     };
     unsigned num_default_constructors = sizeof(default_constructors) / sizeof(default_constructors[0]);
