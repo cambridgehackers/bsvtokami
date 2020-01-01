@@ -574,8 +574,7 @@ void TypeChecker::addDeclaration(BSVParser::TypedefstructContext *structdef) {
         subdecl->parent = structDecl;
     }
     currentContext->visitStructDeclaration(structDecl);
-    shared_ptr<Declaration> decl = structDecl;
-    lexicalScope->bind(name, decl);
+    lexicalScope->bind(name, structDecl);
 }
 
 void TypeChecker::addDeclaration(BSVParser::TypedefsynonymContext *synonymdef) {
