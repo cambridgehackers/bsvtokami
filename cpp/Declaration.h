@@ -89,7 +89,7 @@ public:
 
     EnumDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype)
     : Declaration(name, bsvtype, GlobalBindingType) {};
-    virtual shared_ptr<EnumDeclaration> enumDeclaration() { return static_pointer_cast<EnumDeclaration, Declaration>(shared_from_this()); }
+    shared_ptr<EnumDeclaration> enumDeclaration() override { return static_pointer_cast<EnumDeclaration, Declaration>(shared_from_this()); }
 
 };
 
@@ -99,21 +99,21 @@ public:
 
     InterfaceDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype)
     : Declaration(name, bsvtype, GlobalBindingType) {};
-    virtual shared_ptr<InterfaceDeclaration> interfaceDeclaration() { return static_pointer_cast<InterfaceDeclaration, Declaration>(shared_from_this()); }
+    shared_ptr<InterfaceDeclaration> interfaceDeclaration() override { return static_pointer_cast<InterfaceDeclaration, Declaration>(shared_from_this()); }
 
 };
 
 class MethodDeclaration : public Declaration {
 public:
     MethodDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype) : Declaration(name, bsvtype) {};
-    virtual shared_ptr<MethodDeclaration> methodDeclaration() override { return static_pointer_cast<MethodDeclaration, Declaration>(shared_from_this()); }
+    shared_ptr<MethodDeclaration> methodDeclaration() override { return static_pointer_cast<MethodDeclaration, Declaration>(shared_from_this()); }
 
 };
 
 class MethodDefinition : public Declaration {
 public:
     MethodDefinition(std::string name, std::shared_ptr<BSVType> bsvtype) : Declaration(name, bsvtype) {};
-    virtual shared_ptr<MethodDefinition> methodDefinition() override { return static_pointer_cast<MethodDefinition, Declaration>(shared_from_this()); }
+    shared_ptr<MethodDefinition> methodDefinition() override { return static_pointer_cast<MethodDefinition, Declaration>(shared_from_this()); }
 
 };
 
@@ -123,7 +123,7 @@ public:
     static shared_ptr<ModuleDefinition> create(std::string name, std::shared_ptr<BSVType> bsvtype) {
         return shared_ptr<ModuleDefinition>(new ModuleDefinition(name, bsvtype));
     }
-    virtual shared_ptr<ModuleDefinition> moduleDefinition() { return static_pointer_cast<ModuleDefinition, Declaration>(shared_from_this()); }
+    shared_ptr<ModuleDefinition> moduleDefinition() override { return static_pointer_cast<ModuleDefinition, Declaration>(shared_from_this()); }
 };
 
 class StructDeclaration : public Declaration {
@@ -132,7 +132,7 @@ public:
 
     StructDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype)
             : Declaration(name, bsvtype, GlobalBindingType) {};
-    virtual shared_ptr<StructDeclaration> structDeclaration() { return static_pointer_cast<StructDeclaration, Declaration>(shared_from_this()); }
+    shared_ptr<StructDeclaration> structDeclaration() override { return static_pointer_cast<StructDeclaration, Declaration>(shared_from_this()); }
 };
 
 class TypeSynonymDeclaration : public Declaration {
@@ -141,7 +141,7 @@ public:
 public:
     TypeSynonymDeclaration(std::string name, std::shared_ptr<BSVType> lhstype, std::shared_ptr<BSVType> bsvtype)
     : Declaration(name, bsvtype, GlobalBindingType), lhstype(lhstype) {};
-    virtual shared_ptr<TypeSynonymDeclaration> typeSynonymDeclaration() { return static_pointer_cast<TypeSynonymDeclaration, Declaration>(shared_from_this()); }
+    shared_ptr<TypeSynonymDeclaration> typeSynonymDeclaration() override { return static_pointer_cast<TypeSynonymDeclaration, Declaration>(shared_from_this()); }
 
 };
 
@@ -151,5 +151,5 @@ public:
 
     UnionDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype)
             : Declaration(name, bsvtype, GlobalBindingType) {};
-    virtual shared_ptr<UnionDeclaration> unionDeclaration() { return static_pointer_cast<UnionDeclaration, Declaration>(shared_from_this()); }
+    shared_ptr<UnionDeclaration> unionDeclaration() override { return static_pointer_cast<UnionDeclaration, Declaration>(shared_from_this()); }
 };
