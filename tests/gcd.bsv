@@ -31,13 +31,13 @@ module GCD#(Bit#(32)) mkGCD();
    endmethod: result
 endmodule: mkGCD
 
-module Empty mkMain();
+module Empty mkMain(Bit#(32) nn, Bit#(32) mm);
    GCD#(Bit#(32)) gcd <- mkGCD();
    Reg#(Bit#(1)) started <- mkRegU();
    Reg#(Bit#(32)) dv <- mkRegU();
    rule rl_start when (started == 0);
-      gcd.set_n(32'd100);
-      gcd.set_m(32'd20);
+      gcd.set_n(nn);
+      gcd.set_m(mm);
       started <= 1;
    endrule
    rule rl_display;
