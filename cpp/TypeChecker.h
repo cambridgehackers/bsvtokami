@@ -825,7 +825,14 @@ protected:
     }
 
     virtual antlrcpp::Any visitOperatorexpr(BSVParser::OperatorexprContext *ctx) override {
-        return visit(ctx->binopexpr());
+        auto it = exprs.find(ctx);
+        if (it != exprs.end())
+            return it->second;
+
+        z3::expr bsvtype_expr = visit(ctx->binopexpr());
+
+        insertExpr(ctx, bsvtype_expr);
+        return bsvtype_expr;
     }
 
     virtual antlrcpp::Any visitCaseexpr(BSVParser::CaseexprContext *ctx) override {
@@ -875,16 +882,16 @@ protected:
     }
 
     virtual antlrcpp::Any visitBinopexpr(BSVParser::BinopexprContext *ctx) override {
-
-        if (ctx->unopexpr() != NULL)
-            return visit(ctx->unopexpr());
-
         auto it = exprs.find(ctx);
-        if (it != exprs.end()) {
-            z3::expr result = it->second;
-            currentContext->logstream << "        Re-Visit binop " << ctx->getText() << endl;
-            return result;
+        if (it != exprs.end())
+            return it->second;
+
+        if (ctx->unopexpr() != NULL) {
+            z3::expr bsvtype_expr = visit(ctx->unopexpr());
+            insertExpr(ctx, bsvtype_expr);
+            return bsvtype_expr;
         }
+
         currentContext->logstream << "        Visit binop " << ctx->getText() << endl;
 
         z3::expr leftsym = visit(ctx->left);
