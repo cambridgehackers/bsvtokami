@@ -215,7 +215,7 @@ module mkSizedDFIFOF#(Integer n, a dflt) (FIFOF#(a))
    // If the queue contains n elements, they are in q[0]..q[n-1].  The head of
    // the queue (the "first" element) is in q[0], the tail in q[n-1].
 
-   Reg#(a) q[n];
+   Vector#(n, Reg#(a)) q;
    for (Integer i=0; i<n; i=i+1)
       q[i] <- mkReg(dflt);
    SCounter cntr <- mkSCounter(n);
@@ -428,8 +428,7 @@ endmodule
 `endif
 function Bool rangeTest( UInt#(cntSz) value,
                         Integer comp,
-                        function Bool foperation(UInt#(cntSz) a,
-                                                 UInt#(cntSz) b ),
+                        Function3#(UInt#(cntSz), UInt#(cntSz), Bool) foperation,
                            Integer minValue,
                            Integer maxValue,
                            String methodName );

@@ -4,16 +4,16 @@ interface Vector#(numeric type len, type element_type);
 endinterface
 
 typeclass VectorOps#(type index_type);
-   function Vector#(len, element_type) \$vecnew (Integer size);
-   function Vector#(len, element_type) \$vecupdate (Vector#(len, element_type) vector, index_type offset, element_type v);
-   function element_type \$vecselect (Vector#(len, element_type) vector, index_type offset);
+   //function Vector#(len, element_type) \$vecnew (Integer size);
+   //function Vector#(len, element_type) \$vecupdate (Vector#(len, element_type) vector, index_type offset, element_type v);
+   //function element_type \$vecselect (Vector#(len, element_type) vector, index_type offset);
 
    function Vector#(len, element_type) update(Vector#(len, element_type) vector, index_type offset, element_type v);
    function element_type select(Vector#(len, element_type) vector, index_type offset);
  endtypeclass
 
 (* nogen *)
-function Vector#(len, element_type) genWith(function element_type func(Integer xi));
+function Vector#(len, element_type) genWith(Function2#(Integer, element_type) func);
    function Vector#(len, element_type) genWithRec(Vector#(len, element_type) vect, Integer i);
        if (i < valueOf(len))
 	  return genWithRec($vecupdate(vect, i, func(i)), i + 1);
@@ -120,7 +120,7 @@ endfunction
 // Mapping Functions over Vectors
 
 (* nogen *)
-function Vector#(vsize,b_type) map(function b_type func(a_type x),
+function Vector#(vsize,b_type) map(Function2#(a_type, b_type) func,
 				   Vector#(vsize, a_type) vect);
    function b_type funci(Integer i);
       return func(vect[i]);
@@ -209,7 +209,7 @@ endfunction
 
 // Fold Functions
 (* nogen *)
-function b_type foldr(function b_type func(a_type x, b_type y),
+function b_type foldr(Function3#(a_type, b_type, b_type) func,
 		       b_type seed, Vector#(vsize,a_type) vect);
    function b_type foldrec(Integer i, b_type v);
       if (i < valueOf(vsize))
@@ -221,7 +221,7 @@ function b_type foldr(function b_type func(a_type x, b_type y),
 endfunction
 
 (* nogen *)
-function b_type foldl(function b_type func(b_type y, a_type x),
+function b_type foldl(Function3#(b_type, a_type, b_type) func,
                        b_type seed, Vector#(vsize,a_type) vect);
    b_type result = seed;
    function b_type foldrec(Integer i, b_type v);
@@ -234,7 +234,7 @@ function b_type foldl(function b_type func(b_type y, a_type x),
 endfunction
 
 (* nogen *)
-function a_type fold(function b_type func(a_type y, a_type x),
+function a_type fold(Function3#(a_type, a_type, b_type) func,
 		      Vector#(vsize,a_type) vect);
    function b_type recursive(Integer lb, Integer rb);
        if (lb == rb)
@@ -252,7 +252,7 @@ function a_type fold(function b_type func(a_type y, a_type x),
 endfunction
 
 (* nogen *)
-function a_type foldr1(function a_type func(a_type x, a_type y),
+function a_type foldr1(Function3#(a_type, a_type, a_type) func,
                       Vector#(vsize,a_type) vect)
    provisos (Add#(vsizem1, 1, vsize));
    Vector#(vsizem1, a_type) subvec = take(vect);
@@ -260,7 +260,7 @@ function a_type foldr1(function a_type func(a_type x, a_type y),
 endfunction
 
 (* nogen *)
-function a_type foldl1(function a_type func(a_type y, a_type x),
+function a_type foldl1(Function3#(a_type, a_type, a_type) func,
                       Vector#(vsize,a_type) vect)
    provisos (Add#(vsizem1, 1, vsize));
    Vector#(vsizem1, a_type) subvec = takeTail(vect);
@@ -280,7 +280,7 @@ function Bool elem (element_type needle,
 endfunction
 
 (* nogen *)
-function Bool any(function Bool pred(element_type x1),
+function Bool any(Function2#(element_type, Bool) pred,
                   Vector#(vsize,element_type) vect );
    function Bool anypred(Bool f, element_type elt);
       return f || pred(elt);
@@ -289,7 +289,7 @@ function Bool any(function Bool pred(element_type x1),
 endfunction
 
 (* nogen *)
-function Bool all(function Bool pred(element_type x1),
+function Bool all(Function2#(element_type, Bool) pred,
                   Vector#(vsize,element_type) vect );
    function Bool allelts(Bool f, element_type elt);
       return f && pred(elt);
@@ -326,7 +326,7 @@ function UInt#(logv1) countElem (element_type needle,
 endfunction
 
 (* nogen *)
-function UInt#(logv1) countIf (function Bool pred(element_type x1),
+function UInt#(logv1) countIf (Function2#(element_type, Bool) pred,
                                Vector#(vsize, element_type) vect)
   provisos (Add#(vsize, 1, vsize1), Log#(vsize1, logv1));
    
@@ -337,7 +337,7 @@ function UInt#(logv1) countIf (function Bool pred(element_type x1),
 endfunction
 
 (* nogen *)
-function Maybe#(element_type) find (function Bool pred(element_type x),
+function Maybe#(element_type) find (Function2#(element_type, Bool) pred,
 				    Vector#(vsize, element_type) vect);
 
    function Maybe#(element_type) findelt(Maybe#(element_type) found, element_type elt);
@@ -367,7 +367,7 @@ function Maybe#(UInt#(logv)) findElem (element_type needle,
 endfunction
 
 (* nogen *)
-function Maybe#(UInt#(logv)) findIndex(function Bool pred(element_type x1),
+function Maybe#(UInt#(logv)) findIndex(Function2#(element_type, Bool) pred,
 				       Vector#(vsize, element_type) vect)
    provisos (Add#(xx1,1,vsize), Log#(vsize, logv));
    
@@ -488,7 +488,7 @@ endfunction
 
 (* nogen *)
 function Vector#(vsize,c_type)
-         zipWith (function c_type func(a_type x, b_type y),
+         zipWith (Function3#(a_type, b_type, c_type) func,
                   Vector#(vsize,a_type) vecta,
                   Vector#(vsize,b_type) vectb );
    function c_type funci(Integer i);
@@ -499,7 +499,7 @@ endfunction
 
 (* nogen *)
 function Vector#(vsize,c_type)
-         zipWithAny (function c_type func(a_type x, b_type y),
+         zipWithAny (Function3#(a_type, b_type, c_type) func,
                       Vector#(m,a_type) vecta,
                       Vector#(n,b_type) vectb )
   provisos (Max#(n, vsize, n), Max#(m, vsize, m));
@@ -512,7 +512,7 @@ endfunction
 
 (* nogen *)
 function Vector#(vsize,d_type)
-        zipWith3(function d_type func(a_type x, b_type y, c_type z),
+        zipWith3(Function4#(a_type, b_type, c_type, d_type) func,
                  Vector#(vsize,a_type) vecta,
                  Vector#(vsize,b_type) vectb,
                  Vector#(vsize,c_type) vectc );
@@ -525,7 +525,7 @@ endfunction
 
 (* nogen *)
 function Vector#(vsize,d_type)
-   zipWithAny3(function d_type func(a_type x, b_type y, c_type z),
+   zipWithAny3(Function4#(a_type, b_type, c_type, d_type) func,
                Vector#(m,a_type) vecta,
                Vector#(n,b_type) vectb,
                Vector#(o,c_type) vectc )
@@ -539,12 +539,12 @@ endfunction
 // Monadic Operations
 
 (* nogen *)
-function m#(Vector#(vsize, element_type)) genWithM(function m#(element_type) func(Integer x))
+function Module#(Vector#(vsize, element_type)) genWithM(Function2#(Integer,Module#(element_type)) func)
    provisos (Monad#(m));
    Vector#(vsize, Integer) indices = genVector;
    Vector#(vsize, element_type) result = newVector;
 
-   function m#(Vector#(vsize, element_type)) upd(element_type elt);
+   function Module#(Vector#(vsize, element_type)) upd(element_type elt);
       Integer i = 0;
       //return \return (update(result, i, elt));
    endfunction
@@ -553,22 +553,22 @@ function m#(Vector#(vsize, element_type)) genWithM(function m#(element_type) fun
 endfunction
 
 (* nogen *)
-function m#(Vector#(vsize, b_type)) mapM( function m#(b_type) func(a_type x),
+function Module#(Vector#(vsize, b_type)) mapM(Function2#(a_type, Module#(b_type)) func,
 					 Vector#(vsize, a_type) vecta )
    provisos (Monad#(m));
-   function m#(b_type) gen_elt(Integer i);
-      m#(b_type) v = func(vecta[i]);
+   function Module#(b_type) gen_elt(Integer i);
+      Module#(b_type) v = func(vecta[i]);
       return v;
    endfunction
    return genWithM(gen_elt);
 endfunction
 
 (* nogen *)
-function m#(void) mapM_( function m#(b_type) func(a_type x),
+function Module#(void) mapM_(Function2#(a_type, Module#(b_type)) func,
 			Vector#(vsize, a_type) vecta )
    provisos (Monad#(m));
-   function m#(b_type) gen_elt(Integer i);
-      m#(b_type) v = func(vecta[i]);
+   function Module#(b_type) gen_elt(Integer i);
+      Module#(b_type) v = func(vecta[i]);
       return v;
    endfunction
    let vect = genWithM(gen_elt);
@@ -576,47 +576,47 @@ function m#(void) mapM_( function m#(b_type) func(a_type x),
 endfunction
 
 (* nogen *)
-function m#(Vector#(vsize, c_type)) zipWithM( function m#(c_type) func(a_type x, b_type y),
+function Module#(Vector#(vsize, c_type)) zipWithM(Function3#(a_type, b_type, Module#(c_type)) func,
 					     Vector#(vsize, a_type) vecta,
 					     Vector#(vsize, b_type) vectb )
   provisos (Monad#(m));
-   function m#(c_type) gen_elt(Integer i);
-      m#(c_type) v = func(vecta[i], vectb[i]);
+   function Module#(c_type) gen_elt(Integer i);
+      Module#(c_type) v = func(vecta[i], vectb[i]);
       return v;
    endfunction
    return genWithM(gen_elt);
 endfunction
 
 (* nogen *)
-function m#(void) zipWithM_( function m#(c_type) func(a_type x, b_type y),
+function Module#(void) zipWithM_(Function3#(a_type, b_type, Module#(c_type)) func,
 			    Vector#(vsize, a_type) vecta,
 			    Vector#(vsize, b_type) vectb )
   provisos (Monad#(m));
-   function m#(c_type) gen_elt(Integer i);
-      m#(c_type) v = func(vecta[i], vectb[i]);
+   function Module#(c_type) gen_elt(Integer i);
+      Module#(c_type) v = func(vecta[i], vectb[i]);
       return v;
    endfunction
-   m#(Vector#(vsize, c_type)) vect = genWithM(gen_elt);
+   Module#(Vector#(vsize, c_type)) vect = genWithM(gen_elt);
    return ?;
 endfunction
 
 (* nogen *)
-function m#(Vector#(vsize, d_type)) zipWith3M( function m#(d_type) func(a_type x, b_type y, c_type z),
+function Module#(Vector#(vsize, d_type)) zipWith3M(Function4#(a_type, b_type, c_type, Module#(d_type)) func,
 					      Vector#(vsize, a_type) vecta,
 					      Vector#(vsize, b_type) vectb,
 					      Vector#(vsize, c_type) vectc )
    provisos (Monad#(m));
-   function m#(d_type) gen_elt_3m(Integer i);
-      m#(d_type) v = func(vecta[i], vectb[i], vectc[i]);
+   function Module#(d_type) gen_elt_3m(Integer i);
+      Module#(d_type) v = func(vecta[i], vectb[i], vectc[i]);
       return v;
    endfunction
    return genWithM(gen_elt_3m);
 endfunction
 
 (* nogen *)
-function m#(Vector#(vsize, b_type)) replicateM( m#(b_type) c)
+function Module#(Vector#(vsize, b_type)) replicateM( Module#(b_type) c)
    provisos (Monad#(m));
-   function m#(b_type) gen_elt(Integer i);
+   function Module#(b_type) gen_elt(Integer i);
       return c;
    endfunction
    return genWithM(gen_elt);

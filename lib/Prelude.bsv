@@ -133,12 +133,6 @@ function Bool \$guard(Bool cond);
    return False;
 endfunction
 
-(* nogen *)
-function a when(Bool cond, a expr);
-   $guard(cond);
-   return expr;
-endfunction
-
 typeclass Bits #(type a, numeric type nsz);
 (* nogen *)
    function Bit#(nsz) pack(a x);

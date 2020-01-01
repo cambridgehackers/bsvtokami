@@ -31,8 +31,8 @@ endinstance
 //    provisos (Connectable#(a, b));
 // endinstance
 
-instance Connectable#(ActionValue#(a), function Action f(a x));
-   module mkConnection#(ActionValue#(a) y, function Action f(a x))(Empty);
+instance Connectable#(ActionValue#(a), Function2#(a, Action));
+   module mkConnection#(ActionValue#(a) y, Function2#(a, Action) f)(Empty);
       rule connect;
 	 let v <- y();
 	 f(v);
@@ -40,8 +40,8 @@ instance Connectable#(ActionValue#(a), function Action f(a x));
    endmodule
 endinstance
 
-instance Connectable#(function Action f(a x), ActionValue#(a));
-   module mkConnection#(function Action f(a x), ActionValue#(a) y)(Empty);
+instance Connectable#(Function2#(a, Action), ActionValue#(a));
+   module mkConnection#(Function2#(a, Action) f, ActionValue#(a) y)(Empty);
       rule connect;
 	 let v <- y();
 	 f(v);
@@ -49,16 +49,16 @@ instance Connectable#(function Action f(a x), ActionValue#(a));
    endmodule
 endinstance
 
-instance Connectable#(a, function Action f(a x));
-   module mkConnection#(a x, function Action f(a y))(Empty);
+instance Connectable#(a, fFunction2#(a, Action));
+   module mkConnection#(a x, Function2#(a, Action) f)(Empty);
       rule connect;
 	 f(x);
       endrule
    endmodule
 endinstance
 
-instance Connectable#(function Action f(a x), a);
-   module mkConnection#(function Action f(a y), a x)(Empty);
+instance Connectable#(Function2#(a, Action), a);
+   module mkConnection#(Function2#(a, Action) f, a x)(Empty);
       rule connect;
 	 f(x);
       endrule
