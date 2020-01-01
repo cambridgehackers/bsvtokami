@@ -1111,8 +1111,25 @@ protected:
         return visit(ctx->expression());
     }
 
+    shared_ptr<BSVType> resolveInterfaceTag(shared_ptr<BSVType> interfaceTypeOrTag) {
+        auto it = currentContext->typeDeclaration.find(interfaceTypeOrTag->name);
+        if (it == currentContext->typeDeclaration.cend())
+            return interfaceTypeOrTag;
+        shared_ptr<Declaration> typeDeclaration = it->second;
+        if (typeDeclaration->bsvtype->params.size() == interfaceTypeOrTag->params.size())
+            return interfaceTypeOrTag;
+        cerr << "adding type parameters to " << interfaceTypeOrTag->name << endl;
+        vector<shared_ptr<BSVType>> params;
+        for (int i = 0; i < typeDeclaration->bsvtype->params.size(); i++)
+            params.push_back(make_shared<BSVType>());
+        //FIXME: numeric
+        return make_shared<BSVType>(interfaceTypeOrTag->name, params);
+    }
+
     virtual antlrcpp::Any visitInterfaceexpr(BSVParser::InterfaceexprContext *ctx) override {
-        z3::expr interfaceExpr = visit(ctx->bsvtype());
+        shared_ptr<BSVType> interfaceTypeOrTag(bsvtype(ctx->bsvtype()));
+        shared_ptr<BSVType> interfaceType = resolveInterfaceTag(interfaceTypeOrTag);
+        z3::expr interfaceExpr = bsvTypeToExpr(interfaceType);
         for (int i = 0; ctx->interfacestmt(i); i++) {
             visit(ctx->interfacestmt(i));
         }
