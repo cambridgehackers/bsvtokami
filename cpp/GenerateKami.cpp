@@ -588,9 +588,9 @@ void GenerateKami::generateKami(const shared_ptr<VarBindingStmt> &stmt, int dept
 
 void GenerateKami::generateKami(const shared_ptr<FieldExpr> &expr, int depth, int precedence) {
     generateKami(expr->object, depth, precedence);
-    out << " ! ";
-    out << "(* struct type *)"; //FIXME struct type
-    out << " @. \"" << expr->fieldName << "\"";
+    out << " ! (";
+    generateKami(expr->bsvtype);
+    out << ") @. \"" << expr->fieldName << "\"";
 }
 
 void GenerateKami::generateKami(const shared_ptr<VarExpr> &expr, int depth, int precedence) {
