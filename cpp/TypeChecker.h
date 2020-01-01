@@ -816,9 +816,9 @@ protected:
         currentContext->logstream << "visit case expr " << ctx->getText() << endl;
         z3::expr casetype = freshConstant("case", typeSort);
         z3::expr exprtype = visit(ctx->expression());
-        size_t numitems = ctx->caseexpritem().size();
+        size_t numitems = ctx->caseexprpatitem().size();
         for (size_t i = 0; i < numitems; i++) {
-            BSVParser::CaseexpritemContext *item = ctx->caseexpritem()[i];
+            BSVParser::CaseexprpatitemContext *item = ctx->caseexprpatitem(i);
             currentContext->logstream << "item = " << item << endl;
             if (item->body != NULL) {
                 currentContext->logstream << "caseexpritem has pattern "
@@ -833,6 +833,11 @@ protected:
                 z3::expr bodytype = visit(item->body);
                 addConstraint(casetype == bodytype, "casebody", item->body);
             }
+        }
+        for (size_t i = 0; ctx->caseexpritem(i); i++) {
+            BSVParser::CaseexpritemContext *item = ctx->caseexpritem(i);
+            currentContext->logstream << "caseexpritem has expression " << item->match->getText() << endl;
+
         }
         return casetype;
     }

@@ -187,10 +187,10 @@ moduledef :
     ;
 moduleproto :
 /* MIT BSV module proto */
-    'module' moduleinterface=bsvtype name=lowerCaseIdentifier '(' moduleprotoformals? ')' ';'
+    'module' moduleinterface=bsvtype name=lowerCaseIdentifier '(' moduleprotoformals? ')' provisos? ';'
 /* Classic BSV module proto */
-    | 'module' name=lowerCaseIdentifier '(' moduleinterface=bsvtype ')' ';'
-    | 'module' name=lowerCaseIdentifier '#' '(' moduleprotoformals? ')' '(' moduleinterface=bsvtype ')' ';'
+    | 'module' name=lowerCaseIdentifier '(' moduleinterface=bsvtype ')' provisos? ';'
+    | 'module' name=lowerCaseIdentifier '#' '(' moduleprotoformals? ')' '(' moduleinterface=bsvtype ')' provisos? ';'
     ;
 moduleprotoformals :
     moduleprotoformal (',' moduleprotoformal)*
@@ -273,12 +273,14 @@ typenat :
 expression :
       pred=expression '?' expression ':' expression #condexpr
     | expression 'matches' pattern patterncond* #matchesexpr
-    | 'case' '(' expression ')' 'matches' caseexpritem* caseexprdefaultitem? 'endcase' #caseexpr
+    | 'case' '(' expression ')' (('matches' caseexprpatitem+) | caseexpritem*) caseexprdefaultitem? 'endcase' #caseexpr
     | binopexpr #operatorexpr
     ;
-
-caseexpritem :
+caseexprpatitem :
     (pattern patterncond*) ':' body=expression ';'
+    ;
+caseexpritem :
+    match=expression (',' altmatches=expression)*':' body=expression ';'
     ;
 caseexprdefaultitem :
     'default' ':' body=expression ';'
@@ -326,6 +328,7 @@ exprprimary :
     | 'tagged'? (upperCaseIdentifier '::')* tag=upperCaseIdentifier (('{' memberbinds '}')|exprprimary|) #taggedunionexpr
     | 'interface' bsvtype (';')? (interfacestmt)* 'endinterface' (':' typeide)? #interfaceexpr
     | beginendblock #blockexpr
+    | actionvalueblock #actionvalueblockexpr
     ;
 memberbinds :
     memberbind (',' memberbind)*
@@ -373,15 +376,17 @@ stmt :
     | expression ';'
     | returnstmt
     | actionblock
-    | actionvalueblock
     ;
 ifstmt :
     'if' '(' expression ')' stmt ('else' stmt)?
     ;
 /* MIT BSV: requires "matches" */
 casestmt :
-    'case' '(' expression ')' 'matches'? casestmtpatitem* casestmtdefaultitem? 'endcase'
+    'case' '(' expression ')' (('matches' casestmtpatitem+) | casestmtitem*) casestmtdefaultitem? 'endcase'
     ;
+casestmtitem :
+        match=expression (',' altmatches=expression)* ':' stmt
+        ;
 casestmtpatitem :
     pattern patterncond* ':' stmt
     ;
