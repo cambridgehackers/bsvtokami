@@ -186,11 +186,27 @@ protected:
     }
 
     virtual antlrcpp::Any visitExportdecl(BSVParser::ExportdeclContext *ctx) override {
-        return freshConstant(__FUNCTION__, typeSort);
+        visitChildren(ctx);
+        return nullptr;
     }
 
     virtual antlrcpp::Any visitExportitem(BSVParser::ExportitemContext *ctx) override {
-        return freshConstant(__FUNCTION__, typeSort);
+        if (ctx->anyidentifier()) {
+            string name = ctx->anyidentifier()->getText();
+            shared_ptr<Declaration> valueDecl = currentContext->declaration[name];
+            shared_ptr<Declaration> typeDecl = currentContext->typeDeclaration[name];
+            if (valueDecl) {
+                lexicalScope->bind(name, valueDecl);
+            }
+            if (typeDecl) {
+                lexicalScope->bind(name, typeDecl);
+            }
+        } else if (ctx->packageide()) {
+            string exportedPackageName = ctx->packageide()->getText();
+            shared_ptr<LexicalScope> exportedPackage = packageScopes[exportedPackageName];
+            lexicalScope->import(exportedPackage);
+        }
+        return nullptr;
     }
 
     virtual antlrcpp::Any visitImportdecl(BSVParser::ImportdeclContext *ctx) override {

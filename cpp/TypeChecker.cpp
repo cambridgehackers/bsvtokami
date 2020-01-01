@@ -62,12 +62,16 @@ void PackageContext::import(const shared_ptr<LexicalScope> &scope) {
 }
 
 void PackageContext::visitEnumDeclaration(const shared_ptr<EnumDeclaration> &decl) {
+    logstream << "    visitEnumDeclaration " << decl->name << endl;
+    typeDeclarationList.push_back(decl);
+    typeDeclaration[decl->name] = decl;
     for (int i = 0; i < decl->tags.size(); i++) {
         shared_ptr<Declaration> tagdecl = decl->tags[i];
         enumtag.insert(make_pair(tagdecl->name, tagdecl->parent));
     }
 }
 void PackageContext::visitInterfaceDeclaration(const shared_ptr<InterfaceDeclaration> &decl) {
+    logstream << "    visitInterfaceDeclaration " << decl->name << endl;
     typeDeclarationList.push_back(decl);
     typeDeclaration[decl->name] = decl;
     for (auto it = decl->members.cbegin(); it != decl->members.cend(); ++it) {
@@ -119,8 +123,8 @@ BSVParser::PackagedefContext *TypeChecker::analyzePackage(const string &packageN
     shared_ptr<PackageContext> previousContext = currentContext;
     shared_ptr<LexicalScope> previousScope = lexicalScope;
     lexicalScope = make_shared<LexicalScope>(packageName);
-    //currentContext = make_shared<PackageContext>();
-    //currentContext->packageName = packageName;
+    currentContext = make_shared<PackageContext>(packageName);
+    setupModuleFunctionConstructors();
 
     //string inputFileName(argv[i]);
     string inputFileName = searchIncludePath(packageName);
@@ -146,9 +150,9 @@ BSVParser::PackagedefContext *TypeChecker::analyzePackage(const string &packageN
 
     visit(tree);
 
-    previousScope->import(lexicalScope);
     lexicalScope = previousScope;
     currentContext = previousContext;
+    cerr << "returning to package " << currentContext->packageName << endl;
     return tree;
 }
 
@@ -531,10 +535,8 @@ void TypeChecker::addDeclaration(BSVParser::TypedefenumContext *ctx) {
     BSVParser::UpperCaseIdentifierContext *id = ctx->upperCaseIdentifier();
     string name(id->getText());
     shared_ptr<BSVType> bsvtype(new BSVType(name));
-    shared_ptr<Declaration> decl(new EnumDeclaration(name, bsvtype));
+    shared_ptr<EnumDeclaration> decl(new EnumDeclaration(name, bsvtype));
     parentDecl = decl;
-    currentContext->typeDeclaration[name] = decl;
-    currentContext->typeDeclarationList.push_back(decl);
     lexicalScope->bind(name, decl);
 
     size_t numelts = ctx->typedefenumelement().size();
@@ -542,9 +544,11 @@ void TypeChecker::addDeclaration(BSVParser::TypedefenumContext *ctx) {
         BSVParser::TypedefenumelementContext *elt = ctx->typedefenumelement().at(i);
         if (elt) {
             currentContext->logstream << "enum elt " << elt->getText() << endl;
-            visit(elt);
+            shared_ptr<Declaration> subdecl = visit(elt);
+            subdecl->parent = decl;
         }
     }
+    currentContext->visitEnumDeclaration(decl);
 }
 
 void TypeChecker::addDeclaration(BSVParser::TypedefstructContext *structdef) {
