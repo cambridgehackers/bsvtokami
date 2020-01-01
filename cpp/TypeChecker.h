@@ -1095,47 +1095,74 @@ protected:
                 default:
                     currentContext->logstream << "Unhandled type arity " << type_decl;
             }
-            shared_ptr<MethodDeclaration> methodDecl = memberDecl->methodDeclaration();
-            shared_ptr<InterfaceDeclaration> subinterfaceDecl = memberDecl->interfaceDeclaration();
+
+            shared_ptr<StructDeclaration> structDecl = parentDecl->structDeclaration();
             shared_ptr<InterfaceDeclaration> interfaceDecl = parentDecl->interfaceDeclaration();
-            if (methodDecl)
-                currentContext->logstream << " method decl " << methodDecl->name << endl;
-            if (subinterfaceDecl)
-                currentContext->logstream << " subinterface decl " << subinterfaceDecl->name << endl;
-            if (interfaceDecl)
+            if (interfaceDecl) {
                 currentContext->logstream << " interface decl " << interfaceDecl->name << endl;
-            if (interfaceDecl && methodDecl) {
-                shared_ptr<BSVType> interfaceType = interfaceDecl->bsvtype;
-                shared_ptr<BSVType> methodType = methodDecl->bsvtype;
-                currentContext->logstream << "interface method ";
-                interfaceType->prettyPrint(currentContext->logstream);
-                currentContext->logstream << " method ";
-                methodType->prettyPrint(currentContext->logstream);
+
+                shared_ptr<MethodDeclaration> methodDecl = memberDecl->methodDeclaration();
+                shared_ptr<InterfaceDeclaration> subinterfaceDecl = memberDecl->interfaceDeclaration();
+                if (methodDecl)
+                    currentContext->logstream << " method decl " << methodDecl->name << endl;
+                if (subinterfaceDecl)
+                    currentContext->logstream << " subinterface decl " << subinterfaceDecl->name << endl;
+                if (methodDecl) {
+                    shared_ptr<BSVType> interfaceType = interfaceDecl->bsvtype;
+                    shared_ptr<BSVType> methodType = methodDecl->bsvtype;
+                    currentContext->logstream << "interface method ";
+                    interfaceType->prettyPrint(currentContext->logstream);
+                    currentContext->logstream << " method ";
+                    methodType->prettyPrint(currentContext->logstream);
+                    currentContext->logstream << endl;
+                    map<string, string> freshTypeVars;
+                    z3::expr interfaceExpr = bsvTypeToExpr(interfaceType, freshTypeVars);
+                    z3::expr methodExpr = bsvTypeToExpr(methodType, freshTypeVars);
+                    currentContext->logstream << "convert method args to z3::expr ..." << endl;
+                    currentContext->logstream << "    " << interfaceExpr << endl;
+                    currentContext->logstream << "    " << methodExpr << endl;
+                    currentContext->logstream << "    " << (exprtype == interfaceExpr && fieldexpr == methodExpr)
+                                              << endl;
+                    exprs.push_back(exprtype == interfaceExpr && fieldexpr == methodExpr);
+                } else if (subinterfaceDecl) {
+                    shared_ptr<BSVType> interfaceType = interfaceDecl->bsvtype;
+                    shared_ptr<BSVType> subinterfaceType = subinterfaceDecl->bsvtype;
+                    currentContext->logstream << "interface type ";
+                    interfaceType->prettyPrint(currentContext->logstream);
+                    currentContext->logstream << " subinterface type ";
+                    subinterfaceType->prettyPrint(currentContext->logstream);
+                    currentContext->logstream << endl;
+                    map<string, string> freshTypeVars;
+                    z3::expr interfaceExpr = bsvTypeToExpr(interfaceType, freshTypeVars);
+                    z3::expr subinterfaceExpr = bsvTypeToExpr(subinterfaceType, freshTypeVars);
+                    currentContext->logstream << "convert subinterface args to z3::expr ..." << endl;
+                    currentContext->logstream << "    " << interfaceExpr << endl;
+                    currentContext->logstream << "    " << subinterfaceExpr << endl;
+                    currentContext->logstream << "    " << (exprtype == interfaceExpr && fieldexpr == subinterfaceExpr)
+                                              << endl;
+                    exprs.push_back(exprtype == interfaceExpr && fieldexpr == subinterfaceExpr);
+                } else {
+                    assert(0);
+                }
+            } else if (structDecl) {
+                currentContext->logstream << " struct decl " << structDecl->name << endl;
+                shared_ptr<Declaration> fieldDecl = memberDecl;
+                shared_ptr<BSVType> structType = structDecl->bsvtype;
+                shared_ptr<BSVType> fieldType = dereferenceType(fieldDecl->bsvtype);
+                currentContext->logstream << "struct type ";
+                structType->prettyPrint(currentContext->logstream);
+                currentContext->logstream << " field type ";
+                fieldType->prettyPrint(currentContext->logstream);
                 currentContext->logstream << endl;
                 map<string, string> freshTypeVars;
-                z3::expr interfaceExpr = bsvTypeToExpr(interfaceType, freshTypeVars);
-                z3::expr methodExpr = bsvTypeToExpr(methodType, freshTypeVars);
-                currentContext->logstream << "convert method args to z3::expr ..." << endl;
-                currentContext->logstream << "    " << interfaceExpr << endl;
-                currentContext->logstream << "    " << methodExpr << endl;
-                currentContext->logstream << "    " << (exprtype == interfaceExpr && fieldexpr == methodExpr) << endl;
-                exprs.push_back(exprtype == interfaceExpr && fieldexpr == methodExpr);
-            } else if (interfaceDecl && subinterfaceDecl) {
-                shared_ptr<BSVType> interfaceType = interfaceDecl->bsvtype;
-                shared_ptr<BSVType> subinterfaceType = subinterfaceDecl->bsvtype;
-                currentContext->logstream << "interface type ";
-                interfaceType->prettyPrint(currentContext->logstream);
-                currentContext->logstream << " subinterface type ";
-                subinterfaceType->prettyPrint(currentContext->logstream);
-                currentContext->logstream << endl;
-                map<string,string> freshTypeVars;
-                z3::expr interfaceExpr = bsvTypeToExpr(interfaceType, freshTypeVars);
-                z3::expr subinterfaceExpr = bsvTypeToExpr(subinterfaceType, freshTypeVars);
-                currentContext->logstream << "convert subinterface args to z3::expr ..." << endl;
-                currentContext->logstream << "    " << interfaceExpr << endl;
-                currentContext->logstream << "    " << subinterfaceExpr << endl;
-                currentContext->logstream << "    " << (exprtype == interfaceExpr && fieldexpr == subinterfaceExpr) << endl;
-                exprs.push_back(exprtype == interfaceExpr && fieldexpr == subinterfaceExpr);
+                z3::expr structExpr = bsvTypeToExpr(structType, freshTypeVars);
+                z3::expr memberExpr = bsvTypeToExpr(fieldType, freshTypeVars);
+                currentContext->logstream << "convert field args to z3::expr ..." << endl;
+                currentContext->logstream << "    " << structExpr << endl;
+                currentContext->logstream << "    " << memberExpr << endl;
+                currentContext->logstream << "    " << (exprtype == structExpr && fieldexpr == memberExpr)
+                                          << endl;
+                exprs.push_back(exprtype == structExpr && fieldexpr == memberExpr);
             } else {
                 exprs.push_back(sym == type_expr);
             }
