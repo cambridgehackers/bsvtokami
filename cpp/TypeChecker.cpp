@@ -151,6 +151,8 @@ BSVParser::PackagedefContext *TypeChecker::analyzePackage(const string &packageN
 
     visit(tree);
 
+    currentContext->logstream.close();
+
     lexicalScope = previousScope;
     currentContext = previousContext;
     cerr << "returning to package " << currentContext->packageName << endl;
@@ -178,6 +180,7 @@ void TypeChecker::setupModuleFunctionConstructors() {
 }
 
 void TypeChecker::setupZ3Context() {
+    context;
     exprs.clear();
     trackers.clear();
     typeDecls.clear();
@@ -185,75 +188,10 @@ void TypeChecker::setupZ3Context() {
     intSort = context.int_sort();
     boolSort = context.bool_sort();
 
-    Z3_constructor action_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Action"),
-                                                  Z3_mk_string_symbol(context, "isAction"),
-                                                  0, NULL, NULL, NULL);
-    Z3_symbol actionvalue_field_names[] = {Z3_mk_string_symbol(context, "elt")};
-    Z3_sort actionvalue_field_sorts[] = {NULL};
-    unsigned actionvalue_field_sort_refs[] = {0};
-    Z3_constructor actionvalue_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "ActionValue"),
-                                                       Z3_mk_string_symbol(context, "isActionValue"),
-                                                       1,
-                                                       actionvalue_field_names,
-                                                       actionvalue_field_sorts,
-                                                       actionvalue_field_sort_refs);
-
-    Z3_symbol array_field_names[] = {Z3_mk_string_symbol(context, "elt_type")};
-    Z3_sort array_field_sorts[] = {NULL};
-    unsigned array_field_sort_refs[] = {0};
-    Z3_constructor array_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Array"),
-                                                  Z3_mk_string_symbol(context, "isArray"),
-                                                  1,
-                                                  array_field_names,
-                                                  array_field_sorts,
-                                                  array_field_sort_refs);
-
-    Z3_symbol bit_field_names[] = {Z3_mk_string_symbol(context, "width")};
-    Z3_sort bit_field_sorts[] = {0};
-    unsigned bit_field_sort_refs[] = {0};
-    Z3_constructor bit_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Bit"),
-                                               Z3_mk_string_symbol(context, "isBit"),
-                                               1,
-                                               bit_field_names,
-                                               bit_field_sorts,
-                                               bit_field_sort_refs);
-    Z3_constructor bool_con = Z3_mk_constructor(context,
-                                                Z3_mk_string_symbol(context, "Bool"),
-                                                Z3_mk_string_symbol(context, "isBool"),
-                                                0, NULL, NULL, NULL);
     Z3_constructor bozo_con = Z3_mk_constructor(context,
                                                 Z3_mk_string_symbol(context, "Bozo"),
                                                 Z3_mk_string_symbol(context, "isBozo"),
                                                 0, NULL, NULL, NULL);
-    Z3_symbol function_field_names[] = {Z3_mk_string_symbol(context, "domain"), Z3_mk_string_symbol(context, "range")};
-    Z3_sort function_field_sorts[] = {NULL, NULL};
-    unsigned function_field_sort_refs[] = {0, 0};
-    Z3_constructor function_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Function"),
-                                                    Z3_mk_string_symbol(context, "isFunction"),
-                                                    2,
-                                                    function_field_names,
-                                                    function_field_sorts,
-                                                    function_field_sort_refs);
-
-    Z3_symbol int_field_names[] = {Z3_mk_string_symbol(context, "width")};
-    Z3_sort int_field_sorts[] = {0};
-    unsigned int_field_sort_refs[] = {0};
-    Z3_constructor int_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Int"),
-                                               Z3_mk_string_symbol(context, "isInt"),
-                                               1,
-                                               int_field_names,
-                                               int_field_sorts,
-                                               int_field_sort_refs);
-
-    Z3_symbol module_field_names[] = {Z3_mk_string_symbol(context, "interface") };
-    Z3_sort module_field_sorts[] = {NULL, NULL};
-    unsigned module_field_sort_refs[] = {0, 0};
-    Z3_constructor module_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Module"),
-                                                    Z3_mk_string_symbol(context, "ismodule"),
-                                                    1,
-                                                    module_field_names,
-                                                    module_field_sorts,
-                                                    module_field_sort_refs);
 
     Z3_symbol numeric_field_names[] = {Z3_mk_string_symbol(context, "elt")};
     Z3_sort numeric_field_sorts[] = {intSort};
@@ -265,59 +203,10 @@ void TypeChecker::setupZ3Context() {
                                                numeric_field_sorts,
                                                numeric_field_sort_refs);
 
-    Z3_constructor integer_con = Z3_mk_constructor(context,
-                                                   Z3_mk_string_symbol(context, "Integer"),
-                                                   Z3_mk_string_symbol(context, "isInteger"),
-                                                   0, NULL, NULL, NULL);
-    Z3_constructor real_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Real"),
-                                                Z3_mk_string_symbol(context, "isReal"),
-                                                0, NULL, NULL, NULL);
-    Z3_symbol reg_field_names[] = {Z3_mk_string_symbol(context, "elt")};
-    Z3_sort reg_field_sorts[] = {NULL};
-    unsigned reg_field_sort_refs[] = {0};
-    Z3_constructor reg_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Reg"),
-                                               Z3_mk_string_symbol(context, "isReg"),
-                                               1,
-                                               reg_field_names,
-                                               reg_field_sorts,
-                                               reg_field_sort_refs);
-    Z3_constructor rule_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Rule"),
-                                                Z3_mk_string_symbol(context, "isRule"),
-                                                0, NULL, NULL, NULL);
-    Z3_constructor string_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "String"),
-                                                  Z3_mk_string_symbol(context, "isString"),
-                                                  0, NULL, NULL, NULL);
-
-
-    Z3_symbol uint_field_names[] = {Z3_mk_string_symbol(context, "width")};
-    Z3_sort uint_field_sorts[] = {0};
-    unsigned uint_field_sort_refs[] = {0};
-    Z3_constructor uint_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "UInt"),
-                                               Z3_mk_string_symbol(context, "isUInt"),
-                                               1,
-                                               uint_field_names,
-                                               uint_field_sorts,
-                                               uint_field_sort_refs);
-
-    Z3_symbol vector_field_names[] = {Z3_mk_string_symbol(context, "size"), Z3_mk_string_symbol(context, "elt_type")};
-    Z3_sort vector_field_sorts[] = {NULL, NULL};
-    unsigned vector_field_sort_refs[] = {0, 0};
-    Z3_constructor vector_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Vector"),
-                                               Z3_mk_string_symbol(context, "isVector"),
-                                               2,
-                                               vector_field_names,
-                                               vector_field_sorts,
-                                               vector_field_sort_refs);
-
-    Z3_constructor void_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "Void"),
-                                                Z3_mk_string_symbol(context, "isVoid"),
-                                                0, NULL, NULL, NULL);
-
 
     Z3_constructor default_constructors[] = {
             bozo_con,
-            action_con, actionvalue_con, array_con, bit_con, bool_con, function_con, int_con, module_con,
-            integer_con, real_con, reg_con, rule_con, string_con, uint_con, vector_con, void_con, numeric_con
+            numeric_con
     };
     unsigned num_default_constructors = sizeof(default_constructors) / sizeof(default_constructors[0]);
     // constructors for user-defined types

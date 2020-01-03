@@ -1,22 +1,33 @@
 package Prelude;
 
-typedef enum {
-   VoidValue
-   } Void;
 
 // B.2.20
 
-interface Bit#(numeric type sz);
+typedef struct {} Array#(type t);
+typedef struct {} Bit#(numeric type sz);
+typedef struct {} Int#(numeric type n);
+typedef struct {} Integer;
+typedef struct {} Real;
+typedef struct {} String;
+typedef struct {} UInt#(numeric type n);
+typedef struct {} Vector#(numeric type n, type t);
+typedef enum { VoidValue} Void;
+
+typedef enum {
+    False,
+    True
+} Bool deriving (Bits, Eq);
+
+interface Empty; endinterface
+interface Function#(type domain, type range); endinterface
+interface Module#(type ifc); endinterface
+interface Rule; endinterface
+interface Rules; endinterface
+
+interface ActionValue#(type t);
 endinterface
 
-interface Empty;
-endinterface
-
-interface Rule;
-endinterface
-
-interface Rules;
-endinterface
+typedef ActionValue#(Void) Action;
 
 (* nogen *)
 function Rules emptyRules;
