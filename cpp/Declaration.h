@@ -51,12 +51,13 @@ public:
 class Declaration : public enable_shared_from_this<Declaration> {
 public:
     const std::string name;
+    const std::string uniqueName;
     const std::shared_ptr<BSVType> bsvtype;
     const BindingType bindingType;
     shared_ptr<Declaration> parent;
 
     Declaration(std::string name, std::shared_ptr<BSVType> bsvtype, const BindingType bt = LocalBindingType)
-    : name(name), bsvtype(bsvtype), bindingType(bt) {
+    : name(name), uniqueName(genUniqueName(name, bt)), bsvtype(bsvtype), bindingType(bt) {
         if (bsvtype) {
             for (int i = 0; i < bsvtype->params.size(); i++) {
                 numericTypeParamVector.push_back(bsvtype->params[i]->isNumeric());
@@ -81,6 +82,7 @@ public:
 
 private:
     vector<bool> numericTypeParamVector;
+    static string genUniqueName(const string &name, BindingType bt);
 };
 
 class EnumDeclaration : public Declaration {
