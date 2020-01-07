@@ -180,7 +180,6 @@ void TypeChecker::setupModuleFunctionConstructors() {
 }
 
 void TypeChecker::setupZ3Context() {
-    context;
     exprs.clear();
     trackers.clear();
     typeDecls.clear();
@@ -433,6 +432,7 @@ void TypeChecker::addDeclaration(BSVParser::InterfacedeclContext *ctx) {
     currentContext->typeDeclaration[name] = decl;
     lexicalScope->bind(name, decl);
 
+    pushScope(name);
     auto members = ctx->interfacememberdecl();
     for (int i = 0; i < members.size(); i++) {
         shared_ptr<Declaration> memberDecl((Declaration *) visitInterfacememberdecl(members[i]));
@@ -442,6 +442,7 @@ void TypeChecker::addDeclaration(BSVParser::InterfacedeclContext *ctx) {
         memberDecl->parent = decl;
         decl->members.push_back(memberDecl);
     }
+    popScope();
 }
 
 void TypeChecker::addDeclaration(BSVParser::FunctiondefContext *functiondef) {
@@ -641,11 +642,13 @@ antlrcpp::Any TypeChecker::visitMethodproto(BSVParser::MethodprotoContext *ctx) 
         methodType->prettyPrint(currentContext->logstream);
     }
     currentContext->logstream << endl;
+    if (ctx->methodprotoformals())
+        visit(ctx->methodprotoformals());
     return (Declaration *) new MethodDeclaration(ctx->name->getText(), methodType);
 }
 
 antlrcpp::Any TypeChecker::visitMethodprotoformals(BSVParser::MethodprotoformalsContext *ctx) {
-    assert(0);
+    visitChildren(ctx);
     return nullptr;
 }
 
@@ -658,8 +661,10 @@ antlrcpp::Any TypeChecker::visitMethodprotoformal(BSVParser::MethodprotoformalCo
     z3::expr formalExpr = context.constant(context.str_symbol(formalName.c_str()), typeSort);
 
     if (formal->bsvtype()) {
-        z3::expr typeExpr = visit(formal->bsvtype());
-        addConstraint(formalExpr == typeExpr, "mpf", formal);
+        shared_ptr<BSVType> formaltype = dereferenceType(bsvtype(formal->bsvtype()));
+        cerr << "method proto formal bsvtype: " << formaltype->to_string() << " at " << sourceLocation(formal) << endl;
+        z3::expr typeExpr = bsvTypeToExpr(formaltype);
+        addConstraint(formalExpr == typeExpr, "mpf$trk", formal);
         currentContext->logstream << "method proto formal constraint: " << (formalExpr == typeExpr) << endl;
     } else {
         currentContext->logstream << "visitMethodprotoFormal: fixme no type " << formalName << endl;
@@ -1080,7 +1085,11 @@ antlrcpp::Any TypeChecker::visitFunctiondef(BSVParser::FunctiondefContext *ctx) 
     pushScope(functionName);
     actionContext = true;
 
-    visitChildren(ctx);
+    //FIXME: add formal parameters to scope
+    
+    for (int i = 0; ctx->stmt(i); i++) {
+        visit(ctx->stmt(i));
+    }
 
     popScope();
     actionContext = wasActionContext;
@@ -1091,8 +1100,8 @@ antlrcpp::Any TypeChecker::visitFunctiondef(BSVParser::FunctiondefContext *ctx) 
 }
 
 antlrcpp::Any TypeChecker::visitFunctionproto(BSVParser::FunctionprotoContext *ctx) {
-    assert(0);
-    return visitChildren(ctx);
+    visitChildren(ctx);
+    return nullptr;
 }
 
 antlrcpp::Any TypeChecker::visitExterncimport(BSVParser::ExterncimportContext *ctx) {
@@ -1264,11 +1273,37 @@ antlrcpp::Any TypeChecker::visitCaseexpr(BSVParser::CaseexprContext *ctx) {
 }
 
 antlrcpp::Any TypeChecker::visitMatchesexpr(BSVParser::MatchesexprContext *ctx) {
-    return visitChildren(ctx);
+    auto it = exprs.find(ctx);
+    if (it != exprs.end())
+        return it->second;
+
+    pushScope("matches");
+    z3::expr expr = visit(ctx->expression());
+    z3::expr patternExpr = visit(ctx->pattern());
+    addConstraint(expr == patternExpr, "matchespat$trk", ctx);
+    for (int i = 0; ctx->patterncond(i); i++) {
+        visit(ctx->patterncond(i));
+    }
+    popScope();
+
+    insertExpr(ctx, instantiateType("Bool"));
+
+    return expr;
 }
 
 antlrcpp::Any TypeChecker::visitCondexpr(BSVParser::CondexprContext *ctx) {
-    return visitChildren(ctx);
+    auto it = exprs.find(ctx);
+    if (it != exprs.end())
+        return it->second;
+
+    z3::expr boolExpr = visit(ctx->expression(0));
+    z3::expr thenExpr = visit(ctx->expression(1));
+    z3::expr elseExpr = visit(ctx->expression(2));
+    addConstraint(boolExpr == instantiateType("Bool"), "boolexpr$trk", ctx->expression(0));
+    addConstraint(thenExpr == elseExpr, "condexpr$trk", ctx);
+
+    insertExpr(ctx, thenExpr);
+    return thenExpr;
 }
 
 antlrcpp::Any TypeChecker::visitCaseexpritem(BSVParser::CaseexpritemContext *ctx) {
@@ -1276,7 +1311,16 @@ antlrcpp::Any TypeChecker::visitCaseexpritem(BSVParser::CaseexpritemContext *ctx
 }
 
 antlrcpp::Any TypeChecker::visitPatterncond(BSVParser::PatterncondContext *ctx) {
-    return visitChildren(ctx);
+    auto it = exprs.find(ctx);
+    if (it != exprs.end())
+        return it->second;
+
+    z3::expr expr = visit(ctx->expression());
+    z3::expr boolExpr = instantiateType("Bool");
+    addConstraint(expr == boolExpr, "patterncond$trk", ctx);
+
+    insertExpr(ctx, boolExpr);
+    return boolExpr;
 }
 
 antlrcpp::Any TypeChecker::visitBinopexpr(BSVParser::BinopexprContext *ctx) {
@@ -1407,7 +1451,17 @@ antlrcpp::Any TypeChecker::visitVarexpr(BSVParser::VarexprContext *ctx) {
 }
 
 antlrcpp::Any TypeChecker::visitBlockexpr(BSVParser::BlockexprContext *ctx) {
-    return visitChildren(ctx);
+    auto it = exprs.find(ctx);
+    if (it != exprs.end())
+        return it->second;
+
+    z3::expr blockExpr = freshConstant("blockexpr", typeSort);
+    pushScope("blockexpr");
+    visitChildren(ctx);
+    popScope();
+
+    insertExpr(ctx, blockExpr);
+    return blockExpr;
 }
 
 antlrcpp::Any TypeChecker::visitStringliteral(BSVParser::StringliteralContext *ctx) {
@@ -1438,20 +1492,30 @@ antlrcpp::Any TypeChecker::visitIntliteral(BSVParser::IntliteralContext *ctx) {
 }
 
 antlrcpp::Any TypeChecker::visitRealliteral(BSVParser::RealliteralContext *ctx) {
-    return visitChildren(ctx);
+    return instantiateType("Real");
 }
 
 antlrcpp::Any TypeChecker::visitCastexpr(BSVParser::CastexprContext *ctx) {
-    assert(0);
-    return visitChildren(ctx);
+    shared_ptr<BSVType> type = bsvtype(ctx->bsvtype());
+    z3::expr typeExpr = bsvTypeToExpr(type);
+    z3::expr expr = visit(ctx->exprprimary());
+    //addConstraint(typeExpr == expr, "typeassertion$trk", ctx);
+    currentContext->logstream << "cast expr " << ctx->getText() << " at " << sourceLocation(ctx) << endl;
+    return typeExpr;
 }
 
 antlrcpp::Any TypeChecker::visitTypeassertionexpr(BSVParser::TypeassertionexprContext *ctx) {
-    return visitChildren(ctx);
+    shared_ptr<BSVType> type = bsvtype(ctx->bsvtype());
+    z3::expr typeExpr = bsvTypeToExpr(type);
+    z3::expr expr = visit(ctx->expression(0));
+    assert(ctx->expression(1) == nullptr);
+    addConstraint(typeExpr == expr, "typeassertion$trk", ctx);
+    return typeExpr;
 }
 
 antlrcpp::Any TypeChecker::visitResetbyexpr(BSVParser::ResetbyexprContext *ctx) {
-    return visitChildren(ctx);
+    visitChildren(ctx);
+    return nullptr;
 }
 
 antlrcpp::Any TypeChecker::visitUndefinedexpr(BSVParser::UndefinedexprContext *ctx) {
@@ -1464,7 +1528,8 @@ antlrcpp::Any TypeChecker::visitUndefinedexpr(BSVParser::UndefinedexprContext *c
 }
 
 antlrcpp::Any TypeChecker::visitClockedbyexpr(BSVParser::ClockedbyexprContext *ctx) {
-    return visitChildren(ctx);
+    visitChildren(ctx);
+    return nullptr;
 }
 
 antlrcpp::Any TypeChecker::visitFieldexpr(BSVParser::FieldexprContext *ctx) {
@@ -1650,6 +1715,7 @@ antlrcpp::Any TypeChecker::visitSyscallexpr(BSVParser::SyscallexprContext *ctx) 
 }
 
 antlrcpp::Any TypeChecker::visitValueofexpr(BSVParser::ValueofexprContext *ctx) {
+    visit(ctx->bsvtype());
     return instantiateType("Integer");
 }
 
@@ -1714,7 +1780,10 @@ antlrcpp::Any TypeChecker::visitInterfacestmt(BSVParser::InterfacestmtContext *c
 }
 
 antlrcpp::Any TypeChecker::visitBeginendblock(BSVParser::BeginendblockContext *ctx) {
-    return visitChildren(ctx);
+    pushScope("beginend");
+    visitChildren(ctx);
+    popScope();
+    return nullptr;
 }
 
 antlrcpp::Any TypeChecker::visitRegwrite(BSVParser::RegwriteContext *ctx) {
@@ -1729,53 +1798,122 @@ antlrcpp::Any TypeChecker::visitRegwrite(BSVParser::RegwriteContext *ctx) {
 }
 
 antlrcpp::Any TypeChecker::visitStmt(BSVParser::StmtContext *ctx) {
-    return visitChildren(ctx);
+    visitChildren(ctx);
+    return nullptr;
 }
 
 antlrcpp::Any TypeChecker::visitIfstmt(BSVParser::IfstmtContext *ctx) {
-    return visitChildren(ctx);
+    z3::expr condExpr = visit(ctx->expression());
+    addConstraint(condExpr == instantiateType("Bool"), "condexpr$trk", ctx->expression());
+    visit(ctx->stmt(0));
+    if (ctx->stmt(1))
+        visit(ctx->stmt(1));
+    return nullptr;
 }
 
 antlrcpp::Any TypeChecker::visitCasestmt(BSVParser::CasestmtContext *ctx) {
-    return visitChildren(ctx);
+    z3::expr expr = visit(ctx->expression());
+    for (int i = 0; ctx->casestmtitem(i); i++) {
+        BSVParser::CasestmtitemContext *item = ctx->casestmtitem(i);
+        for (int j = 0; item->expression(i); j++) {
+            z3::expr matchExpr = visit(item->expression(j));
+            addConstraint(expr == matchExpr, "match$trk", item->expression(j));
+        }
+        visit(item->stmt());
+    }
+    for (int i = 0; ctx->casestmtpatitem(i); i++) {
+        BSVParser::CasestmtpatitemContext *patitem = ctx->casestmtpatitem(i);
+        z3::expr patExpr = visit(patitem->pattern());
+        addConstraint(expr == patExpr, "patmatch$trk", patitem->pattern());
+        for (int j = 0; patitem->patterncond(j); j++)
+            visit(patitem->patterncond(j));
+        visit(patitem->stmt());
+    }
+    return nullptr;
 }
 
 antlrcpp::Any TypeChecker::visitCasestmtdefaultitem(BSVParser::CasestmtdefaultitemContext *ctx) {
-    return visitChildren(ctx);
+    visit(ctx->stmt());
+    return nullptr;
 }
 
 antlrcpp::Any TypeChecker::visitWhilestmt(BSVParser::WhilestmtContext *ctx) {
-    return visitChildren(ctx);
+    z3::expr condExpr = visit(ctx->expression());
+    addConstraint(condExpr == instantiateType("Bool"), "whilcond$trk", ctx->expression());
+    visit(ctx->stmt());
+    return nullptr;
 }
 
 antlrcpp::Any TypeChecker::visitForstmt(BSVParser::ForstmtContext *ctx) {
-    return visitChildren(ctx);
+    pushScope("forstmt");
+    visit(ctx->forinit());
+    visit(ctx->fortest());
+    visit(ctx->forincr());
+    visit(ctx->stmt());
+    popScope();
+    return nullptr;
 }
 
 antlrcpp::Any TypeChecker::visitForinit(BSVParser::ForinitContext *ctx) {
-    return visitChildren(ctx);
+    string varName = ctx->var->getText();
+    shared_ptr<BSVType> varType = bsvtype(ctx->bsvtype());
+    shared_ptr<Declaration> varDecl = make_shared<Declaration>(varName, varType);
+    lexicalScope->bind(varName, varDecl);
+    z3::expr varExpr = constant(varDecl->uniqueName, typeSort);
+    z3::expr varTypeExpr = bsvTypeToExpr(varType);
+    addConstraint(varTypeExpr == varExpr, "forinit$trk", ctx);
+    return nullptr;
 }
 
 antlrcpp::Any TypeChecker::visitSimplevardeclassign(BSVParser::SimplevardeclassignContext *ctx) {
-    return visitChildren(ctx);
+    string varName = ctx->var->getText();
+    shared_ptr<BSVType> varType;
+    if (ctx->bsvtype()) {
+        varType = bsvtype(ctx->bsvtype());
+    }
+    shared_ptr<Declaration> varDecl = make_shared<Declaration>(varName, varType);
+    z3::expr varExpr = constant(varDecl->uniqueName, typeSort);
+    if (ctx->bsvtype()) {
+        z3::expr varTypeExpr = bsvTypeToExpr(varType);
+        addConstraint(varExpr == varTypeExpr, "vardecltype$trk", ctx);
+    }
+    z3::expr rhsExpr = visit(ctx->expression());
+    addConstraint(varExpr == rhsExpr, "vardeclassign$trk", ctx);
+    return nullptr;
 }
 
 antlrcpp::Any TypeChecker::visitFortest(BSVParser::FortestContext *ctx) {
-    return visitChildren(ctx);
+    z3::expr testExpr = visit(ctx->expression());
+    z3::expr boolExpr = instantiateType("Bool");
+    addConstraint(testExpr == boolExpr, "fortest$trk", ctx);
+    return nullptr;
 }
 
 antlrcpp::Any TypeChecker::visitForincr(BSVParser::ForincrContext *ctx) {
-    return visitChildren(ctx);
+    visitChildren(ctx);
+    return nullptr;
 }
 
 antlrcpp::Any TypeChecker::visitVarincr(BSVParser::VarincrContext *ctx) {
-    return visitChildren(ctx);
+    string varName = ctx->lowerCaseIdentifier()->getText();
+    shared_ptr<Declaration> varDecl = lexicalScope->lookup(varName);
+    if (!varDecl) {
+        cerr << "Failed to lookup for variable " << varName << " at " << sourceLocation(ctx) << endl;
+    }
+    assert(varDecl);
+    z3::expr varExpr = constant(varDecl->uniqueName, typeSort);
+    z3::expr exprExpr = visit(ctx->expression());
+    addConstraint(varExpr == exprExpr, "varincr$trk", ctx);
+    return nullptr;
 }
 
 antlrcpp::Any TypeChecker::visitPattern(BSVParser::PatternContext *ctx) {
     if (ctx->var != NULL) {
+        string varName = ctx->var->getText();
+        shared_ptr<Declaration> varDecl = make_shared<Declaration>(varName, make_shared<BSVType>());
+        lexicalScope->bind(varName, varDecl);
         currentContext->logstream << "Visit pattern var %s\n" << ctx->var->getText() << endl;
-        return constant(ctx->var->getText().c_str(), typeSort);
+        return constant(varDecl->uniqueName.c_str(), typeSort);
     } else if (ctx->constantpattern() != NULL) {
         return visit(ctx->constantpattern());
     } else {
