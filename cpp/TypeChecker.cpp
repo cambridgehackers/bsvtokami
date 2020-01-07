@@ -90,6 +90,7 @@ void PackageContext::visitModuleDefinition(const shared_ptr<ModuleDefinition> &d
 }
 
 void PackageContext::visitStructDeclaration(const shared_ptr<StructDeclaration> &decl) {
+    logstream << "  imported struct type " << decl->name << " " << decl->bsvtype->to_string() << endl;
     typeDeclarationList.push_back(decl);
     typeDeclaration[decl->name] = decl;
     for (int i = 0; i < decl->members.size(); i++) {
@@ -99,6 +100,7 @@ void PackageContext::visitStructDeclaration(const shared_ptr<StructDeclaration> 
 }
 
 void PackageContext::visitTypeSynonymDeclaration(const shared_ptr<TypeSynonymDeclaration> &decl) {
+    logstream << "  imported type synonym " << decl->name << " " << decl->bsvtype->to_string() << endl;
     typeDeclarationList.push_back(decl);
     typeDeclaration[decl->name] = decl;
 }
@@ -220,7 +222,7 @@ void TypeChecker::setupZ3Context() {
         std::shared_ptr<BSVType> interfaceType(typeDecl->bsvtype);
         int arity = interfaceType->params.size();
         std::string typePredicate(std::string("is_") + typeDecl->name);
-        //fprintf(stderr, "User defined type %s predicate %s arity %d\n", typeDecl->name.c_str(), typePredicate.c_str(), arity);
+        cerr << "User defined type " << typeDecl->name << " arity " << arity << endl;
 
         Z3_symbol *param_symbols = new Z3_symbol[arity];
         Z3_sort *param_sorts = new Z3_sort[arity]; //(Z3_sort *)malloc(sizeof(Z3_sort) * arity);
@@ -408,7 +410,15 @@ void TypeChecker::addDeclaration(BSVParser::PackagestmtContext *pkgstmt) {
     } else if (pkgstmt->varbinding()) {
         addDeclaration(pkgstmt->varbinding());
     } else if (pkgstmt->importdecl()) {
-        // handled later?
+        BSVParser::ImportdeclContext *importdecl = pkgstmt->importdecl();
+        string pkgName = importdecl->upperCaseIdentifier(0)->getText();
+        currentContext->logstream << "importing package " << pkgName << endl;
+        cerr << "importing package " << pkgName << endl;
+
+        analyzePackage(pkgName);
+        shared_ptr<LexicalScope> pkgScope = packageScopes[pkgName];
+        currentContext->import(pkgScope);
+
     } else if (pkgstmt->exportdecl()) {
         // handled later?
     } else {
@@ -418,6 +428,8 @@ void TypeChecker::addDeclaration(BSVParser::PackagestmtContext *pkgstmt) {
 }
 
 void TypeChecker::addDeclaration(BSVParser::InterfacedeclContext *ctx) {
+    setupZ3Context();
+
     shared_ptr<BSVType> interfaceType(bsvtype(ctx->typedeftype()));
     string name(interfaceType->name);
 
@@ -601,12 +613,7 @@ antlrcpp::Any TypeChecker::visitExportitem(BSVParser::ExportitemContext *ctx) {
 }
 
 antlrcpp::Any TypeChecker::visitImportdecl(BSVParser::ImportdeclContext *ctx) {
-    string pkgName = ctx->upperCaseIdentifier(0)->getText();
-    currentContext->logstream << "importing package " << pkgName << endl;
-    analyzePackage(pkgName);
-    shared_ptr<LexicalScope> pkgScope = packageScopes[pkgName];
-    currentContext->import(pkgScope);
-    return freshConstant(__FUNCTION__, typeSort);
+    return nullptr;
 }
 
 antlrcpp::Any TypeChecker::visitPackagestmt(BSVParser::PackagestmtContext *ctx) {
@@ -661,7 +668,7 @@ antlrcpp::Any TypeChecker::visitMethodprotoformal(BSVParser::MethodprotoformalCo
     z3::expr formalExpr = context.constant(context.str_symbol(formalName.c_str()), typeSort);
 
     if (formal->bsvtype()) {
-        shared_ptr<BSVType> formaltype = dereferenceType(bsvtype(formal->bsvtype()));
+        shared_ptr<BSVType> formaltype = bsvtype(formal->bsvtype());
         cerr << "method proto formal bsvtype: " << formaltype->to_string() << " at " << sourceLocation(formal) << endl;
         z3::expr typeExpr = bsvTypeToExpr(formaltype);
         addConstraint(formalExpr == typeExpr, "mpf$trk", formal);
@@ -820,8 +827,15 @@ antlrcpp::Any TypeChecker::visitActionbinding(BSVParser::ActionbindingContext *c
 }
 
 antlrcpp::Any TypeChecker::visitPatternbinding(BSVParser::PatternbindingContext *ctx) {
-    assert(0);
-    return visitChildren(ctx);
+    currentContext->logstream << "Unimplemented pattern binding " << ctx->getText() << " at " << sourceLocation(ctx) << endl;
+    z3::expr patternExpr = visit(ctx->pattern());
+    z3::expr rhsExpr = visit(ctx->expression());
+    if (ctx->op->getText() == "<-") {
+        addConstraint(instantiateType("ActionValue", patternExpr) == rhsExpr, "actionpatbinding$trk", ctx);
+    } else {
+        addConstraint(patternExpr == rhsExpr, "patbinding$trk", ctx);
+    }
+    return nullptr;
 }
 
 antlrcpp::Any TypeChecker::visitTypeclassdecl(BSVParser::TypeclassdeclContext *ctx) {
@@ -1815,7 +1829,7 @@ antlrcpp::Any TypeChecker::visitCasestmt(BSVParser::CasestmtContext *ctx) {
     z3::expr expr = visit(ctx->expression());
     for (int i = 0; ctx->casestmtitem(i); i++) {
         BSVParser::CasestmtitemContext *item = ctx->casestmtitem(i);
-        for (int j = 0; item->expression(i); j++) {
+        for (int j = 0; item->expression(j); j++) {
             z3::expr matchExpr = visit(item->expression(j));
             addConstraint(expr == matchExpr, "match$trk", item->expression(j));
         }
