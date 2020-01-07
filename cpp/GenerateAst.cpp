@@ -329,10 +329,10 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::FunctiondefContext *ct
     else
         returnType.reset(new BSVType("Void"));
 
-    if (proto->methodprotoformals()) {
-        vector<BSVParser::MethodprotoformalContext *> formals = proto->methodprotoformals()->methodprotoformal();
+    if (proto->methodformals()) {
+        vector<BSVParser::MethodformalContext *> formals = proto->methodformals()->methodformal();
         for (size_t i = 0; i < formals.size(); i++) {
-            BSVParser::MethodprotoformalContext *formal = formals.at(i);
+            BSVParser::MethodformalContext *formal = formals.at(i);
             params.push_back(formal->lowerCaseIdentifier()->getText());
             if (formal->bsvtype() != nullptr) {
                 paramTypes.push_back(typeChecker->bsvtype(formal->bsvtype()));

@@ -291,6 +291,8 @@ protected:
 
     antlrcpp::Any visitUndefinedexpr(BSVParser::UndefinedexprContext *ctx) override;
 
+    antlrcpp::Any visitActionvalueblockexpr(BSVParser::ActionvalueblockexprContext *ctx) override;
+
     antlrcpp::Any visitClockedbyexpr(BSVParser::ClockedbyexprContext *ctx) override;
 
     antlrcpp::Any visitFieldexpr(BSVParser::FieldexprContext *ctx) override;
@@ -318,6 +320,10 @@ protected:
     antlrcpp::Any visitInterfacestmt(BSVParser::InterfacestmtContext *ctx) override;
 
     antlrcpp::Any visitBeginendblock(BSVParser::BeginendblockContext *ctx) override;
+
+    antlrcpp::Any visitActionblock(BSVParser::ActionblockContext *ctx) override;
+
+    antlrcpp::Any visitActionvalueblock(BSVParser::ActionvalueblockContext *ctx) override;
 
     antlrcpp::Any visitRegwrite(BSVParser::RegwriteContext *ctx) override;
 

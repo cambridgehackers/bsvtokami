@@ -235,7 +235,7 @@ functiondef :
     | functionproto '=' expression ';'
     ;
 functionproto :
-    'function' bsvtype? name=lowerCaseIdentifier ('(' methodprotoformals? ')')? provisos?
+    'function' bsvtype? name=lowerCaseIdentifier ('(' methodformals? ')')? provisos?
     ;
 externcimport :
     'import' '"BDPI"' (lowerCaseIdentifier '=')? 'function' bsvtype lowerCaseIdentifier '(' externcfuncargs? ')' ';'
