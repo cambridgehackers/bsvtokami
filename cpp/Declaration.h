@@ -13,6 +13,8 @@ class EnumDeclaration;
 
 class EnumElementDeclaration;
 
+class FunctionDeclaration;
+
 class InterfaceDeclaration;
 
 class MethodDeclaration;
@@ -40,6 +42,7 @@ public:
     // called for all declarations
     virtual void visitDeclaration(const shared_ptr<Declaration> &declaration) {}
     virtual void visitEnumDeclaration(const shared_ptr<EnumDeclaration> &decl) {}
+    virtual void visitFunctionDeclaration(const shared_ptr<FunctionDeclaration> &decl) {}
     virtual void visitInterfaceDeclaration(const shared_ptr<InterfaceDeclaration> &decl) {}
     virtual void visitMethodDeclaration(const shared_ptr<MethodDeclaration> &decl) {}
     virtual void visitModuleDefinition(const shared_ptr<ModuleDefinition> &decl) {}
@@ -93,6 +96,13 @@ public:
     : Declaration(name, bsvtype, GlobalBindingType) {};
     shared_ptr<EnumDeclaration> enumDeclaration() override { return static_pointer_cast<EnumDeclaration, Declaration>(shared_from_this()); }
 
+};
+
+
+class FunctionDeclaration : public Declaration {
+public:
+    FunctionDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype) : Declaration(name, bsvtype) {};
+    shared_ptr<FunctionDeclaration> functionDeclaration() override { return static_pointer_cast<FunctionDeclaration, Declaration>(shared_from_this()); }
 };
 
 class InterfaceDeclaration : public Declaration {
