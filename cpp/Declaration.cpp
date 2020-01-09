@@ -11,3 +11,11 @@ string Declaration::genUniqueName(const string &name, BindingType bt) {
     else
         return name + "-" + ::to_string(uniqifier++);
 }
+
+shared_ptr<Declaration> UnionDeclaration::lookupMember(const string &memberName) {
+    for (int i = 0; i < members.size(); i++) {
+        if (members[i]->name == memberName)
+            return members[i];
+    }
+    return shared_ptr<Declaration>();
+}

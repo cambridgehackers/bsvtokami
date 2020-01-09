@@ -166,4 +166,5 @@ public:
     UnionDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype)
             : Declaration(name, bsvtype, GlobalBindingType) {};
     shared_ptr<UnionDeclaration> unionDeclaration() override { return static_pointer_cast<UnionDeclaration, Declaration>(shared_from_this()); }
+    shared_ptr<Declaration> lookupMember(const string &memberName);
 };
