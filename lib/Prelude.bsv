@@ -104,7 +104,7 @@ module mkRegU(Reg#(data_t)) provisos (Bits#(data_t,datasz));
 endmodule
 
 //FIXME
-module mkCReg#(Integer depth, data_t v)(Reg#(data_t));
+module mkCReg#(Integer depth_, data_t v)(Vector#(depth,Reg#(data_t)));
 endmodule
 
 (* nogen *)
