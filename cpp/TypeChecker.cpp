@@ -123,6 +123,7 @@ void PackageContext::visitUnionDeclaration(const shared_ptr<UnionDeclaration> &d
     for (int i = 0; i < decl->members.size(); i++) {
         shared_ptr<Declaration> member = decl->members[i];
         memberDeclaration.insert(make_pair(member->name, member));
+        enumtag.insert(make_pair(member->name, decl));
     }
 }
 
@@ -488,7 +489,7 @@ void TypeChecker::addDeclaration(BSVParser::FunctiondefContext *functiondef) {
     shared_ptr<BSVType> functionType = bsvtype(functionproto);
     shared_ptr<FunctionDefinition> functionDecl = make_shared<FunctionDefinition>(functionName, functionType, GlobalBindingType);
     lexicalScope->bind(functionName, functionDecl);
-    cerr << "addDeclaration function def " << functionName << " at " << sourceLocation(functiondef);
+    cerr << "addDeclaration function def " << functionName << " at " << sourceLocation(functiondef) << endl;
 
 }
 
@@ -1777,21 +1778,18 @@ antlrcpp::Any TypeChecker::visitValueofexpr(BSVParser::ValueofexprContext *ctx) 
 antlrcpp::Any TypeChecker::visitTaggedunionexpr(BSVParser::TaggedunionexprContext *ctx) {
     string tagname = ctx->tag->getText();
 
-    string exprname(tagname + string("$expr"));
-    z3::expr exprsym = context.constant(context.str_symbol(exprname.c_str()), typeSort);
+    string exprname(freshString(tagname));
+    z3::expr exprsym = constant(exprname, typeSort);
 
     vector<z3::expr> exprs;
     for (auto it = currentContext->enumtag.find(tagname); it != currentContext->enumtag.end() && it->first == tagname; ++it) {
         shared_ptr<Declaration> decl(it->second);
-        bool foundDecl = typeDecls.find(decl->name) != typeDecls.cend();
-        currentContext->logstream << "Tag exprprimary " << tagname << " of type " << decl->name << (foundDecl ? " found" : " not found") << endl;
-        if (foundDecl) {
-            z3::func_decl type_decl = typeDecls.find(decl->name)->second;
-            exprs.push_back(exprsym == type_decl());
-        }
+        shared_ptr<BSVType> freshTypeInstance = freshType(decl->bsvtype);
+        currentContext->logstream << "Tag exprprimary " << tagname << " of type " << freshTypeInstance->to_string() << endl;
+        exprs.push_back(exprsym == bsvTypeToExpr(freshTypeInstance));
     }
     if (exprs.size())
-        addConstraint(orExprs(exprs), "tunionexpr", ctx);
+        addConstraint(orExprs(exprs), tagname + "$trk", ctx);
     else
         currentContext->logstream << "No enum definitions for expr " << ctx->getText() << endl;
     return exprsym;
@@ -2353,7 +2351,7 @@ shared_ptr<BSVType> TypeChecker::freshType(const shared_ptr<BSVType> &bsvtype) {
 
 shared_ptr<BSVType> TypeChecker::freshType(const shared_ptr<BSVType> &bsvtype, map<string, shared_ptr<BSVType>> &bindings) {
     if (bsvtype->isVar) {
-        shared_ptr<BSVType> fv = make_shared<BSVType>(freshString(bsvtype->name));
+        shared_ptr<BSVType> fv = make_shared<BSVType>(freshString(bsvtype->name), bsvtype->kind, bsvtype->isVar);
         bindings[bsvtype->name] = fv;
         return fv;
     } else {
