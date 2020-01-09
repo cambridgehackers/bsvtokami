@@ -1247,8 +1247,12 @@ antlrcpp::Any TypeChecker::visitLvalue(BSVParser::LvalueContext *ctx) {
         }
     } else {
         BSVParser::LowerCaseIdentifierContext *id = ctx->lowerCaseIdentifier();
-        //FIXME
-        z3::expr varExpr = context.constant(context.str_symbol(id->getText().c_str()), typeSort);
+        string varName = id->getText();
+        shared_ptr<Declaration> varDecl = lookup(varName);
+        if (!varDecl) {
+            cerr << "lvalue " << varName << " no decl at " << sourceLocation(id) << endl;
+        }
+        z3::expr varExpr = constant(varDecl->uniqueName, typeSort);
         return varExpr;
     }
     currentContext->logstream << "Unhandled lvalue " << ctx->getText() << endl;
@@ -1889,12 +1893,10 @@ antlrcpp::Any TypeChecker::visitActionvalueblock(BSVParser::ActionvalueblockCont
 antlrcpp::Any TypeChecker::visitRegwrite(BSVParser::RegwriteContext *ctx) {
     z3::expr rhsExpr = visit(ctx->rhs);
     z3::expr lhsExpr = visit(ctx->lhs);
-    z3::func_decl reg_decl = typeDecls.find("Reg")->second;
-    z3::expr regExpr = reg_decl(rhsExpr);
-    string tracker(freshString("regwrite"));
-    addConstraint(lhsExpr == regExpr, "regwrite", ctx);
+    z3::expr regExpr = instantiateType("Reg", rhsExpr);
+    addConstraint(lhsExpr == regExpr, "reg$write", ctx);
     currentContext->logstream << "visit regwrite << " << (lhsExpr == regExpr) << endl;
-    return lhsExpr;
+    return nullptr;
 }
 
 antlrcpp::Any TypeChecker::visitStmt(BSVParser::StmtContext *ctx) {
