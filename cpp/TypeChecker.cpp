@@ -1332,15 +1332,16 @@ antlrcpp::Any TypeChecker::visitMatchesexpr(BSVParser::MatchesexprContext *ctx) 
     pushScope("matches");
     z3::expr expr = visit(ctx->expression());
     z3::expr patternExpr = visit(ctx->pattern());
-    addConstraint(expr == patternExpr, "matchespat$trk", ctx);
+    addConstraint(expr == patternExpr, "matches$expr", ctx);
     for (int i = 0; ctx->patterncond(i); i++) {
         visit(ctx->patterncond(i));
     }
     popScope();
 
-    insertExpr(ctx, instantiateType("Bool"));
+    z3::expr boolExpr = instantiateType("Bool");
+    insertExpr(ctx, boolExpr);
 
-    return expr;
+    return boolExpr;
 }
 
 antlrcpp::Any TypeChecker::visitCondexpr(BSVParser::CondexprContext *ctx) {
@@ -1422,14 +1423,38 @@ antlrcpp::Any TypeChecker::visitBinopexpr(BSVParser::BinopexprContext *ctx) {
 }
 
 antlrcpp::Any TypeChecker::visitUnopexpr(BSVParser::UnopexprContext *ctx) {
-    //FIXME: Check for op
+    auto it = exprs.find(ctx);
+    if (it != exprs.end())
+        return it->second;
+
     BSVParser::ExprprimaryContext *ep = ctx->exprprimary();
     currentContext->logstream << " visiting unop (" << ctx->getText() << " " << endl;
 
     z3::expr unopExpr = visit(ep);
-    currentContext->logstream << ") visit unop " << ctx->getText() << " " << unopExpr << " at " <<  sourceLocation(ctx) << endl;
+    currentContext->logstream << " visit unop " << ctx->getText() << " " << unopExpr << " at " <<  sourceLocation(ctx) << endl;
+    if (ctx->op == NULL) {
+        insertExpr(ctx, unopExpr);
+        return unopExpr;
+    }
 
-    return unopExpr;
+    string op = ctx->op->getText();
+    if (op == "!") {
+        z3::expr boolExpr = instantiateType("Bool");
+        addConstraint(unopExpr == boolExpr, "unop", ctx);
+        insertExpr(ctx, boolExpr);
+        return boolExpr;
+    } else if (op == "&" || op == "~&"
+               || op == "|" || op == "~|"
+                || op == "^" || op == "^~" || op == "^~") {
+        addConstraint(unopExpr == instantiateType("Bit", instantiateType("Numeric", freshConstant("bit$width", intSort))),
+                "bit$reduce", ctx);
+        z3::expr bit1Expr = instantiateType("Bit", instantiateType("Numeric", context.int_val(1)));
+        insertExpr(ctx, bit1Expr);
+        return bit1Expr;
+    } else {
+        insertExpr(ctx, unopExpr);
+        return unopExpr;
+    }
 }
 
 antlrcpp::Any TypeChecker::visitBitconcat(BSVParser::BitconcatContext *ctx) {
@@ -1811,7 +1836,8 @@ antlrcpp::Any TypeChecker::visitArraysub(BSVParser::ArraysubContext *ctx) {
     z3::expr bitwidth = freshConstant("bitwidth$", typeSort);
     z3::expr eltExpr = freshConstant("elt$", typeSort);
     z3::expr vsizeExpr = freshConstant("vsize$", typeSort);
-    z3::expr arraysubConstraint = ((arrayExpr == instantiateType("Bit", bitwidth) && resultExpr == bitwidth)
+    z3::expr bit1Expr = instantiateType("Bit", instantiateType("Numeric", context.int_val(1)));
+    z3::expr arraysubConstraint = ((arrayExpr == instantiateType("Bit", bitwidth) && resultExpr == bit1Expr)
                                    || (arrayExpr == instantiateType("Array", eltExpr) && resultExpr == eltExpr)
                                    || (arrayExpr == instantiateType("Vector", vsizeExpr, eltExpr) && resultExpr == eltExpr)
     );
