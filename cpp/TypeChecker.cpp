@@ -314,6 +314,19 @@ void TypeChecker::addConstraint(z3::expr constraint, const string &trackerPrefix
     trackers.insert(std::pair<string, antlr4::ParserRuleContext *>(trackerName, ctx));
 }
 
+z3::expr TypeChecker::andExprs(std::vector<z3::expr> exprs) {
+    assert(exprs.size() > 0);
+    if (exprs.size() == 1) {
+        return exprs.at(0);
+    } else {
+        z3::expr result = exprs.at(0);
+        for (int i = 1; i < exprs.size(); i++) {
+            result = (result && exprs[i]);
+        }
+        return result;
+    }
+}
+
 z3::expr TypeChecker::orExprs(std::vector<z3::expr> exprs) {
     assert(exprs.size() > 0);
     if (exprs.size() == 1) {
@@ -1084,8 +1097,7 @@ antlrcpp::Any TypeChecker::visitMethodformal(BSVParser::MethodformalContext *for
 
 antlrcpp::Any TypeChecker::visitMethodcond(BSVParser::MethodcondContext *ctx) {
     z3::expr condtype = visit(ctx->expression());
-    z3::func_decl boolcon = typeDecls.find("Bool")->second;
-    addConstraint(condtype == boolcon(), "methodcond", ctx);
+    addConstraint(condtype == instantiateType("Bool"), "method$cond", ctx);
     return condtype;
 }
 
@@ -1137,8 +1149,9 @@ antlrcpp::Any TypeChecker::visitFunctiondef(BSVParser::FunctiondefContext *ctx) 
     pushScope(functionName);
     actionContext = true;
 
-    //FIXME: add formal parameters to scope
-    
+    if (ctx->functionproto()->methodformals())
+        visit(ctx->functionproto()->methodformals());
+
     for (int i = 0; ctx->stmt(i); i++) {
         visit(ctx->stmt(i));
     }
@@ -2014,10 +2027,14 @@ antlrcpp::Any TypeChecker::visitPattern(BSVParser::PatternContext *ctx) {
         string varName = ctx->var->getText();
         shared_ptr<Declaration> varDecl = make_shared<Declaration>(varName, make_shared<BSVType>());
         lexicalScope->bind(varName, varDecl);
-        currentContext->logstream << "Visit pattern var %s\n" << ctx->var->getText() << endl;
-        return constant(varDecl->uniqueName.c_str(), typeSort);
+        currentContext->logstream << "Visit pattern var " << ctx->var->getText() << endl;
+        return constant(varDecl->uniqueName, typeSort);
     } else if (ctx->constantpattern() != NULL) {
         return visit(ctx->constantpattern());
+    } else if (ctx->taggedunionpattern()) {
+        return visit(ctx->taggedunionpattern());
+    } else if (ctx->tuplepattern()) {
+        return visit(ctx->tuplepattern());
     } else {
         currentContext->logstream << "Visit pattern wildcard " << ctx->getText() << endl;
         return freshConstant("wildcard", typeSort);
@@ -2034,28 +2051,65 @@ antlrcpp::Any TypeChecker::visitTaggedunionpattern(BSVParser::Taggedunionpattern
         string tagname(ctx->upperCaseIdentifier()->getText());
         currentContext->logstream << "Visit pattern tag " <<  tagname << endl;
 
-        string patname(tagname + string("pat"));
-        z3::expr patsym = context.constant(context.str_symbol(patname.c_str()), typeSort);
+        string patname(freshString(tagname));
+        z3::expr patsym = constant(patname, typeSort);
 
         vector<z3::expr> exprs;
         for (auto it = currentContext->enumtag.find(tagname); it != currentContext->enumtag.end() && it->first == tagname; ++it) {
             shared_ptr<Declaration> decl(it->second);
             currentContext->logstream << "Tag pattern " << tagname << " of type " << decl->name << endl;
-            z3::func_decl type_decl = typeDecls.find(decl->name)->second;
-            exprs.push_back(patsym == type_decl());
+            cerr << "Tag pattern " << tagname << " of type " << decl->name << " arity " << decl->bsvtype->params.size() << endl;
+            map<string, shared_ptr<BSVType>> bindings;
+            shared_ptr<BSVType> freshDeclType = freshType(decl->bsvtype, bindings);
+            currentContext->logstream << "Tag pattern freshDeclType " << freshDeclType->to_string() << endl;
+            vector<z3::expr> and_exprs;
+            and_exprs.push_back(patsym == bsvTypeToExpr(freshDeclType));
+            if (ctx->pattern(0)) {
+                currentContext->logstream << "tag pattern 0 " << ctx->pattern(0)->getText() << endl;
+                shared_ptr<UnionDeclaration> unionDeclaration = decl->unionDeclaration();
+                assert(unionDeclaration);
+                shared_ptr<Declaration> memberDecl = unionDeclaration->lookupMember(tagname);
+                assert(memberDecl);
+                currentContext->logstream << "Tag pattern memberDecl " << memberDecl->name << " bsvtype "<< memberDecl->bsvtype->to_string() << endl;
+                shared_ptr<BSVType> memberType = freshType(memberDecl->bsvtype, bindings);
+                currentContext->logstream << "Tag pattern fresh memberType " << memberType->to_string() << endl;
+                if (!ctx->lowerCaseIdentifier(0)) {
+                    // tagged Tag .pat
+                    z3::expr patExpr = visit(ctx->pattern(0));
+                    z3::expr memberTypeExpr = bsvTypeToExpr(memberType);
+                    currentContext->logstream << "   pat expr " << patExpr << " member type expr " << memberTypeExpr << endl;
+                    and_exprs.push_back(patExpr == memberTypeExpr);
+                } else {
+                    assert(!ctx->lowerCaseIdentifier(0));
+                }
+            }
+            exprs.push_back(andExprs(and_exprs));
         }
 
-        addConstraint(orExprs(exprs), "tunionpat", ctx);
+        addConstraint(orExprs(exprs), "tunion$pat", ctx);
 
         z3::expr patexpr = constant(patname, typeSort);
         insertExpr(ctx, patexpr);
-        return patexpr;
+        return patsym;
     }
+    assert(0);
     return visitChildren(ctx);
 }
 
 antlrcpp::Any TypeChecker::visitTuplepattern(BSVParser::TuplepatternContext *ctx) {
-    return visitChildren(ctx);
+    auto it = exprs.find(ctx);
+    if (it != exprs.end())
+        return it->second;
+
+    z3::expr_vector patterns(context);
+    for (int i = 0; ctx->pattern(i); i++) {
+        patterns.push_back(visit(ctx->pattern(i)));
+    }
+    string constructor = "Tuple" + to_string(patterns.size());
+    z3::expr tuplePatternExpr = instantiateType(constructor, patterns);
+    cerr << "tuple pattern " << constructor << " z3 " << tuplePatternExpr << endl;
+    insertExpr(ctx, tuplePatternExpr);
+    return tuplePatternExpr;
 }
 
 antlrcpp::Any TypeChecker::visitProvisos(BSVParser::ProvisosContext *ctx) {
@@ -2337,12 +2391,14 @@ z3::expr TypeChecker::instantiateType(const string &type_name, const z3::expr &p
 z3::expr TypeChecker::bsvTypeToExpr(shared_ptr<BSVType> bsvtype, map<string, string> &varmapping) {
     if (bsvtype->isVar) {
         string bsvname = bsvtype->name;
-        string exprName;
-        if (varmapping.find(bsvname) != varmapping.cend()) {
-            exprName = varmapping.find(bsvname)->second;
-        } else {
-            exprName = freshString(bsvname);
-            varmapping[bsvname] = exprName;
+        string exprName = bsvname;
+        if (0) {
+            if (varmapping.find(bsvname) != varmapping.cend()) {
+                exprName = varmapping.find(bsvname)->second;
+            } else {
+                exprName = bsvname = freshString(bsvname);
+                varmapping[bsvname] = exprName;
+            }
         }
         return constant(exprName, typeSort);
     } else if (bsvtype->isNumeric()) {
@@ -2379,9 +2435,14 @@ shared_ptr<BSVType> TypeChecker::freshType(const shared_ptr<BSVType> &bsvtype) {
 
 shared_ptr<BSVType> TypeChecker::freshType(const shared_ptr<BSVType> &bsvtype, map<string, shared_ptr<BSVType>> &bindings) {
     if (bsvtype->isVar) {
-        shared_ptr<BSVType> fv = make_shared<BSVType>(freshString(bsvtype->name), bsvtype->kind, bsvtype->isVar);
-        bindings[bsvtype->name] = fv;
-        return fv;
+        auto it = bindings.find(bsvtype->name);
+        if (it == bindings.cend()) {
+            shared_ptr<BSVType> fv = make_shared<BSVType>(freshString(bsvtype->name), bsvtype->kind, bsvtype->isVar);
+            bindings[bsvtype->name] = fv;
+            return fv;
+        } else {
+            return it->second;
+        }
     } else {
         vector<shared_ptr<BSVType>> freshParams;
         for (int i = 0; i < bsvtype->params.size(); i++) {

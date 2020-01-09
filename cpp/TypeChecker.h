@@ -104,6 +104,8 @@ private:
 
     void addConstraint(z3::expr constraint, const string &trackerPrefix, antlr4::ParserRuleContext *ctx);
 
+    z3::expr andExprs(std::vector<z3::expr> exprs);
+
     z3::expr orExprs(vector<z3::expr> exprs);
 
     void pushScope(const string &name) {

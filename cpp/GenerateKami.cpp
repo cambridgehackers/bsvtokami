@@ -589,6 +589,7 @@ void GenerateKami::generateKami(const shared_ptr<VarBindingStmt> &stmt, int dept
 void GenerateKami::generateKami(const shared_ptr<FieldExpr> &expr, int depth, int precedence) {
     generateKami(expr->object, depth, precedence);
     out << " ! (";
+    assert(expr->bsvtype);
     generateKami(expr->bsvtype);
     out << ") @. \"" << expr->fieldName << "\"";
 }
