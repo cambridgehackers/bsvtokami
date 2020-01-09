@@ -30,6 +30,7 @@ public:
     void import(const shared_ptr<LexicalScope> &scope);
 
     void visitEnumDeclaration(const shared_ptr<EnumDeclaration> &decl);
+    void visitFunctionDefinition(const shared_ptr<FunctionDefinition> &def);
     void visitInterfaceDeclaration(const shared_ptr<InterfaceDeclaration> &decl);
     void visitMethodDeclaration(const shared_ptr<MethodDeclaration> &decl);
     void visitModuleDefinition(const shared_ptr<ModuleDefinition> &decl);
@@ -72,6 +73,10 @@ public:
 
     shared_ptr<BSVType> lookup(antlr4::ParserRuleContext *ctx);
 
+    shared_ptr<Declaration> lookup(const string &name);
+
+    shared_ptr<BSVType> freshType(const shared_ptr<BSVType> &bsvtype);
+
     shared_ptr<BSVType> dereferenceType(const shared_ptr<BSVType> &bsvtype);
 
     BSVParser::PackagedefContext *analyzePackage(const string &packageName);
@@ -90,6 +95,8 @@ private:
     z3::symbol freshName(string name);
 
     z3::expr freshConstant(string name, z3::sort sort);
+
+    shared_ptr<BSVType> freshType(const shared_ptr<BSVType> &bsvtype, map<string, shared_ptr<BSVType>> &bindings);
 
     z3::expr constant(string name, z3::sort sort);
 
@@ -401,4 +408,6 @@ public:
     z3::expr bsvTypeToExpr(shared_ptr<BSVType> bsvtype, map<string,string> &varmapping);
 
     z3::expr bsvTypeToExpr(shared_ptr<BSVType> bsvtype);
+
+    shared_ptr<BSVType> bsvtype(BSVParser::FunctionprotoContext *ctx);
 };

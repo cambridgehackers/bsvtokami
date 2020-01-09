@@ -34,6 +34,8 @@ void LexicalScope::visit(DeclarationVisitor &visitor) {
         visitor.visitDeclaration(decl);
         if (decl->enumDeclaration())
             visitor.visitEnumDeclaration(decl->enumDeclaration());
+        else if (decl->functionDefinition())
+            visitor.visitFunctionDefinition(decl->functionDefinition());
         else if (decl->interfaceDeclaration())
             visitor.visitInterfaceDeclaration(decl->interfaceDeclaration());
         else if (decl->methodDeclaration())

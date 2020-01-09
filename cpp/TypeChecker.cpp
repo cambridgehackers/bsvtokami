@@ -39,6 +39,11 @@ void PackageContext::import(const shared_ptr<LexicalScope> &scope) {
         void visitEnumDeclaration(const shared_ptr<EnumDeclaration> &decl) override {
             pc->visitEnumDeclaration(decl);
         }
+        virtual void visitFunctionDefinition(const shared_ptr<FunctionDefinition> &decl) override {
+            pc->logstream << "PackageContext::import visitFunctionDefinition " << decl->name << endl;
+            pc->visitFunctionDefinition(decl);
+        }
+
         void visitInterfaceDeclaration(const shared_ptr<InterfaceDeclaration> &decl) override {
             pc->visitInterfaceDeclaration(decl);
         }
@@ -80,6 +85,12 @@ void PackageContext::visitInterfaceDeclaration(const shared_ptr<InterfaceDeclara
     }
 }
 
+
+void PackageContext::visitFunctionDefinition(const shared_ptr<FunctionDefinition> &decl) {
+    declaration[decl->name] = decl;
+    declarationList.push_back(decl);
+}
+
 void PackageContext::visitMethodDeclaration(const shared_ptr<MethodDeclaration> &decl) {
     assert(0);
 }
@@ -114,6 +125,7 @@ void PackageContext::visitUnionDeclaration(const shared_ptr<UnionDeclaration> &d
         memberDeclaration.insert(make_pair(member->name, member));
     }
 }
+
 
 
 BSVParser::PackagedefContext *TypeChecker::analyzePackage(const string &packageName) {
@@ -341,6 +353,17 @@ shared_ptr<BSVType> TypeChecker::lookup(antlr4::ParserRuleContext *ctx) {
     return BSVType::create("NOENT");
 }
 
+shared_ptr<Declaration> TypeChecker::lookup(const string &varname) {
+    shared_ptr<Declaration> vardecl = lexicalScope->lookup(varname);
+    if (!vardecl) {
+        auto it = currentContext->declaration.find(varname);
+        if (it != currentContext->declaration.cend())
+            vardecl = it->second;
+        if (vardecl)
+            currentContext->logstream << "found global vardecl " << varname << " unique " << vardecl->uniqueName << endl;
+    }
+    return vardecl;
+}
 
 shared_ptr<BSVType> TypeChecker::dereferenceType(const shared_ptr<BSVType> &bsvtype) {
     if (bsvtype->isVar || bsvtype->isNumeric())
@@ -458,6 +481,14 @@ void TypeChecker::addDeclaration(BSVParser::InterfacedeclContext *ctx) {
 }
 
 void TypeChecker::addDeclaration(BSVParser::FunctiondefContext *functiondef) {
+    if (!lexicalScope->isGlobal())
+        return;
+    BSVParser::FunctionprotoContext *functionproto = functiondef->functionproto();
+    string functionName = functionproto->name->getText();
+    shared_ptr<BSVType> functionType = bsvtype(functionproto);
+    shared_ptr<FunctionDefinition> functionDecl = make_shared<FunctionDefinition>(functionName, functionType, GlobalBindingType);
+    lexicalScope->bind(functionName, functionDecl);
+    cerr << "addDeclaration function def " << functionName << " at " << sourceLocation(functiondef);
 
 }
 
@@ -569,11 +600,18 @@ antlrcpp::Any TypeChecker::visitEndpackage(BSVParser::EndpackageContext *ctx) {
 
 antlrcpp::Any TypeChecker::visitLowerCaseIdentifier(BSVParser::LowerCaseIdentifierContext *ctx) {
     string varname(ctx->getText());
-    shared_ptr<Declaration> vardecl = lexicalScope->lookup(varname);
+    shared_ptr<Declaration> vardecl = lookup(varname);
+    shared_ptr<FunctionDefinition> functionDef = vardecl->functionDefinition();
     string uniqueName = (vardecl) ? vardecl->uniqueName : varname;
+    if (functionDef) {
+        uniqueName = freshString(varname);
+        shared_ptr<BSVType> uniqueType = freshType(functionDef->bsvtype);
+        z3::expr uniqueExpr = bsvTypeToExpr(uniqueType);
+        addConstraint(constant(uniqueName, typeSort) == uniqueExpr, uniqueName + "$trk", ctx);
+    }
     if (!vardecl)
         currentContext->logstream << "No decl found for var " << varname << " at " << sourceLocation(ctx) << endl;
-    return context.constant(context.str_symbol(uniqueName.c_str()), typeSort);
+    return constant(uniqueName, typeSort);
 }
 
 antlrcpp::Any TypeChecker::visitUpperCaseIdentifier(BSVParser::UpperCaseIdentifierContext *ctx) {
@@ -1363,10 +1401,8 @@ antlrcpp::Any TypeChecker::visitBinopexpr(BSVParser::BinopexprContext *ctx) {
 
 
     string opstr(ctx->op->getText());
-    char opnamebuf[128];
-    snprintf(opnamebuf, sizeof(opnamebuf) - 1, "expr%s-%d", opstr.c_str(), nameCount++);
-    string binopstr(opnamebuf);
-    z3::expr binopsym = context.constant(binopstr.c_str(), typeSort);
+    string binopstr(freshString("binop$"));
+    z3::expr binopsym = constant(binopstr, typeSort);
     if (boolops.find(opstr) != boolops.end()) {
         currentContext->logstream << "Bool expr " << ctx->getText() << endl;
         z3::func_decl Bool = typeDecls.find("Bool")->second;
@@ -1415,7 +1451,7 @@ antlrcpp::Any TypeChecker::visitVarexpr(BSVParser::VarexprContext *ctx) {
     currentContext->logstream << "        Visiting var expr " << ctx->getText().c_str() << " " << ctx << endl;
 
     string varname(ctx->getText());
-    shared_ptr<Declaration> varDecl = lexicalScope->lookup(varname);
+    shared_ptr<Declaration> varDecl = lookup(varname);
     varDecls[ctx] = varDecl;
 
     currentContext->logstream << "visiting var " << varname;
@@ -1435,8 +1471,8 @@ antlrcpp::Any TypeChecker::visitVarexpr(BSVParser::VarexprContext *ctx) {
 
     string uniqueName = (varDecl) ? varDecl->uniqueName : varname;
     string rhsname(uniqueName + string("$rhs"));
-    z3::expr varExpr = context.constant(context.str_symbol(uniqueName.c_str()), typeSort);
-    z3::expr rhsExpr = context.constant(context.str_symbol(rhsname.c_str()), typeSort);
+    z3::expr varExpr = constant(uniqueName, typeSort);
+    z3::expr rhsExpr = constant(rhsname, typeSort);
 
 
     if (currentContext->enumtag.find(varname) != currentContext->enumtag.end()) {
@@ -1451,7 +1487,8 @@ antlrcpp::Any TypeChecker::visitVarexpr(BSVParser::VarexprContext *ctx) {
 
         addConstraint(orExprs(exprs), "enumtag", ctx);
     } else if (!varDecl || varDecl->bindingType == GlobalBindingType) {
-        addConstraint(varExpr == rhsExpr, "varexpr", ctx);
+        //addConstraint(varExpr == rhsExpr, "varexpr", ctx);
+        rhsExpr = varExpr;
     } else {
         // variable
         z3::func_decl reg_decl = typeDecls.find("Reg")->second;
@@ -1703,7 +1740,7 @@ antlrcpp::Any TypeChecker::visitInterfaceexpr(BSVParser::InterfaceexprContext *c
 antlrcpp::Any TypeChecker::visitCallexpr(BSVParser::CallexprContext *ctx) {
     vector<BSVParser::ExpressionContext *> args = ctx->expression();
     currentContext->logstream << "visit call expr " << ctx->getText() << (actionContext ? " side effect " : " constructor ") << " arity " << args.size() << endl;
-    z3::expr instance_expr = freshConstant((actionContext ? "rstT" : "mkinstance"), typeSort);
+    z3::expr instance_expr = freshConstant((actionContext ? "call$trk" : "mkinstance"), typeSort);
     z3::expr fcn_expr = visit(ctx->fcn);
 
     if (args.size() == 0) {
@@ -1935,7 +1972,7 @@ antlrcpp::Any TypeChecker::visitForincr(BSVParser::ForincrContext *ctx) {
 
 antlrcpp::Any TypeChecker::visitVarincr(BSVParser::VarincrContext *ctx) {
     string varName = ctx->lowerCaseIdentifier()->getText();
-    shared_ptr<Declaration> varDecl = lexicalScope->lookup(varName);
+    shared_ptr<Declaration> varDecl = lookup(varName);
     if (!varDecl) {
         cerr << "Failed to lookup for variable " << varName << " at " << sourceLocation(ctx) << endl;
     }
@@ -2110,6 +2147,35 @@ shared_ptr<BSVType> TypeChecker::bsvtype(BSVParser::TypedeftypeContext *ctx) {
     return BSVType::create(name, params);
 }
 
+shared_ptr<BSVType> TypeChecker::bsvtype(BSVParser::FunctionprotoContext *ctx) {
+    shared_ptr<BSVType> returnType = bsvtype(ctx->bsvtype());
+    vector<shared_ptr<BSVType>> params;
+    vector<BSVParser::MethodformalContext *> mpfs;
+    if (ctx->methodformals()) {
+        mpfs = ctx->methodformals()->methodformal();
+    }
+
+    if (mpfs.size() == 0) {
+        // special case, no arguments => type of method is return type
+        currentContext->logstream << "parsed arity 0 functionproto type: " << ctx->getText() << endl;
+        returnType->prettyPrint(currentContext->logstream);
+        currentContext->logstream << endl;
+        return returnType;
+    }
+
+    for (int i = 0; i < mpfs.size(); i++) {
+        params.push_back(bsvtype(mpfs[i]));
+    }
+
+    params.push_back(returnType);
+    string function = "Function" + to_string(params.size());
+    shared_ptr<BSVType> functionType = BSVType::create(function, params);
+    currentContext->logstream << "parsed function type: " << ctx->getText() << endl;
+    functionType->prettyPrint(currentContext->logstream);
+    currentContext->logstream << endl;
+    return functionType;
+}
+
 shared_ptr<BSVType> TypeChecker::bsvtype(BSVParser::MethodprotoformalContext *ctx) {
     if (ctx->bsvtype()) {
         return bsvtype(ctx->bsvtype());
@@ -2280,7 +2346,21 @@ z3::expr TypeChecker::bsvTypeToExpr(shared_ptr<BSVType> bsvtype) {
 }
 
 
+shared_ptr<BSVType> TypeChecker::freshType(const shared_ptr<BSVType> &bsvtype) {
+    map<string, shared_ptr<BSVType>> bindings;
+    return freshType(bsvtype, bindings);
+}
 
-
-
-
+shared_ptr<BSVType> TypeChecker::freshType(const shared_ptr<BSVType> &bsvtype, map<string, shared_ptr<BSVType>> &bindings) {
+    if (bsvtype->isVar) {
+        shared_ptr<BSVType> fv = make_shared<BSVType>(freshString(bsvtype->name));
+        bindings[bsvtype->name] = fv;
+        return fv;
+    } else {
+        vector<shared_ptr<BSVType>> freshParams;
+        for (int i = 0; i < bsvtype->params.size(); i++) {
+            freshParams.push_back(freshType(bsvtype->params[i], bindings));
+        }
+        return make_shared<BSVType>(bsvtype->name, bsvtype->kind, bsvtype->isVar, freshParams);
+    }
+}
