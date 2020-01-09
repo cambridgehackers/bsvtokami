@@ -974,10 +974,6 @@ antlrcpp::Any TypeChecker::visitModuledef(BSVParser::ModuledefContext *ctx) {
         z3::expr_vector unsat_core = solver.unsat_core();
         currentContext->logstream << "unsat_core " << unsat_core << endl;
         currentContext->logstream << "unsat_core.size " << unsat_core.size() << endl;
-        for (int i = 0; i < unsat_core.size(); i++) {
-            z3::expr e = unsat_core[i];
-            currentContext->logstream << e << endl;
-        }
     }
     solver.pop();
     popScope();
