@@ -13,7 +13,7 @@ class EnumDeclaration;
 
 class EnumElementDeclaration;
 
-class FunctionDeclaration;
+class FunctionDefinition;
 
 class InterfaceDeclaration;
 
@@ -42,8 +42,9 @@ public:
     // called for all declarations
     virtual void visitDeclaration(const shared_ptr<Declaration> &declaration) {}
     virtual void visitEnumDeclaration(const shared_ptr<EnumDeclaration> &decl) {}
-    virtual void visitFunctionDeclaration(const shared_ptr<FunctionDeclaration> &decl) {}
+    virtual void visitFunctionDefinition(const shared_ptr<FunctionDefinition> &decl) {}
     virtual void visitInterfaceDeclaration(const shared_ptr<InterfaceDeclaration> &decl) {}
+    virtual void visitMethodDefinition(const shared_ptr<MethodDefinition> &decl) {}
     virtual void visitMethodDeclaration(const shared_ptr<MethodDeclaration> &decl) {}
     virtual void visitModuleDefinition(const shared_ptr<ModuleDefinition> &decl) {}
     virtual void visitStructDeclaration(const shared_ptr<StructDeclaration> &decl) {}
@@ -69,10 +70,11 @@ public:
     };
 
     virtual shared_ptr<EnumDeclaration> enumDeclaration() { return shared_ptr<EnumDeclaration>(); }
+    virtual shared_ptr<FunctionDefinition> functionDefinition() { return shared_ptr<FunctionDefinition>(); }
     virtual shared_ptr<InterfaceDeclaration> interfaceDeclaration() { return shared_ptr<InterfaceDeclaration>(); }
     virtual shared_ptr<ModuleDefinition> moduleDefinition() { return shared_ptr<ModuleDefinition>(); }
-    virtual shared_ptr<MethodDeclaration> methodDeclaration() { return shared_ptr<MethodDeclaration>(); }
     virtual shared_ptr<MethodDefinition> methodDefinition() { return shared_ptr<MethodDefinition>(); }
+    virtual shared_ptr<MethodDeclaration> methodDeclaration() { return shared_ptr<MethodDeclaration>(); }
     virtual shared_ptr<StructDeclaration> structDeclaration() { return shared_ptr<StructDeclaration>(); }
     virtual shared_ptr<TypeSynonymDeclaration> typeSynonymDeclaration() { return shared_ptr<TypeSynonymDeclaration>(); }
     virtual shared_ptr<UnionDeclaration> unionDeclaration() { return shared_ptr<UnionDeclaration>(); }
@@ -99,10 +101,10 @@ public:
 };
 
 
-class FunctionDeclaration : public Declaration {
+class FunctionDefinition : public Declaration {
 public:
-    FunctionDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype) : Declaration(name, bsvtype) {};
-    shared_ptr<FunctionDeclaration> functionDeclaration() override { return static_pointer_cast<FunctionDeclaration, Declaration>(shared_from_this()); }
+    FunctionDefinition(std::string name, std::shared_ptr<BSVType> bsvtype, const BindingType bt = LocalBindingType) : Declaration(name, bsvtype, bt) {};
+    shared_ptr<FunctionDefinition> functionDefinition() override { return static_pointer_cast<FunctionDefinition, Declaration>(shared_from_this()); }
 };
 
 class InterfaceDeclaration : public Declaration {
