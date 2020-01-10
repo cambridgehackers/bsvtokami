@@ -1560,8 +1560,7 @@ antlrcpp::Any TypeChecker::visitVarexpr(BSVParser::VarexprContext *ctx) {
         rhsExpr = varExpr;
     } else {
         // variable
-        z3::func_decl reg_decl = typeDecls.find("Reg")->second;
-        z3::expr regExpr = reg_decl(rhsExpr);
+        z3::expr regExpr = instantiateType("Reg", rhsExpr);
         addConstraint(varExpr == regExpr || varExpr == rhsExpr, "varexpr", ctx);
     }
     insertExpr(ctx, rhsExpr);
@@ -1717,7 +1716,8 @@ antlrcpp::Any TypeChecker::visitFieldexpr(BSVParser::FieldexprContext *ctx) {
                 map<string, shared_ptr<BSVType>> freshTypeVars;
                 z3::expr interfaceExpr = bsvTypeToExpr(freshType(interfaceType, freshTypeVars));
                 z3::expr methodExpr = bsvTypeToExpr(freshType(methodType, freshTypeVars));
-                currentContext->logstream << "convert method " << fieldname << " args to z3::expr ..." << endl;
+                currentContext->logstream << "convert method " << fieldname << " args to z3::expr "
+                                          << sourceLocation(ctx) << endl;
                 currentContext->logstream << "    " << interfaceExpr << endl;
                 currentContext->logstream << "    " << methodExpr << endl;
                 currentContext->logstream << "    " << (exprtype == interfaceExpr && fieldexpr == methodExpr)
@@ -1734,7 +1734,8 @@ antlrcpp::Any TypeChecker::visitFieldexpr(BSVParser::FieldexprContext *ctx) {
                 map<string, shared_ptr<BSVType>> freshTypeVars;
                 z3::expr interfaceExpr = bsvTypeToExpr(freshType(interfaceType, freshTypeVars));
                 z3::expr subinterfaceExpr = bsvTypeToExpr(freshType(subinterfaceType, freshTypeVars));
-                currentContext->logstream << "convert subinterface " << fieldname << " args to z3::expr ..." << endl;
+                currentContext->logstream << "convert subinterface " << fieldname << " args to z3::expr "
+                                          << sourceLocation(ctx) << endl;
                 currentContext->logstream << "    " << interfaceExpr << endl;
                 currentContext->logstream << "    " << subinterfaceExpr << endl;
                 currentContext->logstream << "    " << (exprtype == interfaceExpr && fieldexpr == subinterfaceExpr)
@@ -1756,7 +1757,7 @@ antlrcpp::Any TypeChecker::visitFieldexpr(BSVParser::FieldexprContext *ctx) {
             map<string, shared_ptr<BSVType>> freshTypeVars;
             z3::expr structExpr = bsvTypeToExpr(freshType(structType, freshTypeVars));
             z3::expr memberExpr = bsvTypeToExpr(freshType(fieldType, freshTypeVars));
-            currentContext->logstream << "convert field args to z3::expr ..." << endl;
+            currentContext->logstream << "convert field args to z3::expr " << sourceLocation(ctx) << endl;
             currentContext->logstream << "    " << structExpr << endl;
             currentContext->logstream << "    " << memberExpr << endl;
             currentContext->logstream << "    " << (exprtype == structExpr && fieldexpr == memberExpr)
@@ -1769,8 +1770,35 @@ antlrcpp::Any TypeChecker::visitFieldexpr(BSVParser::FieldexprContext *ctx) {
     //z3::expr tracker(freshConstant("$track", boolSort));
     //insertTracker(ctx, tracker);
     if (exprs.size()) {
-        addConstraint(orExprs(exprs), "fieldexpr", ctx);
-        currentContext->logstream << " returning fieldexpr " << fieldname << " exprs " << orExprs(exprs) << endl;
+        z3::expr orExpr = orExprs(exprs);
+        addConstraint(orExpr, "fieldexpr", ctx);
+        currentContext->logstream << " returning fieldexpr " << fieldname << " exprs " << orExpr << endl;
+
+        if (0) {
+            solver.push();
+            z3::check_result checked = solver.check();
+            if (checked == z3::sat) {
+                z3::model mod = solver.get_model();
+                try {
+                    z3::expr v = mod.eval(orExpr, true);
+                    currentContext->logstream << orExpr << " evaluates to " << v << " at "
+                                              << sourceLocation(ctx) << endl;
+                    //exprTypes[ctx] = bsvtype(v, mod);
+                } catch (const exception &e) {
+                    currentContext->logstream << "exception " << e.what() << " on expr: " << orExpr << " @"
+                                              << ctx->getRuleIndex()
+                                              << " at " << sourceLocation(ctx) << endl;
+                }
+            } else {
+                z3::expr_vector unsat_core = solver.unsat_core();
+                currentContext->logstream << "solver " << solver << endl;
+                currentContext->logstream << "unsat_core " << unsat_core << endl;
+                currentContext->logstream << "unsat_core.size " << unsat_core.size() << " on " << ctx->getText()
+                                          << " at "
+                                          << sourceLocation(ctx) << endl;
+            }
+            solver.pop();
+        }
     }
 
     insertExpr(ctx, fieldexpr);
