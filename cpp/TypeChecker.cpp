@@ -1429,7 +1429,7 @@ antlrcpp::Any TypeChecker::visitBinopexpr(BSVParser::BinopexprContext *ctx) {
     vector<z3::expr> exprs;
     if (opstr == "||" || opstr == "&&") {
         exprs.push_back(leftsym == instantiateType("Bool"));
-    } else {
+    } else if (opstr != "==" && opstr != "!=") {
         z3::expr exprszsym = instantiateType("Numeric", freshConstant("binop$sz", intSort));
         exprs.push_back(leftsym == instantiateType("Bit", exprszsym));
         exprs.push_back(leftsym == instantiateType("Int", exprszsym));
@@ -1438,11 +1438,10 @@ antlrcpp::Any TypeChecker::visitBinopexpr(BSVParser::BinopexprContext *ctx) {
         exprs.push_back(leftsym == instantiateType("Real"));
         exprs.push_back(leftsym == instantiateType("String"));
     }
-    if (opstr == "==" || opstr == "!=") {
-        exprs.push_back(leftsym == instantiateType("Bool"));
+    if (exprs.size()) {
+        z3::expr binopExpr = orExprs(exprs);
+        addConstraint(binopExpr, "binop$type", ctx);
     }
-    z3::expr binopExpr = orExprs(exprs);
-    addConstraint(binopExpr, "binop$type", ctx);
     
     if (boolops.find(opstr) != boolops.end()) {
         currentContext->logstream << "Bool expr " << ctx->getText() << endl;
