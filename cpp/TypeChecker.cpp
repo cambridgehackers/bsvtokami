@@ -1405,7 +1405,7 @@ antlrcpp::Any TypeChecker::visitBinopexpr(BSVParser::BinopexprContext *ctx) {
     z3::expr leftsym = visit(ctx->left);
     z3::expr rightsym = visit(ctx->right);
 
-    addConstraint(leftsym == rightsym, "binop", ctx);
+    addConstraint(leftsym == rightsym, "binop$args", ctx);
     if (0) {
         solver.push();
         currentContext->logstream << "  checking " << ctx->getText() << endl;
@@ -1414,21 +1414,34 @@ antlrcpp::Any TypeChecker::visitBinopexpr(BSVParser::BinopexprContext *ctx) {
         solver.pop();
     }
 
-
     string opstr(ctx->op->getText());
-    string binopstr(freshString("binop$"));
+    string binopstr(freshString(opstr));
     z3::expr binopsym = constant(binopstr, typeSort);
+
+    currentContext->logstream << "Arith expr " << ctx->getText() << endl;
+    vector<z3::expr> exprs;
+    if (opstr == "||" || opstr == "&&") {
+        exprs.push_back(leftsym == instantiateType("Bool"));
+    } else {
+        z3::expr exprszsym = instantiateType("Numeric", freshConstant("binop$sz", intSort));
+        exprs.push_back(leftsym == instantiateType("Bit", exprszsym));
+        exprs.push_back(leftsym == instantiateType("Int", exprszsym));
+        exprs.push_back(leftsym == instantiateType("UInt", exprszsym));
+        exprs.push_back(leftsym == instantiateType("Integer"));
+        exprs.push_back(leftsym == instantiateType("Real"));
+        exprs.push_back(leftsym == instantiateType("String"));
+    }
+    if (opstr == "==" || opstr == "!=") {
+        exprs.push_back(leftsym == instantiateType("Bool"));
+    }
+    z3::expr binopExpr = orExprs(exprs);
+    addConstraint(binopExpr, "binop$type", ctx);
+    
     if (boolops.find(opstr) != boolops.end()) {
         currentContext->logstream << "Bool expr " << ctx->getText() << endl;
-        z3::func_decl Bool = typeDecls.find("Bool")->second;
-        addConstraint(binopsym == Bool(), "binboolop", ctx);
+        addConstraint(binopsym == instantiateType("Bool"), "binboolop$res", ctx);
     } else {
-        currentContext->logstream << "Bit expr " << ctx->getText() << endl;
-        z3::func_decl Bit = typeDecls.find("Bit")->second;
-        string exprsz(opstr);
-        exprsz.append(string("sz"));
-        z3::expr exprszsym = instantiateType("Numeric", context.constant(exprsz.c_str(), intSort));
-        addConstraint(binopsym == Bit(exprszsym), "binbitop", ctx);
+        addConstraint(binopsym == leftsym, "binop$res", ctx);
     }
 
     insertExpr(ctx, binopsym);
