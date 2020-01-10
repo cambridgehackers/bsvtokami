@@ -287,9 +287,9 @@ typeclass Alias#(type a, type b)
                  b determines a);
 endtypeclass
       
-typeclass FShow#(type t);
-   function Fmt fshow(t value);
-endtypeclass
+//typeclass FShow#(type t);
+   function Fmt fshow(t value); endfunction
+//endtypeclass
 
 typedef enum {
    False, True
