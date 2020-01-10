@@ -63,7 +63,7 @@ module NoMethods mkDecExecSep(RegFile#(Bit#(PgmSz), Bit#(InstrSz)) pgm,
 
 	 rf[e2w.idx] <= e2w.val;
 	 Vector#(NumRegs, Bool) flags = sbFlags;
-	 //flags[e2w.idx] = False;
+	 flags[e2w.idx] = False;
 	 sbFlags <= flags;
       endrule
 
