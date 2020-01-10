@@ -10,16 +10,16 @@ void indent(ostream &s, int depth) {
         s << " ";
 }
 
-Stmt::Stmt(StmtType stmtType)
-        : stmtType(stmtType) {
+Stmt::Stmt(StmtType stmtType, const SourcePos &sourcePos)
+        : stmtType(stmtType), sourcePos(sourcePos) {
 }
 
 shared_ptr<Stmt> Stmt::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     return shared_ptr<Stmt>();
 }
 
-RuleDefStmt::RuleDefStmt(const string &name, const shared_ptr<Expr> &guard, const vector<shared_ptr<Stmt>> &stmts)
-        : Stmt(RuleDefStmtType), name(name), guard(guard), stmts(stmts) {
+RuleDefStmt::RuleDefStmt(const string &name, const shared_ptr<Expr> &guard, const vector<shared_ptr<Stmt>> &stmts, const SourcePos &sourcePos)
+        : Stmt(RuleDefStmtType, sourcePos), name(name), guard(guard), stmts(stmts) {
 }
 
 void RuleDefStmt::prettyPrint(ostream &out, int depth) {
@@ -70,8 +70,8 @@ shared_ptr<struct Stmt> RegisterStmt::rename(string prefix, shared_ptr<LexicalSc
     return make_shared<RegisterStmt>(regName, elementType);
 }
 
-RegReadStmt::RegReadStmt(const string &regName, const string &var, const shared_ptr<BSVType> &varType)
-        : Stmt(RegReadStmtType), regName(regName), var(var), varType(varType) {
+RegReadStmt::RegReadStmt(const string &regName, const string &var, const shared_ptr<BSVType> &varType, const SourcePos &sourcePos)
+        : Stmt(RegReadStmtType, sourcePos), regName(regName), var(var), varType(varType) {
 }
 
 void RegReadStmt::prettyPrint(ostream &out, int depth) {
@@ -100,8 +100,8 @@ shared_ptr<RegReadStmt> RegReadStmt::create(const string &regName, const string 
     return make_shared<RegReadStmt>(regName, var, varType);
 }
 
-RegWriteStmt::RegWriteStmt(const string &regName, const shared_ptr<BSVType> &elementType, const shared_ptr<Expr> &rhs)
-        : Stmt(RegWriteStmtType), regName(regName), elementType(elementType), rhs(rhs) {
+RegWriteStmt::RegWriteStmt(const string &regName, const shared_ptr<BSVType> &elementType, const shared_ptr<Expr> &rhs, const SourcePos &sourcePos)
+        : Stmt(RegWriteStmtType, sourcePos), regName(regName), elementType(elementType), rhs(rhs) {
 }
 
 void RegWriteStmt::prettyPrint(ostream &out, int depth) {
@@ -131,8 +131,8 @@ shared_ptr<Stmt> RegWriteStmt::rename(string prefix, shared_ptr<LexicalScope> &s
 }
 
 ActionBindingStmt::ActionBindingStmt(const shared_ptr<BSVType> &bsvtype, const string &name,
-                                     const shared_ptr<Expr> &rhs)
-        : Stmt(ActionBindingStmtType), bsvtype(bsvtype), name(name), rhs(rhs) {
+                                     const shared_ptr<Expr> &rhs, const SourcePos &sourcePos)
+        : Stmt(ActionBindingStmtType, sourcePos), bsvtype(bsvtype), name(name), rhs(rhs) {
 
 }
 
@@ -185,14 +185,14 @@ shared_ptr<Stmt> PatternMatchStmt::rename(string prefix, shared_ptr<LexicalScope
 }
 
 VarBindingStmt::VarBindingStmt(const shared_ptr<BSVType> &bsvtype, const string &name,
-                               const shared_ptr<Expr> &rhs)
-        : Stmt(VarBindingStmtType), bsvtype(bsvtype), name(name), bindingType(LocalBindingType), rhs(rhs) {
+                               const shared_ptr<Expr> &rhs, const SourcePos &sourcePos)
+        : Stmt(VarBindingStmtType, sourcePos), bsvtype(bsvtype), name(name), bindingType(LocalBindingType), rhs(rhs) {
 
 }
 
 VarBindingStmt::VarBindingStmt(const shared_ptr<BSVType> &bsvtype, const string &name, BindingType bindingType,
-                               const shared_ptr<Expr> &rhs)
-        : Stmt(VarBindingStmtType), bsvtype(bsvtype), name(name), bindingType(bindingType), rhs(rhs) {
+                               const shared_ptr<Expr> &rhs, const SourcePos &sourcePos)
+        : Stmt(VarBindingStmtType, sourcePos), bsvtype(bsvtype), name(name), bindingType(bindingType), rhs(rhs) {
 
 }
 
@@ -220,8 +220,8 @@ shared_ptr<Stmt> VarBindingStmt::rename(string prefix, shared_ptr<LexicalScope> 
     return shared_ptr<Stmt>(new VarBindingStmt(bsvtype, renamedVar, renamedRHS));
 }
 
-VarAssignStmt::VarAssignStmt(const shared_ptr<LValue> &lhs, const string &op, const shared_ptr<Expr> &rhs)
-        : Stmt(VarAssignStmtType), lhs(lhs), op(op), rhs(rhs) {
+VarAssignStmt::VarAssignStmt(const shared_ptr<LValue> &lhs, const string &op, const shared_ptr<Expr> &rhs, const SourcePos &sourcePos)
+        : Stmt(VarAssignStmtType, sourcePos), lhs(lhs), op(op), rhs(rhs) {
 
 }
 
@@ -245,11 +245,12 @@ shared_ptr<struct Stmt> VarAssignStmt::rename(string prefix, shared_ptr<LexicalS
 
 
 FunctionDefStmt::FunctionDefStmt(const string &name, const shared_ptr<BSVType> &returnType,
-                             const std::vector<std::string> &params,
-                             const std::vector<std::shared_ptr<BSVType>> &paramTypes,
-                             const shared_ptr<Expr> &guard,
-                             const vector<std::shared_ptr<Stmt>> &stmts)
-        : Stmt(FunctionDefStmtType), name(name), returnType(returnType),
+                                 const std::vector<std::string> &params,
+                                 const std::vector<std::shared_ptr<BSVType>> &paramTypes,
+                                 const shared_ptr<Expr> &guard,
+                                 const vector<std::shared_ptr<Stmt>> &stmts,
+                                 const SourcePos &sourcePos)
+        : Stmt(FunctionDefStmtType, sourcePos), name(name), returnType(returnType),
           params(params), paramTypes(paramTypes),
           guard(guard), stmts(stmts) {}
 
@@ -294,8 +295,9 @@ shared_ptr<Stmt> FunctionDefStmt::rename(string prefix, shared_ptr<LexicalScope>
 
 MethodDeclStmt::MethodDeclStmt(const string &name, const shared_ptr<BSVType> &returnType,
                                const std::vector<std::string> &params,
-                               const std::vector<std::shared_ptr<BSVType>> &paramTypes)
-        : Stmt(MethodDeclStmtType), name(name), returnType(returnType),
+                               const std::vector<std::shared_ptr<BSVType>> &paramTypes,
+                               const SourcePos &sourcePos)
+        : Stmt(MethodDeclStmtType, sourcePos), name(name), returnType(returnType),
           params(params), paramTypes(paramTypes) {}
 
 void MethodDeclStmt::prettyPrint(ostream &out, int depth) {
@@ -323,8 +325,9 @@ MethodDefStmt::MethodDefStmt(const string &name, const shared_ptr<BSVType> &retu
                              const std::vector<std::string> &params,
                              const std::vector<std::shared_ptr<BSVType>> &paramTypes,
                              const shared_ptr<Expr> &guard,
-                             const vector<std::shared_ptr<Stmt>> &stmts)
-        : Stmt(MethodDefStmtType), name(name), returnType(returnType),
+                             const vector<std::shared_ptr<Stmt>> &stmts,
+                             const SourcePos &sourcePos)
+        : Stmt(MethodDefStmtType, sourcePos), name(name), returnType(returnType),
           params(params), paramTypes(paramTypes),
           guard(guard), stmts(stmts) {}
 
@@ -370,8 +373,9 @@ shared_ptr<Stmt> MethodDefStmt::rename(string prefix, shared_ptr<LexicalScope> &
 ModuleDefStmt::ModuleDefStmt(const std::string &name, const std::shared_ptr<BSVType> &interfaceType,
                              const std::vector<std::string> &params,
                              const std::vector<std::shared_ptr<BSVType>> &paramTypes,
-                             const std::vector<std::shared_ptr<Stmt>> &stmts)
-        : Stmt(ModuleDefStmtType), name(name),
+                             const std::vector<std::shared_ptr<Stmt>> &stmts,
+                             const SourcePos &sourcePos)
+        : Stmt(ModuleDefStmtType, sourcePos), name(name),
           params(params), paramTypes(paramTypes),
           interfaceType(interfaceType), stmts(stmts) {
 
@@ -426,8 +430,8 @@ shared_ptr<Stmt> ModuleDefStmt::rename(string prefix, shared_ptr<LexicalScope> &
 }
 
 ModuleInstStmt::ModuleInstStmt(const string &name, const shared_ptr<BSVType> &interfaceType,
-                               const shared_ptr<Expr> &rhs)
-        : Stmt(ModuleInstStmtType), name(name), interfaceType(interfaceType), rhs(rhs) {
+                               const shared_ptr<Expr> &rhs, const SourcePos &sourcePos)
+        : Stmt(ModuleInstStmtType, sourcePos), name(name), interfaceType(interfaceType), rhs(rhs) {
 }
 
 ModuleInstStmt::~ModuleInstStmt() {}
@@ -455,8 +459,9 @@ shared_ptr<ModuleInstStmt> ModuleInstStmt::create(const string &name, const shar
 
 
 IfStmt::IfStmt(const shared_ptr<Expr> &condition, const shared_ptr<Stmt> &thenStmt,
-               const shared_ptr<Stmt> &elseStmt) : Stmt(IfStmtType), condition(condition), thenStmt(thenStmt),
-                                                   elseStmt(elseStmt) {}
+               const shared_ptr<Stmt> &elseStmt, const SourcePos &sourcePos) : Stmt(IfStmtType, sourcePos),
+                                                                               condition(condition), thenStmt(thenStmt),
+                                                                               elseStmt(elseStmt) {}
 
 IfStmt::~IfStmt() {
 
@@ -489,7 +494,8 @@ shared_ptr<struct Stmt> IfStmt::rename(string prefix, shared_ptr<LexicalScope> &
                                            shared_ptr<Stmt>()));
 }
 
-BlockStmt::BlockStmt(const std::vector<std::shared_ptr<Stmt>> &stmts) : Stmt(BlockStmtType), stmts(stmts) {}
+BlockStmt::BlockStmt(const std::vector<std::shared_ptr<Stmt>> &stmts, const SourcePos &sourcePos)
+        : Stmt(BlockStmtType, sourcePos), stmts(stmts) {}
 
 BlockStmt::~BlockStmt() {}
 
@@ -558,8 +564,7 @@ shared_ptr<struct Stmt> ExprStmt::rename(string prefix, shared_ptr<LexicalScope>
     return shared_ptr<Stmt>(new ExprStmt(expr->rename(prefix, scope)));
 }
 
-ImportStmt::ImportStmt(const std::string name) : Stmt(ImportStmtType), name(name) {
-
+ImportStmt::ImportStmt(const std::string &name, const SourcePos &sourcePos) : Stmt(ImportStmtType, sourcePos), name(name) {
 }
 
 void ImportStmt::prettyPrint(ostream &out, int depth) {
@@ -569,8 +574,9 @@ void ImportStmt::prettyPrint(ostream &out, int depth) {
 shared_ptr<ImportStmt> ImportStmt::importStmt() { return static_pointer_cast<ImportStmt, Stmt>(shared_from_this()); }
 
 InterfaceDeclStmt::InterfaceDeclStmt(const std::string &name, const std::shared_ptr<BSVType> &interfaceType,
-                                     const vector<std::shared_ptr<Stmt>> &decls)
-        : Stmt(InterfaceDeclStmtType), name(name),
+                                     const vector<std::shared_ptr<Stmt>> &decls,
+                                     const SourcePos &sourcePos)
+        : Stmt(InterfaceDeclStmtType, sourcePos), name(name),
           interfaceType(interfaceType), decls(decls) {
 }
 
@@ -590,8 +596,8 @@ shared_ptr<InterfaceDeclStmt>
 InterfaceDeclStmt::interfaceDeclStmt() { return static_pointer_cast<InterfaceDeclStmt, Stmt>(shared_from_this()); }
 
 InterfaceDefStmt::InterfaceDefStmt(const std::string &name, const std::shared_ptr<BSVType> &interfaceType,
-                                     const vector<std::shared_ptr<Stmt>> &defs)
-        : Stmt(InterfaceDefStmtType), name(name),
+                                     const vector<std::shared_ptr<Stmt>> &defs, const SourcePos &sourcePos)
+        : Stmt(InterfaceDefStmtType, sourcePos), name(name),
           interfaceType(interfaceType), defs(defs) {
 }
 
@@ -612,8 +618,9 @@ InterfaceDefStmt::interfaceDefStmt() { return static_pointer_cast<InterfaceDefSt
 
 
 TypedefSynonymStmt::TypedefSynonymStmt(const std::shared_ptr<BSVType> &typedeftype,
-                                       const std::shared_ptr<BSVType> &type)
-        : Stmt(TypedefSynonymStmtType), typedeftype(typedeftype), type(type) {
+                                       const std::shared_ptr<BSVType> &type,
+                                       const SourcePos &sourcePos)
+        : Stmt(TypedefSynonymStmtType, sourcePos), typedeftype(typedeftype), type(type) {
 
 }
 
@@ -631,8 +638,9 @@ TypedefSynonymStmt::typedefSynonymStmt() { return static_pointer_cast<TypedefSyn
 
 TypedefStructStmt::TypedefStructStmt(const std::string &name, const std::shared_ptr<BSVType> &structType,
                                      const std::vector<std::string> &members,
-                                     const std::vector<std::shared_ptr<BSVType>> &memberTypes)
-        : Stmt(TypedefStructStmtType),
+                                     const std::vector<std::shared_ptr<BSVType>> &memberTypes,
+                                     const SourcePos &sourcePos)
+        : Stmt(TypedefStructStmtType, sourcePos),
           name(name), structType(structType),
           members(members), memberTypes(memberTypes) {
 }
@@ -654,8 +662,8 @@ void TypedefStructStmt::prettyPrint(ostream &out, int depth) {
 shared_ptr<TypedefStructStmt>
 TypedefStructStmt::typedefStructStmt() { return static_pointer_cast<TypedefStructStmt, Stmt>(shared_from_this()); }
 
-PackageDefStmt::PackageDefStmt(const string& name, const vector<shared_ptr<Stmt>> &stmts)
-    : Stmt(PackageDefStmtType), name(name),
+PackageDefStmt::PackageDefStmt(const string& name, const vector<shared_ptr<Stmt>> &stmts, const SourcePos &sourcePos)
+    : Stmt(PackageDefStmtType, sourcePos), name(name),
     stmts(stmts), bindings() {
     for (int i = 0; i < stmts.size(); i++) {
         if (shared_ptr<ModuleDefStmt> moduleStmt = stmts[i]->moduleDefStmt()) {

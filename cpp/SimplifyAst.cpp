@@ -20,7 +20,7 @@ shared_ptr<struct Stmt> SimplifyAst::simplifySubstatement(const shared_ptr<struc
     simplify(stmt, simplifiedStmts);
     assert(simplifiedStmts.size() > 0);
     if (simplifiedStmts.size() > 1) {
-        return make_shared<BlockStmt>(simplifiedStmts);
+        return make_shared<BlockStmt>(simplifiedStmts, stmt->sourcePos);
     } else {
         return simplifiedStmts[0];
     }
@@ -122,14 +122,15 @@ SimplifyAst::simplify(const shared_ptr<ActionBindingStmt> &stmt, vector<shared_p
     if (actionContext) {
         switch (expr->exprType) {
             case CallExprType: {
-                simplifiedStmts.push_back(make_shared<CallStmt>(stmt->name, stmt->bsvtype, stmt->rhs));
+                simplifiedStmts.push_back(make_shared<CallStmt>(stmt->name, stmt->bsvtype, stmt->rhs, stmt->sourcePos));
             }
                 break;
             case VarExprType:
             case FieldExprType: {
                 vector<shared_ptr<Expr>> args;
                 simplifiedStmts.push_back(make_shared<CallStmt>(stmt->name, stmt->bsvtype,
-                                                                make_shared<CallExpr>(stmt->rhs, args)));
+                                                                make_shared<CallExpr>(stmt->rhs, args),
+                                                                stmt->sourcePos));
             }
                 break;
             default:
@@ -140,19 +141,22 @@ SimplifyAst::simplify(const shared_ptr<ActionBindingStmt> &stmt, vector<shared_p
             case CallExprType: {
                 if (stmt->bsvtype->name == "Reg") {
                     shared_ptr<BSVType> elementType = stmt->bsvtype->params[0];
-                    simplifiedStmts.push_back(make_shared<RegisterStmt>(stmt->name, elementType));
+                    simplifiedStmts.push_back(make_shared<RegisterStmt>(stmt->name, elementType, stmt->sourcePos));
                 } else {
-                    simplifiedStmts.push_back(make_shared<CallStmt>(stmt->name, stmt->bsvtype, stmt->rhs));
+                    simplifiedStmts.push_back(
+                            make_shared<CallStmt>(stmt->name, stmt->bsvtype, stmt->rhs, stmt->sourcePos));
                 }
-            } break;
+            }
+                break;
             case VarExprType: {
                 if (stmt->bsvtype->name == "Reg") {
                     shared_ptr<BSVType> elementType = stmt->bsvtype->params[0];
-                    simplifiedStmts.push_back(make_shared<RegisterStmt>(stmt->name, elementType));
+                    simplifiedStmts.push_back(make_shared<RegisterStmt>(stmt->name, elementType, stmt->sourcePos));
                 } else {
                     vector<shared_ptr<Expr>> args;
                     simplifiedStmts.push_back(make_shared<CallStmt>(stmt->name, stmt->bsvtype,
-                                                                    make_shared<CallExpr>(stmt->rhs, args)));
+                                                                    make_shared<CallExpr>(stmt->rhs, args),
+                                                                    stmt->sourcePos));
                 }
             }
                 break;
@@ -166,7 +170,7 @@ void SimplifyAst::simplify(const shared_ptr<BlockStmt> &stmt, vector<shared_ptr<
     for (int i = 0; i < stmt->stmts.size(); i++) {
         simplify(stmt->stmts[i], simplifiedStmts);
     }
-    shared_ptr<Stmt> newblockstmt(new BlockStmt(simplifiedStmts));
+    shared_ptr<Stmt> newblockstmt = make_shared<BlockStmt>(simplifiedStmts, stmt->sourcePos);
     logstream << "simplified block stmt" << endl;
     simplifiedStmts.push_back(newblockstmt);
 }
@@ -175,14 +179,18 @@ void SimplifyAst::simplify(const shared_ptr<ExprStmt> &exprStmt, vector<shared_p
     shared_ptr<Expr> expr = exprStmt->expr;
     switch (expr->exprType) {
         case CallExprType: {
-            simplifiedStmts.push_back(make_shared<CallStmt>("unused", make_shared<BSVType>("Void"), expr));
-        } break;
+            simplifiedStmts.push_back(
+                    make_shared<CallStmt>("unused", make_shared<BSVType>("Void"), expr, exprStmt->sourcePos));
+        }
+            break;
         case FieldExprType: // fall through
         case VarExprType: {
             vector<shared_ptr<Expr>> args;
             simplifiedStmts.push_back(make_shared<CallStmt>("unused", make_shared<BSVType>("Void"),
-                    make_shared<CallExpr>(expr, args)));
-        } break;
+                                                            make_shared<CallExpr>(expr, args),
+                                                            exprStmt->sourcePos));
+        }
+            break;
         default:
             logstream << "Unhandled expr stmt: " << expr->exprType << "{" << endl;
             expr->prettyPrint(logstream);
@@ -203,7 +211,8 @@ void SimplifyAst::simplify(const shared_ptr<FunctionDefStmt> &stmt, vector<share
 void SimplifyAst::simplify(const shared_ptr<IfStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
     simplifiedStmts.push_back(make_shared<IfStmt>(simplify(stmt->condition, simplifiedStmts),
                                                   simplifySubstatement(stmt->thenStmt),
-                                                  simplifySubstatement(stmt->elseStmt)));
+                                                  simplifySubstatement(stmt->elseStmt),
+                                                  stmt->sourcePos));
 }
 
 void SimplifyAst::simplify(const shared_ptr<ImportStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
@@ -235,7 +244,8 @@ void SimplifyAst::simplify(const shared_ptr<MethodDefStmt> &stmt, vector<shared_
                                                          stmt->params,
                                                          stmt->paramTypes,
                                                          stmt->guard, //FIXME: simplify guard
-                                                         methodStmts
+                                                         methodStmts,
+                                                         stmt->sourcePos
     ));
 
     actionContext = enclosingActionContext;
@@ -246,8 +256,10 @@ SimplifyAst::simplify(const shared_ptr<ModuleDefStmt> &moduleDef, vector<shared_
     registers.clear();
     vector<shared_ptr<Stmt>> simplifiedModuleStmts;
     simplify(moduleDef->stmts, simplifiedModuleStmts);
-    shared_ptr<Stmt> newModuleDef(new ModuleDefStmt(moduleDef->name, moduleDef->interfaceType,
-                                                    moduleDef->params, moduleDef->paramTypes, simplifiedModuleStmts));
+    shared_ptr<Stmt> newModuleDef = make_shared<ModuleDefStmt>(moduleDef->name, moduleDef->interfaceType,
+                                                               moduleDef->params, moduleDef->paramTypes,
+                                                               simplifiedModuleStmts,
+                                                               moduleDef->sourcePos);
     logstream << "simplify moduledef " << moduleDef->name << endl;
     newModuleDef->prettyPrint(logstream, 0);
     logstream << endl;
@@ -267,12 +279,13 @@ void SimplifyAst::simplify(const shared_ptr<RegReadStmt> &stmt, vector<shared_pt
 void SimplifyAst::simplify(const shared_ptr<RegWriteStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
     //logstream << "simplify regwrite stmt " << stmt->regName << endl;
     shared_ptr<Expr> simplifiedRhs = simplify(stmt->rhs, simplifiedStmts);
-    simplifiedStmts.push_back(make_shared<RegWriteStmt>(stmt->regName, stmt->elementType, simplifiedRhs));
+    simplifiedStmts.push_back(
+            make_shared<RegWriteStmt>(stmt->regName, stmt->elementType, simplifiedRhs, stmt->sourcePos));
 }
 
 void SimplifyAst::simplify(const shared_ptr<ReturnStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
     shared_ptr<Expr> simplifiedExpr = simplify(stmt->value, simplifiedStmts);
-    simplifiedStmts.push_back(make_shared<ReturnStmt>(simplifiedExpr));
+    simplifiedStmts.push_back(make_shared<ReturnStmt>(simplifiedExpr, stmt->sourcePos));
 }
 
 void SimplifyAst::simplify(const shared_ptr<RuleDefStmt> &ruleDef, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
@@ -281,7 +294,8 @@ void SimplifyAst::simplify(const shared_ptr<RuleDefStmt> &ruleDef, vector<shared
 
     vector<shared_ptr<Stmt>> ruleSimplifiedStmts;
     simplify(ruleDef->stmts, ruleSimplifiedStmts);
-    shared_ptr<RuleDefStmt> newRuleDef = make_shared<RuleDefStmt>(ruleDef->name, ruleDef->guard, ruleSimplifiedStmts);
+    shared_ptr<RuleDefStmt> newRuleDef = make_shared<RuleDefStmt>(ruleDef->name, ruleDef->guard, ruleSimplifiedStmts,
+                                                                  ruleDef->sourcePos);
     simplifiedStmts.push_back(newRuleDef);
 
     actionContext = enclosingActionContext;
@@ -300,12 +314,12 @@ SimplifyAst::simplify(const shared_ptr<TypedefSynonymStmt> &stmt, vector<shared_
 void SimplifyAst::simplify(const shared_ptr<VarAssignStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
     shared_ptr<LValue> lhs = stmt->lhs;
     shared_ptr<Expr> simplifiedRhs = simplify(stmt->rhs, simplifiedStmts);
-    simplifiedStmts.push_back(make_shared<VarAssignStmt>(lhs, stmt->op, simplifiedRhs));
+    simplifiedStmts.push_back(make_shared<VarAssignStmt>(lhs, stmt->op, simplifiedRhs, stmt->sourcePos));
 }
 
 void SimplifyAst::simplify(const shared_ptr<VarBindingStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
     shared_ptr<Expr> simplifiedRhs = simplify(stmt->rhs, simplifiedStmts);
-    simplifiedStmts.push_back(make_shared<VarBindingStmt>(stmt->bsvtype, stmt->name, simplifiedRhs));
+    simplifiedStmts.push_back(make_shared<VarBindingStmt>(stmt->bsvtype, stmt->name, simplifiedRhs, stmt->sourcePos));
 }
 
 shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
@@ -333,6 +347,7 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
                 shared_ptr<BSVType> elementType = registers.find(varExpr->name)->second;
                 logstream << "simplify var expr reading reg " << varExpr->name << endl;
                 string valName = varExpr->name + "_val";
+                //fixme: no source pos
                 shared_ptr<RegReadStmt> regRead = make_shared<RegReadStmt>(varExpr->name, valName, elementType);
                 simplifiedStmts.push_back(regRead);
                 return make_shared<VarExpr>(valName, elementType);
@@ -371,7 +386,8 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
         case FieldExprType: {
             shared_ptr<FieldExpr> fieldExpr = expr->fieldExpr();
             shared_ptr<Expr> object = simplify(fieldExpr->object, simplifiedStmts);
-            shared_ptr<FieldExpr> simplifiedExpr = make_shared<FieldExpr>(object, fieldExpr->fieldName, fieldExpr->bsvtype);
+            shared_ptr<FieldExpr> simplifiedExpr = make_shared<FieldExpr>(object, fieldExpr->fieldName,
+                                                                          fieldExpr->bsvtype);
             return simplifiedExpr;
         }
         case CondExprType: {
@@ -398,15 +414,18 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
     return expr;
 }
 
-shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<MatchesExpr> &matchesExpr, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
+shared_ptr<Expr>
+SimplifyAst::simplify(const shared_ptr<MatchesExpr> &matchesExpr, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
     shared_ptr<Expr> matchesPattern = matchPattern(matchesExpr->pattern, simplifiedStmts);
     for (int i = 0; i < matchesExpr->patterncond.size(); i++) {
-        matchesPattern = make_shared<OperatorExpr>("==", matchesPattern, simplify(matchesExpr->patterncond[i], simplifiedStmts));
+        matchesPattern = make_shared<OperatorExpr>("==", matchesPattern,
+                                                   simplify(matchesExpr->patterncond[i], simplifiedStmts));
     }
 
     return matchesPattern;
 }
 
-shared_ptr<Expr> SimplifyAst::matchPattern(const shared_ptr<Pattern> &pattern, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
+shared_ptr<Expr>
+SimplifyAst::matchPattern(const shared_ptr<Pattern> &pattern, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
     return make_shared<VarExpr>("fixme_pattern_match", make_shared<BSVType>("PatternType"));
 }

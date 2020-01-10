@@ -66,5 +66,7 @@ public:
 
     std::shared_ptr<Stmt> generateAst(BSVParser::ModuleinstContext *moduleinst);
 
+private:
     string sourceLocation(antlr4::ParserRuleContext *pContext);
+    SourcePos sourcePos(antlr4::ParserRuleContext *pContext);
 };

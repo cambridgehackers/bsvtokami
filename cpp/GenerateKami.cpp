@@ -68,11 +68,10 @@ void GenerateKami::generateModuleStmt(const shared_ptr<struct Stmt> &stmt, int d
             generateModuleStmt(stmt->varBindingStmt());
             break;
         default:
-            out << "(* unhandled module stmt type " << stmt->stmtType << endl;
+            out << "(* unhandled module stmt type " << stmt->stmtType << " at " << stmt->sourcePos.toString() << endl;
             out << "  ";
             stmt->prettyPrint(out);
             out << "*)" << endl;
-            assert(0);
     }
 }
 

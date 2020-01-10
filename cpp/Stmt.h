@@ -44,6 +44,21 @@ enum StmtType {
     RuleDefStmtType
 };
 
+struct SourcePos {
+    const string sourceName;
+    const int line;
+    const int positionInLine;
+
+    SourcePos() : line(0), positionInLine(0) {}
+
+    SourcePos(const string &sourceName, int line, int positionInLine) : sourceName(sourceName), line(line),
+                                                                        positionInLine(positionInLine) {}
+
+    string toString() const {
+        return sourceName + ":" + to_string(line);
+    }
+};
+
 class ActionBindingStmt;
 
 class BlockStmt;
@@ -95,11 +110,13 @@ class VarAssignStmt;
 class Stmt : public enable_shared_from_this<Stmt> {
 
 public:
-    Stmt(StmtType stmtType);
+    const StmtType stmtType;
+    const SourcePos sourcePos;
+
+    Stmt(StmtType stmtType, const SourcePos &sourcePos);
 
     virtual ~Stmt() {}
 
-    const StmtType stmtType;
 
     virtual void prettyPrint(ostream &out, int depth = 0) = 0;
 
@@ -156,7 +173,7 @@ public:
 
 class ImportStmt : public Stmt {
 public:
-    explicit ImportStmt(const string name);
+    ImportStmt(const string &name, const SourcePos &sourcePos = SourcePos());
 
     ~ImportStmt() override {}
 
@@ -169,7 +186,8 @@ public:
 
 class TypedefSynonymStmt : public Stmt {
 public:
-    TypedefSynonymStmt(const shared_ptr<BSVType> &typedeftype, const shared_ptr<BSVType> &type);
+    TypedefSynonymStmt(const shared_ptr<BSVType> &typedeftype, const shared_ptr<BSVType> &type,
+                       const SourcePos &sourcePos = SourcePos());
 
     ~TypedefSynonymStmt() override {}
 
@@ -186,7 +204,8 @@ class TypedefStructStmt : public Stmt {
 public:
     TypedefStructStmt(const string &name, const shared_ptr<BSVType> &structType,
                       const vector<string> &members,
-                      const vector<shared_ptr<BSVType>> &memberTypes);
+                      const vector<shared_ptr<BSVType>> &memberTypes,
+                      const SourcePos &sourcePos = SourcePos());
 
     virtual ~TypedefStructStmt() override {}
 
@@ -204,7 +223,8 @@ public:
 class InterfaceDeclStmt : public Stmt {
 public:
     InterfaceDeclStmt(const string &name, const shared_ptr<BSVType> &interfaceType,
-                      const vector<shared_ptr<Stmt>> &decls);
+                      const vector<shared_ptr<Stmt>> &decls,
+                      const SourcePos &sourcePos = SourcePos());
 
     ~InterfaceDeclStmt() override {}
 
@@ -220,7 +240,8 @@ public:
 class InterfaceDefStmt : public Stmt {
 public:
     InterfaceDefStmt(const string &name, const shared_ptr<BSVType> &interfaceType,
-                      const vector<shared_ptr<Stmt>> &defs);
+                     const vector<shared_ptr<Stmt>> &defs,
+                     const SourcePos &sourcePos = SourcePos());
 
     ~InterfaceDefStmt() override {}
 
@@ -235,11 +256,13 @@ public:
 
 class PackageDefStmt : public Stmt {
 public:
-    PackageDefStmt(const string &name, const vector<shared_ptr<Stmt>> &package_stmts);
+    PackageDefStmt(const string &name, const vector<shared_ptr<Stmt>> &package_stmts,
+                   const SourcePos &sourcePos = SourcePos());
 
     void prettyPrint(ostream &out, int depth) override;
 
     shared_ptr<Stmt> lookup(const string &name);
+
     const vector<shared_ptr<Stmt>> stmts;
 
     const string name;
@@ -251,7 +274,8 @@ public:
     ModuleDefStmt(const string &name, const shared_ptr<BSVType> &interfaceType,
                   const vector<string> &params,
                   const vector<shared_ptr<BSVType>> &paramTypes,
-                  const vector<shared_ptr<Stmt>> &stmts);
+                  const vector<shared_ptr<Stmt>> &stmts,
+                  const SourcePos &sourcePos = SourcePos());
 
     ~ModuleDefStmt() override;
 
@@ -273,7 +297,8 @@ class MethodDeclStmt : public Stmt {
 public:
     MethodDeclStmt(const string &name, const shared_ptr<BSVType> &returnType,
                    const vector<string> &params,
-                   const vector<shared_ptr<BSVType>> &paramTypes);
+                   const vector<shared_ptr<BSVType>> &paramTypes,
+                   const SourcePos &sourcePos = SourcePos());
 
     virtual ~MethodDeclStmt() override {}
 
@@ -293,7 +318,8 @@ public:
 // It's an action binding
 class ModuleInstStmt : public Stmt {
 public:
-    ModuleInstStmt(const string &name, const shared_ptr<BSVType> &interfaceType, const shared_ptr<Expr> &rhs);
+    ModuleInstStmt(const string &name, const shared_ptr<BSVType> &interfaceType, const shared_ptr<Expr> &rhs,
+                   const SourcePos &sourcePos = SourcePos());
 
     ~ModuleInstStmt() override;
 
@@ -303,7 +329,8 @@ public:
 
     shared_ptr<Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 
-    static shared_ptr<ModuleInstStmt> create(const string &name, const shared_ptr<BSVType> &interfaceType, const shared_ptr<Expr> &rhs);
+    static shared_ptr<ModuleInstStmt>
+    create(const string &name, const shared_ptr<BSVType> &interfaceType, const shared_ptr<Expr> &rhs);
 
 public:
     const string name;
@@ -319,7 +346,8 @@ public:
                   const vector<string> &params,
                   const vector<shared_ptr<BSVType>> &paramTypes,
                   const shared_ptr<Expr> &guard,
-                  const vector<shared_ptr<Stmt>> &stmts);
+                  const vector<shared_ptr<Stmt>> &stmts,
+                  const SourcePos &sourcePos = SourcePos());
 
     virtual ~MethodDefStmt();
 
@@ -341,10 +369,11 @@ public:
 class FunctionDefStmt : public Stmt {
 public:
     FunctionDefStmt(const string &name, const shared_ptr<BSVType> &returnType,
-                  const vector<string> &params,
-                  const vector<shared_ptr<BSVType>> &paramTypes,
-                  const shared_ptr<Expr> &guard,
-                  const vector<shared_ptr<Stmt>> &stmts);
+                    const vector<string> &params,
+                    const vector<shared_ptr<BSVType>> &paramTypes,
+                    const shared_ptr<Expr> &guard,
+                    const vector<shared_ptr<Stmt>> &stmts,
+                    const SourcePos &sourcePos = SourcePos());
 
     virtual ~FunctionDefStmt();
 
@@ -370,7 +399,8 @@ public:
     const vector<shared_ptr<Stmt>> stmts;
 
 public:
-    RuleDefStmt(const string &name, const shared_ptr<Expr> &guard, const vector<shared_ptr<Stmt>> &stmts);
+    RuleDefStmt(const string &name, const shared_ptr<Expr> &guard, const vector<shared_ptr<Stmt>> &stmts,
+                const SourcePos &sourcePos = SourcePos());
 
     ~RuleDefStmt() override {}
 
@@ -390,7 +420,7 @@ public:
     const shared_ptr<Expr> rhs;
 public:
     ActionBindingStmt(const shared_ptr<BSVType> &bsvtype, const string &name,
-                      const shared_ptr<Expr> &rhs);
+                      const shared_ptr<Expr> &rhs, const SourcePos &sourcePos = SourcePos());
 
     ~ActionBindingStmt() override {}
 
@@ -408,7 +438,8 @@ public:
     const string op;
     const shared_ptr<Expr> rhs;
 public:
-    VarAssignStmt(const shared_ptr<LValue> &lhs, const string &op, const shared_ptr<Expr> &rhs);
+    VarAssignStmt(const shared_ptr<LValue> &lhs, const string &op, const shared_ptr<Expr> &rhs,
+                  const SourcePos &sourcePos = SourcePos());
 
     ~VarAssignStmt() override = default;
 
@@ -428,9 +459,12 @@ public:
     const shared_ptr<Expr> rhs;
 public:
     VarBindingStmt(const shared_ptr<BSVType> &bsvtype, const string &name,
-                   const shared_ptr<Expr> &rhs);
+                   const shared_ptr<Expr> &rhs,
+                   const SourcePos &sourcePos = SourcePos());
+
     VarBindingStmt(const shared_ptr<BSVType> &bsvtype, const string &name, BindingType bindingType,
-                   const shared_ptr<Expr> &rhs);
+                   const shared_ptr<Expr> &rhs,
+                   const SourcePos &sourcePos = SourcePos());
 
     ~VarBindingStmt() override {}
 
@@ -449,7 +483,8 @@ public:
     const shared_ptr<Expr> rhs;
 public:
     PatternMatchStmt(const shared_ptr<Pattern> &pattern, const string &op,
-            const shared_ptr<Expr> &rhs) : Stmt(PatternMatchStmtType), pattern(pattern), op(op), rhs(rhs) {}
+                     const shared_ptr<Expr> &rhs, const SourcePos &sourcePos = SourcePos())
+            : Stmt(PatternMatchStmtType, sourcePos), pattern(pattern), op(op), rhs(rhs) {}
 
     ~PatternMatchStmt() override {}
 
@@ -466,8 +501,9 @@ public:
     const string regName;
     const shared_ptr<BSVType> elementType;
 public:
-    RegisterStmt(const string &regName, const shared_ptr<BSVType> &elementType)
-    : Stmt(RegisterStmtType), regName(regName), elementType(elementType) {};
+    RegisterStmt(const string &regName, const shared_ptr<BSVType> &elementType,
+                 const SourcePos &sourcePos = SourcePos())
+            : Stmt(RegisterStmtType, sourcePos), regName(regName), elementType(elementType) {};
 
     ~RegisterStmt() override {}
 
@@ -485,7 +521,8 @@ public:
     const string var;
     const shared_ptr<BSVType> varType;
 public:
-    RegReadStmt(const string &regName, const string &var, const shared_ptr<BSVType> &varType);
+    RegReadStmt(const string &regName, const string &var, const shared_ptr<BSVType> &varType,
+                const SourcePos &sourcePos = SourcePos());
 
     ~RegReadStmt() override {}
 
@@ -505,7 +542,8 @@ public:
     const shared_ptr<BSVType> elementType;
     const shared_ptr<Expr> rhs;
 public:
-    RegWriteStmt(const string &regName, const shared_ptr<BSVType> &elementType, const shared_ptr<Expr> &rhs);
+    RegWriteStmt(const string &regName, const shared_ptr<BSVType> &elementType, const shared_ptr<Expr> &rhs,
+                 const SourcePos &sourcePos = SourcePos());
 
     ~RegWriteStmt() override {}
 
@@ -518,7 +556,7 @@ public:
 
 class BlockStmt : public Stmt {
 public:
-    explicit BlockStmt(const vector<shared_ptr<Stmt>> &stmts);
+    explicit BlockStmt(const vector<shared_ptr<Stmt>> &stmts, const SourcePos &sourcePos = SourcePos());
 
     ~BlockStmt() override;
 
@@ -535,7 +573,7 @@ public:
 class IfStmt : public Stmt {
 public:
     IfStmt(const shared_ptr<Expr> &condition, const shared_ptr<Stmt> &thenStmt,
-           const shared_ptr<Stmt> &elseStmt);
+           const shared_ptr<Stmt> &elseStmt, const SourcePos &sourcePos = SourcePos());
 
     ~IfStmt() override;
 
@@ -553,7 +591,9 @@ public:
 
 class ReturnStmt : public Stmt {
 public:
-    ReturnStmt(const shared_ptr<Expr> value) : Stmt(ReturnStmtType), value(value) {}
+    ReturnStmt(const shared_ptr<Expr> value, const SourcePos &sourcePos = SourcePos()) : Stmt(ReturnStmtType,
+                                                                                              sourcePos),
+                                                                                         value(value) {}
 
     ~ReturnStmt() override {}
 
@@ -569,7 +609,8 @@ public:
 
 class ExprStmt : public Stmt {
 public:
-    ExprStmt(const shared_ptr<Expr> expr) : Stmt(ExprStmtType), expr(expr) {}
+    ExprStmt(const shared_ptr<Expr> expr, const SourcePos &sourcePos = SourcePos())
+            : Stmt(ExprStmtType, sourcePos), expr(expr) {}
 
     ~ExprStmt() override {}
 
@@ -584,8 +625,9 @@ public:
 
 class CallStmt : public Stmt {
 public:
-    CallStmt(const string &name, const shared_ptr<BSVType> &interfaceType, const shared_ptr<Expr> &rhs)
-    : Stmt(CallStmtType), name(name), interfaceType(interfaceType), rhs(rhs) {}
+    CallStmt(const string &name, const shared_ptr<BSVType> &interfaceType, const shared_ptr<Expr> &rhs,
+             const SourcePos &sourcePos = SourcePos())
+            : Stmt(CallStmtType, sourcePos), name(name), interfaceType(interfaceType), rhs(rhs) {}
 
     ~CallStmt() override {};
 
