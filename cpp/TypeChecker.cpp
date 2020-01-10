@@ -1828,9 +1828,10 @@ antlrcpp::Any TypeChecker::visitCallexpr(BSVParser::CallexprContext *ctx) {
 }
 
 antlrcpp::Any TypeChecker::visitSyscallexpr(BSVParser::SyscallexprContext *ctx) {
-    //fixme visit parameters
-    z3::func_decl voidDecl = typeDecls.find("Void")->second;
-    return voidDecl();
+    currentContext->logstream << "visit syscall at " << sourceLocation(ctx) << endl;
+    currentContext->logstream << "      syscall   " << ctx->getText() << endl;
+    visitChildren(ctx);
+    return instantiateType("Void");
 }
 
 antlrcpp::Any TypeChecker::visitValueofexpr(BSVParser::ValueofexprContext *ctx) {
