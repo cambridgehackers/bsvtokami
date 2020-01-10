@@ -195,6 +195,7 @@ void TypeChecker::setupModuleFunctionConstructors() {
 }
 
 void TypeChecker::setupZ3Context() {
+    currentContext->logstream << "setup Z3 context" << endl;
     exprs.clear();
     trackers.clear();
     typeDecls.clear();
@@ -822,6 +823,7 @@ antlrcpp::Any TypeChecker::visitDerives(BSVParser::DerivesContext *ctx) {
 antlrcpp::Any TypeChecker::visitVarbinding(BSVParser::VarbindingContext *ctx) {
     BindingType bindingType = lexicalScope->isGlobal() ? GlobalBindingType : LocalBindingType;
     if (lexicalScope->isGlobal()) {
+        currentContext->logstream << " setupZ3Context should not be needed here" << endl;
         setupZ3Context();
         solver.push();
     }
@@ -1039,7 +1041,7 @@ antlrcpp::Any TypeChecker::visitModuleinst(BSVParser::ModuleinstContext *ctx) {
 
 antlrcpp::Any TypeChecker::visitMethoddef(BSVParser::MethoddefContext *ctx) {
     string methodName(ctx->name->getText().c_str());
-    currentContext->logstream << "    tc MethodDef " << methodName << endl;
+    currentContext->logstream << "    tc MethodDef " << methodName << " at " << sourceLocation(ctx) << endl;
     pushScope(methodName);
     actionContext = true;
 
@@ -1137,6 +1139,7 @@ antlrcpp::Any TypeChecker::visitRulecond(BSVParser::RulecondContext *ctx) {
 }
 
 antlrcpp::Any TypeChecker::visitFunctiondef(BSVParser::FunctiondefContext *ctx) {
+    currentContext->logstream << "visit " << (lexicalScope->isGlobal() ? "global" : "local") << " function def" << endl;
     if (lexicalScope->isGlobal()) {
         setupZ3Context();
         solver.push();
