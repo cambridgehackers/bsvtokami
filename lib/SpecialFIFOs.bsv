@@ -89,12 +89,12 @@ endmodule: mkPipelineFIFO
 `ifdef BSVTOKAMI
 (* nogen *)
 `endif
-module mkPipelineFIFOF (FIFOF#(a))
+module mkPipelineFIFOF (FIFOF#(Bit#(3)))
    provisos (Bits#(a,sa));
 
    // STATE ----------------
 
-   Vector#(3, Reg#(Maybe#(a))) rv <- mkCReg(3, tagged Invalid);
+   Vector#(3, Reg#(Maybe#(Bit#(3)))) rv <- mkCReg(3, tagged Invalid);
 
    // INTERFACE ----------------
 
@@ -220,9 +220,9 @@ module mkSizedDFIFOF#(Integer n, a dflt) (FIFOF#(a))
       q[i] <- mkReg(dflt);
    SCounter cntr <- mkSCounter(n);
 
-   Reg#(Bool)enqueueing <- mkReg();
-   Reg#(a)      x_wire <- mkReg();
-   Reg#(Bool)dequeueing <- mkReg();
+   Reg#(Bool)enqueueing <- mkRegU();
+   Reg#(a)      x_wire <- mkRegU();
+   Reg#(Bool)dequeueing <- mkRegU();
 
    let empty = cntr.isEq(0);
    let full  = cntr.isEq(n);
@@ -312,17 +312,17 @@ module mkSizedBypassFIFOF#(Integer n)(FIFOF#(a))
 
    FIFOF#(a) ff <- mkUGSizedFIFOF(n);
 
-   Reg#(a) enqw <- mkReg();
+   Reg#(a) enqw <- mkRegU();
    Reg#(Bool) firstValid <- mkRevertingVirtualReg(True);
-   Reg#(Bool)dequeueing <- mkReg();
+   Reg#(Bool)dequeueing <- mkRegU();
 
    let empty = !ff.notEmpty;
    let full  = !ff.notFull;
-   let enqueueing = isValid(enqw.wget);
+   let enqueueing = enqw;
    let bypassing = (enqueueing && dequeueing && empty);
 
    rule enqueue (enqueueing && !bypassing);
-      ff.enq(validValue(enqw.wget));
+      ff.enq(enqw);
    endrule
 
    rule dequeue (dequeueing && !empty);
@@ -335,11 +335,11 @@ module mkSizedBypassFIFOF#(Integer n)(FIFOF#(a))
    endmethod
 
    method first if (firstValid && (!empty || enqueueing));
-      return (empty ? validValue(enqw.wget) : ff.first);
+      return (empty ? enqw : ff.first);
    endmethod
 
    method Action enq(x) if (!full);
-      enqw.wset(x);
+      enqw <= x;
    endmethod
 
    method Action clear;
@@ -354,6 +354,7 @@ endmodule
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
+`ifndef BSVTOKAMI
 `ifdef BSVTOKAMI
 (* nogen *)
 `endif
@@ -372,9 +373,9 @@ module mkBypassFIFOLevel(FIFOLevelIfc#(a, fifoDepth))
    Reg#(Bool)           levelsValidEnq <- mkRevertingVirtualReg(True);
    Reg#(Bool)           levelsValidDeq <- mkRevertingVirtualReg(True);
    Reg#(Bool)           levelsValidClr <- mkRevertingVirtualReg(True);
-   Reg#(Bool)     do_enq      <- mkReg();
-   Reg#(Bool)     do_deq      <- mkReg();
-   Reg#(Bool)     do_clr      <- mkReg();
+   Reg#(Bool)     do_enq      <- mkRegU();
+   Reg#(Bool)     do_deq      <- mkRegU();
+   Reg#(Bool)     do_clr      <- mkRegU();
 
    Bool levelsValid = levelsValidEnq && levelsValidDeq && levelsValidClr;
 
@@ -423,6 +424,7 @@ module mkBypassFIFOLevel(FIFOLevelIfc#(a, fifoDepth))
    endmethod
 
 endmodule
+`endif // BSVTOKAMI
 
 // Common function to test the validity arguments to methods
 `ifdef BSVTOKAMI
