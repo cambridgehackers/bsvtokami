@@ -9,6 +9,7 @@
 #include "LexicalScope.h"
 #include "Pattern.h"
 #include "BSVType.h"
+#include "SourcePos.h"
 
 using namespace std;
 
@@ -54,9 +55,10 @@ class Expr : public enable_shared_from_this<Expr> {
 public:
     const ExprType exprType;
     const shared_ptr<BSVType> bsvtype;
+    const SourcePos sourcePos;
 
-    Expr(ExprType exprType);
-    Expr(ExprType exprType, const shared_ptr<BSVType> &bsvtype);
+    Expr(ExprType exprType, const SourcePos &sourcePos);
+    Expr(ExprType exprType, const shared_ptr<BSVType> &bsvtype, const SourcePos &sourcePos);
 
     virtual ~Expr();
 
@@ -92,7 +94,7 @@ public:
     const shared_ptr<Expr> object;
     const string fieldName;
 public:
-    FieldExpr(const shared_ptr<Expr> &object, const string &fieldName, const shared_ptr<BSVType> &bsvtype);
+    FieldExpr(const shared_ptr<Expr> &object, const string &fieldName, const shared_ptr<BSVType> &bsvtype, const SourcePos &sourcePos = SourcePos());
 
     virtual ~FieldExpr();
 
@@ -109,7 +111,7 @@ public:
     const string name;
     const string sourceName;
 public:
-    VarExpr(const string &name, const shared_ptr<BSVType> &bsvtype);
+    VarExpr(const string &name, const shared_ptr<BSVType> &bsvtype, const SourcePos &sourcePos = SourcePos());
 
     virtual ~VarExpr();
 
@@ -126,7 +128,7 @@ public:
     const shared_ptr<Expr> function;
     const vector<shared_ptr<Expr>> args;
 public:
-    CallExpr(const shared_ptr<Expr> &function, const vector<shared_ptr<Expr>> &args);
+    CallExpr(const shared_ptr<Expr> &function, const vector<shared_ptr<Expr>> &args, const SourcePos &sourcePos = SourcePos());
 
     virtual ~CallExpr();
 
@@ -144,7 +146,7 @@ public:
     const shared_ptr<Expr> elseExpr;
 
 public:
-    CondExpr(const shared_ptr<Expr> &cond, const shared_ptr<Expr> &thenExpr, const shared_ptr<Expr> &elseExpr);
+    CondExpr(const shared_ptr<Expr> &cond, const shared_ptr<Expr> &thenExpr, const shared_ptr<Expr> &elseExpr, const SourcePos &sourcePos = SourcePos());
 
     virtual ~CondExpr();
 
@@ -162,7 +164,7 @@ public:
     long base;
     long width;
 public:
-    IntConst(const string &repr);
+    IntConst(const string &repr, const SourcePos &sourcePos = SourcePos());
 
     ~IntConst() override;
 
@@ -177,7 +179,7 @@ class StringConst : public Expr {
 public:
     const string repr;
 public:
-    StringConst(const string &repr);
+    StringConst(const string &repr, const SourcePos &sourcePos = SourcePos());
 
     ~StringConst() override;
 
@@ -195,9 +197,9 @@ public:
     const shared_ptr<Expr> rhs;
 public:
 
-    OperatorExpr(const string &op, const shared_ptr<Expr> &lhs);
+    OperatorExpr(const string &op, const shared_ptr<Expr> &lhs, const SourcePos &sourcePos = SourcePos());
 
-    OperatorExpr(const string &op, const shared_ptr<Expr> &lhs, const shared_ptr<Expr> &rhs);
+    OperatorExpr(const string &op, const shared_ptr<Expr> &lhs, const shared_ptr<Expr> &rhs, const SourcePos &sourcePos = SourcePos());
 
     ~OperatorExpr() override;
 
@@ -215,9 +217,9 @@ public:
     const vector<shared_ptr<Expr>> patterncond;
 public:
 
-    MatchesExpr(const shared_ptr<Expr> &expr, const shared_ptr<Pattern> &pattern);
+    MatchesExpr(const shared_ptr<Expr> &expr, const shared_ptr<Pattern> &pattern, const SourcePos &sourcePos = SourcePos());
 
-    MatchesExpr(const shared_ptr<Expr> &expr, const shared_ptr<Pattern> &pattern, const vector<shared_ptr<Expr>> &patterncond);
+    MatchesExpr(const shared_ptr<Expr> &expr, const shared_ptr<Pattern> &pattern, const vector<shared_ptr<Expr>> &patterncond, const SourcePos &sourcePos = SourcePos());
 
     ~MatchesExpr() override;
 
@@ -235,7 +237,7 @@ public:
 
 class ArraySubExpr : public Expr {
 public:
-    ArraySubExpr(const shared_ptr<Expr> &array, const shared_ptr<Expr> &index);
+    ArraySubExpr(const shared_ptr<Expr> &array, const shared_ptr<Expr> &index, const SourcePos &sourcePos = SourcePos());
 
     virtual ~ArraySubExpr();
 
@@ -253,7 +255,7 @@ public:
 class BitSelExpr : public Expr {
 public:
     BitSelExpr(const shared_ptr<Expr> &value, const shared_ptr<Expr> &msb,
-                 const shared_ptr<Expr> &lsb);
+                 const shared_ptr<Expr> &lsb, const SourcePos &sourcePos = SourcePos());
 
     virtual ~BitSelExpr();
 
@@ -272,7 +274,7 @@ public:
 class EnumUnionStructExpr : public Expr {
 public:
     EnumUnionStructExpr(const string &tag, const vector<string> &keys,
-                        const vector<shared_ptr<Expr>> &vals);
+                        const vector<shared_ptr<Expr>> &vals, const SourcePos &sourcePos = SourcePos());
 
     ~EnumUnionStructExpr() override {}
 

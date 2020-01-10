@@ -13,6 +13,7 @@ using namespace std;
 #include "Expr.h"
 #include "LValue.h"
 #include "LexicalScope.h"
+#include "SourcePos.h"
 
 void indent(ostream &s, int depth);
 
@@ -42,21 +43,6 @@ enum StmtType {
     VarBindingStmtType,
     VarAssignStmtType,
     RuleDefStmtType
-};
-
-struct SourcePos {
-    const string sourceName;
-    const int line;
-    const int positionInLine;
-
-    SourcePos() : line(0), positionInLine(0) {}
-
-    SourcePos(const string &sourceName, int line, int positionInLine) : sourceName(sourceName), line(line),
-                                                                        positionInLine(positionInLine) {}
-
-    string toString() const {
-        return sourceName + ":" + to_string(line);
-    }
 };
 
 class ActionBindingStmt;

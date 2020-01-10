@@ -8,12 +8,12 @@ using namespace std;
 
 #include "Expr.h"
 
-Expr::Expr(ExprType exprType)
-        : exprType(exprType) {
+Expr::Expr(ExprType exprType, const SourcePos &sourcePos)
+        : exprType(exprType), sourcePos(sourcePos) {
 }
 
-Expr::Expr(ExprType exprType, const shared_ptr<BSVType> &bsvtype)
-        : exprType(exprType), bsvtype(bsvtype) {
+Expr::Expr(ExprType exprType, const shared_ptr<BSVType> &bsvtype, const SourcePos &sourcePos)
+        : exprType(exprType), bsvtype(bsvtype), sourcePos(sourcePos) {
 }
 
 Expr::~Expr() {
@@ -25,8 +25,8 @@ shared_ptr<Expr> Expr::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     return shared_ptr<Expr>();
 }
 
-VarExpr::VarExpr(const string &name, const shared_ptr<BSVType> &bsvtype)
-        : Expr(VarExprType, bsvtype), name(name), sourceName(name) {
+VarExpr::VarExpr(const string &name, const shared_ptr<BSVType> &bsvtype, const SourcePos &sourcePos)
+        : Expr(VarExprType, bsvtype, sourcePos), name(name), sourceName(name) {
 }
 
 VarExpr::~VarExpr() {
@@ -46,8 +46,8 @@ shared_ptr<Expr> VarExpr::rename(string prefix, shared_ptr<LexicalScope> &scope)
     return shared_ptr<VarExpr>(new VarExpr(newname, bsvtype));
 }
 
-IntConst::IntConst(const string &repr)
-        : Expr(IntConstType), repr(repr), base(0), width(0) {
+IntConst::IntConst(const string &repr, const SourcePos &sourcePos)
+        : Expr(IntConstType, sourcePos), repr(repr), base(0), width(0) {
     const char *repr_ptr = repr.c_str();
     const char *quote_ptr = strchr(repr_ptr, '\'');
     const char *base_ptr = (quote_ptr) ? quote_ptr + 1 : repr_ptr;
@@ -89,13 +89,13 @@ shared_ptr<Expr> IntConst::rename(string prefix, shared_ptr<LexicalScope> &scope
     return shared_ptr<IntConst>(new IntConst(repr));
 }
 
-OperatorExpr::OperatorExpr(const string &op, const shared_ptr<Expr> &lhs)
-        : Expr(OperatorExprType), op(op), lhs(lhs) {
+OperatorExpr::OperatorExpr(const string &op, const shared_ptr<Expr> &lhs, const SourcePos &sourcePos)
+        : Expr(OperatorExprType, sourcePos), op(op), lhs(lhs) {
     assert(lhs);
 }
 
-OperatorExpr::OperatorExpr(const string &op, const shared_ptr<Expr> &lhs, const shared_ptr<Expr> &rhs)
-        : Expr(OperatorExprType), op(op), lhs(lhs), rhs(rhs) {
+OperatorExpr::OperatorExpr(const string &op, const shared_ptr<Expr> &lhs, const shared_ptr<Expr> &rhs, const SourcePos &sourcePos)
+        : Expr(OperatorExprType, sourcePos), op(op), lhs(lhs), rhs(rhs) {
     assert(lhs);
 }
 
@@ -124,12 +124,13 @@ shared_ptr<Expr> OperatorExpr::rename(string prefix, shared_ptr<LexicalScope> &s
         return shared_ptr<OperatorExpr>(new OperatorExpr(op, lhs->rename(prefix, scope)));
 }
 
-MatchesExpr::MatchesExpr(const shared_ptr<Expr> &expr, const shared_ptr<Pattern> &pattern)
-        : Expr(MatchesExprType), expr(expr), pattern(pattern) {
+MatchesExpr::MatchesExpr(const shared_ptr<Expr> &expr, const shared_ptr<Pattern> &pattern, const SourcePos &sourcePos)
+        : Expr(MatchesExprType, sourcePos), expr(expr), pattern(pattern) {
 }
 
-MatchesExpr::MatchesExpr(const shared_ptr<Expr> &expr, const shared_ptr<Pattern> &pattern, const vector<shared_ptr<Expr>> &patterncond)
-    : Expr(MatchesExprType), expr(expr), pattern(pattern), patterncond(patterncond) {
+MatchesExpr::MatchesExpr(const shared_ptr<Expr> &expr, const shared_ptr<Pattern> &pattern,
+                         const vector<shared_ptr<Expr>> &patterncond, const SourcePos &sourcePos)
+        : Expr(MatchesExprType, sourcePos), expr(expr), pattern(pattern), patterncond(patterncond) {
 
 }
 
@@ -166,8 +167,8 @@ shared_ptr<MatchesExpr> MatchesExpr::create(const shared_ptr<Expr> &expr, const 
     return shared_ptr<MatchesExpr>(new MatchesExpr(expr, pattern, exprs));
 }
 
-FieldExpr::FieldExpr(const shared_ptr<Expr> &object, const std::string &fieldName, const shared_ptr<BSVType> &bsvtype)
-        : Expr(FieldExprType, bsvtype), object(object), fieldName(fieldName) {
+FieldExpr::FieldExpr(const shared_ptr<Expr> &object, const std::string &fieldName, const shared_ptr<BSVType> &bsvtype, const SourcePos &sourcePos)
+        : Expr(FieldExprType, bsvtype, sourcePos), object(object), fieldName(fieldName) {
 }
 
 FieldExpr::~FieldExpr() {
@@ -185,8 +186,8 @@ shared_ptr<Expr> FieldExpr::rename(string prefix, shared_ptr<LexicalScope> &scop
     return shared_ptr<FieldExpr>(new FieldExpr(object->rename(prefix, scope), fieldName, bsvtype));
 }
 
-CallExpr::CallExpr(const shared_ptr<Expr> &function, const vector<shared_ptr<Expr>> &args) : Expr(
-        CallExprType), function(function), args(args) {
+CallExpr::CallExpr(const shared_ptr<Expr> &function, const vector<shared_ptr<Expr>> &args, const SourcePos &sourcePos)
+        : Expr(CallExprType, sourcePos), function(function), args(args) {
 
 }
 
@@ -219,9 +220,10 @@ shared_ptr<Expr> CallExpr::rename(string prefix, shared_ptr<LexicalScope> &scope
 
 
 EnumUnionStructExpr::EnumUnionStructExpr(const string &tag, const vector<string> &keys,
-                                         const vector<shared_ptr<Expr>> &vals) : Expr(EnumUnionStructExprType),
-                                                                                 tag(tag), keys(keys),
-                                                                                 vals(vals) {}
+                                         const vector<shared_ptr<Expr>> &vals, const SourcePos &sourcePos)
+        : Expr(EnumUnionStructExprType, sourcePos),
+          tag(tag), keys(keys),
+          vals(vals) {}
 
 void EnumUnionStructExpr::prettyPrint(ostream &out, int depth) {
     out << tag << " {";
@@ -246,8 +248,8 @@ shared_ptr<Expr> EnumUnionStructExpr::rename(string prefix, shared_ptr<LexicalSc
 }
 
 
-ArraySubExpr::ArraySubExpr(const shared_ptr<Expr> &array, const shared_ptr<Expr> &index)
-: Expr(ArraySubExprType), array(array), index(index) {}
+ArraySubExpr::ArraySubExpr(const shared_ptr<Expr> &array, const shared_ptr<Expr> &index, const SourcePos &sourcePos)
+: Expr(ArraySubExprType, sourcePos), array(array), index(index) {}
 
 ArraySubExpr::~ArraySubExpr() {
 
@@ -269,8 +271,8 @@ shared_ptr<Expr> ArraySubExpr::rename(string prefix, shared_ptr<LexicalScope> &s
                                                      index->rename(prefix, scope)));
 }
 
-BitSelExpr::BitSelExpr(const shared_ptr<Expr> &value, const shared_ptr<Expr> &msb, const shared_ptr<Expr> &lsb)
-        : Expr(BitSelExprType), value(value), msb(msb), lsb(lsb) {}
+BitSelExpr::BitSelExpr(const shared_ptr<Expr> &value, const shared_ptr<Expr> &msb, const shared_ptr<Expr> &lsb, const SourcePos &sourcePos)
+        : Expr(BitSelExprType, sourcePos), value(value), msb(msb), lsb(lsb) {}
 
 BitSelExpr::~BitSelExpr() {
 
@@ -295,8 +297,8 @@ shared_ptr<Expr> BitSelExpr::rename(string prefix, shared_ptr<LexicalScope> &sco
                                                  lsb->rename(prefix, scope)));
 }
 
-StringConst::StringConst(const string &repr)
-    : Expr(StringConstType), repr(repr) {
+StringConst::StringConst(const string &repr, const SourcePos &sourcePos)
+    : Expr(StringConstType, sourcePos), repr(repr) {
 
 }
 
@@ -314,8 +316,9 @@ shared_ptr<Expr> StringConst::rename(string prefix, shared_ptr<LexicalScope> &sc
     return shared_ptr<StringConst>(new StringConst(repr));
 }
 
-CondExpr::CondExpr(const shared_ptr<Expr> &cond, const shared_ptr<Expr> &thenExpr, const shared_ptr<Expr> &elseExpr)
-    : Expr(CondExprType), cond(cond), thenExpr(thenExpr), elseExpr(elseExpr) {
+CondExpr::CondExpr(const shared_ptr<Expr> &cond, const shared_ptr<Expr> &thenExpr, const shared_ptr<Expr> &elseExpr,
+                   const SourcePos &sourcePos)
+        : Expr(CondExprType, sourcePos), cond(cond), thenExpr(thenExpr), elseExpr(elseExpr) {
 
 }
 

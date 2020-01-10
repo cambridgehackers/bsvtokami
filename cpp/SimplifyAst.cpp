@@ -348,7 +348,7 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
                 logstream << "simplify var expr reading reg " << varExpr->name << endl;
                 string valName = varExpr->name + "_val";
                 //fixme: no source pos
-                shared_ptr<RegReadStmt> regRead = make_shared<RegReadStmt>(varExpr->name, valName, elementType);
+                shared_ptr<RegReadStmt> regRead = make_shared<RegReadStmt>(varExpr->name, valName, elementType, varExpr->sourcePos);
                 simplifiedStmts.push_back(regRead);
                 return make_shared<VarExpr>(valName, elementType);
             }
@@ -374,7 +374,7 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
                     logstream << endl;
                 }
             }
-            shared_ptr<OperatorExpr> simplifiedExpr = make_shared<OperatorExpr>(opexpr->op, lhs, rhs);
+            shared_ptr<OperatorExpr> simplifiedExpr = make_shared<OperatorExpr>(opexpr->op, lhs, rhs, opexpr->sourcePos);
             return simplifiedExpr;
         }
         case CallExprType: {
@@ -387,7 +387,7 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
             shared_ptr<FieldExpr> fieldExpr = expr->fieldExpr();
             shared_ptr<Expr> object = simplify(fieldExpr->object, simplifiedStmts);
             shared_ptr<FieldExpr> simplifiedExpr = make_shared<FieldExpr>(object, fieldExpr->fieldName,
-                                                                          fieldExpr->bsvtype);
+                                                                          fieldExpr->bsvtype, fieldExpr->sourcePos);
             return simplifiedExpr;
         }
         case CondExprType: {
@@ -395,7 +395,7 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
             shared_ptr<Expr> cond = simplify(condExpr->cond, simplifiedStmts);
             shared_ptr<Expr> thenExpr = simplify(condExpr->thenExpr, simplifiedStmts);
             shared_ptr<Expr> elseExpr = simplify(condExpr->elseExpr, simplifiedStmts);
-            shared_ptr<CondExpr> simplifiedExpr = make_shared<CondExpr>(cond, thenExpr, elseExpr);
+            shared_ptr<CondExpr> simplifiedExpr = make_shared<CondExpr>(cond, thenExpr, elseExpr, expr->sourcePos);
             return simplifiedExpr;
         }
         case CaseExprType:
@@ -419,7 +419,8 @@ SimplifyAst::simplify(const shared_ptr<MatchesExpr> &matchesExpr, vector<shared_
     shared_ptr<Expr> matchesPattern = matchPattern(matchesExpr->pattern, simplifiedStmts);
     for (int i = 0; i < matchesExpr->patterncond.size(); i++) {
         matchesPattern = make_shared<OperatorExpr>("==", matchesPattern,
-                                                   simplify(matchesExpr->patterncond[i], simplifiedStmts));
+                                                   simplify(matchesExpr->patterncond[i], simplifiedStmts),
+                                                   matchesExpr->sourcePos);
     }
 
     return matchesPattern;
@@ -427,5 +428,6 @@ SimplifyAst::simplify(const shared_ptr<MatchesExpr> &matchesExpr, vector<shared_
 
 shared_ptr<Expr>
 SimplifyAst::matchPattern(const shared_ptr<Pattern> &pattern, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
-    return make_shared<VarExpr>("fixme_pattern_match", make_shared<BSVType>("PatternType"));
+    //FIXME: sourcePos
+    return make_shared<VarExpr>("fixme_pattern_match", make_shared<BSVType>("PatternType"), SourcePos());
 }
