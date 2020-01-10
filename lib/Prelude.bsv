@@ -445,7 +445,7 @@ endinstance
 interface Empty;
 endinterface
 
-function Action error(String msg);
+function any error(String msg);
 endfunction
 
 module errorM#(String s)(Empty);
