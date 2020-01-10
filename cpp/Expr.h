@@ -92,7 +92,7 @@ public:
     const shared_ptr<Expr> object;
     const string fieldName;
 public:
-    FieldExpr(const shared_ptr<Expr> &object, const string &fieldName);
+    FieldExpr(const shared_ptr<Expr> &object, const string &fieldName, const shared_ptr<BSVType> &bsvtype);
 
     virtual ~FieldExpr();
 
@@ -101,10 +101,6 @@ public:
     shared_ptr<FieldExpr> fieldExpr() override;
 
     shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
-
-    static shared_ptr<FieldExpr> create(const shared_ptr<Expr> &object, const string &fieldName) {
-        return shared_ptr<FieldExpr>(new FieldExpr(object, fieldName));
-    }
 
 };
 

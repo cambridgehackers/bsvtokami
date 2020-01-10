@@ -371,7 +371,7 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
         case FieldExprType: {
             shared_ptr<FieldExpr> fieldExpr = expr->fieldExpr();
             shared_ptr<Expr> object = simplify(fieldExpr->object, simplifiedStmts);
-            shared_ptr<FieldExpr> simplifiedExpr = make_shared<FieldExpr>(object, fieldExpr->fieldName);
+            shared_ptr<FieldExpr> simplifiedExpr = make_shared<FieldExpr>(object, fieldExpr->fieldName, fieldExpr->bsvtype);
             return simplifiedExpr;
         }
         case CondExprType: {

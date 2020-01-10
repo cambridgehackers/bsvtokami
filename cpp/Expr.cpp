@@ -166,8 +166,8 @@ shared_ptr<MatchesExpr> MatchesExpr::create(const shared_ptr<Expr> &expr, const 
     return shared_ptr<MatchesExpr>(new MatchesExpr(expr, pattern, exprs));
 }
 
-FieldExpr::FieldExpr(const shared_ptr<Expr> &object, const std::string &fieldName)
-        : Expr(FieldExprType), object(object), fieldName(fieldName) {
+FieldExpr::FieldExpr(const shared_ptr<Expr> &object, const std::string &fieldName, const shared_ptr<BSVType> &bsvtype)
+        : Expr(FieldExprType, bsvtype), object(object), fieldName(fieldName) {
 }
 
 FieldExpr::~FieldExpr() {
@@ -182,7 +182,7 @@ void FieldExpr::prettyPrint(ostream &out, int depth) {
 shared_ptr<FieldExpr> FieldExpr::fieldExpr() { return static_pointer_cast<FieldExpr, Expr>(shared_from_this()); }
 
 shared_ptr<Expr> FieldExpr::rename(string prefix, shared_ptr<LexicalScope> &scope) {
-    return shared_ptr<FieldExpr>(new FieldExpr(object->rename(prefix, scope), fieldName));
+    return shared_ptr<FieldExpr>(new FieldExpr(object->rename(prefix, scope), fieldName, bsvtype));
 }
 
 CallExpr::CallExpr(const shared_ptr<Expr> &function, const vector<shared_ptr<Expr>> &args) : Expr(

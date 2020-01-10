@@ -97,13 +97,13 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::UnopexprContext *ctx) {
 
 shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
     shared_ptr<Expr> result;
+    shared_ptr<BSVType> resultType = typeChecker->lookup(ctx);
+
     if (BSVParser::FieldexprContext *fieldexpr = dynamic_cast<BSVParser::FieldexprContext *>(ctx)) {
         shared_ptr<Expr> object(expr(fieldexpr->exprprimary()));
-        return FieldExpr::create(object, fieldexpr->field->getText());
+        return make_shared<FieldExpr>(object, fieldexpr->field->getText(), resultType);
     } else if (BSVParser::VarexprContext *varexpr = dynamic_cast<BSVParser::VarexprContext *>(ctx)) {
-        //FIXME: get type from type checker
-        shared_ptr<BSVType> varType = typeChecker->lookup(varexpr);
-        result.reset(new VarExpr(varexpr->getText(), varType));
+        result.reset(new VarExpr(varexpr->getText(), resultType));
     } else if (BSVParser::IntliteralContext *intliteral = dynamic_cast<BSVParser::IntliteralContext *>(ctx)) {
         result.reset(new IntConst(intliteral->getText()));
     } else if (BSVParser::StringliteralContext *stringliteral = dynamic_cast<BSVParser::StringliteralContext *>(ctx)) {
