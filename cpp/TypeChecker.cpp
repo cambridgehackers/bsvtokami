@@ -303,7 +303,7 @@ z3::expr TypeChecker::constant(std::string name, z3::sort sort) {
 }
 
 void TypeChecker::insertExpr(antlr4::ParserRuleContext *ctx, z3::expr expr) {
-    currentContext->logstream << "  insert expr " << ctx->getText().c_str() << endl;
+    currentContext->logstream << "  insert expr " << ctx->getText().c_str() << " @" << ctx->getRuleIndex() << " at " << sourceLocation(ctx) << endl;
     exprs.insert(std::pair<antlr4::ParserRuleContext *, z3::expr>(ctx, expr));
 }
 
@@ -364,7 +364,7 @@ TypeChecker::~TypeChecker() {}
 shared_ptr<BSVType> TypeChecker::lookup(antlr4::ParserRuleContext *ctx) {
     if (exprTypes.find(ctx) != exprTypes.cend())
         return exprTypes.find(ctx)->second;
-    currentContext->logstream << "no entry for " << ctx->getText() << " at " << sourceLocation(ctx) << endl;
+    currentContext->logstream << "no entry for @" << ctx->getRuleIndex() << ": " << ctx->getText() << " at " << sourceLocation(ctx) << endl;
     return BSVType::create("NOENT");
 }
 
@@ -967,10 +967,13 @@ antlrcpp::Any TypeChecker::visitModuledef(BSVParser::ModuledefContext *ctx) {
             z3::expr e = it->second;
             try {
                 z3::expr v = mod.eval(e, true);
-                currentContext->logstream << e << " evaluates to " << v << " is datatype " << v.is_datatype() << endl;
+                currentContext->logstream << e << " evaluates to " << v << " for " << it->first->getText() << " at "
+                                          << sourceLocation(it->first) << endl;
                 exprTypes[it->first] = bsvtype(v, mod);
             } catch (const exception &e) {
-                currentContext->logstream << "exception" << endl;
+                currentContext->logstream << "exception " << e.what() << " on expr: " << it->second << " @"
+                                          << it->first->getRuleIndex()
+                                          << " at " << sourceLocation(it->first) << endl;
             }
         }
     } else {
