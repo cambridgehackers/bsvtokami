@@ -622,6 +622,7 @@ antlrcpp::Any TypeChecker::visitLowerCaseIdentifier(BSVParser::LowerCaseIdentifi
         shared_ptr<BSVType> uniqueType = freshType(functionDef->bsvtype);
         z3::expr uniqueExpr = bsvTypeToExpr(uniqueType);
         addConstraint(constant(uniqueName, typeSort) == uniqueExpr, uniqueName + "$trk", ctx);
+        currentContext->logstream << "visitLowerCaseIdentifier " << (constant(uniqueName, typeSort) == uniqueExpr) << endl;
     }
     if (!vardecl)
         currentContext->logstream << "No decl found for var " << varname << " at " << sourceLocation(ctx) << endl;
@@ -1181,25 +1182,30 @@ antlrcpp::Any TypeChecker::visitVarassign(BSVParser::VarassignContext *ctx) {
     currentContext->logstream << "var assign " << ctx->getText() << endl;
     z3::expr lhsExpr = visit(ctx->lvalue(0));
     z3::expr rhsExpr = visit(ctx->expression());
-    //FIXME: module instance or action binding
+    if (ctx->op->getText() == "<-") {
+        currentContext->logstream << "var assign action value " << lhsExpr << endl;
+        lhsExpr = instantiateType("ActionValue", lhsExpr);
+    }
     addConstraint(lhsExpr == rhsExpr, "varassign", ctx);
     return visitChildren(ctx);
 }
 
-z3::expr TypeChecker::visitLIndexValue(BSVParser::ExprprimaryContext *ctx, BSVParser::ExpressionContext *index) {
+z3::expr TypeChecker::visitArraysubLvalue(BSVParser::ExprprimaryContext *ctx, BSVParser::ExpressionContext *index) {
     currentContext->logstream << "Visit array index lvalue at " << sourceLocation(ctx) << endl;
 
     z3::expr arrayExpr = visit(ctx);
     z3::expr indexExpr = visit(ctx);
-    z3::expr typeexpr = freshConstant("alindex", typeSort);
+    z3::expr typeexpr = freshConstant("arraysub$lvalue", typeSort);
     vector<z3::expr> exprs;
     exprs.push_back(typeexpr == instantiateType("Bit", instantiateType("Numeric", context.int_val(1))));
     exprs.push_back(arrayExpr == instantiateType("Vector",
                                                  instantiateType("Numeric", freshConstant("alindex", intSort)),
                                                  typeexpr));
-
+    exprs.push_back(arrayExpr == instantiateType("Vector",
+                                                 instantiateType("Numeric", freshConstant("alindex", intSort)),
+                                                 instantiateType("Reg", typeexpr)));
     if (exprs.size())
-        addConstraint(orExprs(exprs), "alindext", ctx);
+        addConstraint(orExprs(exprs), "arraysub$lvalue", ctx);
 
     insertExpr(ctx, typeexpr);
     return typeexpr;
@@ -1246,7 +1252,7 @@ antlrcpp::Any TypeChecker::visitLvalue(BSVParser::LvalueContext *ctx) {
         z3::expr lhsExpr = visit(lhs);
         if (ctx->index != NULL) {
             // lvalue [ index ]
-            return visitLIndexValue(lhs, ctx->index);
+            return visitArraysubLvalue(lhs, ctx->index);
         } else if (ctx->lowerCaseIdentifier()) {
             // lvalue . field
             return visitLFieldValue(lhs, ctx->lowerCaseIdentifier()->getText());
@@ -1410,7 +1416,8 @@ antlrcpp::Any TypeChecker::visitBinopexpr(BSVParser::BinopexprContext *ctx) {
         solver.push();
         currentContext->logstream << "  checking " << ctx->getText() << endl;
         //currentContext->logstream << solver << endl;
-        currentContext->logstream << "        check(" << ctx->getText() << ") " << check_result_name[solver.check()] << endl;
+        currentContext->logstream << "        check(" << ctx->getText() << ") " << check_result_name[solver.check()]
+                                  << endl;
         solver.pop();
     }
 
@@ -1517,7 +1524,12 @@ antlrcpp::Any TypeChecker::visitVarexpr(BSVParser::VarexprContext *ctx) {
         if (varDecl && varDecl->bsvtype) {
             varDecl->bsvtype->prettyPrint(currentContext->logstream);
             currentContext->logstream << endl;
-            return bsvTypeToExpr(dereferenceType(varDecl->bsvtype));
+            shared_ptr<BSVType> derefType = dereferenceType(varDecl->bsvtype);
+            if (varDecl->functionDefinition() || varDecl->moduleDefinition()) {
+                derefType = freshType(derefType);
+                currentContext->logstream << "global " << varname << " freshType " << derefType->to_string() << endl;
+            }
+            return bsvTypeToExpr(derefType);
         }
     }
 
@@ -1811,6 +1823,7 @@ antlrcpp::Any TypeChecker::visitCallexpr(BSVParser::CallexprContext *ctx) {
     arg_exprs.push_back(instance_expr);
     currentContext->logstream << "instantiate " << constructorName << " arity " << arg_exprs.size() << endl;
     z3::expr result_expr = instantiateType(constructorName, arg_exprs);
+    currentContext->logstream << "   constraint " << (result_expr == fcn_expr) << endl;
     addConstraint(result_expr == fcn_expr, ctx->fcn->getText(), ctx);
     return instance_expr;
 }
@@ -1916,8 +1929,9 @@ antlrcpp::Any TypeChecker::visitRegwrite(BSVParser::RegwriteContext *ctx) {
     z3::expr rhsExpr = visit(ctx->rhs);
     z3::expr lhsExpr = visit(ctx->lhs);
     z3::expr regExpr = instantiateType("Reg", rhsExpr);
-    addConstraint(lhsExpr == regExpr, "reg$write", ctx);
-    currentContext->logstream << "visit regwrite << " << (lhsExpr == regExpr) << endl;
+    z3::expr constraint = (lhsExpr == regExpr);
+    addConstraint(constraint, "reg$write", ctx);
+    currentContext->logstream << "visit regwrite << " << constraint << endl;
     return nullptr;
 }
 

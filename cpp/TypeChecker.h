@@ -252,7 +252,7 @@ protected:
 
     antlrcpp::Any visitVarassign(BSVParser::VarassignContext *ctx) override;
 
-    z3::expr visitLIndexValue(BSVParser::ExprprimaryContext *ctx, BSVParser::ExpressionContext *index);
+    z3::expr visitArraysubLvalue(BSVParser::ExprprimaryContext *ctx, BSVParser::ExpressionContext *index);
 
     z3::expr visitLFieldValue(BSVParser::ExprprimaryContext *ctx, string fieldname);
 
