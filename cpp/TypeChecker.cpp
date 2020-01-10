@@ -363,7 +363,7 @@ TypeChecker::~TypeChecker() {}
 shared_ptr<BSVType> TypeChecker::lookup(antlr4::ParserRuleContext *ctx) {
     if (exprTypes.find(ctx) != exprTypes.cend())
         return exprTypes.find(ctx)->second;
-    currentContext->logstream << "no entry for " << ctx->getText() << " " << ctx->getText() << endl;
+    currentContext->logstream << "no entry for " << ctx->getText() << " at " << sourceLocation(ctx) << endl;
     return BSVType::create("NOENT");
 }
 
@@ -1708,10 +1708,10 @@ antlrcpp::Any TypeChecker::visitFieldexpr(BSVParser::FieldexprContext *ctx) {
                 currentContext->logstream << " method ";
                 methodType->prettyPrint(currentContext->logstream);
                 currentContext->logstream << endl;
-                map<string, string> freshTypeVars;
-                z3::expr interfaceExpr = bsvTypeToExpr(interfaceType, freshTypeVars);
-                z3::expr methodExpr = bsvTypeToExpr(methodType, freshTypeVars);
-                currentContext->logstream << "convert method args to z3::expr ..." << endl;
+                map<string, shared_ptr<BSVType>> freshTypeVars;
+                z3::expr interfaceExpr = bsvTypeToExpr(freshType(interfaceType, freshTypeVars));
+                z3::expr methodExpr = bsvTypeToExpr(freshType(methodType, freshTypeVars));
+                currentContext->logstream << "convert method " << fieldname << " args to z3::expr ..." << endl;
                 currentContext->logstream << "    " << interfaceExpr << endl;
                 currentContext->logstream << "    " << methodExpr << endl;
                 currentContext->logstream << "    " << (exprtype == interfaceExpr && fieldexpr == methodExpr)
@@ -1725,10 +1725,10 @@ antlrcpp::Any TypeChecker::visitFieldexpr(BSVParser::FieldexprContext *ctx) {
                 currentContext->logstream << " subinterface type ";
                 subinterfaceType->prettyPrint(currentContext->logstream);
                 currentContext->logstream << endl;
-                map<string, string> freshTypeVars;
-                z3::expr interfaceExpr = bsvTypeToExpr(interfaceType, freshTypeVars);
-                z3::expr subinterfaceExpr = bsvTypeToExpr(subinterfaceType, freshTypeVars);
-                currentContext->logstream << "convert subinterface args to z3::expr ..." << endl;
+                map<string, shared_ptr<BSVType>> freshTypeVars;
+                z3::expr interfaceExpr = bsvTypeToExpr(freshType(interfaceType, freshTypeVars));
+                z3::expr subinterfaceExpr = bsvTypeToExpr(freshType(subinterfaceType, freshTypeVars));
+                currentContext->logstream << "convert subinterface " << fieldname << " args to z3::expr ..." << endl;
                 currentContext->logstream << "    " << interfaceExpr << endl;
                 currentContext->logstream << "    " << subinterfaceExpr << endl;
                 currentContext->logstream << "    " << (exprtype == interfaceExpr && fieldexpr == subinterfaceExpr)
@@ -1747,9 +1747,9 @@ antlrcpp::Any TypeChecker::visitFieldexpr(BSVParser::FieldexprContext *ctx) {
             currentContext->logstream << " field type ";
             fieldType->prettyPrint(currentContext->logstream);
             currentContext->logstream << endl;
-            map<string, string> freshTypeVars;
-            z3::expr structExpr = bsvTypeToExpr(structType, freshTypeVars);
-            z3::expr memberExpr = bsvTypeToExpr(fieldType, freshTypeVars);
+            map<string, shared_ptr<BSVType>> freshTypeVars;
+            z3::expr structExpr = bsvTypeToExpr(freshType(structType, freshTypeVars));
+            z3::expr memberExpr = bsvTypeToExpr(freshType(fieldType, freshTypeVars));
             currentContext->logstream << "convert field args to z3::expr ..." << endl;
             currentContext->logstream << "    " << structExpr << endl;
             currentContext->logstream << "    " << memberExpr << endl;
@@ -2410,25 +2410,17 @@ z3::expr TypeChecker::instantiateType(const string &type_name, const z3::expr &p
     return instantiateType(type_name, params);
 }
 
-z3::expr TypeChecker::bsvTypeToExpr(shared_ptr<BSVType> bsvtype, map<string, string> &varmapping) {
+z3::expr TypeChecker::bsvTypeToExprHelper(shared_ptr<BSVType> bsvtype) {
     if (bsvtype->isVar) {
         string bsvname = bsvtype->name;
         string exprName = bsvname;
-        if (0) {
-            if (varmapping.find(bsvname) != varmapping.cend()) {
-                exprName = varmapping.find(bsvname)->second;
-            } else {
-                exprName = bsvname = freshString(bsvname);
-                varmapping[bsvname] = exprName;
-            }
-        }
         return constant(exprName, typeSort);
     } else if (bsvtype->isNumeric()) {
         return instantiateType("Numeric", context.int_val((int) strtol(bsvtype->name.c_str(), NULL, 0)));
     } else {
         z3::expr_vector arg_exprs(context);
         for (int i = 0; i < bsvtype->params.size(); i++) {
-            arg_exprs.push_back(bsvTypeToExpr(bsvtype->params[i], varmapping));
+            arg_exprs.push_back(bsvTypeToExprHelper(bsvtype->params[i]));
         }
         bool foundDecl = typeDecls.find(bsvtype->name) != typeDecls.cend();
         bool found2 = currentContext->typeDeclaration.find(bsvtype->name) != currentContext->typeDeclaration.cend();
@@ -2444,9 +2436,8 @@ z3::expr TypeChecker::bsvTypeToExpr(shared_ptr<BSVType> bsvtype, map<string, str
 }
 
 z3::expr TypeChecker::bsvTypeToExpr(shared_ptr<BSVType> bsvtype) {
-    map<string,string> varmapping;
     shared_ptr<BSVType> derefType = dereferenceType(bsvtype);
-    return bsvTypeToExpr(derefType, varmapping);
+    return bsvTypeToExprHelper(derefType);
 }
 
 

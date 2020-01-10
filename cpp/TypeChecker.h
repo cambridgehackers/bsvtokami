@@ -407,7 +407,7 @@ public:
 
     z3::expr instantiateType(const string &type_name, const z3::expr &param0, const z3::expr &param1);
 
-    z3::expr bsvTypeToExpr(shared_ptr<BSVType> bsvtype, map<string,string> &varmapping);
+    z3::expr bsvTypeToExprHelper(shared_ptr<BSVType> bsvtype);
 
     z3::expr bsvTypeToExpr(shared_ptr<BSVType> bsvtype);
 
