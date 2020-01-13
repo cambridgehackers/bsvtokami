@@ -6,14 +6,14 @@ std::shared_ptr<LValue> GenerateAst::lvalue(BSVParser::LvalueContext *lhs) {
     if (lhs->exprprimary() != nullptr) {
         shared_ptr<Expr> lhsLValue(expr(lhs->exprprimary()));
         if (lhs->index != nullptr) {
-            return ArraySubLValue::create(lhsLValue, expr(lhs->index));
+            return make_shared<ArraySubLValue>(lhsLValue, expr(lhs->index));
         } else if (lhs->msb != nullptr) {
-            return RangeSelLValue::create(lhsLValue, expr(lhs->msb), expr(lhs->lsb));
+            return make_shared<RangeSelLValue>(lhsLValue, expr(lhs->msb), expr(lhs->lsb));
         } else {
-            return FieldLValue::create(lhsLValue, lhs->lowerCaseIdentifier()->getText());
+            return make_shared<FieldLValue>(lhsLValue, lhs->lowerCaseIdentifier()->getText());
         }
     } else {
-        return VarLValue::create(lhs->lowerCaseIdentifier()->getText());
+        return make_shared<VarLValue>(lhs->lowerCaseIdentifier()->getText());
     }
 }
 
@@ -65,9 +65,9 @@ std::shared_ptr<Expr> GenerateAst::expr(BSVParser::MatchesexprContext *ctx) {
         vector<shared_ptr<Expr>> exprs;
         for (int i = 0; i < patterncond.size(); i++)
             exprs.push_back(expr(patterncond[i]->expression()));
-        return MatchesExpr::create(lhs, pattern, exprs);
+        return make_shared<MatchesExpr>(lhs, pattern, exprs, sourcePos(ctx));
     } else {
-        return MatchesExpr::create(lhs, pattern);
+        return make_shared<MatchesExpr>(lhs, pattern, sourcePos(ctx));
     }
 }
 
@@ -101,21 +101,21 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
 
     if (BSVParser::FieldexprContext *fieldexpr = dynamic_cast<BSVParser::FieldexprContext *>(ctx)) {
         shared_ptr<Expr> object(expr(fieldexpr->exprprimary()));
-        return make_shared<FieldExpr>(object, fieldexpr->field->getText(), resultType);
+        return make_shared<FieldExpr>(object, fieldexpr->field->getText(), resultType, sourcePos(ctx));
     } else if (BSVParser::VarexprContext *varexpr = dynamic_cast<BSVParser::VarexprContext *>(ctx)) {
-        result.reset(new VarExpr(varexpr->getText(), resultType));
+	return make_shared<VarExpr>(varexpr->getText(), resultType, sourcePos(ctx));
     } else if (BSVParser::IntliteralContext *intliteral = dynamic_cast<BSVParser::IntliteralContext *>(ctx)) {
-        result.reset(new IntConst(intliteral->getText()));
+        return make_shared<IntConst>(intliteral->getText(), sourcePos(ctx));
     } else if (BSVParser::StringliteralContext *stringliteral = dynamic_cast<BSVParser::StringliteralContext *>(ctx)) {
-        result.reset(new StringConst(stringliteral->getText()));
+        return make_shared<StringConst>(stringliteral->getText(), sourcePos(ctx));
     } else if (BSVParser::ArraysubContext *arraysub = dynamic_cast<BSVParser::ArraysubContext *>(ctx)) {
         shared_ptr<Expr> array(expr(arraysub->array));
         shared_ptr<Expr> msb(expr(arraysub->msb));
         if (arraysub->lsb) {
             shared_ptr<Expr> lsb(expr(arraysub->lsb));
-            return make_shared<BitSelExpr>(array, msb, lsb);
+            return make_shared<BitSelExpr>(array, msb, lsb, sourcePos(ctx));
         } else {
-            return make_shared<ArraySubExpr>(array, msb);
+            return make_shared<ArraySubExpr>(array, msb, sourcePos(ctx));
         }
     } else if (BSVParser::CallexprContext *callexpr = dynamic_cast<BSVParser::CallexprContext *>(ctx)) {
         shared_ptr<Expr> function(expr(callexpr->fcn));
@@ -124,16 +124,16 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
         for (size_t i = 0; i < args.size(); i++) {
             exprs.push_back(expr(args.at(i)));
         }
-        result.reset(new CallExpr(function, exprs));
+        return make_shared<CallExpr>(function, exprs, sourcePos(ctx));
     } else if (BSVParser::SyscallexprContext *syscallexpr = dynamic_cast<BSVParser::SyscallexprContext *>(ctx)) {
         //FIXME: placeholder type for $display etc.
-        shared_ptr<VarExpr> function = make_shared<VarExpr>(syscallexpr->fcn->getText(), make_shared<BSVType>());
+        shared_ptr<VarExpr> function = make_shared<VarExpr>(syscallexpr->fcn->getText(), make_shared<BSVType>(), sourcePos(ctx));
         vector<BSVParser::ExpressionContext *> args = syscallexpr->expression();
         vector<shared_ptr<Expr>> exprs;
         for (size_t i = 0; i < args.size(); i++) {
             exprs.push_back(expr(args.at(i)));
         }
-        result.reset(new CallExpr(function, exprs));
+        return make_shared<CallExpr>(function, exprs, sourcePos(ctx));
     } else if (BSVParser::TaggedunionexprContext *unionexpr = dynamic_cast<BSVParser::TaggedunionexprContext *>(ctx)) {
         string tag = unionexpr->upperCaseIdentifier(0)->getText();
         vector<string> keys;
@@ -151,12 +151,12 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
             logstream << "unhandled tagged union: " << unionexpr->getText() << endl;
         }
 
-        result.reset(new EnumUnionStructExpr(tag, keys, vals));
+        return make_shared<EnumUnionStructExpr>(tag, keys, vals, sourcePos(ctx));
     } else if (BSVParser::ParenexprContext *parenexpr = dynamic_cast<BSVParser::ParenexprContext *>(ctx)) {
         return expr(parenexpr->expression());
     } else if (BSVParser::UndefinedexprContext *undef = dynamic_cast<BSVParser::UndefinedexprContext *>(ctx)) {
         //FIXME:: get type from type checker
-        return shared_ptr<Expr>(new VarExpr("Undefined", make_shared<BSVType>()));
+        return make_shared<VarExpr>("Undefined", make_shared<BSVType>(), sourcePos(ctx));
     } else {
         logstream << "Unhandled expr primary " << ctx->getText() << endl;
     }
@@ -176,7 +176,7 @@ shared_ptr<PackageDefStmt> GenerateAst::generateAst(BSVParser::PackagedefContext
         if (stmt)
             package_stmts.push_back(stmt);
     }
-    return shared_ptr<PackageDefStmt>(new PackageDefStmt(packageName, package_stmts));
+    return make_shared<PackageDefStmt>(packageName, package_stmts);
 }
 
 shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::PackagestmtContext *ctx) {
@@ -221,7 +221,8 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::PackagestmtContext *ctx) {
     } else {
         logstream << "unhandled packagestmt" << ctx->getText() << endl;
     }
-    return shared_ptr<Stmt>();
+    shared_ptr<Stmt> stmt;
+    return stmt;
 }
 
 std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::InterfacedeclContext *ctx) {
@@ -356,8 +357,8 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::FunctiondefContext *ct
             logstream << "unhandled method stmt: " << stmts.at(i)->getText() << endl;
         ast_stmts.push_back(stmt);
     }
-    return shared_ptr<Stmt>(new FunctionDefStmt(functionName, returnType,
-                                                params, paramTypes, guard, ast_stmts, sourcePos(ctx)));
+    return make_shared<FunctionDefStmt>(functionName, returnType,
+                                        params, paramTypes, guard, ast_stmts, sourcePos(ctx));
 }
 
 std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::MethoddefContext *ctx) {
@@ -395,8 +396,8 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::MethoddefContext *ctx)
             logstream << "unhandled method stmt: " << stmts.at(i)->getText() << endl;
         ast_stmts.push_back(stmt);
     }
-    return shared_ptr<Stmt>(new MethodDefStmt(methodName, returnType,
-                                              params, paramTypes, guard, ast_stmts, sourcePos(ctx)));
+    return make_shared<MethodDefStmt>(methodName, returnType,
+                                      params, paramTypes, guard, ast_stmts, sourcePos(ctx));
 }
 
 std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::RuledefContext *ctx) {
@@ -432,7 +433,7 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
         } else {
             logstream << "(* Unhandled RegWrite element type " << regType->to_string() << " for regwrite: "
                       << ctx->getText() << "*)" << endl;
-            elementType = BSVType::create("Bit", BSVType::create("32", BSVType_Numeric, false));
+            elementType = make_shared<BSVType>("Bit", make_shared<BSVType>("32", BSVType_Numeric, false));
         }
         return make_shared<RegWriteStmt>(regName, elementType, rhs);
     } else if (BSVParser::VarbindingContext *varbinding = ctx->varbinding()) {
@@ -449,7 +450,7 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
         shared_ptr<Stmt> elseStmt;
         if (ifstmt->stmt(1))
             elseStmt = generateAst(ifstmt->stmt(1));
-        return shared_ptr<Stmt>(new IfStmt(condition, thenStmt, elseStmt, sourcePos(ctx)));
+        return make_shared<IfStmt>(condition, thenStmt, elseStmt, sourcePos(ctx));
     } else if (BSVParser::BeginendblockContext *block = ctx->beginendblock()) {
         vector<BSVParser::StmtContext *> stmts = block->stmt();
         vector<shared_ptr<Stmt>> ast_stmts;
@@ -459,7 +460,7 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
                 logstream << "unhandled block stmt: " << stmts.at(i)->getText() << endl;
             ast_stmts.push_back(ast_stmt);
         }
-        return shared_ptr<Stmt>(new BlockStmt(ast_stmts, sourcePos(ctx)));
+        return make_shared<BlockStmt>(ast_stmts, sourcePos(ctx));
     } else if (BSVParser::ActionblockContext *block = ctx->actionblock()) {
         vector<BSVParser::StmtContext *> stmts = block->stmt();
         vector<shared_ptr<Stmt>> ast_stmts;
@@ -469,17 +470,17 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
                 logstream << "unhandled block stmt: " << stmts.at(i)->getText() << endl;
             ast_stmts.push_back(ast_stmt);
         }
-        return shared_ptr<Stmt>(new BlockStmt(ast_stmts, sourcePos(ctx)));
+        return make_shared<BlockStmt>(ast_stmts, sourcePos(ctx));
     } else if (BSVParser::PatternbindingContext *patternBinding = ctx->patternbinding()) {
         shared_ptr<Expr> val(expr(patternBinding->expression()));
         shared_ptr<Pattern> pat = generateAst(patternBinding->pattern());
         return make_shared<PatternMatchStmt>(pat, patternBinding->op->getText(), val);
     } else if (BSVParser::ReturnstmtContext *ret_stmt = ctx->returnstmt()) {
         shared_ptr<Expr> val(expr(ret_stmt->expression()));
-        return shared_ptr<Stmt>(new ReturnStmt(val, sourcePos(ctx)));
+        return make_shared<ReturnStmt>(val, sourcePos(ctx));
     } else if (BSVParser::ExpressionContext *exp_stmt = ctx->expression()) {
         shared_ptr<Expr> val(expr(exp_stmt));
-        return shared_ptr<Stmt>(new ExprStmt(val, sourcePos(ctx)));
+        return make_shared<ExprStmt>(val, sourcePos(ctx));
     } else if (BSVParser::RuledefContext *ruledef = ctx->ruledef()) {
         return generateAst(ruledef);
     } else if (BSVParser::FunctiondefContext *fcn = ctx->functiondef()) {
@@ -487,7 +488,9 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
         return generateAst(fcn);
     } else {
         logstream << "Unhandled stmt: " << ctx->getText() << endl;
-        return shared_ptr<Stmt>();
+        shared_ptr<Stmt> stmt;
+        return stmt;
+        //return make_shared<Stmt>(InvalidStmtType, sourcePos(ctx));
     }
 }
 
@@ -504,11 +507,12 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::VarbindingContext *varbindi
         shared_ptr<Expr> rhs(expr(varinit->rhs));
         if (!rhs)
             logstream << "var binding unhandled rhs: " << varinit->expression()->getText() << endl;
-        return shared_ptr<Stmt>(new VarBindingStmt(varType, varName, rhs, sourcePos(varbinding)));
+        return make_shared<VarBindingStmt>(varType, varName, rhs, sourcePos(varbinding));
     }
     //FIXME: how to make multiple bindings?
     assert(0);
-    return shared_ptr<Stmt>();
+    shared_ptr<Stmt> stmt;
+    return stmt;
 }
 
 shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ActionbindingContext *actionbinding) {
@@ -523,7 +527,7 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ActionbindingContext *actio
     //cout << "action binding rhs ";
     //expr(actionbinding->rhs)->prettyPrint(cout, 0); cout << endl;
 
-    shared_ptr<Stmt> actionBindingStmt(new ActionBindingStmt(varType, varName, rhs, sourcePos(actionbinding)));
+    shared_ptr<Stmt> actionBindingStmt = make_shared<ActionBindingStmt>(varType, varName, rhs, sourcePos(actionbinding));
     return actionBindingStmt;
 }
 
@@ -533,7 +537,7 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::VarassignContext *varassign
     shared_ptr<Expr> rhs(expr(varassign->expression()));
     if (!rhs)
         logstream << "var binding unhandled rhs: " << varassign->expression()->getText() << endl;
-    return shared_ptr<Stmt>(new VarAssignStmt(lhs, op, rhs, sourcePos(varassign)));
+    return make_shared<VarAssignStmt>(lhs, op, rhs, sourcePos(varassign));
 }
 
 shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ModuleinstContext *moduleinst) {
@@ -545,19 +549,19 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ModuleinstContext *modulein
         varType.reset(new BSVType());
     shared_ptr<Expr> rhs(expr(moduleinst->rhs));
     //FIXME: mark it as module instantiation?
-    shared_ptr<Stmt> actionBindingStmt(new ActionBindingStmt(varType, varName, rhs, sourcePos(moduleinst)));
+    shared_ptr<Stmt> actionBindingStmt = make_shared<ActionBindingStmt>(varType, varName, rhs, sourcePos(moduleinst));
     return actionBindingStmt;
 }
 
 std::shared_ptr<Pattern> GenerateAst::generateAst(BSVParser::PatternContext *ctx) {
     if (BSVParser::ConstantpatternContext *constPattern = ctx->constantpattern()) {
         if (constPattern->IntLiteral()) {
-            return IntPattern::create(strtoul(ctx->getText().c_str(), 0, 0));
+            return make_shared<IntPattern>(strtoul(ctx->getText().c_str(), 0, 0));
         } else if (constPattern->IntPattern()) {
             return make_shared<IntPattern>(ctx->getText());
         } else {
             logstream << "Unhandled constant pattern: " << ctx->getText() << endl;
-            return WildcardPattern::create();
+            return make_shared<WildcardPattern>();
         }
     } else if (BSVParser::TaggedunionpatternContext *taggedPattern = ctx->taggedunionpattern()) {
         logstream << "checkme tagged union pattern: " << ctx->getText() << endl;
@@ -570,11 +574,11 @@ std::shared_ptr<Pattern> GenerateAst::generateAst(BSVParser::PatternContext *ctx
             ast_patterns.push_back(generateAst(patterns[i]));
         return make_shared<TuplePattern>(ast_patterns);
     } else if (ctx->var) {
-        return VarPattern::create(ctx->getText());
+        return make_shared<VarPattern>(ctx->getText());
     } else if (ctx->pattern()) {
         return generateAst(ctx->pattern());
     } else {
-        return WildcardPattern::create();
+        return make_shared<WildcardPattern>();
     }
     assert(0);
 }

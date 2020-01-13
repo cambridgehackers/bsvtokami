@@ -4,12 +4,13 @@
 
 #pragma once
 
-struct SourcePos {
+class SourcePos {
+public:
     const string sourceName;
     const int line;
     const int positionInLine;
 
-    SourcePos() : line(0), positionInLine(0) {}
+    SourcePos() : sourceName(), line(0), positionInLine(0) {}
 
     SourcePos(const string &sourceName, int line, int positionInLine) : sourceName(sourceName), line(line),
                                                                         positionInLine(positionInLine) {}
