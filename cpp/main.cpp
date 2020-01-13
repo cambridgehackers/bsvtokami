@@ -36,48 +36,138 @@ void usage(char *const argv[]) {
     exit(-1);
 }
 
+struct BSVOptions {
+    bool dumptree;
+    bool opt_type_check;
+    bool opt_ast;
+    bool opt_kami;
+    bool opt_koika;
+    bool opt_ir;
+    bool opt_inline;
+    vector<string> includePath;
+    vector<string> definitions;
+};
+
+int processBSVFile(const string &inputFileName, shared_ptr<TypeChecker> typeChecker, const BSVOptions options) {
+    char buffer[4096];
+    string packageName(::basename_r(inputFileName.c_str(), buffer));
+    packageName = packageName.substr(0, packageName.size() - 4);
+    cerr << "processBSVFile package " << packageName << " filename " << inputFileName << endl;
+    BSVPreprocessor preprocessor(inputFileName);
+    preprocessor.define(options.definitions);
+    CommonTokenStream tokens((TokenSource *) &preprocessor);
+
+    tokens.fill();
+
+    BSVParser parser(&tokens);
+    //parser.addErrorListener(&ConsoleErrorListener::INSTANCE);
+    BSVParser::PackagedefContext *tree = parser.packagedef();
+    int numberOfSyntaxErrors = parser.getNumberOfSyntaxErrors();
+    if (options.dumptree) {
+        std::cout << tree->toStringTree(&parser) << std::endl << std::endl;
+    }
+    if (options.opt_ast) {
+        typeChecker->visit(tree);
+        GenerateAst *generateAst = new GenerateAst(packageName, typeChecker);
+        shared_ptr<PackageDefStmt> packageDef = generateAst->generateAst(tree);;
+        vector<shared_ptr<Stmt>> stmts = packageDef->stmts;
+        SimplifyAst *simplifier = new SimplifyAst(packageName);
+        vector<shared_ptr<Stmt>> simplifiedStmts;
+        simplifier->simplify(stmts, simplifiedStmts);
+        stmts = simplifiedStmts;
+        if (options.opt_kami) {
+            ::mkdir("kami", 0755);
+
+            string kamiFileName("kami/");
+            char buffer[4096];
+            kamiFileName += packageName;
+            kamiFileName += string(".v");
+            GenerateKami *generateKami = new GenerateKami();
+            generateKami->open(kamiFileName);
+            generateKami->generateStmts(stmts);
+            generateKami->close();
+        }
+        if (options.opt_koika) {
+            ::mkdir("koika", 0775);
+
+            string koikaFileName("koika/");
+            char buffer[4096];
+            koikaFileName += string(::basename_r(inputFileName.c_str(), buffer));
+            koikaFileName += string(".koika");
+
+            GenerateKoika *generateKoika = new GenerateKoika();
+            generateKoika->open(koikaFileName);
+            generateKoika->generateStmts(stmts);
+            generateKoika->close();
+        }
+        if (options.opt_ir) {
+            GenerateIR *generateIR = new GenerateIR();
+            generateIR->open("kami/" + packageName + string(".IR"));
+            generateIR->generateIR(stmts);
+            generateIR->close();
+        }
+        string opt_rename;
+        if (opt_rename.size()) {
+            for (size_t i = 0; i < stmts.size(); i++) {
+                shared_ptr<Stmt> stmt = stmts[i];
+                if (stmt && stmt->moduleDefStmt()) {
+                    shared_ptr<LexicalScope> scope(make_shared<LexicalScope>("rename"));
+                    shared_ptr<Stmt> renamedStmt = stmt->rename(opt_rename, scope);
+                    //renamedStmt->prettyPrint(cout, 0);
+                }
+            }
+        }
+        if (options.opt_inline) {
+            Inliner *inliner = new Inliner();
+            vector<shared_ptr<Stmt>> inlinedStmts = inliner->processPackage(stmts);
+            for (size_t i = 0; i < inlinedStmts.size(); i++) {
+                //inlinedStmts[i]->prettyPrint(cout, 0);
+            }
+        }
+    }
+}
+
 int main(int argc, char *const argv[]) {
     bool dumptokens = false;
     bool dumptree = false;
     size_t numberOfSyntaxErrors = 0;
 
     int ch;
-    int opt_type_check = 1;
-    int opt_ast = 1;
-    int opt_kami = 1;
-    int opt_koika = 1;
-    int opt_ir = 0;
-    int opt_inline = 0;
+    BSVOptions options;
+    options.opt_type_check = 1;
+    options.opt_ast = 1;
+    options.opt_kami = 1;
+    options.opt_koika = 1;
+    options.opt_ir = 0;
+    options.opt_inline = 0;
     string opt_rename;
-    vector<string> includePath;
-    vector<string> definitions;
 
     while ((ch = getopt(argc, argv, "D:I:air:t")) != -1) {
         switch (ch) {
             case 'a':
-                opt_ast = 1;
+                options.opt_ast = 1;
                 break;
             case 'D':
-                definitions.push_back(optarg);
+                options.definitions.push_back(optarg);
                 break;
             case 'i':
-                opt_ir = 1;
+                options.opt_ir = 1;
                 break;
             case 'k':
-                opt_kami = 1;
+                options.opt_kami = 1;
                 break;
             case 'K':
-                opt_koika = 1;
+                options.opt_koika = 1;
                 break;
             case 'I':
                 cerr << "include " << optarg << endl;
-                includePath.push_back(optarg);
+                options.includePath.push_back(optarg);
                 break;
             case 'r':
                 opt_rename = string(optarg);
                 break;
             case 't':
-                opt_type_check = 1;
+                options.opt_type_check = 1;
                 break;
             default:
                 usage(argv);
@@ -91,83 +181,10 @@ int main(int argc, char *const argv[]) {
         long dotpos = input_basename.find_first_of('.');
         string packageName = input_basename.substr(0, dotpos);
         std::cerr << "Parsing file -1- " << inputFileName << " package " << packageName << std::endl;
-        BSVPreprocessor preprocessor(inputFileName);
-        preprocessor.define(definitions);
-        CommonTokenStream tokens((TokenSource *) &preprocessor);
 
-        tokens.fill();
-        if (dumptokens) {
-            for (auto token : tokens.getTokens()) {
-                std::cout << token->toString() << std::endl;
-            }
-        }
+        shared_ptr<TypeChecker> typeChecker = make_shared<TypeChecker>(packageName, options.includePath, options.definitions);
+        processBSVFile(inputFileName, typeChecker, options);
 
-        BSVParser parser(&tokens);
-        //parser.addErrorListener(&ConsoleErrorListener::INSTANCE);
-        BSVParser::PackagedefContext *tree = parser.packagedef();
-        numberOfSyntaxErrors += parser.getNumberOfSyntaxErrors();
-        if (dumptree) {
-            std::cout << tree->toStringTree(&parser) << std::endl << std::endl;
-        }
-        if (opt_ast) {
-            shared_ptr<TypeChecker> typeChecker(new TypeChecker(packageName, includePath, definitions));
-            typeChecker->visit(tree);
-            GenerateAst *generateAst = new GenerateAst(packageName, typeChecker);
-            shared_ptr<PackageDefStmt> packageDef = generateAst->generateAst(tree);;
-            vector<shared_ptr<Stmt>> stmts = packageDef->stmts;
-            SimplifyAst *simplifier = new SimplifyAst(packageName);
-            vector<shared_ptr<Stmt>> simplifiedStmts;
-            simplifier->simplify(stmts, simplifiedStmts);
-            stmts = simplifiedStmts;
-            if (opt_kami) {
-                ::mkdir("kami", 0755);
-
-                string kamiFileName("kami/");
-                char buffer[4096];
-                kamiFileName += packageName;
-                kamiFileName += string(".v");
-                GenerateKami *generateKami = new GenerateKami();
-                generateKami->open(kamiFileName);
-                generateKami->generateStmts(stmts);
-                generateKami->close();
-            }
-            if (opt_koika) {
-                ::mkdir("koika", 0775);
-
-                string koikaFileName("koika/");
-                char buffer[4096];
-                koikaFileName += string(::basename_r(inputFileName.c_str(), buffer));
-                koikaFileName += string(".koika");
-
-                GenerateKoika *generateKoika = new GenerateKoika();
-                generateKoika->open(koikaFileName);
-                generateKoika->generateStmts(stmts);
-                generateKoika->close();
-            }
-            if (opt_ir) {
-                GenerateIR *generateIR = new GenerateIR();
-                generateIR->open(argv[i] + string(".IR"));
-                generateIR->generateIR(stmts);
-                generateIR->close();
-            }
-            if (opt_rename.size()) {
-                for (size_t i = 0; i < stmts.size(); i++) {
-                    shared_ptr<Stmt> stmt = stmts[i];
-                    if (stmt && stmt->moduleDefStmt()) {
-                        shared_ptr<LexicalScope> scope(make_shared<LexicalScope>("rename"));
-                        shared_ptr<Stmt> renamedStmt = stmt->rename(opt_rename, scope);
-                        //renamedStmt->prettyPrint(cout, 0);
-                    }
-                }
-            }
-            if (opt_inline) {
-                Inliner *inliner = new Inliner();
-                vector<shared_ptr<Stmt>> inlinedStmts = inliner->processPackage(stmts);
-                for (size_t i = 0; i < inlinedStmts.size(); i++) {
-                    //inlinedStmts[i]->prettyPrint(cout, 0);
-                }
-            }
-        }
     }
     return (numberOfSyntaxErrors == 0) ? 0 : 1;
 }
