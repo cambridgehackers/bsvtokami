@@ -78,6 +78,9 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::BinopexprContext *ctx) {
     shared_ptr<Expr> lhs(expr(ctx->left));
     shared_ptr<Expr> rhs(expr(ctx->right));
     string op(ctx->op->getText());
+    if (!lhs) {
+        cerr << "GenerateAst no lhs " << sourceLocation(ctx) << endl;
+    }
     shared_ptr<Expr> result(new OperatorExpr(op, lhs, rhs));
     return result;
 }
@@ -103,11 +106,14 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
         shared_ptr<Expr> object(expr(fieldexpr->exprprimary()));
         return make_shared<FieldExpr>(object, fieldexpr->field->getText(), resultType, sourcePos(ctx));
     } else if (BSVParser::VarexprContext *varexpr = dynamic_cast<BSVParser::VarexprContext *>(ctx)) {
-	return make_shared<VarExpr>(varexpr->getText(), resultType, sourcePos(ctx));
+	    return make_shared<VarExpr>(varexpr->getText(), resultType, sourcePos(ctx));
     } else if (BSVParser::IntliteralContext *intliteral = dynamic_cast<BSVParser::IntliteralContext *>(ctx)) {
         return make_shared<IntConst>(intliteral->getText(), sourcePos(ctx));
     } else if (BSVParser::StringliteralContext *stringliteral = dynamic_cast<BSVParser::StringliteralContext *>(ctx)) {
         return make_shared<StringConst>(stringliteral->getText(), sourcePos(ctx));
+    } else if (BSVParser::ValueofexprContext *valueofexpr = dynamic_cast<BSVParser::ValueofexprContext *>(ctx)) {
+        shared_ptr<BSVType> bsvtype = typeChecker->lookup(valueofexpr->bsvtype());
+        return make_shared<ValueofExpr>(bsvtype, sourcePos(ctx));
     } else if (BSVParser::ArraysubContext *arraysub = dynamic_cast<BSVParser::ArraysubContext *>(ctx)) {
         shared_ptr<Expr> array(expr(arraysub->array));
         shared_ptr<Expr> msb(expr(arraysub->msb));
@@ -157,6 +163,9 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
     } else if (BSVParser::UndefinedexprContext *undef = dynamic_cast<BSVParser::UndefinedexprContext *>(ctx)) {
         //FIXME:: get type from type checker
         return make_shared<VarExpr>("Undefined", make_shared<BSVType>(), sourcePos(ctx));
+    } else if (BSVParser::InterfaceexprContext *ifcexpr = dynamic_cast<BSVParser::InterfaceexprContext *>(ctx)) {
+        shared_ptr<BSVType> bsvtype = typeChecker->lookup(ifcexpr);
+        return make_shared<InterfaceExpr>(bsvtype, sourcePos(ifcexpr));
     } else {
         logstream << "Unhandled expr primary " << ctx->getText() << endl;
     }
@@ -477,6 +486,9 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
         return make_shared<PatternMatchStmt>(pat, patternBinding->op->getText(), val);
     } else if (BSVParser::ReturnstmtContext *ret_stmt = ctx->returnstmt()) {
         shared_ptr<Expr> val(expr(ret_stmt->expression()));
+        if (!val) {
+            logstream << "Unhandled return stmt at " << sourceLocation(ret_stmt->expression()) << endl;
+        }
         return make_shared<ReturnStmt>(val, sourcePos(ctx));
     } else if (BSVParser::ExpressionContext *exp_stmt = ctx->expression()) {
         shared_ptr<Expr> val(expr(exp_stmt));
@@ -504,9 +516,14 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::VarbindingContext *varbindi
     for (size_t i = 0; i < varinits.size(); i++) {
         BSVParser::VarinitContext *varinit = varinits[i];
         string varName = varinit->lowerCaseIdentifier()->getText();
+        if (!varinit->rhs) {
+            cerr << "varinit with no rhs at " << sourceLocation(varinit) << endl;
+            cerr << "    " << varinit->getText() << endl;
+        }
+        assert(varinit->rhs);
         shared_ptr<Expr> rhs(expr(varinit->rhs));
         if (!rhs)
-            logstream << "var binding unhandled rhs: " << varinit->expression()->getText() << endl;
+            logstream << "Unhandled var binding rhs at " << sourceLocation(varinit->expression()) << endl;
         return make_shared<VarBindingStmt>(varType, varName, rhs, sourcePos(varbinding));
     }
     //FIXME: how to make multiple bindings?

@@ -19,6 +19,7 @@ enum ExprType {
     BitSelExprType,
     VarExprType,
     IntConstType,
+    InterfaceExprType,
     StringConstType,
     OperatorExprType,
     CallExprType,
@@ -26,7 +27,8 @@ enum ExprType {
     CondExprType,
     CaseExprType,
     EnumUnionStructExprType,
-    MatchesExprType
+    MatchesExprType,
+    ValueofExprType
 };
 
 class FieldExpr;
@@ -41,6 +43,8 @@ class CondExpr;
 
 class IntConst;
 
+class InterfaceExpr;
+
 class StringConst;
 
 class MatchesExpr;
@@ -50,6 +54,8 @@ class OperatorExpr;
 class ArraySubExpr;
 
 class EnumUnionStructExpr;
+
+class ValueofExpr;
 
 class Expr : public enable_shared_from_this<Expr> {
 public:
@@ -76,6 +82,8 @@ public:
 
     virtual shared_ptr<IntConst> intConst() { return shared_ptr<IntConst>(); }
 
+    virtual shared_ptr<InterfaceExpr> interfaceExpr() { return shared_ptr<InterfaceExpr>(); }
+
     virtual shared_ptr<MatchesExpr> matchesExpr() { return shared_ptr<MatchesExpr>(); }
 
     virtual shared_ptr<StringConst> stringConst() { return shared_ptr<StringConst>(); }
@@ -85,6 +93,9 @@ public:
     virtual shared_ptr<ArraySubExpr> arraySubExpr() { return shared_ptr<ArraySubExpr>(); }
 
     virtual shared_ptr<EnumUnionStructExpr> enumUnionStructExpr() { return shared_ptr<EnumUnionStructExpr>(); }
+
+    virtual shared_ptr<ValueofExpr> valueofExpr() { return shared_ptr<ValueofExpr>(); }
+
 
     virtual shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames);
 };
@@ -171,6 +182,24 @@ public:
     void prettyPrint(ostream &out, int depth = 0) override;
 
     shared_ptr<IntConst> intConst() override;
+
+    shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
+};
+
+class Stmt;
+
+class InterfaceExpr : public Expr {
+public:
+    const vector<shared_ptr<Stmt>> stmts;
+public:
+
+    InterfaceExpr(const shared_ptr<BSVType> bsvtype, const SourcePos &sourcePos = SourcePos());
+
+    ~InterfaceExpr() override;
+
+    void prettyPrint(ostream &out, int depth = 0) override;
+
+    shared_ptr<InterfaceExpr> interfaceExpr() override;
 
     shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
 };
@@ -288,4 +317,19 @@ public:
     const string tag;
     const vector<string> keys;
     const vector<shared_ptr<Expr>> vals;
+};
+
+class ValueofExpr : public Expr {
+    shared_ptr<BSVType> argtype;
+public:
+
+    ValueofExpr(const shared_ptr<BSVType> argtype, const SourcePos &sourcePos = SourcePos());
+
+    ~ValueofExpr() override;
+
+    void prettyPrint(ostream &out, int depth = 0) override;
+
+    shared_ptr<ValueofExpr> valueofExpr() override;
+
+    shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
 };

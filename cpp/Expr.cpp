@@ -346,3 +346,42 @@ shared_ptr<Expr> CondExpr::rename(string prefix, shared_ptr<LexicalScope> &renam
                                              elseExpr->rename(prefix, renames)));
 }
 
+InterfaceExpr::InterfaceExpr(const shared_ptr<BSVType> bsvtype, const SourcePos &sourcePos) : Expr(InterfaceExprType, bsvtype, sourcePos) {
+
+}
+
+InterfaceExpr::~InterfaceExpr() {
+
+}
+
+void InterfaceExpr::prettyPrint(ostream &out, int depth) {
+    out << "interface " << bsvtype->to_string() << endl;
+}
+
+shared_ptr<InterfaceExpr> InterfaceExpr::interfaceExpr() {
+    return static_pointer_cast<InterfaceExpr, Expr>(shared_from_this());
+
+}
+
+shared_ptr<Expr> InterfaceExpr::rename(string prefix, shared_ptr<LexicalScope> &renames) {
+    assert(0);
+    return static_pointer_cast<InterfaceExpr, Expr>(shared_from_this());
+}
+
+ValueofExpr::ValueofExpr(const shared_ptr<BSVType> argtype, const SourcePos &sourcePos)
+: Expr(ValueofExprType, make_shared<BSVType>("Integer"), sourcePos), argtype(argtype) {
+
+}
+
+ValueofExpr::~ValueofExpr() {}
+
+void ValueofExpr::prettyPrint(ostream &out, int depth) {
+    assert(0);
+}
+
+shared_ptr<ValueofExpr> ValueofExpr::valueofExpr() { return static_pointer_cast<ValueofExpr, Expr>(shared_from_this()); }
+
+shared_ptr<Expr> ValueofExpr::rename(string prefix, shared_ptr<LexicalScope> &renames) {
+    assert(0);
+    return static_pointer_cast<ValueofExpr, Expr>(shared_from_this());
+}
