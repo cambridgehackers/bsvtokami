@@ -125,6 +125,7 @@ int processBSVFile(const string &inputFileName, shared_ptr<TypeChecker> typeChec
             }
         }
     }
+    return numberOfSyntaxErrors;
 }
 
 int main(int argc, char *const argv[]) {
@@ -137,7 +138,7 @@ int main(int argc, char *const argv[]) {
     options.opt_type_check = 1;
     options.opt_ast = 1;
     options.opt_kami = 1;
-    options.opt_koika = 1;
+    options.opt_koika = 0;
     options.opt_ir = 0;
     options.opt_inline = 0;
     string opt_rename;
@@ -174,6 +175,7 @@ int main(int argc, char *const argv[]) {
         }
     }
 
+    map<string,string> visitedPackages;
     for (int i = optind; i < argc; i++) {
         string inputFileName(argv[i]);
         char buffer[4096];
@@ -182,9 +184,27 @@ int main(int argc, char *const argv[]) {
         string packageName = input_basename.substr(0, dotpos);
         std::cerr << "Parsing file -1- " << inputFileName << " package " << packageName << std::endl;
 
-        shared_ptr<TypeChecker> typeChecker = make_shared<TypeChecker>(packageName, options.includePath, options.definitions);
-        processBSVFile(inputFileName, typeChecker, options);
+        shared_ptr<TypeChecker> typeChecker = make_shared<TypeChecker>(packageName, options.includePath,
+                                                                       options.definitions);
+        numberOfSyntaxErrors += processBSVFile(inputFileName, typeChecker, options);
+        visitedPackages[packageName] = inputFileName;
 
+        if (1) {
+            const vector<string> visitedPackageNames = typeChecker->visitedPackageNames();
+            for (int j = 0; j < visitedPackageNames.size(); j++) {
+                const string packageName = visitedPackageNames[j];
+                if (packageName == string("Prelude"))
+                    continue;
+
+                if (visitedPackages.find(packageName) == visitedPackages.cend()) {
+                    string packageFileName = typeChecker->searchIncludePath(packageName);
+                    std::cerr << "Processing imported file -2- " << packageFileName << " package " << packageName << std::endl;
+                    processBSVFile(packageFileName, typeChecker, options);
+                } else {
+                    cerr << "Already visited package " << packageName << endl;
+                }
+            }
+        }
     }
     return (numberOfSyntaxErrors == 0) ? 0 : 1;
 }
