@@ -81,10 +81,12 @@ public:
 
     BSVParser::PackagedefContext *analyzePackage(const string &packageName);
 
-private:
-    static const char *check_result_name[];
+    const vector<string> visitedPackageNames() const;
 
     string searchIncludePath(const string &pkgName);
+
+private:
+    static const char *check_result_name[];
 
     void setupZ3Context();
 

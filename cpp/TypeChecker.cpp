@@ -174,6 +174,15 @@ BSVParser::PackagedefContext *TypeChecker::analyzePackage(const string &packageN
     return tree;
 }
 
+const vector<string> TypeChecker::visitedPackageNames() const {
+    vector <string> result;
+    for (auto it = packageScopes.cbegin(); it != packageScopes.cend(); ++it) {
+        result.push_back(it->first);
+    }
+    return result;
+}
+
+
 void TypeChecker::setupModuleFunctionConstructors() {
     const string constructorNames[] = { "Function" };
     for (int c = 0; c < 1; c++) {
