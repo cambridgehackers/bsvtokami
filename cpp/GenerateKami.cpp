@@ -542,6 +542,8 @@ void GenerateKami::generateKami(const shared_ptr<ReturnStmt> &stmt, int depth) {
 
     indent(out, depth);
     out << "Ret ";
+    if (!stmt->value)
+        cerr << "Bad return at " << stmt->sourcePos.toString() << endl;
     generateKami(stmt->value, depth+1);
 }
 
