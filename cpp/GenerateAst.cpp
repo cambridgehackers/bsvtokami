@@ -114,6 +114,12 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
     } else if (BSVParser::ValueofexprContext *valueofexpr = dynamic_cast<BSVParser::ValueofexprContext *>(ctx)) {
         shared_ptr<BSVType> bsvtype = typeChecker->lookup(valueofexpr->bsvtype());
         return make_shared<ValueofExpr>(bsvtype, sourcePos(ctx));
+    } else if (BSVParser::BitconcatContext *bitconcat = dynamic_cast<BSVParser::BitconcatContext *>(ctx)) {
+        vector<shared_ptr<Expr>> values;
+        for (int i = 0; bitconcat->expression(i); i++) {
+            values.push_back(expr(bitconcat->expression(i)));
+        }
+        return make_shared<BitConcatExpr>(values, typeChecker->lookup(ctx), sourcePos(ctx));
     } else if (BSVParser::ArraysubContext *arraysub = dynamic_cast<BSVParser::ArraysubContext *>(ctx)) {
         shared_ptr<Expr> array(expr(arraysub->array));
         shared_ptr<Expr> msb(expr(arraysub->msb));
@@ -523,7 +529,7 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::VarbindingContext *varbindi
         assert(varinit->rhs);
         shared_ptr<Expr> rhs(expr(varinit->rhs));
         if (!rhs)
-            logstream << "Unhandled var binding rhs at " << sourceLocation(varinit->expression()) << endl;
+            cerr << "Unhandled var binding rhs at " << sourceLocation(varinit->expression()) << endl;
         return make_shared<VarBindingStmt>(varType, varName, rhs, sourcePos(varbinding));
     }
     //FIXME: how to make multiple bindings?

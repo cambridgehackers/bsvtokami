@@ -330,7 +330,7 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
             shared_ptr<ArraySubExpr> arraysubexpr = expr->arraySubExpr();
             shared_ptr<Expr> value = simplify(arraysubexpr->array, simplifiedStmts);
             shared_ptr<Expr> index = simplify(arraysubexpr->index, simplifiedStmts);
-            shared_ptr<ArraySubExpr> simplifiedExpr = make_shared<ArraySubExpr>(value, index);
+            shared_ptr<ArraySubExpr> simplifiedExpr = make_shared<ArraySubExpr>(value, index, arraysubexpr->sourcePos);
             return simplifiedExpr;
         }
         case BitSelExprType: {
@@ -338,7 +338,16 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
             shared_ptr<Expr> array = simplify(bitselexpr->value, simplifiedStmts);
             shared_ptr<Expr> msb = simplify(bitselexpr->msb, simplifiedStmts);
             shared_ptr<Expr> lsb = simplify(bitselexpr->lsb, simplifiedStmts);
-            shared_ptr<BitSelExpr> simplifiedExpr = make_shared<BitSelExpr>(array, msb, lsb);
+            shared_ptr<BitSelExpr> simplifiedExpr = make_shared<BitSelExpr>(array, msb, lsb, bitselexpr->sourcePos);
+            return simplifiedExpr;
+        }
+        case BitConcatExprType: {
+            shared_ptr<BitConcatExpr> bitconcatexpr = expr->bitConcatExpr();
+            vector<shared_ptr<Expr>> simplifiedExprs;
+            for (int i = 0; i < bitconcatexpr->values.size(); i++) {
+                simplifiedExprs.push_back(simplify(bitconcatexpr->values[i], simplifiedStmts));
+            }
+            shared_ptr<BitConcatExpr> simplifiedExpr = make_shared<BitConcatExpr>(simplifiedExprs, bitconcatexpr->bsvtype, bitconcatexpr->sourcePos);
             return simplifiedExpr;
         }
         case VarExprType: {

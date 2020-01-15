@@ -385,3 +385,28 @@ shared_ptr<Expr> ValueofExpr::rename(string prefix, shared_ptr<LexicalScope> &re
     assert(0);
     return static_pointer_cast<ValueofExpr, Expr>(shared_from_this());
 }
+
+BitConcatExpr::BitConcatExpr(const vector<shared_ptr<Expr>> &values,
+                             const shared_ptr<BSVType> &bsvtype,
+                             const SourcePos &sourcePos) : Expr(BitConcatExprType, bsvtype, sourcePos), values(values) {
+}
+
+BitConcatExpr::~BitConcatExpr() {
+}
+
+void BitConcatExpr::prettyPrint(ostream &out, int depth) {
+    out << "{ ";
+    for (int i = 0; i < values.size(); i++) {
+        if (i > 0) out << ", ";
+        values[i]->prettyPrint(out, depth+1);
+    }
+    out << " }";
+}
+
+shared_ptr<BitConcatExpr> BitConcatExpr::bitConcatExpr() {
+    return static_pointer_cast<BitConcatExpr, Expr>(shared_from_this());
+};
+
+shared_ptr<Expr> BitConcatExpr::rename(string prefix, shared_ptr<LexicalScope> &renames) {
+    return static_pointer_cast<BitConcatExpr, Expr>(shared_from_this());
+}

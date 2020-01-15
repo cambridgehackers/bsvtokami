@@ -283,6 +283,16 @@ void GenerateKami::generateKami(const shared_ptr<Expr> &expr, int depth, int pre
             out << " ]";
             out << " $width"; // fixme
         } return;
+        case BitConcatExprType: {
+            shared_ptr<BitConcatExpr> bitConcatExpr = expr->bitConcatExpr();
+            out << "{ ";
+            for (int i = 0; i < bitConcatExpr->values.size(); i++) {
+                if (i > 0)
+                    out << ", ";
+                generateKami(bitConcatExpr->values[i], depth + 1);
+            }
+            out << " }";
+        } return;
         case CallExprType:
             generateKami(expr->callExpr(), depth, precedence);
             return;

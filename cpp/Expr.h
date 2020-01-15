@@ -16,6 +16,7 @@ using namespace std;
 enum ExprType {
     InvalidExprType,
     ArraySubExprType,
+    BitConcatExprType,
     BitSelExprType,
     VarExprType,
     IntConstType,
@@ -34,6 +35,8 @@ enum ExprType {
 class FieldExpr;
 
 class VarExpr;
+
+class BitConcatExpr;
 
 class BitSelExpr;
 
@@ -69,6 +72,8 @@ public:
     virtual ~Expr();
 
     virtual void prettyPrint(ostream &out, int depth = 0) = 0;
+
+    virtual shared_ptr<BitConcatExpr> bitConcatExpr() { return shared_ptr<BitConcatExpr>(); }
 
     virtual shared_ptr<BitSelExpr> bitSelExpr() { return shared_ptr<BitSelExpr>(); }
 
@@ -277,6 +282,22 @@ public:
 public:
     const shared_ptr<Expr> array;
     const shared_ptr<Expr> index;
+
+    shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
+};
+
+class BitConcatExpr : public Expr {
+public:
+    BitConcatExpr(const vector<shared_ptr<Expr>> &values, const shared_ptr<BSVType> &bsvtype, const SourcePos &sourcePos = SourcePos());
+
+    ~BitConcatExpr() override;
+
+    void prettyPrint(ostream &out, int depth) override;
+
+    shared_ptr<BitConcatExpr> bitConcatExpr() override;
+
+public:
+    const vector<shared_ptr<Expr>> values;
 
     shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
 };
