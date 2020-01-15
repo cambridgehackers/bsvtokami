@@ -187,6 +187,11 @@ shared_ptr<PackageDefStmt> GenerateAst::generateAst(BSVParser::PackagedefContext
         if (ctx->packagedecl()) {
             packageName = ctx->packagedecl()->packageide()->getText();
         }
+        antlrcpp::Any attributes = aiv.visit(stmts[i]);
+        if (aiv.contains(attributes, "nogen")) {
+            cerr << "Skipping (* nogen *) statement at " << sourceLocation(stmts[i]) << endl;
+            continue;
+        }
         shared_ptr<Stmt> stmt = generateAst(stmts[i]);
         if (stmt)
             package_stmts.push_back(stmt);

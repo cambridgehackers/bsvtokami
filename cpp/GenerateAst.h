@@ -5,6 +5,7 @@
 
 #include <BSVParser.h>
 
+#include "AttributeInstanceVisitor.h"
 #include "BSVType.h"
 #include "Expr.h"
 #include "Pattern.h"
@@ -14,6 +15,7 @@
 class GenerateAst {
     shared_ptr<TypeChecker> typeChecker;
     ofstream logstream;
+    AttributeInstanceVisitor aiv;
 public:
     GenerateAst(const string &packageName, shared_ptr<TypeChecker> &typeChecker)
         : typeChecker(typeChecker), logstream(string("kami/") + packageName + string(".ast.log"), ostream::out) {}
