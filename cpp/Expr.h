@@ -324,7 +324,7 @@ public:
 class EnumUnionStructExpr : public Expr {
 public:
     EnumUnionStructExpr(const string &tag, const vector<string> &keys,
-                        const vector<shared_ptr<Expr>> &vals, const SourcePos &sourcePos = SourcePos());
+                        const vector<shared_ptr<Expr>> &vals, const shared_ptr<BSVType> &bsvtype, const SourcePos &sourcePos = SourcePos());
 
     ~EnumUnionStructExpr() override {}
 

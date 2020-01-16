@@ -162,8 +162,8 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
             //FIXME
             logstream << "unhandled tagged union: " << unionexpr->getText() << endl;
         }
-
-        return make_shared<EnumUnionStructExpr>(tag, keys, vals, sourcePos(ctx));
+        shared_ptr<BSVType> bsvtype = typeChecker->lookup(ctx);
+        return make_shared<EnumUnionStructExpr>(tag, keys, vals, bsvtype, sourcePos(ctx));
     } else if (BSVParser::ParenexprContext *parenexpr = dynamic_cast<BSVParser::ParenexprContext *>(ctx)) {
         return expr(parenexpr->expression());
     } else if (BSVParser::UndefinedexprContext *undef = dynamic_cast<BSVParser::UndefinedexprContext *>(ctx)) {
@@ -368,13 +368,15 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::FunctiondefContext *ct
             }
         }
     }
-    logstream << "    methoddef " << functionName << endl;
+    logstream << "    functiondef " << functionName << endl;
     vector<BSVParser::StmtContext *> stmts = ctx->stmt();
     vector<shared_ptr<Stmt>> ast_stmts;
     for (size_t i = 0; i < stmts.size(); i++) {
         shared_ptr<Stmt> stmt(generateAst(stmts.at(i)));
-        if (!stmt)
-            logstream << "unhandled method stmt: " << stmts.at(i)->getText() << endl;
+        if (!stmt) {
+            logstream << "unhandled function stmt at " << sourceLocation(stmts.at(i)) << endl;
+            logstream << "          " << stmts.at(i)->getText() << endl;
+        }
         ast_stmts.push_back(stmt);
     }
     return make_shared<FunctionDefStmt>(functionName, returnType,
@@ -518,15 +520,11 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
 }
 
 shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::VarbindingContext *varbinding) {
-    shared_ptr<BSVType> varType;
-    if (varbinding->t)
-        varType = typeChecker->bsvtype(varbinding->t);
-    else
-        varType.reset(new BSVType());
     std::vector<BSVParser::VarinitContext *> varinits = varbinding->varinit();
     for (size_t i = 0; i < varinits.size(); i++) {
         BSVParser::VarinitContext *varinit = varinits[i];
         string varName = varinit->lowerCaseIdentifier()->getText();
+        shared_ptr<BSVType> varType = typeChecker->lookup(varinit->var);
         if (!varinit->rhs) {
             cerr << "varinit with no rhs at " << sourceLocation(varinit) << endl;
             cerr << "    " << varinit->getText() << endl;

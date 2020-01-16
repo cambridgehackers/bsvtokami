@@ -623,6 +623,10 @@ antlrcpp::Any TypeChecker::visitEndpackage(BSVParser::EndpackageContext *ctx) {
 }
 
 antlrcpp::Any TypeChecker::visitLowerCaseIdentifier(BSVParser::LowerCaseIdentifierContext *ctx) {
+    auto it = exprs.find(ctx);
+    if (it != exprs.end())
+        return it->second;
+
     string varname(ctx->getText());
     shared_ptr<Declaration> vardecl = lookup(varname);
     shared_ptr<FunctionDefinition> functionDef = vardecl->functionDefinition();
@@ -636,7 +640,9 @@ antlrcpp::Any TypeChecker::visitLowerCaseIdentifier(BSVParser::LowerCaseIdentifi
     }
     if (!vardecl)
         currentContext->logstream << "No decl found for var " << varname << " at " << sourceLocation(ctx) << endl;
-    return constant(uniqueName, typeSort);
+    z3::expr varExpr = constant(uniqueName, typeSort);
+    insertExpr(ctx, varExpr);
+    return varExpr;
 }
 
 antlrcpp::Any TypeChecker::visitUpperCaseIdentifier(BSVParser::UpperCaseIdentifierContext *ctx) {
@@ -1883,6 +1889,10 @@ antlrcpp::Any TypeChecker::visitValueofexpr(BSVParser::ValueofexprContext *ctx) 
 }
 
 antlrcpp::Any TypeChecker::visitTaggedunionexpr(BSVParser::TaggedunionexprContext *ctx) {
+    auto it = exprs.find(ctx);
+    if (it != exprs.end())
+        return it->second;
+
     string tagname = ctx->tag->getText();
 
     string exprname(freshString(tagname));
@@ -1898,7 +1908,8 @@ antlrcpp::Any TypeChecker::visitTaggedunionexpr(BSVParser::TaggedunionexprContex
     if (exprs.size())
         addConstraint(orExprs(exprs), tagname + "$trk", ctx);
     else
-        currentContext->logstream << "No enum definitions for expr " << ctx->getText() << endl;
+        currentContext->logstream << "No enum definitions for expr " << ctx->getText() << " at " << sourceLocation(ctx) << endl;
+    insertExpr(ctx, exprsym);
     return exprsym;
 }
 

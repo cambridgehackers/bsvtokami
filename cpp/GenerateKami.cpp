@@ -310,7 +310,10 @@ void GenerateKami::generateKami(const shared_ptr<Expr> &expr, int depth, int pre
         } return;
         case EnumUnionStructExprType: {
             shared_ptr<EnumUnionStructExpr> tagExpr = expr->enumUnionStructExpr();
-            out << "(* tagged *)" << tagExpr->tag;
+            out << "(* tagged ";
+            if (tagExpr->bsvtype)
+                out << tagExpr->bsvtype->to_string();
+            out << " *)" << tagExpr->tag;
         } return;
         case FieldExprType:
             generateKami(expr->fieldExpr(), depth, precedence);

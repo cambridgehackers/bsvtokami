@@ -220,8 +220,8 @@ shared_ptr<Expr> CallExpr::rename(string prefix, shared_ptr<LexicalScope> &scope
 
 
 EnumUnionStructExpr::EnumUnionStructExpr(const string &tag, const vector<string> &keys,
-                                         const vector<shared_ptr<Expr>> &vals, const SourcePos &sourcePos)
-        : Expr(EnumUnionStructExprType, sourcePos),
+                                         const vector<shared_ptr<Expr>> &vals, const shared_ptr<BSVType> &bsvtype, const SourcePos &sourcePos)
+        : Expr(EnumUnionStructExprType, bsvtype, sourcePos),
           tag(tag), keys(keys),
           vals(vals) {}
 
@@ -244,7 +244,7 @@ shared_ptr<Expr> EnumUnionStructExpr::rename(string prefix, shared_ptr<LexicalSc
     vector<shared_ptr<Expr>> renamedVals;
     for (size_t i = 0; i < vals.size(); i++)
         renamedVals.push_back(vals[i]->rename(prefix, scope));
-    return shared_ptr<EnumUnionStructExpr>(new EnumUnionStructExpr(tag, keys, renamedVals));
+    return make_shared<EnumUnionStructExpr>(tag, keys, renamedVals, bsvtype, sourcePos);
 }
 
 
