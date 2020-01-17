@@ -92,7 +92,7 @@ private:
 
 class EnumDeclaration : public Declaration {
 public:
-    std::vector<std::shared_ptr<Declaration> > tags;
+    std::vector<std::shared_ptr<Declaration> > members;
 
     EnumDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype)
     : Declaration(name, bsvtype, GlobalBindingType) {};

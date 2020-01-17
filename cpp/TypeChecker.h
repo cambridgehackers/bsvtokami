@@ -53,7 +53,7 @@ class TypeChecker : public BSVBaseVisitor {
     map<antlr4::ParserRuleContext *, shared_ptr<Declaration>> varDecls;
     map<string, z3::func_decl> typeDecls;
     map<string, z3::func_decl> typeRecognizers;
-    z3::sort typeSort, intSort, boolSort;
+    z3::sort typeSort, intSort, boolSort, stringSort;
 
     map<string, bool> boolops;
 
@@ -89,6 +89,10 @@ private:
     static const char *check_result_name[];
 
     void setupZ3Context();
+
+    void checkSolution(antlr4::ParserRuleContext *ctx);
+
+    shared_ptr<BSVType> modelValue(z3::expr expr);
 
     void setupModuleFunctionConstructors();
 

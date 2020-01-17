@@ -70,8 +70,9 @@ void PackageContext::visitEnumDeclaration(const shared_ptr<EnumDeclaration> &dec
     logstream << "    visitEnumDeclaration " << decl->name << endl;
     typeDeclarationList.push_back(decl);
     typeDeclaration[decl->name] = decl;
-    for (int i = 0; i < decl->tags.size(); i++) {
-        shared_ptr<Declaration> tagdecl = decl->tags[i];
+    for (int i = 0; i < decl->members.size(); i++) {
+        shared_ptr<Declaration> tagdecl = decl->members[i];
+        logstream << "        enum tag " << tagdecl->name << endl;
         enumtag.insert(make_pair(tagdecl->name, tagdecl->parent));
     }
 }
@@ -122,6 +123,7 @@ void PackageContext::visitUnionDeclaration(const shared_ptr<UnionDeclaration> &d
     typeDeclaration[decl->name] = decl;
     for (int i = 0; i < decl->members.size(); i++) {
         shared_ptr<Declaration> member = decl->members[i];
+        logstream << "    union member " << member->name << endl;
         memberDeclaration.insert(make_pair(member->name, member));
         enumtag.insert(make_pair(member->name, decl));
     }
@@ -211,6 +213,7 @@ void TypeChecker::setupZ3Context() {
 
     intSort = context.int_sort();
     boolSort = context.bool_sort();
+    stringSort = context.string_sort();
 
     Z3_constructor bozo_con = Z3_mk_constructor(context,
                                                 Z3_mk_string_symbol(context, "Bozo"),
@@ -227,9 +230,19 @@ void TypeChecker::setupZ3Context() {
                                                numeric_field_sorts,
                                                numeric_field_sort_refs);
 
+    Z3_symbol freevar_field_names[] = {Z3_mk_string_symbol(context, "var")};
+    Z3_sort freevar_field_sorts[] = {stringSort};
+    unsigned freevar_field_sort_refs[] = {0};
+    Z3_constructor freevar_con = Z3_mk_constructor(context, Z3_mk_string_symbol(context, "FreeVar"),
+                                                   Z3_mk_string_symbol(context, "isFreeVar"),
+                                                   1,
+                                                   freevar_field_names,
+                                                   freevar_field_sorts,
+                                                   freevar_field_sort_refs);
 
     Z3_constructor default_constructors[] = {
             bozo_con,
+            freevar_con,
             numeric_con
     };
     unsigned num_default_constructors = sizeof(default_constructors) / sizeof(default_constructors[0]);
@@ -290,6 +303,48 @@ void TypeChecker::setupZ3Context() {
     boolops["&&"] = true;
     boolops["||"] = true;
 }
+
+void TypeChecker::checkSolution(antlr4::ParserRuleContext *ctx) {
+    //solver.push();
+    z3::check_result checked = solver.check();
+    currentContext->logstream << "  Type checking at " << sourceLocation(ctx) << ": " << check_result_name[checked] << endl;
+    currentContext->logstream << solver << endl;
+    if (checked == z3::sat) {
+        bool displaySolution = false;
+        if (displaySolution) {
+            z3::model mod = solver.get_model();
+            currentContext->logstream << "model: " << mod << endl;
+            currentContext->logstream << exprs.size() << " exprs" << endl;
+            for (auto it = exprs.cbegin(); it != exprs.cend(); ++it) {
+                z3::expr e = it->second;
+                try {
+                    z3::expr v = mod.eval(e, true);
+                    currentContext->logstream << e << " evaluates to " << v << " for " << it->first->getText() << " at "
+                                              << sourceLocation(it->first) << endl;
+                } catch (const exception &e) {
+                    currentContext->logstream << "exception " << e.what() << " on expr: " << it->second << " @"
+                                              << it->first->getRuleIndex()
+                                              << " at " << sourceLocation(it->first) << endl;
+                }
+            }
+        }
+    } else {
+        z3::expr_vector unsat_core = solver.unsat_core();
+        currentContext->logstream << "unsat_core " << unsat_core << endl;
+        currentContext->logstream << "unsat_core.size " << unsat_core.size() << endl;
+        assert(0);
+    }
+    //solver.pop();
+}
+
+shared_ptr<BSVType> TypeChecker::modelValue(z3::expr e) {
+    z3::model mod = solver.get_model();
+    z3::expr v = mod.eval(e, true);
+    return bsvtype(v, mod);
+}
+
+
+
 
 string TypeChecker::freshString(std::string name) {
     char uniq_name[128];
@@ -353,7 +408,7 @@ z3::expr TypeChecker::orExprs(std::vector<z3::expr> exprs) {
 
 TypeChecker::TypeChecker(const string &packageName, const vector<string> &includePath,
                          const vector<string> &definitions)
-        : context(), solver(context), typeSort(context), intSort(context), boolSort(context), nameCount(100),
+        : context(), solver(context), typeSort(context), intSort(context), boolSort(context), stringSort(context), nameCount(100),
           actionContext(false),
           includePath(includePath), definitions(definitions) {
     //solver.set("produce-unsat-cores", true);
@@ -543,6 +598,7 @@ void TypeChecker::addDeclaration(BSVParser::TypedefenumContext *ctx) {
             currentContext->logstream << "enum elt " << elt->getText() << endl;
             shared_ptr<Declaration> subdecl = visit(elt);
             subdecl->parent = decl;
+            decl->members.push_back(subdecl);
         }
     }
     currentContext->visitEnumDeclaration(decl);
@@ -964,6 +1020,13 @@ antlrcpp::Any TypeChecker::visitModuledef(BSVParser::ModuledefContext *ctx) {
     pushScope(module_name);
     solver.push();
 
+    set<string> freeTypeVars = moduleType->freeVars();
+    for (auto it = freeTypeVars.cbegin(); it != freeTypeVars.cend(); ++it) {
+        string freevar = *it;
+        z3::expr fvexpr = instantiateType("FreeVar", context.string_val(freevar));
+        addConstraint(constant(freevar, typeSort) == fvexpr, "freevar$trk", ctx);
+    }
+
     visit(ctx->moduleproto());
 
     //vector<BSVParser::ModulestmtContext *> stmts = ctx->modulestmt();
@@ -983,6 +1046,8 @@ antlrcpp::Any TypeChecker::visitModuledef(BSVParser::ModuledefContext *ctx) {
             try {
                 z3::expr v = mod.eval(e, true);
                 currentContext->logstream << e << " evaluates to " << v << " for " << it->first->getText() << " at "
+                                          << sourceLocation(it->first) << endl;
+                cerr << e << " evaluates to " << v << " for " << it->first->getText() << " at "
                                           << sourceLocation(it->first) << endl;
                 exprTypes[it->first] = bsvtype(v, mod);
             } catch (const exception &e) {
@@ -1204,8 +1269,9 @@ antlrcpp::Any TypeChecker::visitVarassign(BSVParser::VarassignContext *ctx) {
     z3::expr lhsExpr = visit(ctx->lvalue(0));
     z3::expr rhsExpr = visit(ctx->expression());
     if (ctx->op->getText() == "<-") {
-        currentContext->logstream << "var assign action value " << lhsExpr << endl;
-        lhsExpr = instantiateType("ActionValue", lhsExpr);
+        string constructor = (actionContext ? "ActionValue" : "Module");
+        currentContext->logstream << "var assign <- " << constructor << " " << lhsExpr << endl;
+        lhsExpr = instantiateType(constructor, lhsExpr);
     }
     addConstraint(lhsExpr == rhsExpr, "varassign", ctx);
     return visitChildren(ctx);
@@ -1894,7 +1960,7 @@ antlrcpp::Any TypeChecker::visitTaggedunionexpr(BSVParser::TaggedunionexprContex
         return it->second;
 
     string tagname = ctx->tag->getText();
-
+    currentContext->logstream << "tagged expr " << tagname << " at " << sourceLocation(ctx) << endl;
     string exprname(freshString(tagname));
     z3::expr exprsym = constant(exprname, typeSort);
 
@@ -1902,18 +1968,38 @@ antlrcpp::Any TypeChecker::visitTaggedunionexpr(BSVParser::TaggedunionexprContex
     for (auto it = currentContext->enumtag.find(tagname); it != currentContext->enumtag.end() && it->first == tagname; ++it) {
         shared_ptr<Declaration> decl(it->second);
         shared_ptr<BSVType> freshTypeInstance = freshType(decl->bsvtype);
+        z3::expr tagConstraint = (exprsym == bsvTypeToExpr(freshTypeInstance));
         currentContext->logstream << "Tag exprprimary " << tagname << " of type " << freshTypeInstance->to_string() << endl;
-        exprs.push_back(exprsym == bsvTypeToExpr(freshTypeInstance));
+        currentContext->logstream << " tag constraint " << tagConstraint << " at " << sourceLocation(ctx) << endl;
+        exprs.push_back(tagConstraint);
+    }
+    auto tt = currentContext->typeDeclaration.find(tagname);
+    if (tt != currentContext->typeDeclaration.cend()) {
+        shared_ptr<Declaration> tagDecl = tt->second;
+        currentContext->logstream << "  tag decl " << tagDecl->name << " declType " << endl;
+        shared_ptr<StructDeclaration> structDecl = tagDecl->structDeclaration();
+        if (structDecl) {
+            shared_ptr<BSVType> freshTypeInstance = freshType(structDecl->bsvtype);
+            z3::expr structConstraint = exprsym == bsvTypeToExpr(freshTypeInstance);
+            currentContext->logstream << "  struct constraint " << structConstraint << " at " << sourceLocation(ctx) << endl;
+            exprs.push_back(structConstraint);
+        }
     }
     if (exprs.size())
         addConstraint(orExprs(exprs), tagname + "$trk", ctx);
     else
         currentContext->logstream << "No enum definitions for expr " << ctx->getText() << " at " << sourceLocation(ctx) << endl;
+
+    checkSolution(ctx);
     insertExpr(ctx, exprsym);
     return exprsym;
 }
 
 antlrcpp::Any TypeChecker::visitArraysub(BSVParser::ArraysubContext *ctx) {
+    auto it = exprs.find(ctx);
+    if (it != exprs.end())
+        return it->second;
+
     z3::expr arrayExpr = visit(ctx->array);
     z3::expr msbExpr = visit(ctx->msb);
     if (ctx->lsb) {
@@ -1935,7 +2021,18 @@ antlrcpp::Any TypeChecker::visitArraysub(BSVParser::ArraysubContext *ctx) {
                                    || (arrayExpr == instantiateType("Vector", vsizeExpr, eltExpr) && resultExpr == eltExpr)
     );
     addConstraint(arraysubConstraint, ctx->getText(), ctx);
-    return resultExpr;
+    checkSolution(ctx);
+    shared_ptr<BSVType> resultType = modelValue(resultExpr);
+
+    if (resultType->name == "Reg") {
+        currentContext->logstream << "Reg type " << resultType->to_string() << " returning " << resultType->params[0]->to_string() << endl;
+        cerr << "Reg type " << resultType->to_string() << " returning " << resultType->params[0]->to_string() << endl;
+
+        resultType = resultType->params[0];
+    }
+    z3::expr result = bsvTypeToExpr(resultType);
+    insertExpr(ctx, result);
+    return result;
 }
 
 antlrcpp::Any TypeChecker::visitMemberbinds(BSVParser::MemberbindsContext *ctx) {
@@ -2238,7 +2335,11 @@ shared_ptr<BSVType> TypeChecker::bsvtype(z3::expr v, z3::model mod) {
         return bsvt;
     }
     std::shared_ptr<BSVType> bsvt(new BSVType(name));
-    if (v.is_app()) {
+    if (name == "FreeVar") {
+        // fixme
+        string fvname = v.arg(0).to_string();
+        bsvt->params.push_back(make_shared<BSVType>(fvname.substr(1, fvname.size() - 2)));
+    } else if (v.is_app()) {
         z3::func_decl func_decl = v.decl();
         size_t num_args = v.num_args();
         for (size_t i = 0; i < num_args; i++)
@@ -2427,9 +2528,14 @@ shared_ptr<BSVType> TypeChecker::bsvtype(BSVParser::ModuleprotoformalContext *ct
 }
 
 z3::expr TypeChecker::instantiateType(z3::func_decl type_decl, const z3::expr_vector &params) {
-    if (type_decl.arity() != params.size())
-        currentContext->logstream << "Mismatched params length " << params.size() << " for type " << type_decl << " expected " << type_decl.arity() << endl;
-
+    if (type_decl.arity() != params.size()) {
+        currentContext->logstream << "Mismatched params length " << params.size() << " for type " << type_decl
+                                  << " expected " << type_decl.arity() << endl;
+        cerr << "Mismatched params length " << params.size() << " for type " << type_decl << " expected " << type_decl.arity() << endl;
+    }
+    int error = context.check_error();
+    if (error != Z3_OK)
+        cerr << "z3 error ? " << error << endl;
     return type_decl(params);
 }
 
@@ -2472,6 +2578,12 @@ z3::expr TypeChecker::bsvTypeToExprHelper(shared_ptr<BSVType> bsvtype) {
         return constant(exprName, typeSort);
     } else if (bsvtype->isNumeric()) {
         return instantiateType("Numeric", context.int_val((int) strtol(bsvtype->name.c_str(), NULL, 0)));
+    } else if (bsvtype->name == "Numeric") {
+        // special case
+        return instantiateType("Numeric", context.int_val((int) strtol(bsvtype->params[0]->name.c_str(), NULL, 0)));
+    } else if (bsvtype->name == "FreeVar") {
+        // special case
+        return instantiateType("FreeVar", context.string_val(bsvtype->params[0]->name));
     } else {
         z3::expr_vector arg_exprs(context);
         for (int i = 0; i < bsvtype->params.size(); i++) {
@@ -2486,6 +2598,7 @@ z3::expr TypeChecker::bsvTypeToExprHelper(shared_ptr<BSVType> bsvtype) {
                                   << endl;
         z3::func_decl typeDecl = typeDecls.find(bsvtype->name)->second;
         currentContext->logstream << " typeDecl " << typeDecl << endl;
+
         return instantiateType(typeDecl, arg_exprs);
     }
 }
