@@ -255,7 +255,7 @@ lvalue :
     lowerCaseIdentifier
     | exprprimary '.' lowerCaseIdentifier
     | exprprimary '[' index=expression ']'
-    | exprprimary '[' msb=expression ':' lsb=expression ']'
+    | exprprimary '[' msb=expression ((':' lsb=expression) | ('+:' widthup=IntLiteral) | ('-:' widthdown=IntLiteral)) ']'
     ;
 bsvtype :
     typeide ('#' '(' bsvtype (',' bsvtype)* ')')?
@@ -318,7 +318,7 @@ exprprimary :
     | '?' #undefinedexpr
     | ('valueOf'|'valueof') '(' bsvtype ')' #valueofexpr
     | '{' expression (',' expression)* '}' #bitconcat
-    | array=exprprimary '[' msb=expression ((':' lsb=expression) | (':+' lsb=expression))? ']' #arraysub
+    | array=exprprimary '[' msb=expression ((':' lsb=expression) | ('+:' widthup=IntLiteral) | ('-:' widthdown=IntLiteral))? ']' #arraysub
     | fcn=exprprimary '(' (expression (',' expression)*)? ')' #callexpr
     | fcn=DollarIdentifier '(' (expression (',' expression)*)? ')' #syscallexpr
     | 'clocked_by' exprprimary #clockedbyexpr

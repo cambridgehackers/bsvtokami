@@ -1302,6 +1302,36 @@ z3::expr TypeChecker::visitArraysubLvalue(BSVParser::ExprprimaryContext *ctx, BS
     return typeexpr;
 }
 
+
+z3::expr TypeChecker::visitBitselLvalue(BSVParser::ExprprimaryContext *ctx,
+                                        BSVParser::ExpressionContext *lsb,
+                                        antlr4::Token *widthdown,
+                                        antlr4::Token *widthup) {
+    currentContext->logstream << "Visit bit selection lvalue at " << sourceLocation(ctx) << endl;
+
+    z3::expr arrayExpr = visit(ctx);
+
+    z3::expr typeexpr = freshConstant("bitsel$lvalue", typeSort);
+    z3::expr bitwidthexpr = context.int_val(1);
+    if (lsb) {
+        // FIXME: add constraint we're expecting Bit Int UInt Integer
+        bitwidthexpr = freshConstant("bitsel$width", intSort);
+    } else if (widthdown) {
+        bitwidthexpr = context.int_val((int) strtol(widthdown->getText().c_str(), 0, 0));
+    } else if (widthup) {
+        bitwidthexpr = context.int_val((int) strtol(widthup->getText().c_str(), 0, 0));
+    }
+
+    vector<z3::expr> exprs;
+    exprs.push_back(typeexpr == instantiateType("Bit", instantiateType("Numeric", bitwidthexpr)));
+
+    if (exprs.size())
+        addConstraint(orExprs(exprs), "arraysub$lvalue", ctx);
+
+    insertExpr(ctx, typeexpr);
+    return typeexpr;
+}
+
 z3::expr TypeChecker::visitLFieldValue(BSVParser::ExprprimaryContext *ctx, string fieldname) {
     currentContext->logstream << "Visit field lvalue " << fieldname << endl;
     z3::expr objexpr = visit(ctx);
@@ -1332,14 +1362,20 @@ z3::expr TypeChecker::visitLFieldValue(BSVParser::ExprprimaryContext *ctx, strin
 antlrcpp::Any TypeChecker::visitLvalue(BSVParser::LvalueContext *ctx) {
     if (BSVParser::ExprprimaryContext *lhs = ctx->exprprimary()) {
         z3::expr lhsExpr = visit(lhs);
-        if (ctx->index != NULL) {
+        if (ctx->msb != NULL) {
+            currentContext->logstream << "bitsel lvalue with msb, widthdown or widthup at " << sourceLocation((ctx)) << endl;
+            return visitBitselLvalue(lhs, ctx->msb, ctx->widthdown, ctx->widthup);
+        } else if (ctx->index != NULL) {
             // lvalue [ index ]
+            currentContext->logstream << "arraysub lvalue with index at " << sourceLocation((ctx)) << endl;
             return visitArraysubLvalue(lhs, ctx->index);
         } else if (ctx->lowerCaseIdentifier()) {
             // lvalue . field
-            return visitLFieldValue(lhs, ctx->lowerCaseIdentifier()->getText());
+            string fieldname = ctx->lowerCaseIdentifier()->getText();
+            currentContext->logstream << "field lvalue <" << fieldname << "> at " << sourceLocation((ctx)) << endl;
+            return visitLFieldValue(lhs, fieldname);
         } else {
-            // lvalue [ msb : lsb ]
+            // should never occur
             assert(0);
         }
     } else {
@@ -1998,9 +2034,23 @@ antlrcpp::Any TypeChecker::visitArraysub(BSVParser::ArraysubContext *ctx) {
 
     z3::expr arrayExpr = visit(ctx->array);
     z3::expr msbExpr = visit(ctx->msb);
-    if (ctx->lsb) {
+    z3::expr bitSelWidth = context.int_val(1);
+    if (ctx->widthdown) {
+        currentContext->logstream << "visit arraysub bit slice down " << ctx->getText() << " at " << sourceLocation(ctx) << endl;
+
+        bitSelWidth = context.int_val((int) strtol(ctx->widthdown->getText().c_str(), 0, 0));
+    } else if (ctx->widthup) {
+
+        currentContext->logstream << "visit arraysub bit slice up " << ctx->getText() << " at " << sourceLocation(ctx) << endl;
+        bitSelWidth = context.int_val((int) strtol(ctx->widthup->getText().c_str(), 0, 0));
+    } else if (ctx->lsb) {
         z3::expr lsbExpr = visit(ctx->lsb);
-        currentContext->logstream << "Fixme: bit field selection " << ctx->getText() << " at " << sourceLocation(ctx) << endl;
+        currentContext->logstream << "FIXME: bit field selection " << ctx->getText() << " at " << sourceLocation(ctx) << endl;
+        bitSelWidth = freshConstant("bitsel$width", intSort);
+    } else {
+        // not selecting a slice
+        currentContext->logstream << "visit arraysub index " << ctx->getText() << " at " << sourceLocation(ctx) << endl;
+
     }
     currentContext->logstream << "Fixme: array sub " << ctx->getText() << " z3 " << arrayExpr << " lsb expr "<< endl;
     // arrayExpr could be Bit#(n)
@@ -2008,11 +2058,11 @@ antlrcpp::Any TypeChecker::visitArraysub(BSVParser::ArraysubContext *ctx) {
     // arrayExpr could be Vector#(n, t)
     // return could be Bit#(1) or t
     z3::expr resultExpr = freshConstant("arraysub$", typeSort);
-    z3::expr bitwidth = freshConstant("bitwidth$", typeSort);
+    z3::expr bitexprWidth = freshConstant("bitexpr$width", typeSort);
     z3::expr eltExpr = freshConstant("elt$", typeSort);
     z3::expr vsizeExpr = freshConstant("vsize$", typeSort);
-    z3::expr bit1Expr = instantiateType("Bit", instantiateType("Numeric", context.int_val(1)));
-    z3::expr arraysubConstraint = ((arrayExpr == instantiateType("Bit", bitwidth) && resultExpr == bit1Expr)
+    z3::expr bitselWidth = instantiateType("Bit", instantiateType("Numeric", bitSelWidth));
+    z3::expr arraysubConstraint = ((arrayExpr == instantiateType("Bit", bitexprWidth) && resultExpr == bitselWidth)
                                    || (arrayExpr == instantiateType("Array", eltExpr) && resultExpr == eltExpr)
                                    || (arrayExpr == instantiateType("Vector", vsizeExpr, eltExpr) && resultExpr == eltExpr)
     );
