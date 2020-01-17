@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <set>
 #include <string>
 #include <vector>
 #include <memory>
@@ -78,4 +79,6 @@ public:
     }
 
     shared_ptr<BSVType> eval() const;
+    set<string> freeVars() const;
+    void computeFreeVars(set<string> &freeVars) const;
 };

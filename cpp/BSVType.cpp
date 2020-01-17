@@ -1,4 +1,6 @@
 #include <iostream>
+#include <map>
+#include <set>
 #include <strstream>
 #include <math.h>
 
@@ -87,5 +89,23 @@ void BSVType::prettyPrint(ostream &out, int depth) const {
             params.at(i)->prettyPrint(out, 0);
         }
         out << ")";
+    }
+}
+
+set<string> BSVType::freeVars() const {
+    set<string> result;
+    computeFreeVars(result);
+    return result;
+}
+
+void BSVType::computeFreeVars(set<string> &mapping) const {
+    if (isVar) {
+        auto it = mapping.find(name);
+        if (it == mapping.cend()) {
+            mapping.insert(name);
+        }
+    }
+    for (int i = 0; i < params.size(); i++) {
+        params[i]->computeFreeVars(mapping);
     }
 }
