@@ -304,7 +304,7 @@ void TypeChecker::setupZ3Context() {
     boolops["||"] = true;
 }
 
-void TypeChecker::checkSolution(antlr4::ParserRuleContext *ctx) {
+bool TypeChecker::checkSolution(antlr4::ParserRuleContext *ctx) {
     //solver.push();
     z3::check_result checked = solver.check();
     currentContext->logstream << "  Type checking at " << sourceLocation(ctx) << ": " << check_result_name[checked] << endl;
@@ -332,9 +332,13 @@ void TypeChecker::checkSolution(antlr4::ParserRuleContext *ctx) {
         z3::expr_vector unsat_core = solver.unsat_core();
         currentContext->logstream << "unsat_core " << unsat_core << endl;
         currentContext->logstream << "unsat_core.size " << unsat_core.size() << endl;
+#ifdef FAIL_ON_UNSAT
         assert(0);
+#endif
+        return false;
     }
     //solver.pop();
+    return true;
 }
 
 shared_ptr<BSVType> TypeChecker::modelValue(z3::expr e) {
@@ -453,7 +457,7 @@ shared_ptr<BSVType> TypeChecker::dereferenceType(const shared_ptr<BSVType> &bsvt
     if (it != currentContext->typeDeclaration.cend()) {
         shared_ptr<Declaration> decl = it->second;
         shared_ptr<TypeSynonymDeclaration> synonymDecl = decl->typeSynonymDeclaration();
-        currentContext->logstream << "dereferencing bsvtype " << bsvtype->name << " found " << decl->name << endl;
+        //currentContext->logstream << "dereferencing bsvtype " << bsvtype->name << " found " << decl->name << endl;
         if (synonymDecl) {
             currentContext->logstream << "dereferencing bsvtype " << bsvtype->name << " arity " << bsvtype->params.size() << endl;
             assert(synonymDecl->bsvtype->params.size() == 0);
@@ -1300,31 +1304,22 @@ z3::expr TypeChecker::visitArraysubLvalue(BSVParser::ExprprimaryContext *ctx, BS
 
 z3::expr TypeChecker::visitLFieldValue(BSVParser::ExprprimaryContext *ctx, string fieldname) {
     currentContext->logstream << "Visit field lvalue " << fieldname << endl;
-
-    z3::expr sym = context.constant(context.str_symbol(fieldname.c_str()), typeSort);
+    z3::expr objexpr = visit(ctx);
+    z3::expr sym = freshConstant(fieldname, typeSort);
     vector<z3::expr> exprs;
     for (auto it = currentContext->memberDeclaration.find(fieldname);
          it != currentContext->memberDeclaration.end() && it->first == fieldname; ++it) {
         shared_ptr<Declaration> memberDecl(it->second);
-        shared_ptr<Declaration> interfaceDecl(memberDecl->parent);
-        currentContext->logstream << "    field " << fieldname << " belongs to type " << interfaceDecl->name << endl;
+        shared_ptr<Declaration> parentDecl(memberDecl->parent);
+        shared_ptr<StructDeclaration> structDecl = parentDecl->structDeclaration();
+        currentContext->logstream << "    field " << fieldname << " belongs to type " << parentDecl->name << endl;
         //FIXME continue here
-        z3::func_decl type_decl = typeDecls.find(interfaceDecl->name)->second;
-        z3::expr type_expr = freshConstant("_ph_", typeSort);
-        switch (type_decl.arity()) {
-            case 0: {
-                type_expr = type_decl();
-            }
-                break;
-            case 1: {
-                z3::expr type_var = freshConstant("_var_", typeSort);
-                type_expr = type_decl(type_var);
-            }
-                break;
-            default:
-                currentContext->logstream << "Unhandled type arity " << type_decl;
-        }
-        exprs.push_back(sym == type_expr);
+        map<string, shared_ptr<BSVType>> mapping;
+        shared_ptr<BSVType> freshParentType = freshType(parentDecl->bsvtype, mapping);
+        z3::expr fieldexpr = bsvTypeToExpr(freshType(memberDecl->bsvtype, mapping));
+        z3::expr fieldConstraint = (objexpr == bsvTypeToExpr(freshParentType) && sym == fieldexpr);
+        currentContext->logstream << "    fieldConstraint " << fieldConstraint << endl;
+        exprs.push_back(fieldConstraint);
     }
     if (exprs.size())
         addConstraint(orExprs(exprs), "fieldval", ctx);
@@ -1832,7 +1827,7 @@ antlrcpp::Any TypeChecker::visitFieldexpr(BSVParser::FieldexprContext *ctx) {
             shared_ptr<BSVType> fieldType = dereferenceType(fieldDecl->bsvtype);
             currentContext->logstream << "struct type ";
             structType->prettyPrint(currentContext->logstream);
-            currentContext->logstream << " field type ";
+            currentContext->logstream << " field <" << fieldDecl->name << "> type ";
             fieldType->prettyPrint(currentContext->logstream);
             currentContext->logstream << endl;
             map<string, shared_ptr<BSVType>> freshTypeVars;
@@ -1989,8 +1984,9 @@ antlrcpp::Any TypeChecker::visitTaggedunionexpr(BSVParser::TaggedunionexprContex
         addConstraint(orExprs(exprs), tagname + "$trk", ctx);
     else
         currentContext->logstream << "No enum definitions for expr " << ctx->getText() << " at " << sourceLocation(ctx) << endl;
-
+    solver.push();
     checkSolution(ctx);
+    solver.pop();
     insertExpr(ctx, exprsym);
     return exprsym;
 }
@@ -2021,16 +2017,22 @@ antlrcpp::Any TypeChecker::visitArraysub(BSVParser::ArraysubContext *ctx) {
                                    || (arrayExpr == instantiateType("Vector", vsizeExpr, eltExpr) && resultExpr == eltExpr)
     );
     addConstraint(arraysubConstraint, ctx->getText(), ctx);
-    checkSolution(ctx);
-    shared_ptr<BSVType> resultType = modelValue(resultExpr);
+    z3::expr result = resultExpr;
+    solver.push();
+    if (checkSolution(ctx)) {
+        shared_ptr<BSVType> resultType = modelValue(resultExpr);
 
-    if (resultType->name == "Reg") {
-        currentContext->logstream << "Reg type " << resultType->to_string() << " returning " << resultType->params[0]->to_string() << endl;
-        cerr << "Reg type " << resultType->to_string() << " returning " << resultType->params[0]->to_string() << endl;
+        if (resultType->name == "Reg") {
+            currentContext->logstream << "Reg type " << resultType->to_string() << " returning "
+                                      << resultType->params[0]->to_string() << endl;
+            cerr << "Reg type " << resultType->to_string() << " returning " << resultType->params[0]->to_string()
+                 << endl;
 
-        resultType = resultType->params[0];
+            resultType = resultType->params[0];
+        }
+        result = bsvTypeToExpr(resultType);
     }
-    z3::expr result = bsvTypeToExpr(resultType);
+    solver.pop();
     insertExpr(ctx, result);
     return result;
 }

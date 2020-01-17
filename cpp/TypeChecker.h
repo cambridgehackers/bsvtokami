@@ -90,7 +90,7 @@ private:
 
     void setupZ3Context();
 
-    void checkSolution(antlr4::ParserRuleContext *ctx);
+    bool checkSolution(antlr4::ParserRuleContext *ctx);
 
     shared_ptr<BSVType> modelValue(z3::expr expr);
 

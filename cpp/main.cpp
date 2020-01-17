@@ -189,7 +189,7 @@ int main(int argc, char *const argv[]) {
         numberOfSyntaxErrors += processBSVFile(inputFileName, typeChecker, options);
         visitedPackages[packageName] = inputFileName;
 
-        if (1) {
+        if (0) {
             const vector<string> visitedPackageNames = typeChecker->visitedPackageNames();
             for (int j = 0; j < visitedPackageNames.size(); j++) {
                 const string packageName = visitedPackageNames[j];
