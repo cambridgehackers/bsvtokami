@@ -196,7 +196,7 @@ moduleprotoformals :
     moduleprotoformal (',' moduleprotoformal)*
     ;
 moduleprotoformal :
-    attributeinstance* bsvtype name=lowerCaseIdentifier
+    attributeinstance* 'parameter'? bsvtype name=lowerCaseIdentifier
     ;
 modulestmt :
     methoddef
