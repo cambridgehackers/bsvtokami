@@ -245,10 +245,10 @@ function a_type fold(Function3#(a_type, a_type, b_type) func,
 	  Integer midpoint = lb + (rb - lb + 1 / 2);
 	  a_type v0 = recursive(lb, lb + midpoint);
 	  a_type v1 = recursive(lb + midpoint, rb);
-	  return func(v0, v2);
+	  return func(v0, v1);
        end
    endfunction
-   return recursive(0, valueOf(vsize)-1, seed);
+   return recursive(0, valueOf(vsize)-1);
 endfunction
 
 (* nogen *)

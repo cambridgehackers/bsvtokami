@@ -107,4 +107,8 @@ module mkSizedFIFOF#(Integer n)(FIFOF#(element_type));
    endmethod
 endmodule
 
+(* nogen *)
+module mkGFIFOF#(Bool ugenq, Bool ugdeq)(FIFOF#(element_type)) provisos (Bits#(element_type, width_any));
+endmodule
+
 endpackage
