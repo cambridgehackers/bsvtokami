@@ -581,11 +581,15 @@ void TypeChecker::addDeclaration(BSVParser::FunctionprotoContext *functionproto)
 }
 
 void TypeChecker::addDeclaration(BSVParser::ModuledefContext *module) {
+    addDeclaration(module->moduleproto());
 
 }
 
-void TypeChecker::addDeclaration(BSVParser::ModuleprotoContext *module) {
-    currentContext->logstream << "add declaration module proto " << module->name->getText() << endl;
+void TypeChecker::addDeclaration(BSVParser::ModuleprotoContext *moduleproto) {
+    string moduleName = moduleproto->name->getText();
+    currentContext->logstream << "add declaration module proto " << moduleName << endl;
+    shared_ptr<BSVType> moduleType = bsvtype(moduleproto);
+    lexicalScope->bind(moduleName, make_shared<ModuleDefinition>(moduleName, moduleType));
 }
 
 void TypeChecker::addDeclaration(BSVParser::OverloadeddeclContext *overloadeddecl) {
@@ -675,6 +679,14 @@ void TypeChecker::addDeclaration(BSVParser::TypedeftaggedunionContext *uniondef)
 
 void TypeChecker::addDeclaration(BSVParser::VarbindingContext *varbinding) {
     currentContext->logstream << "add declaration varbinding " << varbinding->varinit(0)->getText() << endl;
+    assert(varbinding->t);
+    shared_ptr<BSVType> varType = bsvtype(varbinding->t);
+    BindingType bindingType = (lexicalScope->isGlobal() ? GlobalBindingType : LocalBindingType);
+    for (int i = 0; varbinding->varinit(i); ++i) {
+        BSVParser::VarinitContext *varinit = varbinding->varinit(i);
+        string varName = varinit->lowerCaseIdentifier()->getText();
+        lexicalScope->bind(varName, make_shared<Declaration>(varName, varType, bindingType));
+    }
 }
 
 antlrcpp::Any TypeChecker::visitPackagedef(BSVParser::PackagedefContext *ctx) {
