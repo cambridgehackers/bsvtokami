@@ -260,7 +260,7 @@ FunctionDefStmt::~FunctionDefStmt() {
 
 void FunctionDefStmt::prettyPrint(ostream &out, int depth) {
     indent(out, 4 * depth);
-    out << "method ";
+    out << "function ";
     returnType->prettyPrint(out, depth + 1);
     out << " " << name << "(";
     for (size_t i = 0; i < params.size(); i++) {
@@ -274,7 +274,7 @@ void FunctionDefStmt::prettyPrint(ostream &out, int depth) {
         stmts.at(i)->prettyPrint(out, depth + 1);
     }
     indent(out, 4 * depth);
-    out << "endmethod" << endl;
+    out << "endfunction" << endl;
 }
 
 shared_ptr<FunctionDefStmt> FunctionDefStmt::functionDefStmt(){
