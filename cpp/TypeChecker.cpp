@@ -1473,14 +1473,12 @@ antlrcpp::Any TypeChecker::visitMatchesexpr(BSVParser::MatchesexprContext *ctx) 
     if (it != exprs.end())
         return it->second;
 
-    pushScope("matches");
     z3::expr expr = visit(ctx->expression());
     z3::expr patternExpr = visit(ctx->pattern());
     addConstraint(expr == patternExpr, "matches$expr", ctx);
     for (int i = 0; ctx->patterncond(i); i++) {
         visit(ctx->patterncond(i));
     }
-    popScope();
 
     z3::expr boolExpr = instantiateType("Bool");
     insertExpr(ctx, boolExpr);
