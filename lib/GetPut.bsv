@@ -73,4 +73,9 @@ instance ToPut#(FIFOF#(a), a);
    endfunction
 endinstance
 
+(* nogen *)
+function Server#(req_type, resp_type) toGPServer(req_ifc_type req_ifc, resp_ifc_type resp_ifc)
+provisos (ToPut#(req_ifc_type, req_type), ToGet#(resp_ifc_type,resp_type));
+endfunction
+
 endpackage
