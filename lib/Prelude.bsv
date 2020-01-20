@@ -171,6 +171,10 @@ typeclass Literal #(type data_t);
    function Bool   inLiteralRange(data_t target, Integer x);
 endtypeclass
 
+(* nogen *)
+function data_t fromInteger(Integer x);
+endfunction
+
 instance Literal#(Bit#(bsz));
 (* nogen *)
    function Bit#(bsz) fromInteger(Integer x); return (Bit#(bsz))'x; endfunction
