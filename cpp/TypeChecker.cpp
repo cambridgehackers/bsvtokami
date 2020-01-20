@@ -1264,6 +1264,8 @@ antlrcpp::Any TypeChecker::visitFunctiondef(BSVParser::FunctiondefContext *ctx) 
     }
     bool wasActionContext = actionContext;
     string functionName = ctx->functionproto()->name->getText();
+    lexicalScope->bind(functionName, make_shared<FunctionDefinition>(functionName, bsvtype(ctx->functionproto())));
+
     pushScope(functionName);
     actionContext = true;
 
@@ -1275,6 +1277,7 @@ antlrcpp::Any TypeChecker::visitFunctiondef(BSVParser::FunctiondefContext *ctx) 
     }
 
     popScope();
+
     actionContext = wasActionContext;
     if (lexicalScope->isGlobal()) {
         solver.pop();
