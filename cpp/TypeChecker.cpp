@@ -568,11 +568,15 @@ void TypeChecker::addDeclaration(BSVParser::FunctiondefContext *functiondef) {
     if (!lexicalScope->isGlobal())
         return;
     BSVParser::FunctionprotoContext *functionproto = functiondef->functionproto();
+    addDeclaration(functionproto);
+}
+
+void TypeChecker::addDeclaration(BSVParser::FunctionprotoContext *functionproto) {
     string functionName = functionproto->name->getText();
     shared_ptr<BSVType> functionType = bsvtype(functionproto);
     shared_ptr<FunctionDefinition> functionDecl = make_shared<FunctionDefinition>(functionName, functionType, GlobalBindingType);
     lexicalScope->bind(functionName, functionDecl);
-    cerr << "addDeclaration function def " << functionName << " at " << sourceLocation(functiondef) << endl;
+    cerr << "addDeclaration function proto " << functionName << " at " << sourceLocation(functionproto) << endl;
 
 }
 
@@ -580,8 +584,28 @@ void TypeChecker::addDeclaration(BSVParser::ModuledefContext *module) {
 
 }
 
+void TypeChecker::addDeclaration(BSVParser::ModuleprotoContext *module) {
+    currentContext->logstream << "add declaration module proto " << module->name->getText() << endl;
+}
+
+void TypeChecker::addDeclaration(BSVParser::OverloadeddeclContext *overloadeddecl) {
+    if (overloadeddecl->functionproto()) {
+        addDeclaration(overloadeddecl->functionproto());
+    } else if (overloadeddecl->moduleproto()) {
+        addDeclaration(overloadeddecl->moduleproto());
+    } else if (overloadeddecl->varbinding()) {
+        cerr << "type class containing varbinding at " << sourceLocation(overloadeddecl) << endl;
+        addDeclaration(overloadeddecl->varbinding());
+    } else {
+        assert(0);
+    }
+}
+
 void TypeChecker::addDeclaration(BSVParser::TypeclassdeclContext *typeclassdecl) {
     currentContext->logstream << "visit type class decl " << typeclassdecl->typeclasside(0)->getText() << " at " << sourceLocation(typeclassdecl) << endl;
+    for (int i = 0; typeclassdecl->overloadeddecl(i); i++) {
+        addDeclaration(typeclassdecl->overloadeddecl(i));
+    }
 }
 
 void TypeChecker::addDeclaration(BSVParser::TypeclassinstanceContext *typeclassinstance) {

@@ -127,7 +127,10 @@ protected:
     void addDeclaration(BSVParser::PackagestmtContext *pkgstmt);
     void addDeclaration(BSVParser::InterfacedeclContext *interfacedecl);
     void addDeclaration(BSVParser::FunctiondefContext *functiondef);
+    void addDeclaration(BSVParser::FunctionprotoContext *functionproto);
     void addDeclaration(BSVParser::ModuledefContext *moduledef);
+    void addDeclaration(BSVParser::ModuleprotoContext *moduleproto);
+    void addDeclaration(BSVParser::OverloadeddeclContext *overloadeddecl);
     void addDeclaration(BSVParser::TypeclassdeclContext *typeclassdecl);
     void addDeclaration(BSVParser::TypeclassinstanceContext *typeclassinstance);
     void addDeclaration(BSVParser::TypedefenumContext *enumdef);
@@ -394,6 +397,8 @@ public:
 
     shared_ptr<BSVType> bsvtype(BSVParser::TypedeftypeContext *ctx);
 
+    shared_ptr<BSVType> bsvtype(BSVParser::FunctionprotoContext *ctx);
+
     shared_ptr<BSVType> bsvtype(BSVParser::MethodprotoformalContext *ctx);
 
     shared_ptr<BSVType> bsvtype(BSVParser::MethodprotoContext *ctx);
@@ -421,6 +426,4 @@ public:
     z3::expr bsvTypeToExprHelper(shared_ptr<BSVType> bsvtype);
 
     z3::expr bsvTypeToExpr(shared_ptr<BSVType> bsvtype);
-
-    shared_ptr<BSVType> bsvtype(BSVParser::FunctionprotoContext *ctx);
 };
