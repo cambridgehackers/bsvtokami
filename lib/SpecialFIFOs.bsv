@@ -62,29 +62,6 @@ interface SCounter;
    method Action clear;
 endinterface
 
-// ================================================================
-// 1-element "pipeline FIFO"
-// It's a 1-element FIFO (register with Valid/Invalid tag bit), where
-//   - if empty, can only enq, cannot deq, leaving it full
-//   - if full, can
-//     - either just deq, leaving it empty
-//     - or deq and enq simultaneously (logically: deq before enq), leaving it full
-
-`ifdef BSVTOKAMI
-(* nogen *)
-`endif
-module mkPipelineFIFO (FIFO#(a))
-   provisos (Bits#(a,sa));
-
-   (* hide *) FIFOF#(a) _ifc <- mkPipelineFIFOF();
-
-   // return fifofToFifo(_ifc)
-   method enq = _ifc.enq;
-   method deq = _ifc.deq;
-   method first = _ifc.first;
-   method clear = _ifc.clear;
-
-endmodule: mkPipelineFIFO
 
 `ifdef BSVTOKAMI
 (* nogen *)
@@ -123,6 +100,30 @@ module mkPipelineFIFOF (FIFOF#(Bit#(3)))
 
 endmodule
 
+
+// ================================================================
+// 1-element "pipeline FIFO"
+// It's a 1-element FIFO (register with Valid/Invalid tag bit), where
+//   - if empty, can only enq, cannot deq, leaving it full
+//   - if full, can
+//     - either just deq, leaving it empty
+//     - or deq and enq simultaneously (logically: deq before enq), leaving it full
+
+`ifdef BSVTOKAMI
+(* nogen *)
+`endif
+module mkPipelineFIFO (FIFO#(a))
+   provisos (Bits#(a,sa));
+
+   (* hide *) FIFOF#(a) _ifc <- mkPipelineFIFOF();
+
+   // return fifofToFifo(_ifc)
+   method enq = _ifc.enq;
+   method deq = _ifc.deq;
+   method first = _ifc.first;
+   method clear = _ifc.clear;
+
+endmodule: mkPipelineFIFO
 // ================================================================
 // 1-element "bypass FIFO".
 // It's a 1-element FIFO (register with Valid/Invalid tag bit), where
