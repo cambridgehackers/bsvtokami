@@ -398,8 +398,8 @@ typedef struct {
    } Tuple6#(type t1, type t2, type t3, type t4, type t5, type t6) deriving (Bits);
 
 (* nogen *)
-function Tuple6#(t1, t2, t3, t4, t5, t6) tuple5(t1 x1, t2 x2, t3 x3, t4 x4, t5 x5, t6 x6);
-   return Tuple5 { tpl_1: x1, tpl_2: x2, tpl_3: x3, tpl_4: x4, tpl_5: x5, tpl_6: x6 };
+function Tuple6#(t1, t2, t3, t4, t5, t6) tuple6(t1 x1, t2 x2, t3 x3, t4 x4, t5 x5, t6 x6);
+   return Tuple6 { tpl_1: x1, tpl_2: x2, tpl_3: x3, tpl_4: x4, tpl_5: x5, tpl_6: x6 };
 endfunction
 
 typeclass TupleSelector#(type t, type t1, type t2, type t3, type t4);
