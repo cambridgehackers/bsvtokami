@@ -18,6 +18,8 @@ typedef enum {
     True
 } Bool deriving (Bits, Eq);
 
+interface Clock; endinterface
+interface Reset; endinterface
 interface Empty; endinterface
 interface Function#(type domain, type range); endinterface
 interface Module#(type ifc); endinterface
@@ -102,6 +104,10 @@ module mkRegU(Reg#(data_t)) provisos (Bits#(data_t,datasz));
     method Action _write(data_t v);
     endmethod
 endmodule
+(* nogen *)
+module Reg#(a) mkConfigReg(a v);
+endmodule
+
 
 //FIXME
 module mkCReg#(Integer depth_, data_t v)(Vector#(depth,Reg#(data_t)));
