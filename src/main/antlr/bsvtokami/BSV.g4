@@ -376,6 +376,7 @@ stmt :
     | expression ';'
     | returnstmt
     | actionblock
+    | actionvalueblock
     ;
 ifstmt :
     'if' '(' expression ')' stmt ('else' stmt)?
