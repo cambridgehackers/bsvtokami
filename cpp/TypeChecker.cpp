@@ -690,8 +690,6 @@ void TypeChecker::addDeclaration(BSVParser::VarbindingContext *varbinding) {
 }
 
 antlrcpp::Any TypeChecker::visitPackagedef(BSVParser::PackagedefContext *ctx) {
-    size_t numelts = ctx->packagestmt().size();
-
     currentContext->logstream << "importing Prelude " << endl;
     analyzePackage("Prelude");
     shared_ptr<LexicalScope> pkgScope = packageScopes["Prelude"];
@@ -700,12 +698,12 @@ antlrcpp::Any TypeChecker::visitPackagedef(BSVParser::PackagedefContext *ctx) {
     if (ctx->packagedecl())
         visit(ctx->packagedecl());
 
-    for (size_t i = 0; i < numelts; i++) {
-        addDeclaration(ctx->packagestmt().at(i));
+    for (size_t i = 0; ctx->packagestmt(i); i++) {
+        addDeclaration(ctx->packagestmt(i));
     }
 
-    for (size_t i = 0; i < numelts; i++) {
-        visit(ctx->packagestmt().at(i));
+    for (size_t i = 0; ctx->packagestmt(i); i++) {
+        visit(ctx->packagestmt(i));
     }
     return freshConstant("pkgstmt", typeSort);
 }
@@ -2478,6 +2476,9 @@ shared_ptr<BSVType> TypeChecker::bsvtype(BSVParser::TypedeftypeContext *ctx) {
 }
 
 shared_ptr<BSVType> TypeChecker::bsvtype(BSVParser::FunctionprotoContext *ctx) {
+    if (!ctx->bsvtype()) {
+        cerr << "function proto with no return type " << ctx->name->getText() << " at " << sourceLocation(ctx) << endl;
+    }
     shared_ptr<BSVType> returnType = bsvtype(ctx->bsvtype());
     vector<shared_ptr<BSVType>> params;
     vector<BSVParser::MethodformalContext *> mpfs;

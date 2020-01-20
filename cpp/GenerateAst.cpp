@@ -493,6 +493,16 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
             ast_stmts.push_back(ast_stmt);
         }
         return make_shared<BlockStmt>(ast_stmts, sourcePos(ctx));
+    } else if (BSVParser::ActionvalueblockContext *block = ctx->actionvalueblock()) {
+        vector<BSVParser::StmtContext *> stmts = block->stmt();
+        vector<shared_ptr<Stmt>> ast_stmts;
+        for (size_t i = 0; i < stmts.size(); i++) {
+            shared_ptr<Stmt> ast_stmt(generateAst(stmts.at(i)));
+            if (!ast_stmt)
+                logstream << "unhandled block stmt: " << stmts.at(i)->getText() << endl;
+            ast_stmts.push_back(ast_stmt);
+        }
+        return make_shared<BlockStmt>(ast_stmts, sourcePos(ctx));
     } else if (BSVParser::PatternbindingContext *patternBinding = ctx->patternbinding()) {
         shared_ptr<Expr> val(expr(patternBinding->expression()));
         shared_ptr<Pattern> pat = generateAst(patternBinding->pattern());
