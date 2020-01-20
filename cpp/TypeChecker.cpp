@@ -304,13 +304,13 @@ void TypeChecker::setupZ3Context() {
     boolops["||"] = true;
 }
 
-bool TypeChecker::checkSolution(antlr4::ParserRuleContext *ctx) {
+bool TypeChecker::checkSolution(antlr4::ParserRuleContext *ctx, bool displaySolution, bool showSolver) {
     //solver.push();
     z3::check_result checked = solver.check();
     currentContext->logstream << "  Type checking at " << sourceLocation(ctx) << ": " << check_result_name[checked] << endl;
-    currentContext->logstream << solver << endl;
     if (checked == z3::sat) {
-        bool displaySolution = false;
+
+        //bool displaySolution = false;
         if (displaySolution) {
             z3::model mod = solver.get_model();
             currentContext->logstream << "model: " << mod << endl;
@@ -329,6 +329,7 @@ bool TypeChecker::checkSolution(antlr4::ParserRuleContext *ctx) {
             }
         }
     } else {
+        currentContext->logstream << solver << endl;
         z3::expr_vector unsat_core = solver.unsat_core();
         currentContext->logstream << "unsat_core " << unsat_core << endl;
         currentContext->logstream << "unsat_core.size " << unsat_core.size() << endl;
@@ -637,7 +638,7 @@ void TypeChecker::addDeclaration(BSVParser::TypedeftaggedunionContext *uniondef)
     shared_ptr<BSVType> typedeftype(bsvtype(uniondef->typedeftype()));
     string name = typedeftype->name;
     shared_ptr<UnionDeclaration> unionDecl(new UnionDeclaration(name, typedeftype));
-    currentContext->logstream << "visit typedef union " << name << endl;
+    currentContext->logstream << "add declaration typedef union " << name << endl;
     for (int i = 0; uniondef->unionmember(i); i++) {
         shared_ptr<Declaration> subdecl = visit(uniondef->unionmember(i));
         unionDecl->members.push_back(subdecl);
@@ -649,7 +650,7 @@ void TypeChecker::addDeclaration(BSVParser::TypedeftaggedunionContext *uniondef)
 
 
 void TypeChecker::addDeclaration(BSVParser::VarbindingContext *varbinding) {
-
+    currentContext->logstream << "add declaration varbinding " << varbinding->varinit(0)->getText() << endl;
 }
 
 antlrcpp::Any TypeChecker::visitPackagedef(BSVParser::PackagedefContext *ctx) {
@@ -906,7 +907,13 @@ antlrcpp::Any TypeChecker::visitVarbinding(BSVParser::VarbindingContext *ctx) {
     for (size_t i = 0; i < varinits.size(); i++) {
         BSVParser::VarinitContext *varinit = varinits[i];
         string varName = varinit->var->getText();
-        shared_ptr<Declaration> varDecl = make_shared<Declaration>(varName, make_shared<BSVType>(), bindingType);
+        shared_ptr<BSVType> varType = (ctx->t ? bsvtype(ctx->t) : make_shared<BSVType>());
+        shared_ptr<Declaration> varDecl = (actionContext
+                                           ? make_shared<Declaration>(varName, varType, bindingType)
+                                           : make_shared<FunctionDefinition>(varName, varType));
+        if (lexicalScope->isGlobal()) {
+            currentContext->logstream << "visitVarBinding " << varName << " at " << sourceLocation(varinit) << endl;
+        }
         lexicalScope->bind(varName, varDecl);
 
         z3::expr lhsexpr = visit(varinit->var);
@@ -1624,18 +1631,19 @@ antlrcpp::Any TypeChecker::visitVarexpr(BSVParser::VarexprContext *ctx) {
     auto it = exprs.find(ctx);
     if (it != exprs.end())
         return it->second;
-    currentContext->logstream << "        Visiting var expr " << ctx->getText().c_str() << " " << ctx << endl;
+    currentContext->logstream << "Visiting var expr " << ctx->getText().c_str() << " " << ctx << endl;
 
     string varname(ctx->getText());
     shared_ptr<Declaration> varDecl = lookup(varname);
     varDecls[ctx] = varDecl;
-
-    currentContext->logstream << "visiting var " << varname;
     if (varDecl) {
-        currentContext->logstream << " uniqname " << varDecl->uniqueName << " bindingType " << varDecl->bindingType << endl;
+        currentContext->logstream << "    uniqname " << varDecl->uniqueName << " bindingType " << varDecl->bindingType << endl;
     } else {
-        currentContext->logstream << " no decl found at " << sourceLocation(ctx) << endl;
+        currentContext->logstream << "    no decl found at " << sourceLocation(ctx) << endl;
+        cerr << "    no decl for " << varname << " found at " << sourceLocation(ctx) << endl;
+
     }
+    assert(varDecl);
     if (!varDecl || varDecl->bindingType == GlobalBindingType) {
         currentContext->logstream << "visiting global var " << varname << " at " << sourceLocation(ctx) << endl;
         if (varDecl && varDecl->bsvtype) {
@@ -1885,32 +1893,6 @@ antlrcpp::Any TypeChecker::visitFieldexpr(BSVParser::FieldexprContext *ctx) {
         z3::expr orExpr = orExprs(exprs);
         addConstraint(orExpr, "fieldexpr", ctx);
         currentContext->logstream << " returning fieldexpr " << fieldname << " exprs " << orExpr << endl;
-
-        if (0) {
-            solver.push();
-            z3::check_result checked = solver.check();
-            if (checked == z3::sat) {
-                z3::model mod = solver.get_model();
-                try {
-                    z3::expr v = mod.eval(orExpr, true);
-                    currentContext->logstream << orExpr << " evaluates to " << v << " at "
-                                              << sourceLocation(ctx) << endl;
-                    //exprTypes[ctx] = bsvtype(v, mod);
-                } catch (const exception &e) {
-                    currentContext->logstream << "exception " << e.what() << " on expr: " << orExpr << " @"
-                                              << ctx->getRuleIndex()
-                                              << " at " << sourceLocation(ctx) << endl;
-                }
-            } else {
-                z3::expr_vector unsat_core = solver.unsat_core();
-                currentContext->logstream << "solver " << solver << endl;
-                currentContext->logstream << "unsat_core " << unsat_core << endl;
-                currentContext->logstream << "unsat_core.size " << unsat_core.size() << " on " << ctx->getText()
-                                          << " at "
-                                          << sourceLocation(ctx) << endl;
-            }
-            solver.pop();
-        }
     }
 
     insertExpr(ctx, fieldexpr);
@@ -2069,9 +2051,9 @@ antlrcpp::Any TypeChecker::visitArraysub(BSVParser::ArraysubContext *ctx) {
     addConstraint(arraysubConstraint, ctx->getText(), ctx);
     z3::expr result = resultExpr;
     solver.push();
-    if (checkSolution(ctx)) {
+    if (checkSolution(ctx, true, true)) {
         shared_ptr<BSVType> resultType = modelValue(resultExpr);
-
+        currentContext->logstream << "varinit result type is " << resultType->to_string() << " at " << sourceLocation(ctx) << endl;
         if (resultType->name == "Reg") {
             currentContext->logstream << "Reg type " << resultType->to_string() << " returning "
                                       << resultType->params[0]->to_string() << endl;
@@ -2080,6 +2062,7 @@ antlrcpp::Any TypeChecker::visitArraysub(BSVParser::ArraysubContext *ctx) {
 
             resultType = resultType->params[0];
         }
+
         result = bsvTypeToExpr(resultType);
     }
     solver.pop();
