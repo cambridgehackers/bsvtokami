@@ -221,6 +221,9 @@ void GenerateKami::generateKami(const shared_ptr<Stmt> &stmt, int depth) {
         case MethodDeclStmtType:
             generateKami(stmt->methodDeclStmt(), depth);
             break;
+        case MethodDefStmtType:
+            generateKami(stmt->methodDefStmt(), depth);
+            break;
         case ModuleDefStmtType:
             generateKami(stmt->moduleDefStmt(), depth);
             break;
@@ -245,14 +248,11 @@ void GenerateKami::generateKami(const shared_ptr<Stmt> &stmt, int depth) {
             generateKami(stmt->typedefSynonymStmt(), depth);
             break;
         case VarAssignStmtType:
-            out << "(* VarAssignStmt" << endl;
-            stmt->varAssignStmt()->prettyPrint(out, 1);
-            out << "*)" << endl;
+            generateKami(stmt->varAssignStmt(), depth);
             break;
         case PackageDefStmtType:
             out << "(* Package: " << stmt->packageDefStmt()->name << " *)";
             break;
-        case MethodDefStmtType:
         case ModuleInstStmtType:
         case RegisterStmtType:
         case RuleDefStmtType:
@@ -480,6 +480,22 @@ void GenerateKami::generateKami(const shared_ptr<MethodDeclStmt> &stmt, int dept
     out << "(* method decl " << stmt->name << " *)" << endl;
 }
 
+void GenerateKami::generateKami(const shared_ptr<MethodDefStmt> &method, int depth) {
+    out << "(* method def " << method->name << " *)" << endl;
+    indent(out, depth);
+    out << "Method \"" << method->name << "\" ";
+    for (int i = 0; i < method->params.size(); i++) {
+        indent(out, depth + 1);
+        out << "( " << method->params[i] << " : ";
+        generateCoqType(method->paramTypes[i], depth);
+        out << ") ";
+    }
+    out << " := " << endl;
+    for (int i = 0; i < method->stmts.size(); i++) {
+        generateKami(method->stmts[i], depth + 1);
+    }
+}
+
 void GenerateKami::generateKami(const shared_ptr<ModuleDefStmt> &moduledef, int depth) {
     bool enclosingActionContext = actionContext;
     actionContext = true;
@@ -586,6 +602,42 @@ void GenerateKami::generateKami(const shared_ptr<TypedefSynonymStmt> &stmt, int 
 
 }
 
+void GenerateKami::generateKami(const shared_ptr<VarAssignStmt> &stmt, int depth) {
+    shared_ptr<LValue> lvalue = stmt->lhs;
+    switch (lvalue->lvalueType) {
+        case ArraySubLValueType: {
+            shared_ptr<ArraySubLValue> arraysubLvalue = lvalue->arraySubLValue();
+            shared_ptr<Expr> array = arraysubLvalue->array;
+            indent(out, depth);
+            out << "LET ";
+            generateKami(array, depth);
+            out << " @[ ";
+            generateKami(arraysubLvalue->index, depth + 1);
+            out << " <- ";
+            generateKami(stmt->rhs, depth + 1);
+            out << " ]";
+            out << " ; " << endl;
+            break;
+        }
+        case FieldLValueType: {
+            shared_ptr<FieldLValue> fieldLValue = lvalue->fieldLValue();
+            shared_ptr<Expr> obj = fieldLValue->obj;
+            indent(out, depth);
+            out << "LET ";
+            generateKami(obj, depth);
+            out << " ! ";
+            generateCoqType(obj->bsvtype, depth + 1);
+            out << " @. " << fieldLValue->field << " <- ";
+            generateKami(stmt->rhs, depth + 1);
+            out << " ; " << endl;
+            break;
+        }
+        default:
+            out << "(* VarAssignStmt" << endl;
+            stmt->varAssignStmt()->prettyPrint(out, 1);
+            out << "*)" << endl;
+    }
+}
 void GenerateKami::generateKami(const shared_ptr<VarBindingStmt> &stmt, int depth) {
     indent(out, depth);
     if (actionContext) {

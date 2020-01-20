@@ -69,6 +69,8 @@ public:
 
     void generateKami(const shared_ptr<MethodDeclStmt> &stmt, int depth = 0);
 
+    void generateKami(const shared_ptr<MethodDefStmt> &stmt, int depth = 0);
+
     void generateKami(const shared_ptr<ModuleDefStmt> &stmt, int depth = 0);
 
     void generateKami(const shared_ptr<RegReadStmt> &stmt, int depth = 0);
@@ -80,6 +82,8 @@ public:
     void generateKami(const shared_ptr<TypedefStructStmt> &stmt, int depth = 0);
 
     void generateKami(const shared_ptr<TypedefSynonymStmt> &stmt, int depth = 0);
+
+    void generateKami(const shared_ptr<VarAssignStmt> &stmt, int depth = 0);
 
     void generateKami(const shared_ptr<VarBindingStmt> &stmt, int depth = 0);
 
