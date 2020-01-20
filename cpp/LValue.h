@@ -20,15 +20,23 @@ enum LValueType {
     RangeSelLValueType
 };
 
+class ArraySubLValue;
+class FieldLValue;
 class VarLValue;
 
 class LValue : public enable_shared_from_this<LValue> {
-    LValueType lvalueType;
+public:
+    const LValueType lvalueType;
 public:
     LValue(LValueType lvalueType = InvalidLValueType) : lvalueType(lvalueType) {};
     virtual ~LValue() {}
 
     virtual void prettyPrint(ostream &out, int depth) = 0;
+
+    virtual shared_ptr<ArraySubLValue> arraySubLValue() { return shared_ptr<ArraySubLValue>(); }
+    virtual shared_ptr<FieldLValue> fieldLValue() { return shared_ptr<FieldLValue>(); }
+    virtual shared_ptr<VarLValue> varLValue() { return shared_ptr<VarLValue>(); }
+
     virtual shared_ptr<struct LValue> rename(string prefix, shared_ptr<LexicalScope> &scope) = 0;
 
 };
@@ -40,6 +48,8 @@ public:
     explicit VarLValue(const string &name);
     virtual ~VarLValue();
     virtual void prettyPrint(ostream &out, int depth);
+    shared_ptr<VarLValue> varLValue() override;
+
     virtual shared_ptr<struct LValue> rename(string prefix, shared_ptr<LexicalScope> &scope);
 };
 
@@ -51,6 +61,8 @@ public:
     explicit ArraySubLValue(const shared_ptr<Expr> &array, const shared_ptr<Expr> &index);
     virtual ~ArraySubLValue();
     virtual void prettyPrint(ostream &out, int depth);
+    shared_ptr<ArraySubLValue> arraySubLValue() override;
+
     virtual shared_ptr<struct LValue> rename(string prefix, shared_ptr<LexicalScope> &scope);
 
     static shared_ptr<LValue> create(shared_ptr<Expr> array, const shared_ptr<Expr> &index);
@@ -79,6 +91,8 @@ public:
     explicit FieldLValue(const shared_ptr<Expr> &obj, const string &field);
     virtual ~FieldLValue();
     virtual void prettyPrint(ostream &out, int depth);
+    shared_ptr<FieldLValue> fieldLValue() override;
+
     virtual shared_ptr<struct LValue> rename(string prefix, shared_ptr<LexicalScope> &scope);
 
     static shared_ptr<LValue> create(shared_ptr<Expr> obj, string basicString);

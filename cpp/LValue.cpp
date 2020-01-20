@@ -20,6 +20,10 @@ void VarLValue::prettyPrint(ostream &out, int depth) {
     cout << name;
 }
 
+shared_ptr<VarLValue> VarLValue::varLValue() {
+    return static_pointer_cast<VarLValue, LValue>(shared_from_this());
+}
+
 shared_ptr<struct LValue> VarLValue::rename(string prefix, shared_ptr<LexicalScope> &scope)
 {
     //FIXME:
@@ -40,6 +44,10 @@ FieldLValue::~FieldLValue() {}
 void FieldLValue::prettyPrint(ostream &out, int depth) {
     obj->prettyPrint(out, depth);
     cout << "." << field;
+}
+
+shared_ptr<FieldLValue> FieldLValue::fieldLValue() {
+    return static_pointer_cast<FieldLValue, LValue>(shared_from_this());
 }
 
 shared_ptr<struct LValue> FieldLValue::rename(string prefix, shared_ptr<LexicalScope> &scope)
@@ -65,6 +73,10 @@ void ArraySubLValue::prettyPrint(ostream &out, int depth) {
     cout << "[";
     index->prettyPrint(out, depth);
     cout << "]";
+}
+
+shared_ptr<ArraySubLValue> ArraySubLValue::arraySubLValue() {
+    return static_pointer_cast<ArraySubLValue, LValue>(shared_from_this());
 }
 
 shared_ptr<struct LValue> ArraySubLValue::rename(string prefix, shared_ptr<LexicalScope> &scope) {
