@@ -256,6 +256,12 @@ typeclass BitExtend #(numeric type msz, numeric type nsz, type x);  // n > m
    function x#(msz) truncate (x#(nsz) d);
 endtypeclass
 
+`ifdef BSVTOKAMI
+function Bit#(nsz) extend (Bit#(msz) d);
+endfunction
+`endif
+
+
 (* nogen *)
 function Bool signedLT(a x, a y);
    return x < y;
