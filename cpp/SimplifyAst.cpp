@@ -419,6 +419,12 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
             expr->prettyPrint(logstream, 0);
             logstream << endl;
             return expr;
+        case InterfaceExprType:
+            assert(expr->exprType != InterfaceExprType);
+            break;
+        case ValueofExprType:
+            assert(expr->exprType != ValueofExprType);
+            break;
     }
     return expr;
 }
