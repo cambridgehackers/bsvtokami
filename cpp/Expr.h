@@ -199,6 +199,7 @@ public:
 public:
 
     InterfaceExpr(const shared_ptr<BSVType> bsvtype, const SourcePos &sourcePos = SourcePos());
+    InterfaceExpr(const shared_ptr<BSVType> bsvtype, const vector<shared_ptr<Stmt>> &stmts, const SourcePos &sourcePos = SourcePos());
 
     ~InterfaceExpr() override;
 

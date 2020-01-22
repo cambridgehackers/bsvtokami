@@ -350,6 +350,11 @@ InterfaceExpr::InterfaceExpr(const shared_ptr<BSVType> bsvtype, const SourcePos 
 
 }
 
+InterfaceExpr::InterfaceExpr(const shared_ptr<BSVType> bsvtype, const vector<shared_ptr<Stmt>> &stmts,
+                             const SourcePos &sourcePos)
+        : Expr(InterfaceExprType, bsvtype, sourcePos), stmts(stmts) {
+}
+
 InterfaceExpr::~InterfaceExpr() {
 
 }
@@ -367,6 +372,7 @@ shared_ptr<Expr> InterfaceExpr::rename(string prefix, shared_ptr<LexicalScope> &
     assert(0);
     return static_pointer_cast<InterfaceExpr, Expr>(shared_from_this());
 }
+
 
 ValueofExpr::ValueofExpr(const shared_ptr<BSVType> argtype, const SourcePos &sourcePos)
 : Expr(ValueofExprType, make_shared<BSVType>("Integer"), sourcePos), argtype(argtype) {
