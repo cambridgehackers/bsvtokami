@@ -316,11 +316,16 @@ void GenerateKami::generateKami(const shared_ptr<Expr> &expr, int depth, int pre
             out << "Unimplemented " << expr->exprType << " { ";
             expr->prettyPrint(out, depth);
             out << " }";
+            break;
         case InterfaceExprType:
-            assert(expr->exprType != InterfaceExprType);
+            out << "Unimplemented " << expr->exprType << " { ";
+            expr->prettyPrint(out, depth);
+            out << " }";
             break;
         case ValueofExprType:
-            assert(expr->exprType != ValueofExprType);
+            out << "Unimplemented " << expr->exprType << " { ";
+            expr->prettyPrint(out, depth);
+            out << " }";
             break;
     }
 }
