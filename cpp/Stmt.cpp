@@ -23,7 +23,7 @@ RuleDefStmt::RuleDefStmt(const string &name, const shared_ptr<Expr> &guard, cons
 }
 
 void RuleDefStmt::prettyPrint(ostream &out, int depth) {
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "rule " << name;
     if (guard) {
         out << " when (";
@@ -36,7 +36,7 @@ void RuleDefStmt::prettyPrint(ostream &out, int depth) {
         if (stmt)
             stmt->prettyPrint(out, depth + 1);
     }
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "endrule //" << name << endl;
 }
 
@@ -75,7 +75,7 @@ RegReadStmt::RegReadStmt(const string &regName, const string &var, const shared_
 }
 
 void RegReadStmt::prettyPrint(ostream &out, int depth) {
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << var << " : ";
     varType->prettyPrint(out, depth);
     out << " = (* reg read *)" << regName << ";" << endl;
@@ -105,7 +105,7 @@ RegWriteStmt::RegWriteStmt(const string &regName, const shared_ptr<BSVType> &ele
 }
 
 void RegWriteStmt::prettyPrint(ostream &out, int depth) {
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << regName << " <= ";
     if (rhs)
         rhs->prettyPrint(out, depth + 1);
@@ -137,7 +137,7 @@ ActionBindingStmt::ActionBindingStmt(const shared_ptr<BSVType> &bsvtype, const s
 }
 
 void ActionBindingStmt::prettyPrint(ostream &out, int depth) {
-    indent(out, 4 * depth);
+    indent(out, depth);
     bsvtype->prettyPrint(out, 0);
     out << " " << name << " <- ";
     rhs->prettyPrint(out, depth + 1);
@@ -161,7 +161,7 @@ shared_ptr<Stmt> ActionBindingStmt::rename(string prefix, shared_ptr<LexicalScop
 }
 
 void PatternMatchStmt::prettyPrint(ostream &out, int depth) {
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "{";
     pattern->prettyPrint(out, depth+1);
     out << "}";
@@ -197,7 +197,7 @@ VarBindingStmt::VarBindingStmt(const shared_ptr<BSVType> &bsvtype, const string 
 }
 
 void VarBindingStmt::prettyPrint(ostream &out, int depth) {
-    indent(out, 4 * depth);
+    indent(out, depth);
     if (bsvtype) bsvtype->prettyPrint(out, 0);
     out << " " << name;
     if (rhs) {
@@ -227,7 +227,7 @@ VarAssignStmt::VarAssignStmt(const shared_ptr<LValue> &lhs, const string &op, co
 
 void VarAssignStmt::prettyPrint(ostream &out, int depth)
 {
-    indent(out, 4 * depth);
+    indent(out, depth);
     lhs->prettyPrint(out, depth);
     out << " " << op << " ";
     rhs->prettyPrint(out, depth + 1);
@@ -259,7 +259,7 @@ FunctionDefStmt::~FunctionDefStmt() {
 }
 
 void FunctionDefStmt::prettyPrint(ostream &out, int depth) {
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "function ";
     returnType->prettyPrint(out, depth + 1);
     out << " " << name << "(";
@@ -273,7 +273,7 @@ void FunctionDefStmt::prettyPrint(ostream &out, int depth) {
     for (size_t i = 0; i < stmts.size(); i++) {
         stmts.at(i)->prettyPrint(out, depth + 1);
     }
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "endfunction" << endl;
 }
 
@@ -301,7 +301,7 @@ MethodDeclStmt::MethodDeclStmt(const string &name, const shared_ptr<BSVType> &re
           params(params), paramTypes(paramTypes) {}
 
 void MethodDeclStmt::prettyPrint(ostream &out, int depth) {
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "method ";
     returnType->prettyPrint(out, depth + 1);
     out << " " << name << "(";
@@ -312,7 +312,7 @@ void MethodDeclStmt::prettyPrint(ostream &out, int depth) {
         out << " " << params[i];
     }
     out << ");" << endl;
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "endmethod" << endl;
 }
 
@@ -336,7 +336,7 @@ MethodDefStmt::~MethodDefStmt() {
 }
 
 void MethodDefStmt::prettyPrint(ostream &out, int depth) {
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "method ";
     returnType->prettyPrint(out, depth + 1);
     out << " " << name << "(";
@@ -350,7 +350,7 @@ void MethodDefStmt::prettyPrint(ostream &out, int depth) {
     for (size_t i = 0; i < stmts.size(); i++) {
         stmts.at(i)->prettyPrint(out, depth + 1);
     }
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "endmethod" << endl;
 }
 
@@ -386,7 +386,7 @@ ModuleDefStmt::~ModuleDefStmt() {
 }
 
 void ModuleDefStmt::prettyPrint(ostream &out, int depth) {
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "module ";
     interfaceType->prettyPrint(out, depth + 1);
     out << " " << name << "(";
@@ -403,7 +403,7 @@ void ModuleDefStmt::prettyPrint(ostream &out, int depth) {
         else
             out << "Empty stmt ..." << endl;
     }
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "endmodule" << endl;
 }
 
@@ -468,13 +468,13 @@ IfStmt::~IfStmt() {
 }
 
 void IfStmt::prettyPrint(ostream &out, int depth) {
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "if (";
     condition->prettyPrint(out);
     out << ") ";
     thenStmt->prettyPrint(out, depth + 1);
     if (elseStmt) {
-        indent(out, 4 * depth);
+        indent(out, depth);
         out << "else ";
         elseStmt->prettyPrint(out, depth + 1);
     }
@@ -507,7 +507,7 @@ void BlockStmt::prettyPrint(ostream &out, int depth) {
         else
             out << "emptystmt:" << to_string(i) << endl;
     }
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "end" << endl;
 }
 
@@ -523,7 +523,7 @@ shared_ptr<struct Stmt> BlockStmt::rename(string prefix, shared_ptr<LexicalScope
 }
 
 void CallStmt::prettyPrint(ostream &out, int depth) {
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "Call" << name << " : ";
     interfaceType->prettyPrint(out, depth);
     out << " <- ";
@@ -540,7 +540,7 @@ shared_ptr<Stmt> CallStmt::rename(string prefix, shared_ptr<LexicalScope> &scope
 }
 
 void ReturnStmt::prettyPrint(ostream &out, int depth) {
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "return ";
     value->prettyPrint(out, depth);
     out << ";" << endl;
@@ -553,7 +553,7 @@ shared_ptr<struct Stmt> ReturnStmt::rename(string prefix, shared_ptr<LexicalScop
 }
 
 void ExprStmt::prettyPrint(ostream &out, int depth) {
-    indent(out, 4 * depth);
+    indent(out, depth);
     expr->prettyPrint(out, depth);
     out << ";" << endl;
 }
@@ -581,14 +581,14 @@ InterfaceDeclStmt::InterfaceDeclStmt(const std::string &name, const std::shared_
 }
 
 void InterfaceDeclStmt::prettyPrint(ostream &out, int depth) {
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "interface ";
     interfaceType->prettyPrint(out, depth + 1);
     out << ":" << endl;
     for (size_t i = 0; i < decls.size(); i++) {
         decls[i]->prettyPrint(out, depth + 1);
     }
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "endinterface" << endl;
 }
 
@@ -602,14 +602,14 @@ InterfaceDefStmt::InterfaceDefStmt(const std::string &name, const std::shared_pt
 }
 
 void InterfaceDefStmt::prettyPrint(ostream &out, int depth) {
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "interface ";
     interfaceType->prettyPrint(out, depth + 1);
     out << ":" << endl;
     for (size_t i = 0; i < defs.size(); i++) {
         defs[i]->prettyPrint(out, depth + 1);
     }
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "endinterface" << endl;
 }
 
@@ -625,7 +625,7 @@ TypedefSynonymStmt::TypedefSynonymStmt(const std::shared_ptr<BSVType> &typedefty
 }
 
 void TypedefSynonymStmt::prettyPrint(ostream &out, int depth) {
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "typedef ";
     type->prettyPrint(out, 0);
     out << " ";
@@ -646,14 +646,14 @@ TypedefStructStmt::TypedefStructStmt(const std::string &name, const std::shared_
 }
 
 void TypedefStructStmt::prettyPrint(ostream &out, int depth) {
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "typedef struct {" << endl;
     for (size_t i = 0; i < members.size(); i++) {
         indent(out, 4 * (depth + 1));
         memberTypes[i]->prettyPrint(out, depth + 1);
         out << " " << members[i] << ";" << endl;
     }
-    indent(out, 4 * depth);
+    indent(out, depth);
     out << "} ";
     structType->prettyPrint(out, depth);
     out << ":" << endl;
