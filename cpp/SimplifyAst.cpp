@@ -8,6 +8,12 @@ void
 SimplifyAst::simplify(const vector<shared_ptr<struct Stmt>> &stmts, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
     //logstream << "simplify stmts" << endl;
     for (int i = 0; i < stmts.size(); i++) {
+        if (!stmts[i]) {
+            cerr << "Null stmt number " << i << " of " << stmts.size() << " at " << stmts[i - 1]->sourcePos.toString()
+                 << endl;
+            stmts[i - 1]->prettyPrint(cerr);
+            cerr << endl;
+        }
         simplify(stmts[i], simplifiedStmts);
     }
 }
@@ -419,12 +425,19 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
             expr->prettyPrint(logstream, 0);
             logstream << endl;
             return expr;
-        case InterfaceExprType:
-            assert(expr->exprType != InterfaceExprType);
-            break;
+        case InterfaceExprType: {
+            shared_ptr<InterfaceExpr> interfaceExpr = expr->interfaceExpr();
+            assert(!interfaceExpr->stmts.size());
+            vector<shared_ptr<Stmt>> stmts;
+            for (int i = 0; i < interfaceExpr->stmts.size(); i++) {
+                simplify(interfaceExpr->stmts[i], stmts);
+            }
+            shared_ptr<InterfaceExpr> simplifiedExpr = make_shared<InterfaceExpr>(interfaceExpr->bsvtype, stmts, interfaceExpr->sourcePos);
+            return simplifiedExpr;
+        }
         case ValueofExprType:
             assert(expr->exprType != ValueofExprType);
-            break;
+            return expr;
     }
     return expr;
 }
