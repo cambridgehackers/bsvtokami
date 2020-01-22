@@ -1325,11 +1325,11 @@ antlrcpp::Any TypeChecker::visitVarassign(BSVParser::VarassignContext *ctx) {
     return visitChildren(ctx);
 }
 
-z3::expr TypeChecker::visitArraysubLvalue(BSVParser::ExprprimaryContext *ctx, BSVParser::ExpressionContext *index) {
+z3::expr TypeChecker::visitArraysubLvalue(BSVParser::LvalueContext *ctx, BSVParser::ExprprimaryContext *array, BSVParser::ExpressionContext *index) {
     currentContext->logstream << "Visit array index lvalue at " << sourceLocation(ctx) << endl;
 
-    z3::expr arrayExpr = visit(ctx);
-    z3::expr indexExpr = visit(ctx);
+    z3::expr arrayExpr = visit(array);
+    z3::expr indexExpr = visit(index);
     z3::expr typeexpr = freshConstant("arraysub$lvalue", typeSort);
     vector<z3::expr> exprs;
     exprs.push_back(typeexpr == instantiateType("Bit", instantiateType("Numeric", context.int_val(1))));
@@ -1376,9 +1376,13 @@ z3::expr TypeChecker::visitBitselLvalue(BSVParser::ExprprimaryContext *ctx,
     return typeexpr;
 }
 
-z3::expr TypeChecker::visitLFieldValue(BSVParser::ExprprimaryContext *ctx, string fieldname) {
+z3::expr TypeChecker::visitLFieldValue(BSVParser::LvalueContext *ctx, BSVParser::ExprprimaryContext *objctx, string fieldname) {
+    auto it = exprs.find(ctx);
+    if (it != exprs.end())
+        return it->second;
+
     currentContext->logstream << "Visit field lvalue " << fieldname << endl;
-    z3::expr objexpr = visit(ctx);
+    z3::expr objexpr = visit(objctx);
     z3::expr sym = freshConstant(fieldname, typeSort);
     vector<z3::expr> exprs;
     for (auto it = currentContext->memberDeclaration.find(fieldname);
@@ -1412,12 +1416,12 @@ antlrcpp::Any TypeChecker::visitLvalue(BSVParser::LvalueContext *ctx) {
         } else if (ctx->index != NULL) {
             // lvalue [ index ]
             currentContext->logstream << "arraysub lvalue with index at " << sourceLocation((ctx)) << endl;
-            return visitArraysubLvalue(lhs, ctx->index);
+            return visitArraysubLvalue(ctx, lhs, ctx->index);
         } else if (ctx->lowerCaseIdentifier()) {
             // lvalue . field
             string fieldname = ctx->lowerCaseIdentifier()->getText();
             currentContext->logstream << "field lvalue <" << fieldname << "> at " << sourceLocation((ctx)) << endl;
-            return visitLFieldValue(lhs, fieldname);
+            return visitLFieldValue(ctx, lhs, fieldname);
         } else {
             // should never occur
             assert(0);
@@ -1620,7 +1624,7 @@ antlrcpp::Any TypeChecker::visitUnopexpr(BSVParser::UnopexprContext *ctx) {
         return it->second;
 
     BSVParser::ExprprimaryContext *ep = ctx->exprprimary();
-    currentContext->logstream << " visiting unop (" << ctx->getText() << " " << endl;
+    currentContext->logstream << " visiting unop " << ctx->getText() << " " << endl;
 
     z3::expr unopExpr = visit(ep);
     currentContext->logstream << " visit unop " << ctx->getText() << " " << unopExpr << " at " <<  sourceLocation(ctx) << endl;
@@ -1694,7 +1698,7 @@ antlrcpp::Any TypeChecker::visitVarexpr(BSVParser::VarexprContext *ctx) {
     }
 
     string uniqueName = (varDecl) ? varDecl->uniqueName : varname;
-    string rhsname(uniqueName + string("$rhs"));
+    string rhsname(uniqueName + string("-rhs"));
     z3::expr varExpr = constant(uniqueName, typeSort);
     z3::expr rhsExpr = constant(rhsname, typeSort);
 
@@ -1811,6 +1815,10 @@ antlrcpp::Any TypeChecker::visitActionvalueblockexpr(BSVParser::Actionvalueblock
 }
 
 antlrcpp::Any TypeChecker::visitFieldexpr(BSVParser::FieldexprContext *ctx) {
+    auto it = exprs.find(ctx);
+    if (it != exprs.end())
+        return it->second;
+
     z3::expr exprtype = visit(ctx->exprprimary());
     string fieldname = ctx->field->getText();
 
@@ -1832,22 +1840,7 @@ antlrcpp::Any TypeChecker::visitFieldexpr(BSVParser::FieldexprContext *ctx) {
             currentContext->logstream << " missing parentDecl" << endl;
             assert(0);
         }
-        //FIXME continue here
-        z3::func_decl type_decl = typeDecls.find(parentDecl->name)->second;
-        z3::expr type_expr = freshConstant("_ph_", typeSort);
-        switch (type_decl.arity()) {
-            case 0: {
-                type_expr = type_decl();
-            }
-                break;
-            case 1: {
-                z3::expr type_var = freshConstant("_var_", typeSort);
-                type_expr = type_decl(type_var);
-            }
-                break;
-            default:
-                currentContext->logstream << "Unhandled type arity " << type_decl;
-        }
+        z3::expr type_expr = bsvTypeToExpr(freshType(parentDecl->bsvtype));
 
         shared_ptr<StructDeclaration> structDecl = parentDecl->structDeclaration();
         shared_ptr<InterfaceDeclaration> interfaceDecl = parentDecl->interfaceDeclaration();

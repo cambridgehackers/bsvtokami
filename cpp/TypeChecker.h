@@ -261,14 +261,14 @@ protected:
 
     antlrcpp::Any visitVarassign(BSVParser::VarassignContext *ctx) override;
 
-    z3::expr visitArraysubLvalue(BSVParser::ExprprimaryContext *ctx, BSVParser::ExpressionContext *index);
+    z3::expr visitArraysubLvalue(BSVParser::LvalueContext *ctx, BSVParser::ExprprimaryContext *arrayctx, BSVParser::ExpressionContext *index);
 
     z3::expr visitBitselLvalue(BSVParser::ExprprimaryContext *ctx,
                                BSVParser::ExpressionContext *lsb,
                                antlr4::Token *widthdown,
                                antlr4::Token *widthup);
 
-    z3::expr visitLFieldValue(BSVParser::ExprprimaryContext *ctx, string fieldname);
+    z3::expr visitLFieldValue(BSVParser::LvalueContext *ctx, BSVParser::ExprprimaryContext *objexpr, string fieldname);
 
     antlrcpp::Any visitLvalue(BSVParser::LvalueContext *ctx) override;
 
