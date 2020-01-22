@@ -46,11 +46,11 @@ public:
     const string name;
     static shared_ptr<VarLValue> create(const string &name);
     explicit VarLValue(const string &name);
-    virtual ~VarLValue();
-    virtual void prettyPrint(ostream &out, int depth);
+    ~VarLValue() override;
+    void prettyPrint(ostream &out, int depth) override;
     shared_ptr<VarLValue> varLValue() override;
 
-    virtual shared_ptr<struct LValue> rename(string prefix, shared_ptr<LexicalScope> &scope);
+    shared_ptr<struct LValue> rename(string prefix, shared_ptr<LexicalScope> &scope) override;
 };
 
 class ArraySubLValue : public LValue {
@@ -59,11 +59,11 @@ public:
     const shared_ptr<Expr> index;
 
     explicit ArraySubLValue(const shared_ptr<Expr> &array, const shared_ptr<Expr> &index);
-    virtual ~ArraySubLValue();
-    virtual void prettyPrint(ostream &out, int depth);
+    ~ArraySubLValue() override;
+    void prettyPrint(ostream &out, int depth) override;
     shared_ptr<ArraySubLValue> arraySubLValue() override;
 
-    virtual shared_ptr<struct LValue> rename(string prefix, shared_ptr<LexicalScope> &scope);
+    shared_ptr<struct LValue> rename(string prefix, shared_ptr<LexicalScope> &scope) override;
 
     static shared_ptr<LValue> create(shared_ptr<Expr> array, const shared_ptr<Expr> &index);
 };
@@ -77,9 +77,9 @@ public:
 
 
     explicit RangeSelLValue(const shared_ptr<Expr> &bitarray, const shared_ptr<Expr> &msb, const shared_ptr<Expr> &lsb);
-    virtual ~RangeSelLValue();
-    virtual void prettyPrint(ostream &out, int depth);
-    virtual shared_ptr<struct LValue> rename(string prefix, shared_ptr<LexicalScope> &scope);
+    ~RangeSelLValue() override;
+    void prettyPrint(ostream &out, int depth) override;
+    shared_ptr<struct LValue> rename(string prefix, shared_ptr<LexicalScope> &scope) override;
 
     static shared_ptr<LValue> create(shared_ptr<Expr> bitarray, const shared_ptr<Expr> &msb, const shared_ptr<Expr> &lsb);
 };
@@ -89,11 +89,11 @@ public:
     const shared_ptr<Expr> obj;
     const string field;
     explicit FieldLValue(const shared_ptr<Expr> &obj, const string &field);
-    virtual ~FieldLValue();
-    virtual void prettyPrint(ostream &out, int depth);
+    ~FieldLValue() override;
+    void prettyPrint(ostream &out, int depth) override;
     shared_ptr<FieldLValue> fieldLValue() override;
 
-    virtual shared_ptr<struct LValue> rename(string prefix, shared_ptr<LexicalScope> &scope);
+    shared_ptr<struct LValue> rename(string prefix, shared_ptr<LexicalScope> &scope) override;
 
     static shared_ptr<LValue> create(shared_ptr<Expr> obj, string basicString);
 };
