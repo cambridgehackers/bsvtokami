@@ -735,6 +735,7 @@ antlrcpp::Any TypeChecker::visitLowerCaseIdentifier(BSVParser::LowerCaseIdentifi
     }
     if (!vardecl)
         currentContext->logstream << "No decl found for var " << varname << " at " << sourceLocation(ctx) << endl;
+    assert(vardecl);
     z3::expr varExpr = constant(uniqueName, typeSort);
     insertExpr(ctx, varExpr);
     return varExpr;
@@ -940,9 +941,17 @@ antlrcpp::Any TypeChecker::visitVarbinding(BSVParser::VarbindingContext *ctx) {
     vector<BSVParser::VarinitContext *> varinits = ctx->varinit();
     for (size_t i = 0; i < varinits.size(); i++) {
         BSVParser::VarinitContext *varinit = varinits[i];
+
+        z3::expr rhsexpr(context);
+        if (varinit->rhs) {
+            // visit RHS before adding the LHS binding in case the binding shadows a variable used in the RHS
+            //FIXME: make this more robust
+            rhsexpr = visit(varinit->rhs);
+        }
+
         string varName = varinit->var->getText();
         shared_ptr<BSVType> varType = (ctx->t ? bsvtype(ctx->t) : make_shared<BSVType>());
-        shared_ptr<Declaration> varDecl = (actionContext
+        shared_ptr<Declaration> varDecl = (!lexicalScope->isGlobal()
                                            ? make_shared<Declaration>(varName, varType, bindingType)
                                            : make_shared<FunctionDefinition>(varName, varType));
         if (lexicalScope->isGlobal()) {
@@ -957,7 +966,6 @@ antlrcpp::Any TypeChecker::visitVarbinding(BSVParser::VarbindingContext *ctx) {
             currentContext->logstream << "visit VarInit lhs " << (lhsexpr == bsvtypeExpr) << " at " << sourceLocation(varinit) << endl;
         }
         if (varinit->rhs) {
-            z3::expr rhsexpr = visit(varinit->rhs);
             addConstraint(lhsexpr == rhsexpr, "varinit$rhs", varinit);
             currentContext->logstream << "visit VarInit rhs " << (lhsexpr == rhsexpr) << " at " << sourceLocation(varinit->rhs) << endl;
         } else {
