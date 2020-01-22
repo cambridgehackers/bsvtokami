@@ -84,7 +84,7 @@ int processBSVFile(const string &inputFileName, shared_ptr<TypeChecker> typeChec
             kamiFileName += string(".v");
             GenerateKami *generateKami = new GenerateKami();
             generateKami->open(kamiFileName);
-            generateKami->generateStmts(stmts);
+            generateKami->generateStmts(stmts, 0);
             generateKami->close();
         }
         if (options.opt_koika) {
