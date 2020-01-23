@@ -15,6 +15,7 @@ shared_ptr<Declaration> LexicalScope::lookup(const string &name) const {
 
 void LexicalScope::bind(const string &name, const shared_ptr<Declaration> &value) {
     bindings[name] = value;
+    bindingList.push_back(value);
 }
 
 void LexicalScope::import(const shared_ptr<LexicalScope> &scope)
@@ -27,8 +28,8 @@ void LexicalScope::import(const shared_ptr<LexicalScope> &scope)
 
 void LexicalScope::visit(DeclarationVisitor &visitor) {
     //cerr << "lexical scope visit " << name << endl;
-    for (auto it = bindings.cbegin(); it != bindings.cend(); ++it) {
-        shared_ptr<Declaration> decl = it->second;
+    for (int i = 0; i < bindingList.size(); i++) {
+        shared_ptr<Declaration> decl = bindingList[i];
         //cerr << "   lexical scope visit " << decl->name << endl;
         visitor.visitDeclaration(decl);
         if (decl->enumDeclaration())

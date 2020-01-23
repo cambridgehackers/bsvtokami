@@ -11,6 +11,7 @@ using namespace std;
 class LexicalScope {
     const string name;
     map<string, shared_ptr<Declaration>> bindings;
+    vector<shared_ptr<Declaration>> bindingList;
 public:
     LexicalScope(const string &name) : name(name), parent() {}
     LexicalScope(const string &name, shared_ptr<LexicalScope> &parent) : name(name), parent(parent) {}
