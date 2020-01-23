@@ -3,7 +3,10 @@
 #include <iostream>
 #include <memory>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdefaulted-function-deleted"
 #include <BSVParser.h>
+#pragma GCC diagnostic pop
 
 #include "AttributeInstanceVisitor.h"
 #include "BSVType.h"

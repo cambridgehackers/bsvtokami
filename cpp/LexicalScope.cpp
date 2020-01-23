@@ -21,7 +21,6 @@ void LexicalScope::import(const shared_ptr<LexicalScope> &scope)
 {
     for (auto it = scope->bindings.cbegin(); it != scope->bindings.cend(); ++it) {
         //FIXME only if no conflicts
-        cerr << "    Importing " << scope->name << "::" << it->first << endl;
         bind(it->first, it->second);
     }
 }

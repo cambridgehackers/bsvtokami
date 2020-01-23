@@ -104,6 +104,9 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
 
     if (BSVParser::FieldexprContext *fieldexpr = dynamic_cast<BSVParser::FieldexprContext *>(ctx)) {
         shared_ptr<Expr> object(expr(fieldexpr->exprprimary()));
+        string fieldName = fieldexpr->field->getText();
+        if (fieldName == "tpl_1")
+            logstream << "field expr type " << object->bsvtype->to_string() << " result type " << resultType->to_string() << endl;
         return make_shared<FieldExpr>(object, fieldexpr->field->getText(), resultType, sourcePos(ctx));
     } else if (BSVParser::VarexprContext *varexpr = dynamic_cast<BSVParser::VarexprContext *>(ctx)) {
 	    return make_shared<VarExpr>(varexpr->getText(), resultType, sourcePos(ctx));
@@ -542,7 +545,7 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::VarbindingContext *varbindi
         assert(varinit->rhs);
         shared_ptr<Expr> rhs(expr(varinit->rhs));
         if (!rhs)
-            cerr << "Unhandled var binding rhs at " << sourceLocation(varinit->expression()) << endl;
+            logstream << "Unhandled var binding rhs at " << sourceLocation(varinit->expression()) << endl;
         return make_shared<VarBindingStmt>(varType, varName, rhs, sourcePos(varbinding));
     }
     //FIXME: how to make multiple bindings?

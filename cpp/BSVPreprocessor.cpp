@@ -2,8 +2,12 @@
 // Created by Jamey Hicks on 10/15/19.
 //
 
-#include <stdio.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdefaulted-function-deleted"
 #include "antlr4-runtime.h"
+#pragma GCC diagnostic pop
+
+#include <stdio.h>
 #include "BSVLexer.h"
 #include "BSVPreprocessor.h"
 

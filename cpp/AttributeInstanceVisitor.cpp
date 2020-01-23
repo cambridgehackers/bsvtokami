@@ -86,7 +86,6 @@ bool AttributeInstanceVisitor::contains(antlrcpp::Any any, std::string key) {
 
 antlrcpp::Any AttributeInstanceVisitor::visitAttrspec(BSVParser::AttrspecContext *ctx) {
     //FIXME: return a tuple
-    cerr << "AttrSpec " << ctx->getText() << " at " << sourceLocation(ctx) << endl;
     return ctx->getText();
 }
 
