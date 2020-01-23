@@ -11,8 +11,9 @@ GenerateKami::GenerateKami() : containsReturn(false) {
 
 void GenerateKami::open(const string &filename) {
     this->filename = filename;
-    cerr << "Opening Kami file " << filename << endl;
+    logstream << "Opening Kami file " << filename << endl;
     out.open(filename);
+    logstream.open(filename + string(".kami.log"), ostream::out);
 
     string prelude[] = {
             "Require Import Bool String List.",
@@ -35,8 +36,9 @@ void GenerateKami::open(const string &filename) {
 }
 
 void GenerateKami::close() {
-    cerr << "Closing Kami file " << filename << endl;
+    logstream << "Closing Kami file " << filename << endl;
     out.close();
+    logstream.close();
 }
 
 void GenerateKami::generateStmts(std::vector<shared_ptr<struct Stmt>> stmts, int depth) {
@@ -575,11 +577,13 @@ void GenerateKami::generateKami(const shared_ptr<ReturnStmt> &stmt, int depth) {
     indent(out, depth);
     out << "Ret ";
     if (!stmt->value)
-        cerr << "Bad return at " << stmt->sourcePos.toString() << endl;
+        logstream << "Bad return at " << stmt->sourcePos.toString() << endl;
     generateKami(stmt->value, depth+1);
 }
 
 void GenerateKami::generateKami(const shared_ptr<TypedefStructStmt> &stmt, int depth) {
+    logstream << "typedef struct " << stmt->structType->to_string() << endl;
+
     indent(out, depth);
     out << "Definition ";
     generateKami(stmt->structType, depth + 1);
@@ -660,8 +664,8 @@ void GenerateKami::generateKami(const shared_ptr<VarBindingStmt> &stmt, int dept
 
 void GenerateKami::generateKami(const shared_ptr<FieldExpr> &expr, int depth, int precedence) {
     if (!expr->bsvtype) {
-        expr->prettyPrint(cerr);
-        cerr << endl;
+        expr->prettyPrint(logstream);
+        logstream << endl;
     }
     generateKami(expr->object, depth, precedence);
     out << " ! (";

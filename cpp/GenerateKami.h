@@ -19,6 +19,7 @@ using namespace std;
 class GenerateKami {
     string filename;
     ofstream out;
+    ofstream logstream;
     map<string,string> instanceNames;
     bool actionContext;
     bool containsReturn; // a bit of a hack
