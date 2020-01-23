@@ -83,6 +83,8 @@ public:
 
     const vector<string> visitedPackageNames() const;
 
+    shared_ptr<LexicalScope> lookupPackage(const string &pkgname);
+
     string searchIncludePath(const string &pkgName);
 
 private:

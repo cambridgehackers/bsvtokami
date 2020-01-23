@@ -184,6 +184,13 @@ const vector<string> TypeChecker::visitedPackageNames() const {
     return result;
 }
 
+shared_ptr<LexicalScope> TypeChecker::lookupPackage(const string &pkgname) {
+    auto it = packageScopes.find(pkgname);
+    if (it != packageScopes.cend()) {
+        return it->second;
+    }
+    return shared_ptr<LexicalScope>();
+}
 
 void TypeChecker::setupModuleFunctionConstructors() {
     const string constructorNames[] = { "Function" };
