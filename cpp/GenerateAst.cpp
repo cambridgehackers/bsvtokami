@@ -2,6 +2,59 @@
 
 using namespace std;
 
+class GenerateAstPackageVisitor : public DeclarationVisitor {
+    ostream &logstream;
+    vector<shared_ptr<Stmt>> &stmts;
+public:
+    GenerateAstPackageVisitor(ostream &logstream, vector<shared_ptr<Stmt>> &stmts) : logstream(logstream), stmts(stmts) {}
+
+    void visitEnumDeclaration(const shared_ptr<EnumDeclaration> &decl) override {
+        DeclarationVisitor::visitEnumDeclaration(decl);
+    }
+
+    void visitFunctionDefinition(const shared_ptr<FunctionDefinition> &decl) override {
+        DeclarationVisitor::visitFunctionDefinition(decl);
+    }
+
+    void visitInterfaceDeclaration(const shared_ptr<InterfaceDeclaration> &decl) override {
+        DeclarationVisitor::visitInterfaceDeclaration(decl);
+    }
+
+    void visitMethodDefinition(const shared_ptr<MethodDefinition> &decl) override {
+        DeclarationVisitor::visitMethodDefinition(decl);
+    }
+
+    void visitMethodDeclaration(const shared_ptr<MethodDeclaration> &decl) override {
+        DeclarationVisitor::visitMethodDeclaration(decl);
+    }
+
+    void visitModuleDefinition(const shared_ptr<ModuleDefinition> &decl) override {
+        DeclarationVisitor::visitModuleDefinition(decl);
+    }
+
+    void visitStructDeclaration(const shared_ptr<StructDeclaration> &decl) override {
+        string name(decl->name);
+        shared_ptr<BSVType> structType(decl->bsvtype);
+        logstream << "struct " << structType->to_string() << endl;
+        vector<string> memberNames;
+        vector<shared_ptr<BSVType>> memberTypes;
+        for (size_t i = 0; i < decl->members.size(); i++) {
+            memberNames.push_back(decl->members[i]->name);
+            memberTypes.push_back(decl->members[i]->bsvtype);
+        }
+        shared_ptr<Stmt> stmt(new TypedefStructStmt(name, structType, memberNames, memberTypes, SourcePos()));
+        stmts.push_back(stmt);
+    }
+
+    void visitTypeSynonymDeclaration(const shared_ptr<TypeSynonymDeclaration> &decl) override {
+        DeclarationVisitor::visitTypeSynonymDeclaration(decl);
+    }
+
+    void visitUnionDeclaration(const shared_ptr<UnionDeclaration> &decl) override {
+        DeclarationVisitor::visitUnionDeclaration(decl);
+    }
+};
+
 std::shared_ptr<LValue> GenerateAst::lvalue(BSVParser::LvalueContext *lhs) {
     if (lhs->exprprimary() != nullptr) {
         shared_ptr<Expr> lhsLValue(expr(lhs->exprprimary()));
@@ -183,6 +236,7 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
 
 shared_ptr<PackageDefStmt> GenerateAst::generateAst(BSVParser::PackagedefContext *ctx) {
     vector<BSVParser::PackagestmtContext *> stmts = ctx->packagestmt();
+
     vector<shared_ptr<Stmt>> package_stmts;
     logstream << "generateAst " << stmts.size() << " stmts" << endl;
     string packageName("<unnamed>");
@@ -195,35 +249,37 @@ shared_ptr<PackageDefStmt> GenerateAst::generateAst(BSVParser::PackagedefContext
             cerr << "Skipping (* nogen *) statement at " << sourceLocation(stmts[i]) << endl;
             continue;
         }
-        shared_ptr<Stmt> stmt = generateAst(stmts[i]);
-        if (stmt)
-            package_stmts.push_back(stmt);
+        generateAst(stmts[i], package_stmts);
     }
     return make_shared<PackageDefStmt>(packageName, package_stmts);
 }
 
-shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::PackagestmtContext *ctx) {
+void GenerateAst::generateAst(BSVParser::PackagestmtContext *ctx, vector<shared_ptr<Stmt>> &stmts) {
     if (ctx->moduledef() != NULL) {
-        return generateAst(ctx->moduledef());
+        stmts.push_back(generateAst(ctx->moduledef()));
     } else if (BSVParser::VarbindingContext *varbinding = ctx->varbinding()) {
         shared_ptr<Stmt> stmt = generateAst(varbinding);
         //stmt->prettyPrint(cout, 0);
-        return stmt;
+        stmts.push_back(stmt);
     } else if (BSVParser::ImportdeclContext *importdecl = ctx->importdecl()) {
         //FIXME: package specifier
-        shared_ptr<Stmt> stmt(new ImportStmt(importdecl->upperCaseIdentifier(0)->getText(), sourcePos(ctx)));
+        string pkgname = importdecl->upperCaseIdentifier(0)->getText();
+        shared_ptr<LexicalScope> packageScope = typeChecker->lookupPackage(pkgname);
+        GenerateAstPackageVisitor packageVisitor(logstream, stmts);
+        packageScope->visit(packageVisitor);
+        shared_ptr<Stmt> stmt(new ImportStmt(pkgname, sourcePos(ctx)));
         //stmt->prettyPrint(cout, 0);
-        return stmt;
+        stmts.push_back(stmt);
     } else if (BSVParser::InterfacedeclContext *interfacedecl = ctx->interfacedecl()) {
         shared_ptr<Stmt> stmt = generateAst(interfacedecl);
         //stmt->prettyPrint(cout, 0);
-        return stmt;
+        stmts.push_back(stmt);
     } else if (BSVParser::TypedefsynonymContext *synonym = ctx->typedefsynonym()) {
         shared_ptr<BSVType> type(typeChecker->bsvtype(synonym->bsvtype()));
         shared_ptr<BSVType> typedeftype(typeChecker->bsvtype(synonym->typedeftype()));
         shared_ptr<Stmt> stmt(new TypedefSynonymStmt(typedeftype, type, sourcePos(ctx)));
         //stmt->prettyPrint(cout, 0);
-        return stmt;
+        stmts.push_back(stmt);
     } else if (BSVParser::TypedefstructContext *def = ctx->typedefstruct()) {
         //FIXME: package name
         string name(def->typedeftype()->typeide()->getText());
@@ -238,14 +294,13 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::PackagestmtContext *ctx) {
         }
         shared_ptr<Stmt> stmt(new TypedefStructStmt(name, structType, memberNames, memberTypes, sourcePos(ctx)));
         //stmt->prettyPrint(cout, 0);
-        return stmt;
+        stmts.push_back(stmt);
     } else if (BSVParser::FunctiondefContext *fcn = ctx->functiondef()) {
-        return generateAst(fcn);
+        shared_ptr<Stmt> stmt = generateAst(fcn);
+        stmts.push_back(stmt);
     } else {
         logstream << "unhandled packagestmt" << ctx->getText() << endl;
     }
-    shared_ptr<Stmt> stmt;
-    return stmt;
 }
 
 std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::InterfacedeclContext *ctx) {

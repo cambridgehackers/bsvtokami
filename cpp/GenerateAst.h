@@ -25,7 +25,7 @@ public:
 
     std::shared_ptr<PackageDefStmt> generateAst(BSVParser::PackagedefContext *ctx);
 
-    std::shared_ptr<Stmt> generateAst(BSVParser::PackagestmtContext *ctx);
+    void generateAst(BSVParser::PackagestmtContext *ctx, vector<std::shared_ptr<Stmt>> &stmts);
 
     std::shared_ptr<Stmt> generateAst(BSVParser::InterfacedeclContext *ctx);
 
