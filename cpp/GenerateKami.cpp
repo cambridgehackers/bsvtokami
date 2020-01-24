@@ -5,7 +5,7 @@
 #include "GenerateKami.h"
 
 
-GenerateKami::GenerateKami() : containsReturn(false) {
+GenerateKami::GenerateKami() {
     coqTypeMapping["TAdd"] = "add";
     coqTypeMapping["TSub"] = "sub";
     coqTypeMapping["TMul"] = "mul";
@@ -91,6 +91,7 @@ void GenerateKami::generateModuleStmt(const shared_ptr<struct Stmt> &stmt, int d
 //}
 
 void GenerateKami::generateModuleStmt(const shared_ptr<MethodDefStmt> &methoddef, int depth, vector<shared_ptr<Stmt>> &actionStmts) {
+    returnPending = "Retv";
     indent(out, depth);
     out << "Method (instancePrefix--\"" << methoddef->name << "\")";
     if (methoddef->params.size() == 0) {
@@ -122,9 +123,9 @@ void GenerateKami::generateModuleStmt(const shared_ptr<MethodDefStmt> &methoddef
         out << endl;
     }
 
-    if (!containsReturn) {
+    if (returnPending.size()) {
         indent(out, depth + 1);
-        out << "Retv " << endl;
+        out << returnPending << endl;
     }
     indent(out, depth); out << ")" << endl;
 }
@@ -141,6 +142,7 @@ void GenerateKami::generateModuleStmt(const shared_ptr<RegisterStmt> &registerSt
 void GenerateKami::generateModuleStmt(const shared_ptr<class RuleDefStmt> & ruledef, int depth, vector<shared_ptr<Stmt>> &actionStmts) {
     bool enclosingActionContext = actionContext;
     actionContext = true;
+    returnPending = "Retv";
 
     indent(out, depth);
     out << "Rule (instancePrefix--\"" << ruledef->name << "\") := " << endl;
@@ -158,7 +160,10 @@ void GenerateKami::generateModuleStmt(const shared_ptr<class RuleDefStmt> & rule
         }
         out << endl;
     }
-    indent(out, depth + 1); out << "Retv " << endl;
+    if (returnPending.size()) {
+        indent(out, depth);
+        out << returnPending << endl;
+    }
     indent(out, depth); out << ")" << endl;
 
     actionContext = enclosingActionContext;
@@ -440,6 +445,7 @@ void GenerateKami::generateKami(const shared_ptr<ExprStmt> &stmt, int depth) {
 
 
 void GenerateKami::generateKami(const shared_ptr<FunctionDefStmt> &functiondef, int depth) {
+    returnPending = "Retv";
     indent(out, depth);
     shared_ptr<BSVType> returnType = make_shared<BSVType>("Unknown");
     if (functiondef->returnType)
@@ -457,34 +463,42 @@ void GenerateKami::generateKami(const shared_ptr<FunctionDefStmt> &functiondef, 
         }
         out << endl;
     }
+    if (returnPending.size()) {
+        indent(out, depth);
+        out << returnPending << endl;
+    }
     indent(out, depth); out << ")%kami_action." << endl;
 }
 
 void GenerateKami::generateKami(const shared_ptr<IfStmt> &stmt, int depth) {
+    returnPending = "Retv";
     indent(out, depth);
     out << "If (";
     generateKami(stmt->condition, depth + 1);
     out << ") then (" << endl;
 
-    containsReturn = false;
     generateKami(stmt->thenStmt, depth + 1);
-    if (!containsReturn)
-        out << "Retv";
     out << endl;
-
+    if (returnPending.size()) {
+        indent(out, depth + 1);
+        out << returnPending << endl;
+    }
     indent(out, depth);
     out << ") else (" << endl;
     if (stmt->elseStmt) {
-        containsReturn = false;
+        returnPending = "Retv";
 
         generateKami(stmt->elseStmt, depth + 1);
-        if (!containsReturn)
-            out << "Retv";
+        if (returnPending.size()) {
+            indent(out, depth + 1);
+            out << returnPending << endl;
+        }
     } else
         out << "Retv";
     out << endl;
     indent(out, depth);
-    out << ") as v; Ret v" << endl;
+    out << ") as retval ;" << endl;
+    returnPending = "Ret #retval";
 }
 
 void GenerateKami::generateKami(const shared_ptr<ImportStmt> &stmt, int depth) {
@@ -500,6 +514,7 @@ void GenerateKami::generateKami(const shared_ptr<MethodDeclStmt> &stmt, int dept
 }
 
 void GenerateKami::generateKami(const shared_ptr<MethodDefStmt> &method, int depth) {
+    returnPending = "Retv";
     out << "(* method def " << method->name << " *)" << endl;
     indent(out, depth);
     out << "Method \"" << method->name << "\" ";
@@ -512,6 +527,10 @@ void GenerateKami::generateKami(const shared_ptr<MethodDefStmt> &method, int dep
     out << " := " << endl;
     for (int i = 0; i < method->stmts.size(); i++) {
         generateKami(method->stmts[i], depth + 1);
+    }
+    if (returnPending.size()) {
+        indent(out, depth + 1);
+        out << returnPending << endl;
     }
 }
 
@@ -599,7 +618,7 @@ void GenerateKami::generateKami(const shared_ptr<RegWriteStmt> &regwrite, int de
 }
 
 void GenerateKami::generateKami(const shared_ptr<ReturnStmt> &stmt, int depth) {
-    containsReturn = true;
+    returnPending = string();
 
     indent(out, depth);
     out << "Ret ";

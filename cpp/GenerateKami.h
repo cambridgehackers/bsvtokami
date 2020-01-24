@@ -25,7 +25,7 @@ class GenerateKami {
     map<string,string> kamiTypeMapping;
 
     bool actionContext;
-    bool containsReturn; // a bit of a hack
+    string returnPending; // a bit of a hack
 
 public:
     GenerateKami();
