@@ -456,12 +456,17 @@ shared_ptr<Declaration> TypeChecker::lookup(const string &varname, const string 
             auto it = currentContext->declaration.find(varname);
             if (it != currentContext->declaration.cend())
                 vardecl = it->second;
-            if (vardecl)
-                currentContext->logstream << "found global vardecl " << varname << " unique " << vardecl->uniqueName
-                                          << endl;
         }
+        if (!vardecl) {
+            auto it = currentContext->typeDeclaration.find(varname);
+            if (it != currentContext->typeDeclaration.cend())
+                vardecl = it->second;
+        }
+        if (vardecl)
+            currentContext->logstream << "found global vardecl " << varname << " unique " << vardecl->uniqueName
+                                      << endl;
+        return vardecl;
     }
-    return vardecl;
 }
 
 shared_ptr<BSVType> TypeChecker::dereferenceType(const shared_ptr<BSVType> &bsvtype) {

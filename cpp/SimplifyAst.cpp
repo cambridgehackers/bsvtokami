@@ -408,6 +408,22 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
                                                                           fieldExpr->bsvtype, fieldExpr->sourcePos);
             return simplifiedExpr;
         }
+        case MethodExprType: {
+            shared_ptr<MethodExpr> methodExpr = expr->methodExpr();
+            shared_ptr<Expr> object = simplify(methodExpr->object, simplifiedStmts);
+            shared_ptr<MethodExpr> simplifiedExpr = make_shared<MethodExpr>(object, methodExpr->methodName,
+                                                                            methodExpr->bsvtype, methodExpr->sourcePos);
+            return simplifiedExpr;
+        }
+        case SubinterfaceExprType: {
+            shared_ptr<SubinterfaceExpr> subinterfaceExpr = expr->subinterfaceExpr();
+            shared_ptr<Expr> object = simplify(subinterfaceExpr->object, simplifiedStmts);
+            shared_ptr<SubinterfaceExpr> simplifiedExpr = make_shared<SubinterfaceExpr>(object,
+                                                                                        subinterfaceExpr->subinterfaceName,
+                                                                                        subinterfaceExpr->bsvtype,
+                                                                                        subinterfaceExpr->sourcePos);
+            return simplifiedExpr;
+        }
         case CondExprType: {
             shared_ptr<CondExpr> condExpr = expr->condExpr();
             shared_ptr<Expr> cond = simplify(condExpr->cond, simplifiedStmts);

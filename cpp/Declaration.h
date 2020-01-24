@@ -126,7 +126,7 @@ public:
     InterfaceDeclaration(const std::string &package, const std::string &name, std::shared_ptr<BSVType> bsvtype)
     : Declaration(package, name, bsvtype, GlobalBindingType) {};
     shared_ptr<InterfaceDeclaration> interfaceDeclaration() override { return static_pointer_cast<InterfaceDeclaration, Declaration>(shared_from_this()); }
-
+    shared_ptr<Declaration> lookupMember(const string &memberName);
 };
 
 class MethodDeclaration : public Declaration {

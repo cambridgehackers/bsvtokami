@@ -163,11 +163,7 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
     shared_ptr<BSVType> resultType = typeChecker->lookup(ctx);
 
     if (BSVParser::FieldexprContext *fieldexpr = dynamic_cast<BSVParser::FieldexprContext *>(ctx)) {
-        shared_ptr<Expr> object(expr(fieldexpr->exprprimary()));
-        string fieldName = fieldexpr->field->getText();
-        if (fieldName == "tpl_1")
-            logstream << "field expr type " << object->bsvtype->to_string() << " result type " << resultType->to_string() << endl;
-        return make_shared<FieldExpr>(object, fieldexpr->field->getText(), resultType, sourcePos(ctx));
+        return expr(fieldexpr);
     } else if (BSVParser::VarexprContext *varexpr = dynamic_cast<BSVParser::VarexprContext *>(ctx)) {
 	    return make_shared<VarExpr>(varexpr->getText(), resultType, sourcePos(ctx));
     } else if (BSVParser::IntliteralContext *intliteral = dynamic_cast<BSVParser::IntliteralContext *>(ctx)) {
@@ -239,6 +235,45 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
         logstream << "Unhandled expr primary " << ctx->getText() << endl;
     }
     return result;
+}
+
+shared_ptr<Expr> GenerateAst::expr(BSVParser::FieldexprContext *fieldexpr) {
+    string fieldName = fieldexpr->field->getText();
+    shared_ptr<BSVType> resultType = typeChecker->lookup(fieldexpr);
+    shared_ptr<BSVType> objType = typeChecker->lookup(fieldexpr->exprprimary());
+    shared_ptr<Expr> object(expr(fieldexpr->exprprimary()));
+    assert(!objType->isVar);
+    shared_ptr<Declaration> objTypeDecl = typeChecker->lookup(objType->name);
+    logstream << "field expr name " << objType->name << endl;
+    shared_ptr<InterfaceDeclaration> interfaceDecl;
+    shared_ptr<StructDeclaration> structDeclaration;
+    if (objTypeDecl) {
+        logstream << "objtypedecl " << objTypeDecl->name << endl;
+        interfaceDecl = objTypeDecl->interfaceDeclaration();
+        structDeclaration = objTypeDecl->structDeclaration();
+    }
+    if (!objTypeDecl || structDeclaration) {
+        string fieldName = fieldexpr->field->getText();
+        //if (fieldName == "tpl_1")
+            logstream << "field expr type " << object->bsvtype->to_string() << " result type "
+                      << resultType->to_string() << endl;
+        return make_shared<FieldExpr>(object, fieldName, resultType, sourcePos(fieldexpr));
+    } else {
+        assert(interfaceDecl);
+        logstream << "interfacedecl " << interfaceDecl->name << endl;
+        shared_ptr<Declaration> fieldDecl = interfaceDecl->lookupMember(fieldName);
+        shared_ptr<InterfaceDeclaration> subinterfaceDecl = fieldDecl->interfaceDeclaration();
+        if (subinterfaceDecl) {
+            logstream << "    subinterface " << subinterfaceDecl->name << endl;
+            return make_shared<SubinterfaceExpr>(object, fieldName, resultType, sourcePos(fieldexpr));
+        } else {
+            logstream << "    must be a method " << fieldName << endl;
+            shared_ptr<Expr> methodExpr = make_shared<MethodExpr>(object, fieldName, resultType, sourcePos(fieldexpr));
+            vector<shared_ptr<Expr>> args;
+            shared_ptr<Expr> callExpr = make_shared<CallExpr>(methodExpr, args, sourcePos(fieldexpr));
+            return callExpr;
+        }
+    }
 }
 
 shared_ptr<PackageDefStmt> GenerateAst::generateAst(BSVParser::PackagedefContext *ctx) {

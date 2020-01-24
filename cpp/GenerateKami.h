@@ -97,6 +97,10 @@ public:
 
     void generateKami(const shared_ptr<FieldExpr> &expr, int depth = 0, int precedence = 0);
 
+    void generateKami(const shared_ptr<MethodExpr> &expr, int depth = 0, int precedence = 0);
+
+    void generateKami(const shared_ptr<SubinterfaceExpr> &expr, int depth = 0, int precedence = 0);
+
     void generateKami(const shared_ptr<VarExpr> &expr, int depth = 0, int precedence = 0);
 
     void generateKami(const shared_ptr<CallExpr> &expr, int depth = 0, int precedence = 0);

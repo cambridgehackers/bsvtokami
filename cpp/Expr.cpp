@@ -186,6 +186,48 @@ shared_ptr<Expr> FieldExpr::rename(string prefix, shared_ptr<LexicalScope> &scop
     return shared_ptr<FieldExpr>(new FieldExpr(object->rename(prefix, scope), fieldName, bsvtype));
 }
 
+MethodExpr::MethodExpr(const shared_ptr<Expr> &object, const string &methodName, const shared_ptr<BSVType> &bsvtype,
+                       const SourcePos &sourcePos)
+        : Expr(MethodExprType, bsvtype, sourcePos), object(object), methodName(methodName) {}
+
+MethodExpr::~MethodExpr() {}
+
+void MethodExpr::prettyPrint(ostream &out, int depth) {
+    object->prettyPrint(out, depth);
+    out << "." << "(* method *)" << methodName;
+}
+
+shared_ptr<MethodExpr> MethodExpr::methodExpr() {
+    return static_pointer_cast<MethodExpr, Expr>(shared_from_this());
+}
+
+shared_ptr<Expr> MethodExpr::rename(string prefix, shared_ptr<LexicalScope> &renames)  {
+    return make_shared<MethodExpr>(object, methodName, bsvtype, sourcePos);
+}
+
+
+SubinterfaceExpr::SubinterfaceExpr(const shared_ptr<Expr> &object, const string &subinterfaceName,
+                                   const shared_ptr<BSVType> &bsvtype, const SourcePos &sourcePos)
+        : Expr(SubinterfaceExprType, bsvtype, sourcePos), object(object), subinterfaceName(subinterfaceName) {
+
+}
+
+
+SubinterfaceExpr::~SubinterfaceExpr() {}
+
+void SubinterfaceExpr::prettyPrint(ostream &out, int depth) {
+    object->prettyPrint(out, depth);
+    out << "." << "(* subinterface *)" << subinterfaceName;
+}
+
+shared_ptr<SubinterfaceExpr> SubinterfaceExpr::subinterfaceExpr() {
+    return static_pointer_cast<SubinterfaceExpr, Expr>(shared_from_this());
+}
+
+shared_ptr<Expr> SubinterfaceExpr::rename(string prefix, shared_ptr<LexicalScope> &renames) {
+    return make_shared<MethodExpr>(object, subinterfaceName, bsvtype, sourcePos);
+}
+
 CallExpr::CallExpr(const shared_ptr<Expr> &function, const vector<shared_ptr<Expr>> &args, const SourcePos &sourcePos)
         : Expr(CallExprType, sourcePos), function(function), args(args) {
 

@@ -317,6 +317,12 @@ void GenerateKami::generateKami(const shared_ptr<Expr> &expr, int depth, int pre
         case FieldExprType:
             generateKami(expr->fieldExpr(), depth, precedence);
             return;
+        case MethodExprType:
+            generateKami(expr->methodExpr(), depth, precedence);
+            return;
+        case SubinterfaceExprType:
+            generateKami(expr->subinterfaceExpr(), depth, precedence);
+            return;
         case IntConstType:
             out << "$" << expr->intConst()->value;
             return;
@@ -705,6 +711,24 @@ void GenerateKami::generateKami(const shared_ptr<FieldExpr> &expr, int depth, in
     out << ") @. \"" << expr->fieldName << "\"";
 }
 
+void GenerateKami::generateKami(const shared_ptr<MethodExpr> &expr, int depth, int precedence) {
+    logstream << "method expr ";
+    expr->object->bsvtype->to_string();
+    logstream << " " << expr->methodName << " at " << expr->sourcePos.toString() << endl;
+
+    generateKami(expr->object, depth, precedence);
+    out << "." << expr->methodName << "\"";
+}
+
+void GenerateKami::generateKami(const shared_ptr<SubinterfaceExpr> &expr, int depth, int precedence) {
+    logstream << "subinterface expr ";
+    expr->object->bsvtype->to_string();
+    logstream << " " << expr->subinterfaceName << " at " << expr->sourcePos.toString() << endl;
+
+    generateKami(expr->object, depth, precedence);
+    out << "." << expr->subinterfaceName << "\"";
+}
+
 void GenerateKami::generateKami(const shared_ptr<VarExpr> &expr, int depth, int precedence) {
     out << "#" << expr->name;
 }
@@ -749,6 +773,16 @@ void GenerateKami::generateMethodName(const shared_ptr<Expr> &expr) {
             generateMethodName(fieldExpr->object);
             out << " -- \"" << fieldExpr->fieldName << "\"";
         } break;
+        case MethodExprType: {
+            shared_ptr<MethodExpr> methodExpr = expr->methodExpr();
+            generateMethodName(methodExpr->object);
+            out << " -- \"" << methodExpr->methodName << "\"";
+        } break;
+        case SubinterfaceExprType: {
+            shared_ptr<SubinterfaceExpr> subinterfaceExpr = expr->subinterfaceExpr();
+            generateMethodName(subinterfaceExpr->object);
+            out << " -- \"" << subinterfaceExpr->subinterfaceName << "\"";
+        } break;
         case VarExprType: {
             shared_ptr<VarExpr> varExpr = expr->varExpr();
             if (instanceNames[varExpr->name].size()) {
@@ -758,7 +792,7 @@ void GenerateKami::generateMethodName(const shared_ptr<Expr> &expr) {
             }
         } break;
         default:
-            out << "(* unhandled function name *) ";
+            out << "(* unhandled function name " << expr->exprType << " *) ";
             expr->prettyPrint(out);
     }
 }

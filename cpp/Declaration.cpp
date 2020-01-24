@@ -19,3 +19,11 @@ shared_ptr<Declaration> UnionDeclaration::lookupMember(const string &memberName)
     }
     return shared_ptr<Declaration>();
 }
+
+shared_ptr<Declaration> InterfaceDeclaration::lookupMember(const string &memberName) {
+    for (int i = 0; i < members.size(); i++) {
+        if (members[i]->name == memberName)
+            return members[i];
+    }
+    return shared_ptr<Declaration>();
+}

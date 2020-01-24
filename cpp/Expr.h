@@ -21,6 +21,7 @@ enum ExprType {
     VarExprType,
     IntConstType,
     InterfaceExprType,
+    SubinterfaceExprType,
     StringConstType,
     OperatorExprType,
     CallExprType,
@@ -29,6 +30,7 @@ enum ExprType {
     CaseExprType,
     EnumUnionStructExprType,
     MatchesExprType,
+    MethodExprType,
     ValueofExprType
 };
 
@@ -52,11 +54,15 @@ class StringConst;
 
 class MatchesExpr;
 
+class MethodExpr;
+
 class OperatorExpr;
 
 class ArraySubExpr;
 
 class EnumUnionStructExpr;
+
+class SubinterfaceExpr;
 
 class ValueofExpr;
 
@@ -91,6 +97,8 @@ public:
 
     virtual shared_ptr<MatchesExpr> matchesExpr() { return shared_ptr<MatchesExpr>(); }
 
+    virtual shared_ptr<MethodExpr> methodExpr() { return shared_ptr<MethodExpr>(); }
+
     virtual shared_ptr<StringConst> stringConst() { return shared_ptr<StringConst>(); }
 
     virtual shared_ptr<OperatorExpr> operatorExpr() { return shared_ptr<OperatorExpr>(); }
@@ -98,6 +106,8 @@ public:
     virtual shared_ptr<ArraySubExpr> arraySubExpr() { return shared_ptr<ArraySubExpr>(); }
 
     virtual shared_ptr<EnumUnionStructExpr> enumUnionStructExpr() { return shared_ptr<EnumUnionStructExpr>(); }
+
+    virtual shared_ptr<SubinterfaceExpr> subinterfaceExpr() { return shared_ptr<SubinterfaceExpr>(); }
 
     virtual shared_ptr<ValueofExpr> valueofExpr() { return shared_ptr<ValueofExpr>(); }
 
@@ -122,6 +132,39 @@ public:
 
 };
 
+class MethodExpr : public Expr {
+public:
+    const shared_ptr<Expr> object;
+    const string methodName;
+public:
+    MethodExpr(const shared_ptr<Expr> &object, const string &methodName, const shared_ptr<BSVType> &bsvtype, const SourcePos &sourcePos = SourcePos());
+
+    virtual ~MethodExpr();
+
+    virtual void prettyPrint(ostream &out, int depth = 0) override;
+
+    shared_ptr<MethodExpr> methodExpr() override;
+
+    shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
+
+};
+
+class SubinterfaceExpr : public Expr {
+public:
+    const shared_ptr<Expr> object;
+    const string subinterfaceName;
+public:
+    SubinterfaceExpr(const shared_ptr<Expr> &object, const string &subinterfaceName, const shared_ptr<BSVType> &bsvtype, const SourcePos &sourcePos = SourcePos());
+
+    virtual ~SubinterfaceExpr();
+
+    virtual void prettyPrint(ostream &out, int depth = 0) override;
+
+    shared_ptr<SubinterfaceExpr> subinterfaceExpr() override;
+
+    shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
+
+};
 class VarExpr : public Expr {
 public:
     const string name;

@@ -60,6 +60,8 @@ public:
 
     std::shared_ptr<Expr> expr(BSVParser::ExprprimaryContext *ctx);
 
+    shared_ptr<Expr> expr(BSVParser::FieldexprContext *ctx);
+
     std::shared_ptr<Expr> expr(BSVParser::TaggedunionexprContext *ctx);
 
     std::shared_ptr<Pattern> generateAst(BSVParser::PatternContext *ctx);
