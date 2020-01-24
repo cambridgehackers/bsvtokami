@@ -2436,6 +2436,7 @@ shared_ptr<BSVType> TypeChecker::bsvtype(z3::expr v, z3::model mod) {
 shared_ptr<BSVType> TypeChecker::bsvtype(BSVParser::BsvtypeContext *ctx) {
     if (ctx->typeide() != NULL) {
         BSVParser::TypeideContext *typeide = ctx->typeide();
+        assert(!typeide->pkg);
         if (typeide->typevar) {
             string varname = typeide->typevar->getText();
 
@@ -2477,6 +2478,7 @@ shared_ptr<BSVType> TypeChecker::bsvtype(BSVParser::TypeformalContext *ctx) {
 
 shared_ptr<BSVType> TypeChecker::bsvtype(BSVParser::TypedeftypeContext *ctx) {
     BSVParser::TypeideContext *typeide = ctx->typeide();
+    assert(!typeide->pkg);
     string name(typeide->name != 0 ? typeide->name->getText() : typeide->typevar->getText());
     vector<shared_ptr<BSVType>> params;
     if (ctx->typeformals() != 0) {
