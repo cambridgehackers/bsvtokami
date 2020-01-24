@@ -177,7 +177,7 @@ public:
 
 class TypedefEnumStmt : public Stmt {
 public:
-    TypedefEnumStmt(const string &name, const shared_ptr<BSVType> &enumType,
+    TypedefEnumStmt(const string &package, const string &name, const shared_ptr<BSVType> &enumType,
                       const vector<string> &members,
                       const SourcePos &sourcePos = SourcePos());
 
@@ -188,6 +188,7 @@ public:
     virtual shared_ptr<TypedefEnumStmt> typedefEnumStmt() override;
 
 public:
+    const string package;
     const string name;
     const shared_ptr<BSVType> enumType;
     const vector<string> members;
@@ -195,7 +196,7 @@ public:
 
 class TypedefSynonymStmt : public Stmt {
 public:
-    TypedefSynonymStmt(const shared_ptr<BSVType> &typedeftype, const shared_ptr<BSVType> &type,
+    TypedefSynonymStmt(const string &package, const shared_ptr<BSVType> &typedeftype, const shared_ptr<BSVType> &type,
                        const SourcePos &sourcePos = SourcePos());
 
     ~TypedefSynonymStmt() override {}
@@ -205,13 +206,14 @@ public:
     virtual shared_ptr<TypedefSynonymStmt> typedefSynonymStmt() override;
 
 public:
+    const string package;
     const shared_ptr<BSVType> typedeftype; // type being defined
     const shared_ptr<BSVType> type;
 };
 
 class TypedefStructStmt : public Stmt {
 public:
-    TypedefStructStmt(const string &name, const shared_ptr<BSVType> &structType,
+    TypedefStructStmt(const string &package, const string &name, const shared_ptr<BSVType> &structType,
                       const vector<string> &members,
                       const vector<shared_ptr<BSVType>> &memberTypes,
                       const SourcePos &sourcePos = SourcePos());
@@ -223,6 +225,7 @@ public:
     virtual shared_ptr<TypedefStructStmt> typedefStructStmt() override;
 
 public:
+    const string package;
     const string name;
     const shared_ptr<BSVType> structType;
     const vector<string> members;
@@ -231,7 +234,7 @@ public:
 
 class InterfaceDeclStmt : public Stmt {
 public:
-    InterfaceDeclStmt(const string &name, const shared_ptr<BSVType> &interfaceType,
+    InterfaceDeclStmt(const string &package, const string &name, const shared_ptr<BSVType> &interfaceType,
                       const vector<shared_ptr<Stmt>> &decls,
                       const SourcePos &sourcePos = SourcePos());
 
@@ -241,6 +244,7 @@ public:
 
     virtual shared_ptr<InterfaceDeclStmt> interfaceDeclStmt() override;
 
+    const string package;
     const string name;
     const shared_ptr<BSVType> interfaceType;
     const vector<shared_ptr<Stmt>> decls;
@@ -248,7 +252,7 @@ public:
 
 class InterfaceDefStmt : public Stmt {
 public:
-    InterfaceDefStmt(const string &name, const shared_ptr<BSVType> &interfaceType,
+    InterfaceDefStmt(const string &package, const string &name, const shared_ptr<BSVType> &interfaceType,
                      const vector<shared_ptr<Stmt>> &defs,
                      const SourcePos &sourcePos = SourcePos());
 
@@ -258,6 +262,7 @@ public:
 
     virtual shared_ptr<InterfaceDefStmt> interfaceDefStmt() override;
 
+    const string package;
     const string name;
     const shared_ptr<BSVType> interfaceType;
     const vector<shared_ptr<Stmt>> defs;
@@ -280,7 +285,7 @@ public:
 
 class ModuleDefStmt : public Stmt {
 public:
-    ModuleDefStmt(const string &name, const shared_ptr<BSVType> &interfaceType,
+    ModuleDefStmt(const string &package, const string &name, const shared_ptr<BSVType> &interfaceType,
                   const vector<string> &params,
                   const vector<shared_ptr<BSVType>> &paramTypes,
                   const vector<shared_ptr<Stmt>> &stmts,
@@ -378,7 +383,7 @@ public:
 
 class FunctionDefStmt : public Stmt {
 public:
-    FunctionDefStmt(const string &name, const shared_ptr<BSVType> &returnType,
+    FunctionDefStmt(const string &package, const string &name, const shared_ptr<BSVType> &returnType,
                     const vector<string> &params,
                     const vector<shared_ptr<BSVType>> &paramTypes,
                     const shared_ptr<Expr> &guard,
@@ -394,6 +399,7 @@ public:
     shared_ptr<struct Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 
 public:
+    const string package;
     const string name;
     const shared_ptr<BSVType> returnType;
     const vector<string> params;

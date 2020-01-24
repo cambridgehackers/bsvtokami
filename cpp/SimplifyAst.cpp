@@ -265,7 +265,7 @@ SimplifyAst::simplify(const shared_ptr<ModuleDefStmt> &moduleDef, vector<shared_
     registers.clear();
     vector<shared_ptr<Stmt>> simplifiedModuleStmts;
     simplify(moduleDef->stmts, simplifiedModuleStmts);
-    shared_ptr<Stmt> newModuleDef = make_shared<ModuleDefStmt>(moduleDef->name, moduleDef->interfaceType,
+    shared_ptr<Stmt> newModuleDef = make_shared<ModuleDefStmt>(moduleDef->package, moduleDef->name, moduleDef->interfaceType,
                                                                moduleDef->params, moduleDef->paramTypes,
                                                                simplifiedModuleStmts,
                                                                moduleDef->sourcePos);

@@ -58,8 +58,7 @@ shared_ptr<ModuleDefStmt> Inliner::processModuleDef(const shared_ptr<ModuleDefSt
         if (!inlined)
             inlinedStmts.push_back(stmt);
     }
-    return shared_ptr<ModuleDefStmt>(new ModuleDefStmt(moduleDef->name, moduleDef->interfaceType, moduleDef->params, moduleDef->paramTypes,
-                                                       inlinedStmts));
+    return make_shared<ModuleDefStmt>(moduleDef->package, moduleDef->name, moduleDef->interfaceType, moduleDef->params, moduleDef->paramTypes, inlinedStmts);
 }
 
 vector<shared_ptr<Stmt>> Inliner::processStmt(const shared_ptr<Stmt> &stmt)

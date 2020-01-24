@@ -13,7 +13,7 @@ public:
         vector<string> members;
         for (int i = 0; i < decl->members.size(); i++)
             members.push_back(decl->members[i]->name);
-        shared_ptr<Stmt> stmt = make_shared<TypedefEnumStmt>(name, decl->bsvtype, members, decl->sourcePos);
+        shared_ptr<Stmt> stmt = make_shared<TypedefEnumStmt>(decl->package, name, decl->bsvtype, members, decl->sourcePos);
         stmts.push_back(stmt);
     }
 
@@ -47,12 +47,12 @@ public:
             memberNames.push_back(decl->members[i]->name);
             memberTypes.push_back(decl->members[i]->bsvtype);
         }
-        shared_ptr<Stmt> stmt(new TypedefStructStmt(name, structType, memberNames, memberTypes, decl->sourcePos));
+        shared_ptr<TypedefStructStmt> stmt = make_shared<TypedefStructStmt>(decl->package, name, structType, memberNames, memberTypes, decl->sourcePos);
         stmts.push_back(stmt);
     }
 
     void visitTypeSynonymDeclaration(const shared_ptr<TypeSynonymDeclaration> &decl) override {
-        shared_ptr<Stmt> stmt(new TypedefSynonymStmt(decl->bsvtype, decl->lhstype, decl->sourcePos));
+        shared_ptr<Stmt> stmt = make_shared<TypedefSynonymStmt>(decl->package, decl->bsvtype, decl->lhstype, decl->sourcePos);
         //stmt->prettyPrint(cout, 0);
         stmts.push_back(stmt);
     }
@@ -288,12 +288,12 @@ void GenerateAst::generateAst(BSVParser::PackagestmtContext *ctx, vector<shared_
         for (int i = 0; enumctx->typedefenumelement(i); i++) {
             members.push_back(enumctx->typedefenumelement(i)->upperCaseIdentifier()->getText());
         }
-        shared_ptr<Stmt> stmt = make_shared<TypedefEnumStmt>(name, bsvtype, members, sourcePos(enumctx));
+        shared_ptr<Stmt> stmt = make_shared<TypedefEnumStmt>(packageName, name, bsvtype, members, sourcePos(enumctx));
         stmts.push_back(stmt);
     } else if (BSVParser::TypedefsynonymContext *synonym = ctx->typedefsynonym()) {
         shared_ptr<BSVType> type(typeChecker->bsvtype(synonym->bsvtype()));
         shared_ptr<BSVType> typedeftype(typeChecker->bsvtype(synonym->typedeftype()));
-        shared_ptr<Stmt> stmt(new TypedefSynonymStmt(typedeftype, type, sourcePos(ctx)));
+        shared_ptr<Stmt> stmt = make_shared<TypedefSynonymStmt>(packageName, typedeftype, type, sourcePos(ctx));
         //stmt->prettyPrint(cout, 0);
         stmts.push_back(stmt);
     } else if (BSVParser::TypedefstructContext *def = ctx->typedefstruct()) {
@@ -308,7 +308,7 @@ void GenerateAst::generateAst(BSVParser::PackagestmtContext *ctx, vector<shared_
             memberNames.push_back(member->lowerCaseIdentifier()->getText());
             memberTypes.push_back(typeChecker->bsvtype(member->bsvtype()));
         }
-        shared_ptr<Stmt> stmt(new TypedefStructStmt(name, structType, memberNames, memberTypes, sourcePos(ctx)));
+        shared_ptr<Stmt> stmt = make_shared<TypedefStructStmt>(packageName, name, structType, memberNames, memberTypes, sourcePos(ctx));
         //stmt->prettyPrint(cout, 0);
         stmts.push_back(stmt);
     } else if (BSVParser::FunctiondefContext *fcn = ctx->functiondef()) {
@@ -332,13 +332,13 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::InterfacedeclContext *
             shared_ptr<BSVType> returnType(typeChecker->bsvtype(methodproto->bsvtype()));
             vector<string> params;
             vector<shared_ptr<BSVType>> paramTypes;
-            shared_ptr<Stmt> methoddecl(new MethodDeclStmt(methodName, returnType, params, paramTypes, sourcePos(ctx)));
+            shared_ptr<Stmt> methoddecl = make_shared<MethodDeclStmt>(methodName, returnType, params, paramTypes, sourcePos(ctx));
             ast_members.push_back(methoddecl);
 
         }
     }
 
-    shared_ptr<Stmt> interfacedecl(new InterfaceDeclStmt(interfaceName, interfaceType, ast_members, sourcePos(ctx)));
+    shared_ptr<Stmt> interfacedecl = make_shared<InterfaceDeclStmt>(packageName, interfaceName, interfaceType, ast_members, sourcePos(ctx));
     return interfacedecl;
 }
 
@@ -365,7 +365,7 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::SubinterfacedefContext
         }
     }
 
-    shared_ptr<Stmt> interfacedef(new InterfaceDefStmt(interfaceName, interfaceType, ast_members, sourcePos(ctx)));
+    shared_ptr<Stmt> interfacedef(new InterfaceDefStmt(string(), interfaceName, interfaceType, ast_members, sourcePos(ctx)));
     return interfacedef;
 }
 
@@ -405,9 +405,9 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ModuledefContext *ctx)
             logstream << "Unhandled module stmt: " << modstmt->getText() << endl;
         }
     }
-    shared_ptr<Stmt> moduledef(new ModuleDefStmt(moduleName, interfaceType,
-                                                 params, paramTypes,
-                                                 ast_stmts, sourcePos(ctx)));
+    shared_ptr<Stmt> moduledef = make_shared<ModuleDefStmt>(packageName, moduleName, interfaceType,
+                                                            params, paramTypes,
+                                                            ast_stmts, sourcePos(ctx));
     //moduledef->prettyPrint(cout, 0);
     return moduledef;
 }
@@ -453,7 +453,8 @@ std::shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::FunctiondefContext *ct
         }
         ast_stmts.push_back(stmt);
     }
-    return make_shared<FunctionDefStmt>(functionName, returnType,
+    //FIXME: global?
+    return make_shared<FunctionDefStmt>(packageName, functionName, returnType,
                                         params, paramTypes, guard, ast_stmts, sourcePos(ctx));
 }
 

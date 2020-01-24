@@ -244,13 +244,13 @@ shared_ptr<struct Stmt> VarAssignStmt::rename(string prefix, shared_ptr<LexicalS
 }
 
 
-FunctionDefStmt::FunctionDefStmt(const string &name, const shared_ptr<BSVType> &returnType,
+FunctionDefStmt::FunctionDefStmt(const string &package, const string &name, const shared_ptr<BSVType> &returnType,
                                  const std::vector<std::string> &params,
                                  const std::vector<std::shared_ptr<BSVType>> &paramTypes,
                                  const shared_ptr<Expr> &guard,
                                  const vector<std::shared_ptr<Stmt>> &stmts,
                                  const SourcePos &sourcePos)
-        : Stmt(FunctionDefStmtType, sourcePos), name(name), returnType(returnType),
+        : Stmt(FunctionDefStmtType, sourcePos), package(package), name(name), returnType(returnType),
           params(params), paramTypes(paramTypes),
           guard(guard), stmts(stmts) {}
 
@@ -290,7 +290,7 @@ shared_ptr<Stmt> FunctionDefStmt::rename(string prefix, shared_ptr<LexicalScope>
     for (size_t i = 0; i < stmts.size(); i++) {
         renamedStmts.push_back(stmts[i]->rename(prefix, scope));
     }
-    return shared_ptr<Stmt>(new FunctionDefStmt(name, returnType, params, paramTypes, renamedGuard, renamedStmts));
+    return make_shared<FunctionDefStmt>(package, name, returnType, params, paramTypes, renamedGuard, renamedStmts);
 }
 
 MethodDeclStmt::MethodDeclStmt(const string &name, const shared_ptr<BSVType> &returnType,
@@ -370,15 +370,16 @@ shared_ptr<Stmt> MethodDefStmt::rename(string prefix, shared_ptr<LexicalScope> &
     return shared_ptr<Stmt>(new MethodDefStmt(name, returnType, params, paramTypes, renamedGuard, renamedStmts));
 }
 
-ModuleDefStmt::ModuleDefStmt(const std::string &name, const std::shared_ptr<BSVType> &interfaceType,
+ModuleDefStmt::ModuleDefStmt(const string &package, const std::string &name,
+                             const std::shared_ptr<BSVType> &interfaceType,
                              const std::vector<std::string> &params,
                              const std::vector<std::shared_ptr<BSVType>> &paramTypes,
                              const std::vector<std::shared_ptr<Stmt>> &stmts,
                              const SourcePos &sourcePos)
-        : Stmt(ModuleDefStmtType, sourcePos), name(name),
+        : Stmt(ModuleDefStmtType, sourcePos),
+          package(package), name(name),
           params(params), paramTypes(paramTypes),
           interfaceType(interfaceType), stmts(stmts) {
-
 }
 
 ModuleDefStmt::~ModuleDefStmt() {
@@ -389,7 +390,7 @@ void ModuleDefStmt::prettyPrint(ostream &out, int depth) {
     indent(out, depth);
     out << "module ";
     interfaceType->prettyPrint(out, depth + 1);
-    out << " " << name << "(";
+    out << " " << package << "::" << name << "(";
     for (size_t i = 0; i < params.size(); i++) {
         if (i > 0)
             out << ", ";
@@ -426,7 +427,7 @@ shared_ptr<Stmt> ModuleDefStmt::rename(string prefix, shared_ptr<LexicalScope> &
         stmts[i]->prettyPrint(cerr, 0);
         renamedStmts.push_back(stmts[i]->rename(prefix, scope));
     }
-    return shared_ptr<Stmt>(new ModuleDefStmt(name, interfaceType, renamedParams, paramTypes, renamedStmts));
+    return make_shared<ModuleDefStmt>(package, name, interfaceType, renamedParams, paramTypes, renamedStmts);
 }
 
 ModuleInstStmt::ModuleInstStmt(const string &name, const shared_ptr<BSVType> &interfaceType,
@@ -450,7 +451,7 @@ shared_ptr<ModuleInstStmt> ModuleInstStmt::moduleInstStmt() {
 
 shared_ptr<Stmt> ModuleInstStmt::rename(string prefix, shared_ptr<LexicalScope> &scope) {
     //FIXME:
-    return create(name, interfaceType, rhs->rename(prefix, scope));
+    return make_shared<ModuleInstStmt>(name, interfaceType, rhs->rename(prefix, scope));
 }
 
 shared_ptr<ModuleInstStmt> ModuleInstStmt::create(const string &name, const shared_ptr<BSVType> &interfaceType, const shared_ptr<Expr> &rhs) {
@@ -573,10 +574,10 @@ void ImportStmt::prettyPrint(ostream &out, int depth) {
 
 shared_ptr<ImportStmt> ImportStmt::importStmt() { return static_pointer_cast<ImportStmt, Stmt>(shared_from_this()); }
 
-InterfaceDeclStmt::InterfaceDeclStmt(const std::string &name, const std::shared_ptr<BSVType> &interfaceType,
+InterfaceDeclStmt::InterfaceDeclStmt(const string &package, const std::string &name, const std::shared_ptr<BSVType> &interfaceType,
                                      const vector<std::shared_ptr<Stmt>> &decls,
                                      const SourcePos &sourcePos)
-        : Stmt(InterfaceDeclStmtType, sourcePos), name(name),
+        : Stmt(InterfaceDeclStmtType, sourcePos), package(package), name(name),
           interfaceType(interfaceType), decls(decls) {
 }
 
@@ -595,9 +596,9 @@ void InterfaceDeclStmt::prettyPrint(ostream &out, int depth) {
 shared_ptr<InterfaceDeclStmt>
 InterfaceDeclStmt::interfaceDeclStmt() { return static_pointer_cast<InterfaceDeclStmt, Stmt>(shared_from_this()); }
 
-InterfaceDefStmt::InterfaceDefStmt(const std::string &name, const std::shared_ptr<BSVType> &interfaceType,
+InterfaceDefStmt::InterfaceDefStmt(const string &package, const std::string &name, const std::shared_ptr<BSVType> &interfaceType,
                                      const vector<std::shared_ptr<Stmt>> &defs, const SourcePos &sourcePos)
-        : Stmt(InterfaceDefStmtType, sourcePos), name(name),
+        : Stmt(InterfaceDefStmtType, sourcePos), package(package), name(name),
           interfaceType(interfaceType), defs(defs) {
 }
 
@@ -617,10 +618,11 @@ shared_ptr<InterfaceDefStmt>
 InterfaceDefStmt::interfaceDefStmt() { return static_pointer_cast<InterfaceDefStmt, Stmt>(shared_from_this()); }
 
 
-TypedefSynonymStmt::TypedefSynonymStmt(const std::shared_ptr<BSVType> &typedeftype,
+TypedefSynonymStmt::TypedefSynonymStmt(const string &package,
+                                       const std::shared_ptr<BSVType> &typedeftype,
                                        const std::shared_ptr<BSVType> &type,
                                        const SourcePos &sourcePos)
-        : Stmt(TypedefSynonymStmtType, sourcePos), typedeftype(typedeftype), type(type) {
+        : Stmt(TypedefSynonymStmtType, sourcePos), package(package), typedeftype(typedeftype), type(type) {
 
 }
 
@@ -636,12 +638,12 @@ void TypedefSynonymStmt::prettyPrint(ostream &out, int depth) {
 shared_ptr<TypedefSynonymStmt>
 TypedefSynonymStmt::typedefSynonymStmt() { return static_pointer_cast<TypedefSynonymStmt, Stmt>(shared_from_this()); }
 
-TypedefStructStmt::TypedefStructStmt(const std::string &name, const std::shared_ptr<BSVType> &structType,
+TypedefStructStmt::TypedefStructStmt(const string &package, const std::string &name, const std::shared_ptr<BSVType> &structType,
                                      const std::vector<std::string> &members,
                                      const std::vector<std::shared_ptr<BSVType>> &memberTypes,
                                      const SourcePos &sourcePos)
         : Stmt(TypedefStructStmtType, sourcePos),
-          name(name), structType(structType),
+          package(package), name(name), structType(structType),
           members(members), memberTypes(memberTypes) {
 }
 
@@ -685,9 +687,11 @@ void PackageDefStmt::prettyPrint(ostream &out, int depth) {
     }
 }
 
-TypedefEnumStmt::TypedefEnumStmt(const string &name, const shared_ptr<BSVType> &enumType, const vector<string> &members,
+TypedefEnumStmt::TypedefEnumStmt(const string &package, const string &name, const shared_ptr<BSVType> &enumType,
+                                 const vector<string> &members,
                                  const SourcePos &sourcePos)
-                                 : Stmt(TypedefEnumStmtType, sourcePos), name(name), enumType(enumType), members(members) {
+        : Stmt(TypedefEnumStmtType, sourcePos),
+          package(package), name(name), enumType(enumType), members(members) {
 
 }
 
