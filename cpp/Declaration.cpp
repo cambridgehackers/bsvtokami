@@ -4,10 +4,10 @@
 
 #include "Declaration.h"
 
-string Declaration::genUniqueName(const string &name, BindingType bt) {
+string Declaration::genUniqueName(const string &package, const string &name, BindingType bt) {
     static long uniqifier = 0;
     if (bt == GlobalBindingType)
-        return name;
+        return package + "::" + name;
     else
         return name + "-" + ::to_string(uniqifier++);
 }

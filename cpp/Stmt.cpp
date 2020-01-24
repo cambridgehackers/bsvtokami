@@ -216,7 +216,7 @@ shared_ptr<Stmt> VarBindingStmt::rename(string prefix, shared_ptr<LexicalScope> 
     shared_ptr<Expr> renamedRHS;
     if (rhs)
         renamedRHS = rhs->rename(prefix, scope);
-    scope->bind(name, make_shared<Declaration>(renamedVar, bsvtype, bindingType));
+    scope->bind(name, make_shared<Declaration>(package, renamedVar, bsvtype, bindingType));
     return shared_ptr<Stmt>(new VarBindingStmt(bsvtype, renamedVar, renamedRHS));
 }
 
@@ -419,7 +419,7 @@ shared_ptr<Stmt> ModuleDefStmt::rename(string prefix, shared_ptr<LexicalScope> &
     for (size_t i = 0; i < params.size(); i++) {
         string renamedParam(prefix + params[i]);
         renamedParams.push_back(renamedParam);
-        scope->bind(params[i], make_shared<Declaration>(renamedParam, paramTypes[i], ModuleParamBindingType));
+        scope->bind(params[i], make_shared<Declaration>(package, renamedParam, paramTypes[i], ModuleParamBindingType));
     }
     for (size_t i = 0; i < stmts.size(); i++) {
         cerr << "renaming stmt" << endl;

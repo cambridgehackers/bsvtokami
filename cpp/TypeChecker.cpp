@@ -203,7 +203,7 @@ void TypeChecker::setupModuleFunctionConstructors() {
                 paramTypes.push_back(make_shared<BSVType>());
             }
             shared_ptr<BSVType> interfaceType = make_shared<BSVType>(constructorName, paramTypes);
-            std::shared_ptr<Declaration> constructorDecl = make_shared<Declaration>(constructorName, interfaceType,
+            std::shared_ptr<Declaration> constructorDecl = make_shared<Declaration>("Prelude", constructorName, interfaceType,
                                                                                     GlobalBindingType);
             currentContext->logstream << "adding constructor: " << constructorName << endl;
             currentContext->typeDeclarationList.push_back(constructorDecl);
@@ -552,7 +552,7 @@ void TypeChecker::addDeclaration(BSVParser::InterfacedeclContext *ctx) {
     interfaceType->prettyPrint(currentContext->logstream);
     currentContext->logstream << " arity " << arity << endl;
 
-    shared_ptr<InterfaceDeclaration> decl(new InterfaceDeclaration(name, interfaceType));
+    shared_ptr<InterfaceDeclaration> decl(new InterfaceDeclaration(currentContext->packageName, name, interfaceType));
     currentContext->typeDeclarationList.push_back(decl);
     currentContext->typeDeclaration[name] = decl;
     lexicalScope->bind(name, decl);
@@ -580,7 +580,7 @@ void TypeChecker::addDeclaration(BSVParser::FunctiondefContext *functiondef) {
 void TypeChecker::addDeclaration(BSVParser::FunctionprotoContext *functionproto) {
     string functionName = functionproto->name->getText();
     shared_ptr<BSVType> functionType = bsvtype(functionproto);
-    shared_ptr<FunctionDefinition> functionDecl = make_shared<FunctionDefinition>(functionName, functionType, GlobalBindingType);
+    shared_ptr<FunctionDefinition> functionDecl = make_shared<FunctionDefinition>(currentContext->packageName, functionName, functionType, GlobalBindingType);
     lexicalScope->bind(functionName, functionDecl);
     currentContext->logstream << "addDeclaration function proto " << functionName << " at " << sourceLocation(functionproto) << endl;
 
@@ -595,7 +595,7 @@ void TypeChecker::addDeclaration(BSVParser::ModuleprotoContext *moduleproto) {
     string moduleName = moduleproto->name->getText();
     currentContext->logstream << "add declaration module proto " << moduleName << endl;
     shared_ptr<BSVType> moduleType = bsvtype(moduleproto);
-    lexicalScope->bind(moduleName, make_shared<ModuleDefinition>(moduleName, moduleType));
+    lexicalScope->bind(moduleName, make_shared<ModuleDefinition>(currentContext->packageName, moduleName, moduleType));
 }
 
 void TypeChecker::addDeclaration(BSVParser::OverloadeddeclContext *overloadeddecl) {
@@ -626,7 +626,7 @@ void TypeChecker::addDeclaration(BSVParser::TypedefenumContext *ctx) {
     BSVParser::UpperCaseIdentifierContext *id = ctx->upperCaseIdentifier();
     string name(id->getText());
     shared_ptr<BSVType> bsvtype(new BSVType(name));
-    shared_ptr<EnumDeclaration> decl(new EnumDeclaration(name, bsvtype));
+    shared_ptr<EnumDeclaration> decl(new EnumDeclaration(currentContext->packageName, name, bsvtype));
     parentDecl = decl;
     lexicalScope->bind(name, decl);
 
@@ -647,7 +647,7 @@ void TypeChecker::addDeclaration(BSVParser::TypedefstructContext *structdef) {
     shared_ptr<BSVType> typedeftype(bsvtype(structdef->typedeftype()));
     string name = typedeftype->name;
     currentContext->logstream << "visit typedef struct " << name << endl;
-    shared_ptr<StructDeclaration> structDecl(new StructDeclaration(name, typedeftype));
+    shared_ptr<StructDeclaration> structDecl = make_shared<StructDeclaration>(currentContext->packageName, name, typedeftype);
     for (int i = 0; structdef->structmember(i); i++) {
         shared_ptr<Declaration> subdecl = visit(structdef->structmember(i));
         structDecl->members.push_back(subdecl);
@@ -661,7 +661,7 @@ void TypeChecker::addDeclaration(BSVParser::TypedefsynonymContext *synonymdef) {
     shared_ptr<BSVType> lhstype = bsvtype(synonymdef->bsvtype());
     shared_ptr<BSVType> typedeftype = bsvtype(synonymdef->typedeftype());
     currentContext->logstream << "visit typedef synonym " << typedeftype->name << endl;
-    shared_ptr<TypeSynonymDeclaration> synonymDecl = make_shared<TypeSynonymDeclaration>(typedeftype->name,
+    shared_ptr<TypeSynonymDeclaration> synonymDecl = make_shared<TypeSynonymDeclaration>(currentContext->packageName, typedeftype->name,
                                                                                          lhstype, typedeftype);
     currentContext->typeDeclaration[typedeftype->name] = synonymDecl;
     currentContext->typeDeclarationList.push_back(synonymDecl);
@@ -688,10 +688,11 @@ void TypeChecker::addDeclaration(BSVParser::VarbindingContext *varbinding) {
     assert(varbinding->t);
     shared_ptr<BSVType> varType = bsvtype(varbinding->t);
     BindingType bindingType = (lexicalScope->isGlobal() ? GlobalBindingType : LocalBindingType);
+    string packageName = (lexicalScope->isGlobal() ? currentContext->packageName : string());
     for (int i = 0; varbinding->varinit(i); ++i) {
         BSVParser::VarinitContext *varinit = varbinding->varinit(i);
         string varName = varinit->lowerCaseIdentifier()->getText();
-        lexicalScope->bind(varName, make_shared<Declaration>(varName, varType, bindingType));
+        lexicalScope->bind(varName, make_shared<Declaration>(packageName, varName, varType, bindingType));
     }
 }
 
@@ -820,7 +821,7 @@ antlrcpp::Any TypeChecker::visitMethodproto(BSVParser::MethodprotoContext *ctx) 
         methodType->prettyPrint(currentContext->logstream);
     }
     currentContext->logstream << endl;
-    return (Declaration *) new MethodDeclaration(ctx->name->getText(), methodType);
+    return (Declaration *) new MethodDeclaration(currentContext->packageName, ctx->name->getText(), methodType);
 }
 
 antlrcpp::Any TypeChecker::visitMethodprotoformals(BSVParser::MethodprotoformalsContext *ctx) {
@@ -831,7 +832,7 @@ antlrcpp::Any TypeChecker::visitMethodprotoformals(BSVParser::Methodprotoformals
 antlrcpp::Any TypeChecker::visitMethodprotoformal(BSVParser::MethodprotoformalContext *formal) {
     string formalName = formal->name->getText();
     lexicalScope->bind(formalName,
-                       make_shared<Declaration>(formalName, make_shared<BSVType>(), MethodParamBindingType));
+                       make_shared<Declaration>(string(), formalName, make_shared<BSVType>(), MethodParamBindingType));
     currentContext->logstream << "method proto formal " << formalName << endl;
 
     z3::expr formalExpr = context.constant(context.str_symbol(formalName.c_str()), typeSort);
@@ -853,7 +854,7 @@ antlrcpp::Any TypeChecker::visitSubinterfacedecl(BSVParser::SubinterfacedeclCont
     currentContext->logstream << "visit subinterfacedecl " << ctx->getText() << endl;
     string name(ctx->lowerCaseIdentifier()->getText());
     shared_ptr<BSVType> subinterfaceType(bsvtype(ctx->bsvtype()));
-    Declaration *subinterfaceDecl = new InterfaceDeclaration(name, subinterfaceType);
+    Declaration *subinterfaceDecl = new InterfaceDeclaration(currentContext->packageName, name, subinterfaceType);
     return subinterfaceDecl;
 }
 
@@ -958,8 +959,8 @@ antlrcpp::Any TypeChecker::visitVarbinding(BSVParser::VarbindingContext *ctx) {
         string varName = varinit->var->getText();
         shared_ptr<BSVType> varType = (ctx->t ? bsvtype(ctx->t) : make_shared<BSVType>());
         shared_ptr<Declaration> varDecl = (!lexicalScope->isGlobal()
-                                           ? make_shared<Declaration>(varName, varType, bindingType)
-                                           : make_shared<FunctionDefinition>(varName, varType));
+                                           ? make_shared<Declaration>(currentContext->packageName, varName, varType, bindingType)
+                                           : make_shared<FunctionDefinition>(string(), varName, varType));
         if (lexicalScope->isGlobal()) {
             currentContext->logstream << "visitVarBinding " << varName << " at " << sourceLocation(varinit) << endl;
         }
@@ -992,7 +993,8 @@ antlrcpp::Any TypeChecker::visitActionbinding(BSVParser::ActionbindingContext *c
 
     string varname(ctx->var->getText().c_str());
     BindingType bindingType = lexicalScope->isGlobal() ? GlobalBindingType : LocalBindingType;
-    shared_ptr<Declaration> varDecl (make_shared<Declaration>(varname, make_shared<BSVType>(), bindingType));
+    assert(!lexicalScope->isGlobal());
+    shared_ptr<Declaration> varDecl (make_shared<Declaration>(string(), varname, make_shared<BSVType>(), bindingType));
     lexicalScope->bind(varname, varDecl);
     z3::expr varsym = context.constant(context.str_symbol(varDecl->uniqueName.c_str()), typeSort);
 
@@ -1069,7 +1071,7 @@ antlrcpp::Any TypeChecker::visitModuledef(BSVParser::ModuledefContext *ctx) {
     currentContext->logstream << endl;
 
     // declare the module in the global scope
-    shared_ptr<ModuleDefinition> moduleDefinition = ModuleDefinition::create(module_name, moduleType);
+    shared_ptr<ModuleDefinition> moduleDefinition = make_shared<ModuleDefinition>(currentContext->packageName, module_name, moduleType);
     currentContext->declaration[module_name] = moduleDefinition;
     currentContext->declarationList.push_back(moduleDefinition);
     lexicalScope->bind(module_name, moduleDefinition);
@@ -1156,7 +1158,7 @@ antlrcpp::Any TypeChecker::visitModuleprotoformals(BSVParser::Moduleprotoformals
 
 antlrcpp::Any TypeChecker::visitModuleprotoformal(BSVParser::ModuleprotoformalContext *formal) {
     string formalName = formal->name->getText();
-    shared_ptr<Declaration> formalDecl = make_shared<Declaration>(formalName, make_shared<BSVType>(), ModuleParamBindingType);
+    shared_ptr<Declaration> formalDecl = make_shared<Declaration>(string(), formalName, make_shared<BSVType>(), ModuleParamBindingType);
     lexicalScope->bind(formalName, formalDecl);
 
     z3::expr formalExpr = constant(formalDecl->uniqueName, typeSort);
@@ -1218,7 +1220,7 @@ antlrcpp::Any TypeChecker::visitMethodformals(BSVParser::MethodformalsContext *c
 
 antlrcpp::Any TypeChecker::visitMethodformal(BSVParser::MethodformalContext *formal) {
     string formalName = formal->lowerCaseIdentifier()->getText();
-    shared_ptr<Declaration> formalDecl = make_shared<Declaration>(formalName, make_shared<BSVType>(), MethodParamBindingType);
+    shared_ptr<Declaration> formalDecl = make_shared<Declaration>(string(), formalName, make_shared<BSVType>(), MethodParamBindingType);
     lexicalScope->bind(formalName, formalDecl);
     currentContext->logstream << "method formal " << formalName << endl;
 
@@ -1286,7 +1288,8 @@ antlrcpp::Any TypeChecker::visitFunctiondef(BSVParser::FunctiondefContext *ctx) 
     }
     bool wasActionContext = actionContext;
     string functionName = ctx->functionproto()->name->getText();
-    lexicalScope->bind(functionName, make_shared<FunctionDefinition>(functionName, bsvtype(ctx->functionproto())));
+    string packageName = lexicalScope->isGlobal() ? currentContext->packageName : string();
+    lexicalScope->bind(functionName, make_shared<FunctionDefinition>(packageName, functionName, bsvtype(ctx->functionproto())));
 
     pushScope(functionName);
     actionContext = true;

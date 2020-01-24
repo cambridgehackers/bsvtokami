@@ -295,6 +295,7 @@ public:
     shared_ptr<Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope) override;
 
 public:
+    const string package;
     const string name;
     const shared_ptr<BSVType> interfaceType;
     const vector<string> params;
@@ -462,6 +463,7 @@ public:
 
 class VarBindingStmt : public Stmt {
 public:
+    const string package;
     const shared_ptr<BSVType> bsvtype;
     const string name;
     const BindingType bindingType;
