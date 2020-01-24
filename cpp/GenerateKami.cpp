@@ -615,16 +615,16 @@ void GenerateKami::generateKami(const shared_ptr<TypedefStructStmt> &stmt, int d
     logstream << "typedef struct " << stmt->structType->to_string() << endl;
 
     indent(out, depth);
-    out << "Definition ";
+    out << "Notation \"'";
     generateKami(stmt->structType, depth + 1);
-    out << " := STRUCT {";
+    out << "'\" := (Struct (STRUCT {";
     for (int i = 0; i < stmt->members.size(); i++) {
         if (i > 0)
             out << ";";
         out << " \"" << stmt->members[i] << "\" :: ";
         generateKami(stmt->memberTypes[i], depth + 1);
     }
-    out << "}";
+    out << "})) (at level 80)";
     out << ".";
     out << endl;
 }
