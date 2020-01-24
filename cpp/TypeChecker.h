@@ -73,7 +73,7 @@ public:
 
     shared_ptr<BSVType> lookup(antlr4::ParserRuleContext *ctx);
 
-    shared_ptr<Declaration> lookup(const string &name);
+    shared_ptr<Declaration> lookup(const string &name, const string &packageName = string());
 
     shared_ptr<BSVType> freshType(const shared_ptr<BSVType> &bsvtype);
 

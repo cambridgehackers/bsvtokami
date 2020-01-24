@@ -444,14 +444,22 @@ shared_ptr<BSVType> TypeChecker::lookup(antlr4::ParserRuleContext *ctx) {
     return BSVType::create("NOENT");
 }
 
-shared_ptr<Declaration> TypeChecker::lookup(const string &varname) {
-    shared_ptr<Declaration> vardecl = lexicalScope->lookup(varname);
-    if (!vardecl) {
-        auto it = currentContext->declaration.find(varname);
-        if (it != currentContext->declaration.cend())
-            vardecl = it->second;
+shared_ptr<Declaration> TypeChecker::lookup(const string &varname, const string &packageName) {
+    shared_ptr<Declaration> vardecl;
+    if (packageName.size()) {
+        vardecl = packageScopes[packageName]->lookup(varname);
         if (vardecl)
-            currentContext->logstream << "found global vardecl " << varname << " unique " << vardecl->uniqueName << endl;
+            currentContext->logstream << "found vardecl " << varname << " in package " << packageName << endl;
+    } else {
+        vardecl = lexicalScope->lookup(varname);
+        if (!vardecl) {
+            auto it = currentContext->declaration.find(varname);
+            if (it != currentContext->declaration.cend())
+                vardecl = it->second;
+            if (vardecl)
+                currentContext->logstream << "found global vardecl " << varname << " unique " << vardecl->uniqueName
+                                          << endl;
+        }
     }
     return vardecl;
 }
@@ -1687,8 +1695,13 @@ antlrcpp::Any TypeChecker::visitVarexpr(BSVParser::VarexprContext *ctx) {
         return it->second;
     currentContext->logstream << "Visiting var expr " << ctx->getText().c_str() << " " << ctx << endl;
 
-    string varname(ctx->getText());
-    shared_ptr<Declaration> varDecl = lookup(varname);
+    string varname(ctx->lowerCaseIdentifier()->getText());
+    string packageName;
+    if (ctx->upperCaseIdentifier(0)) {
+        packageName = ctx->upperCaseIdentifier(0)->getText();
+        cerr << "package specifier for " << ctx->getText() << " at " << sourceLocation(ctx) << endl;
+    }
+    shared_ptr<Declaration> varDecl = ctx->upperCaseIdentifier(0) ? lookup(varname, ctx->upperCaseIdentifier(0)->getText()) : lookup(varname);
     varDecls[ctx] = varDecl;
     if (varDecl) {
         currentContext->logstream << "    uniqname " << varDecl->uniqueName << " bindingType " << varDecl->bindingType << endl;
