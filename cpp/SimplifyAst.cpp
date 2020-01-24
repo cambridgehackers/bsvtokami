@@ -95,6 +95,9 @@ void SimplifyAst::simplify(const shared_ptr<struct Stmt> &stmt, vector<shared_pt
         case ReturnStmtType:
             simplify(stmt->returnStmt(), simplifiedStmts);
             return;
+        case TypedefEnumStmtType:
+            simplifiedStmts.push_back(stmt);
+            return;
         case TypedefStructStmtType:
             simplifiedStmts.push_back(stmt);
             return;

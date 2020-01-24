@@ -684,3 +684,18 @@ void PackageDefStmt::prettyPrint(ostream &out, int depth) {
         out << " " << stmts[i] << ";" << endl;
     }
 }
+
+TypedefEnumStmt::TypedefEnumStmt(const string &name, const shared_ptr<BSVType> &enumType, const vector<string> &members,
+                                 const SourcePos &sourcePos)
+                                 : Stmt(TypedefEnumStmtType, sourcePos), name(name), enumType(enumType), members(members) {
+
+}
+
+void TypedefEnumStmt::prettyPrint(ostream &out, int depth)
+{
+    out << "Enum " << enumType->to_string();
+}
+
+shared_ptr<TypedefEnumStmt> TypedefEnumStmt::typedefEnumStmt()  {
+    return static_pointer_cast<TypedefEnumStmt, Stmt>(shared_from_this());
+}

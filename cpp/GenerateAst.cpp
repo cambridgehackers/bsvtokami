@@ -9,7 +9,12 @@ public:
     GenerateAstPackageVisitor(ostream &logstream, vector<shared_ptr<Stmt>> &stmts) : logstream(logstream), stmts(stmts) {}
 
     void visitEnumDeclaration(const shared_ptr<EnumDeclaration> &decl) override {
-        DeclarationVisitor::visitEnumDeclaration(decl);
+        string name = decl->name;
+        vector<string> members;
+        for (int i = 0; i < decl->members.size(); i++)
+            members.push_back(decl->members[i]->name);
+        shared_ptr<Stmt> stmt = make_shared<TypedefEnumStmt>(name, decl->bsvtype, members, decl->sourcePos);
+        stmts.push_back(stmt);
     }
 
     void visitFunctionDefinition(const shared_ptr<FunctionDefinition> &decl) override {
@@ -42,12 +47,14 @@ public:
             memberNames.push_back(decl->members[i]->name);
             memberTypes.push_back(decl->members[i]->bsvtype);
         }
-        shared_ptr<Stmt> stmt(new TypedefStructStmt(name, structType, memberNames, memberTypes, SourcePos()));
+        shared_ptr<Stmt> stmt(new TypedefStructStmt(name, structType, memberNames, memberTypes, decl->sourcePos));
         stmts.push_back(stmt);
     }
 
     void visitTypeSynonymDeclaration(const shared_ptr<TypeSynonymDeclaration> &decl) override {
-        DeclarationVisitor::visitTypeSynonymDeclaration(decl);
+        shared_ptr<Stmt> stmt(new TypedefSynonymStmt(decl->bsvtype, decl->lhstype, decl->sourcePos));
+        //stmt->prettyPrint(cout, 0);
+        stmts.push_back(stmt);
     }
 
     void visitUnionDeclaration(const shared_ptr<UnionDeclaration> &decl) override {
@@ -267,12 +274,21 @@ void GenerateAst::generateAst(BSVParser::PackagestmtContext *ctx, vector<shared_
         shared_ptr<LexicalScope> packageScope = typeChecker->lookupPackage(pkgname);
         GenerateAstPackageVisitor packageVisitor(logstream, stmts);
         packageScope->visit(packageVisitor);
-        shared_ptr<Stmt> stmt(new ImportStmt(pkgname, sourcePos(ctx)));
+        shared_ptr<Stmt> stmt = make_shared<ImportStmt>(pkgname, sourcePos(ctx));
         //stmt->prettyPrint(cout, 0);
         stmts.push_back(stmt);
     } else if (BSVParser::InterfacedeclContext *interfacedecl = ctx->interfacedecl()) {
         shared_ptr<Stmt> stmt = generateAst(interfacedecl);
         //stmt->prettyPrint(cout, 0);
+        stmts.push_back(stmt);
+    } else if (BSVParser::TypedefenumContext *enumctx = ctx->typedefenum()) {
+        shared_ptr<BSVType> bsvtype = make_shared<BSVType>(enumctx->upperCaseIdentifier()->getText());
+        string name = bsvtype->name;
+        vector<string> members;
+        for (int i = 0; enumctx->typedefenumelement(i); i++) {
+            members.push_back(enumctx->typedefenumelement(i)->upperCaseIdentifier()->getText());
+        }
+        shared_ptr<Stmt> stmt = make_shared<TypedefEnumStmt>(name, bsvtype, members, sourcePos(enumctx));
         stmts.push_back(stmt);
     } else if (BSVParser::TypedefsynonymContext *synonym = ctx->typedefsynonym()) {
         shared_ptr<BSVType> type(typeChecker->bsvtype(synonym->bsvtype()));

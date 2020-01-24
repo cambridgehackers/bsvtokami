@@ -21,6 +21,9 @@ class GenerateKami {
     ofstream out;
     ofstream logstream;
     map<string,string> instanceNames;
+    map<string,string> coqTypeMapping;
+    map<string,string> kamiTypeMapping;
+
     bool actionContext;
     bool containsReturn; // a bit of a hack
 
@@ -79,6 +82,8 @@ public:
     void generateKami(const shared_ptr<RegWriteStmt> &stmt, int depth);
 
     void generateKami(const shared_ptr<ReturnStmt> &stmt, int depth);
+
+    void generateKami(const shared_ptr<TypedefEnumStmt> &stmt, int depth);
 
     void generateKami(const shared_ptr<TypedefStructStmt> &stmt, int depth);
 

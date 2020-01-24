@@ -6,6 +6,18 @@
 
 
 GenerateKami::GenerateKami() : containsReturn(false) {
+    coqTypeMapping["TAdd"] = "add";
+    coqTypeMapping["TSub"] = "sub";
+    coqTypeMapping["TMul"] = "mul";
+    coqTypeMapping["TDiv"] = "div";
+    coqTypeMapping["TLog"] = "log2";
+
+    kamiTypeMapping["TAdd"] = "add";
+    kamiTypeMapping["TSub"] = "sub";
+    kamiTypeMapping["TMul"] = "mul";
+    kamiTypeMapping["TDiv"] = "div";
+    kamiTypeMapping["TLog"] = "log2";
+    kamiTypeMapping["Action"] = "Void";
 
 }
 
@@ -23,10 +35,13 @@ void GenerateKami::open(const string &filename) {
             "Require Import Kami.Renaming Kami.Inline Kami.InlineFacts.",
             "Require Import Kami.Decomposition Kami.Notations Kami.Tactics.",
             "Require Import Kami.PrimFifo.",
+            "Require Import Init.Nat.",
             "",
             "Require Import Ex.MemTypes.",
             "",
             "Set Implicit Arguments.",
+            "Definition Bit := word.",
+            "Definition Int := word.",
             "Open Scope string.",
             ""
     };
@@ -222,6 +237,9 @@ void GenerateKami::generateKami(const shared_ptr<Stmt> &stmt, int depth) {
         case ReturnStmtType:
             generateKami(stmt->returnStmt(), depth);
             break;
+        case TypedefEnumStmtType:
+            generateKami(stmt->typedefEnumStmt(), depth);
+            break;
         case TypedefStructStmtType:
             generateKami(stmt->typedefStructStmt(), depth);
             break;
@@ -335,8 +353,9 @@ void GenerateKami::generateKami(const shared_ptr<Expr> &expr, int depth, int pre
 void GenerateKami::generateCoqType(const shared_ptr<BSVType> &bsvtype, int depth) {
     if (bsvtype->params.size())
         out << "(";
-    if (bsvtype->name == "Bit")
-        out << "word";
+    auto it = coqTypeMapping.find(bsvtype->name);
+    if (it != coqTypeMapping.cend())
+        out << it->second;
     else
         out << bsvtype->name;
     if (bsvtype->params.size()) {
@@ -350,14 +369,16 @@ void GenerateKami::generateCoqType(const shared_ptr<BSVType> &bsvtype, int depth
 }
 
 void GenerateKami::generateKami(const shared_ptr<BSVType> &bsvtype, int depth) {
+    string name = bsvtype->name;
+    auto it = kamiTypeMapping.find(name);
+    if (it != kamiTypeMapping.cend())
+        name = it->second;
     if (bsvtype->params.size())
         out << "(";
-    if (bsvtype->name == "Action")
-        out << "Void";
-    else if (bsvtype->name == "ActionValue")
+    if (bsvtype->name == "ActionValue")
         generateKami(bsvtype->params[0], depth);
     else
-        out << bsvtype->name;
+        out << name;
     if (bsvtype->params.size()) {
         for (int i = 0; i < bsvtype->params.size(); i++) {
             out << " ";
@@ -461,7 +482,7 @@ void GenerateKami::generateKami(const shared_ptr<IfStmt> &stmt, int depth) {
 }
 
 void GenerateKami::generateKami(const shared_ptr<ImportStmt> &stmt, int depth) {
-    out << "Require Import " << stmt->name << "." << endl;
+    out << "(* Require Import " << stmt->name << ". *)" << endl;
 }
 
 void GenerateKami::generateKami(const shared_ptr<InterfaceDeclStmt> &stmt, int depth) {
@@ -581,6 +602,15 @@ void GenerateKami::generateKami(const shared_ptr<ReturnStmt> &stmt, int depth) {
     generateKami(stmt->value, depth+1);
 }
 
+
+void GenerateKami::generateKami(const shared_ptr<TypedefEnumStmt> &stmt, int depth) {
+    logstream << "typedef enum " << stmt->enumType->to_string() << endl;
+    out << "Definition " << stmt->name << " :=  STRUCT {\"$TAG\" :: Bit 4 }." << endl;
+    for (int i = 0; i < stmt->members.size(); i++) {
+        out << "Definition " << stmt->members[i] << " := " << i << "." << endl;
+    }
+}
+
 void GenerateKami::generateKami(const shared_ptr<TypedefStructStmt> &stmt, int depth) {
     logstream << "typedef struct " << stmt->structType->to_string() << endl;
 
@@ -591,10 +621,11 @@ void GenerateKami::generateKami(const shared_ptr<TypedefStructStmt> &stmt, int d
     for (int i = 0; i < stmt->members.size(); i++) {
         if (i > 0)
             out << ";";
-        out << " \"" << stmt->members[i] << " : ";
+        out << " \"" << stmt->members[i] << "\" :: ";
         generateKami(stmt->memberTypes[i], depth + 1);
     }
-    out << "} ;";
+    out << "}";
+    out << ".";
     out << endl;
 }
 
@@ -604,7 +635,7 @@ void GenerateKami::generateKami(const shared_ptr<TypedefSynonymStmt> &stmt, int 
     generateKami(stmt->typedeftype, depth + 1);
     out << " := ";
     generateKami(stmt->type, depth + 1);
-    out << " ;";
+    out << " .";
     out << endl;
 
 }
@@ -783,3 +814,4 @@ string GenerateKami::callStmtFunctionName(const shared_ptr<CallStmt> &callStmt)
     shared_ptr<VarExpr> varExpr = function->varExpr();
     return varExpr->name;
 }
+

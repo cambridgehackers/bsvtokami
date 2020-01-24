@@ -38,6 +38,7 @@ enum StmtType {
     RegReadStmtType,
     RegWriteStmtType,
     ReturnStmtType,
+    TypedefEnumStmtType,
     TypedefStructStmtType,
     TypedefSynonymStmtType,
     VarBindingStmtType,
@@ -84,6 +85,8 @@ class RegWriteStmt;
 class ReturnStmt;
 
 class RuleDefStmt;
+
+class TypedefEnumStmt;
 
 class TypedefStructStmt;
 
@@ -146,6 +149,8 @@ public:
 
     virtual shared_ptr<RuleDefStmt> ruleDefStmt() { return shared_ptr<RuleDefStmt>(); }
 
+    virtual shared_ptr<TypedefEnumStmt> typedefEnumStmt() { return shared_ptr<TypedefEnumStmt>(); }
+
     virtual shared_ptr<TypedefStructStmt> typedefStructStmt() { return shared_ptr<TypedefStructStmt>(); }
 
     virtual shared_ptr<TypedefSynonymStmt> typedefSynonymStmt() { return shared_ptr<TypedefSynonymStmt>(); }
@@ -168,6 +173,24 @@ public:
     virtual shared_ptr<ImportStmt> importStmt() override;
 
     const string name;
+};
+
+class TypedefEnumStmt : public Stmt {
+public:
+    TypedefEnumStmt(const string &name, const shared_ptr<BSVType> &enumType,
+                      const vector<string> &members,
+                      const SourcePos &sourcePos = SourcePos());
+
+    virtual ~TypedefEnumStmt() override {}
+
+    void prettyPrint(ostream &out, int depth) override;
+
+    virtual shared_ptr<TypedefEnumStmt> typedefEnumStmt() override;
+
+public:
+    const string name;
+    const shared_ptr<BSVType> enumType;
+    const vector<string> members;
 };
 
 class TypedefSynonymStmt : public Stmt {
