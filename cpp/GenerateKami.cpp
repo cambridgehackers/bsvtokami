@@ -375,7 +375,7 @@ void GenerateKami::generateKami(const shared_ptr<BSVType> &bsvtype, int depth) {
         name = it->second;
     if (bsvtype->params.size())
         out << "(";
-    if (bsvtype->name == "ActionValue")
+    if (bsvtype->name == "ActionValue" || bsvtype->name == "Numeric")
         generateKami(bsvtype->params[0], depth);
     else
         out << name;
