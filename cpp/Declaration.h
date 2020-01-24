@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include "BSVType.h"
+#include "SourcePos.h"
 
 using namespace std;
 
@@ -59,6 +60,7 @@ public:
     const std::shared_ptr<BSVType> bsvtype;
     const BindingType bindingType;
     shared_ptr<Declaration> parent;
+    const SourcePos sourcePos;
 
     Declaration(std::string name, std::shared_ptr<BSVType> bsvtype, const BindingType bt = LocalBindingType)
     : name(name), uniqueName(genUniqueName(name, bt)), bsvtype(bsvtype), bindingType(bt) {
