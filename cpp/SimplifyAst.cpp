@@ -135,7 +135,8 @@ SimplifyAst::simplify(const shared_ptr<ActionBindingStmt> &stmt, vector<shared_p
             }
                 break;
             case VarExprType:
-            case FieldExprType: {
+            case FieldExprType:
+            case MethodExprType: {
                 vector<shared_ptr<Expr>> args;
                 simplifiedStmts.push_back(make_shared<CallStmt>(stmt->name, stmt->bsvtype,
                                                                 make_shared<CallExpr>(stmt->rhs, args),
@@ -192,7 +193,8 @@ void SimplifyAst::simplify(const shared_ptr<ExprStmt> &exprStmt, vector<shared_p
                     make_shared<CallStmt>("unused", make_shared<BSVType>("Void"), expr, exprStmt->sourcePos));
         }
             break;
-        case FieldExprType: // fall through
+        case FieldExprType:
+        case MethodExprType: // fall through
         case VarExprType: {
             vector<shared_ptr<Expr>> args;
             simplifiedStmts.push_back(make_shared<CallStmt>("unused", make_shared<BSVType>("Void"),
@@ -328,6 +330,12 @@ void SimplifyAst::simplify(const shared_ptr<VarAssignStmt> &stmt, vector<shared_
 
 void SimplifyAst::simplify(const shared_ptr<VarBindingStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
     shared_ptr<Expr> simplifiedRhs = simplify(stmt->rhs, simplifiedStmts);
+    if (simplifiedRhs->exprType == MethodExprType) {
+        vector<shared_ptr<Expr>> args;
+        simplifiedRhs = make_shared<CallExpr>(simplifiedRhs, args);
+        simplifiedStmts.push_back(make_shared<CallStmt>(stmt->name, stmt->bsvtype, simplifiedRhs, stmt->sourcePos));
+        return;
+    }
     simplifiedStmts.push_back(make_shared<VarBindingStmt>(stmt->bsvtype, stmt->name, simplifiedRhs, stmt->sourcePos));
 }
 

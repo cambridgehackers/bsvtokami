@@ -269,9 +269,7 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::FieldexprContext *fieldexpr) {
         } else {
             logstream << "    must be a method " << fieldName << endl;
             shared_ptr<Expr> methodExpr = make_shared<MethodExpr>(object, fieldName, resultType, sourcePos(fieldexpr));
-            vector<shared_ptr<Expr>> args;
-            shared_ptr<Expr> callExpr = make_shared<CallExpr>(methodExpr, args, sourcePos(fieldexpr));
-            return callExpr;
+            return methodExpr;
         }
     }
 }
