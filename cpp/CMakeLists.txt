@@ -26,7 +26,7 @@ set (SOURCE
      GenerateIR.cpp GenerateIR.h
      BSVPreprocessor.cpp BSVPreprocessor.h
      GenerateKami.cpp GenerateKami.h
-        LValue.cpp LValue.h GenerateKoika.cpp GenerateKoika.h Pattern.cpp Pattern.h SimplifyAst.cpp SimplifyAst.h Declaration.cpp SourcePos.h AttributeInstanceVisitor.cpp AttributeInstanceVisitor.h)
+        LValue.cpp LValue.h GenerateKoika.cpp GenerateKoika.h Pattern.cpp Pattern.h SimplifyAst.cpp SimplifyAst.h Declaration.cpp SourcePos.h AttributeInstanceVisitor.cpp AttributeInstanceVisitor.h TopologicalSort.cpp TopologicalSort.h AstVisitor.cpp AstVisitor.h)
 set(CMAKE_CXX_FLAGS "-O -g -std=c++14")
 add_executable(${PROJECT_NAME} ${SOURCE})
 target_include_directories(${PROJECT_NAME}
