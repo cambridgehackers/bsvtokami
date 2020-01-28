@@ -420,6 +420,8 @@ void GenerateKami::generateKami(const shared_ptr<ActionBindingStmt> &actionbindi
 
 void GenerateKami::generateKami(const shared_ptr<BlockStmt> &blockstmt, int depth) {
     int num_stmts = blockstmt->stmts.size();
+    indent(out, depth);
+    out << "(* block " << blockstmt->sourcePos.toString() << " *)" << endl;
     for (int i = 0; i < num_stmts; i++) {
         shared_ptr<Stmt> stmt = blockstmt->stmts[i];
         generateKami(stmt, depth + 1);
@@ -427,6 +429,9 @@ void GenerateKami::generateKami(const shared_ptr<BlockStmt> &blockstmt, int dept
             //out << ";" << endl;
         }
     }
+    indent(out, depth);
+    out << "(* endblock *)" << endl;
+
 }
 
 void GenerateKami::generateKami(const shared_ptr<CallStmt> &callStmt, int depth) {
@@ -674,6 +679,8 @@ void GenerateKami::generateKami(const shared_ptr<VarAssignStmt> &stmt, int depth
             shared_ptr<Expr> array = arraysubLvalue->array;
             indent(out, depth);
             out << "LET ";
+            generateKamiLHS(array);
+            out << " <- ";
             generateKami(array, depth);
             out << " @[ ";
             generateKami(arraysubLvalue->index, depth + 1);
@@ -688,18 +695,28 @@ void GenerateKami::generateKami(const shared_ptr<VarAssignStmt> &stmt, int depth
             shared_ptr<Expr> obj = fieldLValue->obj;
             indent(out, depth);
             out << "LET ";
+            generateKamiLHS(obj);
+            out << " <- ";
             generateKami(obj, depth);
             out << " ! ";
             generateCoqType(obj->bsvtype, depth + 1);
-            out << " @. " << fieldLValue->field << " <- ";
+            out << " @{ \"" << fieldLValue->field << "\" <- ";
             generateKami(stmt->rhs, depth + 1);
-            out << " ; " << endl;
+            out << " } ; " << endl;
             break;
         }
-        default:
-            out << "(* VarAssignStmt" << endl;
-            stmt->varAssignStmt()->prettyPrint(out, 1);
-            out << "*)" << endl;
+        default: {
+            shared_ptr<VarAssignStmt> varAssign = stmt->varAssignStmt();
+            indent(out, depth);
+            out << "(* VarAssignStmt *)" << endl;
+            indent(out, depth);
+            out << "LET ";
+            generateKamiLHS(varAssign->lhs);
+            out << " <- ";
+            generateKami(varAssign->rhs, depth + 1);
+            out << " ;";
+            out << endl;
+        }
     }
 }
 void GenerateKami::generateKami(const shared_ptr<VarBindingStmt> &stmt, int depth) {
@@ -873,5 +890,27 @@ std::vector<shared_ptr<struct Stmt>> GenerateKami::sortStmts(vector<shared_ptr<s
     Graph g(stmts.size());
 
     return std::vector<shared_ptr<struct Stmt>>();
+}
+
+void GenerateKami::generateKamiLHS(const shared_ptr<Expr> &expr) {
+    switch (expr->exprType) {
+        case VarExprType:
+            out << expr->varExpr()->name;
+            break;
+        default:
+            assert(expr->exprType == VarExprType);
+            //FIXME what else do we see here?
+    }
+
+}
+
+void GenerateKami::generateKamiLHS(const shared_ptr<LValue> &lvalue) {
+    switch (lvalue->lvalueType) {
+        case VarLValueType:
+            out << lvalue->varLValue()->name;
+            break;
+        default:
+            assert(lvalue->lvalueType == VarLValueType);
+    }
 }
 

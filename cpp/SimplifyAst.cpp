@@ -177,10 +177,11 @@ SimplifyAst::simplify(const shared_ptr<ActionBindingStmt> &stmt, vector<shared_p
 }
 
 void SimplifyAst::simplify(const shared_ptr<BlockStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
+    vector<shared_ptr<Stmt>> simplifiedBlockStmts;
     for (int i = 0; i < stmt->stmts.size(); i++) {
-        simplify(stmt->stmts[i], simplifiedStmts);
+        simplify(stmt->stmts[i], simplifiedBlockStmts);
     }
-    shared_ptr<Stmt> newblockstmt = make_shared<BlockStmt>(simplifiedStmts, stmt->sourcePos);
+    shared_ptr<Stmt> newblockstmt = make_shared<BlockStmt>(simplifiedBlockStmts, stmt->sourcePos);
     logstream << "simplified block stmt" << endl;
     simplifiedStmts.push_back(newblockstmt);
 }

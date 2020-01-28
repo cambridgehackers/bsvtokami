@@ -120,6 +120,11 @@ public:
     string callStmtFunctionName(const shared_ptr<CallStmt> &callStmt);
 
     std::vector<shared_ptr<struct Stmt>> sortStmts(vector<shared_ptr<struct Stmt>> vector);
+
+    void generateKamiLHS(const shared_ptr<Expr> &expr);
+
+    void generateKamiLHS(const shared_ptr<LValue> &lvalue);
+
 };
 
 
