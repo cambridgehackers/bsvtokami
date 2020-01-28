@@ -44,6 +44,8 @@ class BitSelExpr;
 
 class CallExpr;
 
+class CaseExpr;
+
 class CondExpr;
 
 class IntConst;
@@ -82,6 +84,8 @@ public:
     virtual shared_ptr<BitConcatExpr> bitConcatExpr() { return shared_ptr<BitConcatExpr>(); }
 
     virtual shared_ptr<BitSelExpr> bitSelExpr() { return shared_ptr<BitSelExpr>(); }
+
+    virtual shared_ptr<CaseExpr> caseExpr() { return shared_ptr<CaseExpr>(); }
 
     virtual shared_ptr<FieldExpr> fieldExpr() { return shared_ptr<FieldExpr>(); }
 
