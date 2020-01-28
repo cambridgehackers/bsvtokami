@@ -3,7 +3,7 @@
 //
 
 #include "GenerateKami.h"
-
+#include "TopologicalSort.h"
 
 GenerateKami::GenerateKami() {
     coqTypeMapping["TAdd"] = "add";
@@ -57,8 +57,9 @@ void GenerateKami::close() {
 }
 
 void GenerateKami::generateStmts(std::vector<shared_ptr<struct Stmt>> stmts, int depth) {
-    for (int i = 0; i < stmts.size(); i++) {
-        shared_ptr<Stmt> stmt = stmts[i];
+    std::vector<shared_ptr<struct Stmt>> sortedStmts = stmts; //sortStmts(stmts);
+    for (int i = 0; i < sortedStmts.size(); i++) {
+        shared_ptr<Stmt> stmt = sortedStmts[i];
         generateKami(stmt, depth);
         out << endl;
     }
@@ -736,7 +737,7 @@ void GenerateKami::generateKami(const shared_ptr<MethodExpr> &expr, int depth, i
     logstream << " " << expr->methodName << " at " << expr->sourcePos.toString() << endl;
 
     generateKami(expr->object, depth, precedence);
-    out << "." << expr->methodName << "\"";
+    out << " -- (* method *) \"" << expr->methodName << "\"";
 }
 
 void GenerateKami::generateKami(const shared_ptr<SubinterfaceExpr> &expr, int depth, int precedence) {
@@ -745,7 +746,7 @@ void GenerateKami::generateKami(const shared_ptr<SubinterfaceExpr> &expr, int de
     logstream << " " << expr->subinterfaceName << " at " << expr->sourcePos.toString() << endl;
 
     generateKami(expr->object, depth, precedence);
-    out << "." << expr->subinterfaceName << "\"";
+    out << " -- (* subinfc *) \"" << expr->subinterfaceName << "\"";
 }
 
 void GenerateKami::generateKami(const shared_ptr<VarExpr> &expr, int depth, int precedence) {
@@ -866,5 +867,11 @@ string GenerateKami::callStmtFunctionName(const shared_ptr<CallStmt> &callStmt)
     shared_ptr<Expr> function = callExpr->function;
     shared_ptr<VarExpr> varExpr = function->varExpr();
     return varExpr->name;
+}
+
+std::vector<shared_ptr<struct Stmt>> GenerateKami::sortStmts(vector<shared_ptr<struct Stmt>> stmts) {
+    Graph g(stmts.size());
+
+    return std::vector<shared_ptr<struct Stmt>>();
 }
 
