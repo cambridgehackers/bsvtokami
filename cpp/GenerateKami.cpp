@@ -477,7 +477,9 @@ void GenerateKami::generateKami(const shared_ptr<FunctionDefStmt> &functiondef, 
 }
 
 void GenerateKami::generateKami(const shared_ptr<IfStmt> &stmt, int depth) {
+    set<string> assignedVars = stmt->attrs().assignedVars;
     returnPending = "Retv";
+
     indent(out, depth);
     out << "If (";
     generateKami(stmt->condition, depth + 1);
@@ -485,16 +487,45 @@ void GenerateKami::generateKami(const shared_ptr<IfStmt> &stmt, int depth) {
 
     generateKami(stmt->thenStmt, depth + 1);
     out << endl;
+    if (assignedVars.size()) {
+        indent(out, depth + 1);
+        out << "LET retval <- STRUCT { ";
+        int i = 0;
+        for (auto it = assignedVars.cbegin(); it != assignedVars.cend(); ++it, i++) {
+            if (i > 0)
+                out << ", ";
+            out << " \"tpl_" << to_string(i) << "\" ::= #" << *it;
+        }
+        out << " } ;" << endl;
+        indent(out, depth + 1);
+        returnPending = "Ret #retval";
+    }
     if (returnPending.size()) {
         indent(out, depth + 1);
         out << returnPending << endl;
     }
+
     indent(out, depth);
     out << ") else (" << endl;
     if (stmt->elseStmt) {
         returnPending = "Retv";
 
         generateKami(stmt->elseStmt, depth + 1);
+
+        if (assignedVars.size()) {
+            indent(out, depth + 1);
+            out << "LET retval <- STRUCT { ";
+            int i = 0;
+            for (auto it = assignedVars.cbegin(); it != assignedVars.cend(); ++it, i++) {
+                if (i > 0)
+                    out << ", ";
+                out << " \"tpl_" << to_string(i) << "\" ::= #" << *it;
+            }
+            out << " } ;" << endl;
+            indent(out, depth + 1);
+            returnPending = "Ret #retval";
+        }
+
         if (returnPending.size()) {
             indent(out, depth + 1);
             out << returnPending << endl;
@@ -504,6 +535,11 @@ void GenerateKami::generateKami(const shared_ptr<IfStmt> &stmt, int depth) {
     out << endl;
     indent(out, depth);
     out << ") as retval ;" << endl;
+    int i = 0;
+    for (auto it = assignedVars.cbegin(); it != assignedVars.cend(); ++it, i++) {
+        indent(out, depth);
+        out << "LET " << *it << " <- (* assigned var *) #retval ! _ @. \"tpl_" << to_string(i) << "\" ;" << endl;
+    }
     returnPending = "Ret #retval";
 }
 
