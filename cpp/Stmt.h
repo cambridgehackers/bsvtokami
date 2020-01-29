@@ -96,6 +96,16 @@ class VarBindingStmt;
 
 class VarAssignStmt;
 
+class StmtAttrs {
+public:
+    set<string> boundVars;
+    set<string> assignedVars;
+    set<string> freeVars;
+};
+
+void uniteSet(set<string> &to, const set<string> &from);
+string to_string(const set<string> &s);
+
 class Stmt : public enable_shared_from_this<Stmt> {
 
 public:
@@ -106,6 +116,7 @@ public:
 
     virtual ~Stmt() {}
 
+    const StmtAttrs &attrs() { return attrs_; }
 
     virtual void prettyPrint(ostream &out, int depth = 0) = 0;
 
@@ -160,6 +171,8 @@ public:
     virtual shared_ptr<VarAssignStmt> varAssignStmt() { return shared_ptr<VarAssignStmt>(); };
 
     virtual shared_ptr<struct Stmt> rename(string prefix, shared_ptr<LexicalScope> &parentScope);
+
+    StmtAttrs attrs_;
 };
 
 class ImportStmt : public Stmt {

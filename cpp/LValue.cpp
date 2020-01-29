@@ -5,9 +5,12 @@
 #include <iostream>
 
 #include "LValue.h"
+#include "Stmt.h"
 
 VarLValue::VarLValue(const string &name)
 : LValue(VarLValueType), name(name) {
+    attrs_.boundVars.insert(name);
+    attrs_.freeVars.insert(name);
 }
 
 shared_ptr<VarLValue> VarLValue::create(const string &name) {
@@ -37,7 +40,9 @@ shared_ptr<struct LValue> VarLValue::rename(string prefix, shared_ptr<LexicalSco
 
 FieldLValue::FieldLValue(const shared_ptr<Expr> &obj, const string &field)
 : LValue(FieldLValueType), obj(obj), field(field) {
+    uniteSet(attrs_.assignedVars, obj->attrs().freeVars);
 
+    uniteSet(attrs_.freeVars, obj->attrs().freeVars);
 }
 
 FieldLValue::~FieldLValue() {}
@@ -61,7 +66,10 @@ shared_ptr<LValue> FieldLValue::create(shared_ptr<Expr> obj, string fieldname) {
 
 ArraySubLValue::ArraySubLValue(const shared_ptr<Expr> &array, const shared_ptr<Expr> &index)
 : LValue(ArraySubLValueType), array(array), index(index) {
+    uniteSet(attrs_.assignedVars, array->attrs().freeVars);
 
+    uniteSet(attrs_.freeVars, array->attrs().freeVars);
+    uniteSet(attrs_.freeVars, index->attrs().freeVars);
 }
 
 ArraySubLValue::~ArraySubLValue() {
@@ -89,6 +97,11 @@ shared_ptr<LValue> ArraySubLValue::create(shared_ptr<Expr> array, const shared_p
 
 RangeSelLValue::RangeSelLValue(const shared_ptr<Expr> &bitarray, const shared_ptr<Expr> &msb, const shared_ptr<Expr> &lsb)
 : LValue(RangeSelLValueType), bitarray(bitarray), msb(msb), lsb(lsb) {
+    uniteSet(attrs_.assignedVars, bitarray->attrs().freeVars);
+
+    uniteSet(attrs_.freeVars, bitarray->attrs().freeVars);
+    uniteSet(attrs_.freeVars, msb->attrs().freeVars);
+    uniteSet(attrs_.freeVars, lsb->attrs().freeVars);
 
 }
 

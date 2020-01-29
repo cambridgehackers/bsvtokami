@@ -10,6 +10,27 @@ void indent(ostream &s, int depth) {
         s << " ";
 }
 
+void uniteSet(set<string> &to, const set<string> &from) {
+    for (auto it = from.cbegin(); it != from.cend(); ++it) {
+        to.insert(*it);
+    }
+}
+
+string to_string(const set<string> &s) {
+    string str;
+    str += "set(" + to_string(s.size());
+    for (auto it = s.cbegin(); it != s.cend(); ++it)
+        str += " " + *it;
+    str += ")";
+    return str;
+}
+
+void attrUpdate(StmtAttrs &dst, const StmtAttrs &src) {
+    uniteSet(dst.freeVars, src.freeVars);
+    uniteSet(dst.boundVars, src.boundVars);
+    uniteSet(dst.assignedVars, src.assignedVars);
+}
+
 Stmt::Stmt(StmtType stmtType, const SourcePos &sourcePos)
         : stmtType(stmtType), sourcePos(sourcePos) {
 }
@@ -222,7 +243,11 @@ shared_ptr<Stmt> VarBindingStmt::rename(string prefix, shared_ptr<LexicalScope> 
 
 VarAssignStmt::VarAssignStmt(const shared_ptr<LValue> &lhs, const string &op, const shared_ptr<Expr> &rhs, const SourcePos &sourcePos)
         : Stmt(VarAssignStmtType, sourcePos), lhs(lhs), op(op), rhs(rhs) {
+    uniteSet(attrs_.assignedVars, lhs->attrs().assignedVars);
 
+    uniteSet(attrs_.freeVars, lhs->attrs().freeVars);
+    uniteSet(attrs_.freeVars, rhs->attrs().freeVars);
+    //cerr << "var assigned vars " << to_string(attrs_.boundVars) << " at " << sourcePos.toString() << endl;
 }
 
 void VarAssignStmt::prettyPrint(ostream &out, int depth)
@@ -462,7 +487,11 @@ shared_ptr<ModuleInstStmt> ModuleInstStmt::create(const string &name, const shar
 IfStmt::IfStmt(const shared_ptr<Expr> &condition, const shared_ptr<Stmt> &thenStmt,
                const shared_ptr<Stmt> &elseStmt, const SourcePos &sourcePos) : Stmt(IfStmtType, sourcePos),
                                                                                condition(condition), thenStmt(thenStmt),
-                                                                               elseStmt(elseStmt) {}
+                                                                               elseStmt(elseStmt) {
+    attrUpdate(attrs_, thenStmt->attrs());
+    if (elseStmt)
+        attrUpdate(attrs_, elseStmt->attrs());
+}
 
 IfStmt::~IfStmt() {
 
@@ -496,7 +525,11 @@ shared_ptr<struct Stmt> IfStmt::rename(string prefix, shared_ptr<LexicalScope> &
 }
 
 BlockStmt::BlockStmt(const std::vector<std::shared_ptr<Stmt>> &stmts, const SourcePos &sourcePos)
-        : Stmt(BlockStmtType, sourcePos), stmts(stmts) {}
+        : Stmt(BlockStmtType, sourcePos), stmts(stmts) {
+    for (int i = 0; i < stmts.size(); i++) {
+        attrUpdate(attrs_, stmts[i]->attrs());
+    }
+}
 
 BlockStmt::~BlockStmt() {}
 

@@ -580,7 +580,10 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
         shared_ptr<Stmt> elseStmt;
         if (ifstmt->stmt(1))
             elseStmt = generateAst(ifstmt->stmt(1));
-        return make_shared<IfStmt>(condition, thenStmt, elseStmt, sourcePos(ctx));
+        shared_ptr<IfStmt> ifStmt = make_shared<IfStmt>(condition, thenStmt, elseStmt, sourcePos(ctx));
+        logstream << "if stmt at " << ifStmt->sourcePos.toString() << endl;
+        logstream << "    assigned vars " << to_string(ifStmt->attrs().assignedVars) << endl;
+        return ifStmt;
     } else if (BSVParser::BeginendblockContext *block = ctx->beginendblock()) {
         vector<BSVParser::StmtContext *> stmts = block->stmt();
         vector<shared_ptr<Stmt>> ast_stmts;
@@ -681,7 +684,10 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::VarassignContext *varassign
     shared_ptr<Expr> rhs(expr(varassign->expression()));
     if (!rhs)
         logstream << "var binding unhandled rhs: " << varassign->expression()->getText() << endl;
-    return make_shared<VarAssignStmt>(lhs, op, rhs, sourcePos(varassign));
+    shared_ptr<Stmt> stmt = make_shared<VarAssignStmt>(lhs, op, rhs, sourcePos(varassign));
+    logstream << "var assign at " << stmt->sourcePos.toString() << endl;
+    logstream << "    assigned vars " << to_string(stmt->attrs().assignedVars) << endl;
+    return stmt;
 }
 
 shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ModuleinstContext *moduleinst) {

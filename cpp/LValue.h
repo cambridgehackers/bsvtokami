@@ -24,9 +24,18 @@ class ArraySubLValue;
 class FieldLValue;
 class VarLValue;
 
+class LValueAttrs {
+public:
+    set<string> boundVars;
+    set<string> assignedVars;
+    set<string> freeVars;
+};
+
 class LValue : public enable_shared_from_this<LValue> {
 public:
     const LValueType lvalueType;
+    LValueAttrs attrs_;
+    const LValueAttrs &attrs() { return attrs_; }
 public:
     LValue(LValueType lvalueType = InvalidLValueType) : lvalueType(lvalueType) {};
     virtual ~LValue() {}

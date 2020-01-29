@@ -34,6 +34,13 @@ enum ExprType {
     ValueofExprType
 };
 
+class ExprAttrs {
+public:
+    set<string> boundVars;
+    set<string> assignedVars;
+    set<string> freeVars;
+};
+
 class FieldExpr;
 
 class VarExpr;
@@ -73,6 +80,8 @@ public:
     const ExprType exprType;
     const shared_ptr<BSVType> bsvtype;
     const SourcePos sourcePos;
+    ExprAttrs attrs_;
+    const ExprAttrs &attrs() { return attrs_; }
 
     Expr(ExprType exprType, const SourcePos &sourcePos);
     Expr(ExprType exprType, const shared_ptr<BSVType> &bsvtype, const SourcePos &sourcePos);

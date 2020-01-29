@@ -1,3 +1,4 @@
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,6 +8,7 @@
 using namespace std;
 
 #include "Expr.h"
+#include "Stmt.h"
 
 Expr::Expr(ExprType exprType, const SourcePos &sourcePos)
         : exprType(exprType), sourcePos(sourcePos) {
@@ -27,6 +29,7 @@ shared_ptr<Expr> Expr::rename(string prefix, shared_ptr<LexicalScope> &scope) {
 
 VarExpr::VarExpr(const string &name, const shared_ptr<BSVType> &bsvtype, const SourcePos &sourcePos)
         : Expr(VarExprType, bsvtype, sourcePos), name(name), sourceName(name) {
+    attrs_.freeVars.insert(name);
 }
 
 VarExpr::~VarExpr() {
@@ -169,6 +172,7 @@ shared_ptr<MatchesExpr> MatchesExpr::create(const shared_ptr<Expr> &expr, const 
 
 FieldExpr::FieldExpr(const shared_ptr<Expr> &object, const std::string &fieldName, const shared_ptr<BSVType> &bsvtype, const SourcePos &sourcePos)
         : Expr(FieldExprType, bsvtype, sourcePos), object(object), fieldName(fieldName) {
+    uniteSet(attrs_.freeVars, object->attrs().freeVars);
 }
 
 FieldExpr::~FieldExpr() {

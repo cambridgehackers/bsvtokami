@@ -326,7 +326,8 @@ SimplifyAst::simplify(const shared_ptr<TypedefSynonymStmt> &stmt, vector<shared_
 void SimplifyAst::simplify(const shared_ptr<VarAssignStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
     shared_ptr<LValue> lhs = stmt->lhs;
     shared_ptr<Expr> simplifiedRhs = simplify(stmt->rhs, simplifiedStmts);
-    simplifiedStmts.push_back(make_shared<VarAssignStmt>(lhs, stmt->op, simplifiedRhs, stmt->sourcePos));
+    shared_ptr<VarAssignStmt> simplifiedStmt = make_shared<VarAssignStmt>(lhs, stmt->op, simplifiedRhs, stmt->sourcePos);
+    simplifiedStmts.push_back(simplifiedStmt);
 }
 
 void SimplifyAst::simplify(const shared_ptr<VarBindingStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
