@@ -26,9 +26,9 @@ class VarLValue;
 
 class LValueAttrs {
 public:
-    set<string> boundVars;
-    set<string> assignedVars;
-    set<string> freeVars;
+    map<string,shared_ptr<BSVType>> boundVars;
+    map<string,shared_ptr<BSVType>> assignedVars;
+    map<string,shared_ptr<BSVType>> freeVars;
 };
 
 class LValue : public enable_shared_from_this<LValue> {
@@ -53,8 +53,8 @@ public:
 class VarLValue : public LValue {
 public:
     const string name;
-    static shared_ptr<VarLValue> create(const string &name);
-    explicit VarLValue(const string &name);
+    const shared_ptr<BSVType> bsvtype;
+    explicit VarLValue(const string &name, const shared_ptr<BSVType> &bsvtype);
     ~VarLValue() override;
     void prettyPrint(ostream &out, int depth) override;
     shared_ptr<VarLValue> varLValue() override;

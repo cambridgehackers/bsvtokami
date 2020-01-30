@@ -29,7 +29,7 @@ shared_ptr<Expr> Expr::rename(string prefix, shared_ptr<LexicalScope> &scope) {
 
 VarExpr::VarExpr(const string &name, const shared_ptr<BSVType> &bsvtype, const SourcePos &sourcePos)
         : Expr(VarExprType, bsvtype, sourcePos), name(name), sourceName(name) {
-    attrs_.freeVars.insert(name);
+    attrs_.freeVars[name] = bsvtype;
 }
 
 VarExpr::~VarExpr() {

@@ -51,6 +51,8 @@ public:
 
     void generateKami(const shared_ptr<struct Stmt> &stmt, int depth);
 
+    void generateCoqType(ostream &ostr, const shared_ptr<BSVType> &bsvtype, int depth);
+
     void generateCoqType(const shared_ptr<BSVType> &bsvtype, int depth);
 
     void generateKami(const shared_ptr<BSVType> &stmt, int depth);
@@ -125,6 +127,7 @@ public:
 
     void generateKamiLHS(const shared_ptr<LValue> &lvalue);
 
+    string formatStructDecl(const map<string,shared_ptr<BSVType>> &assignedVars);
 };
 
 

@@ -2,6 +2,7 @@
 // Created by Jamey Hicks on 10/28/19.
 //
 
+#include <sstream>
 #include "GenerateKami.h"
 #include "TopologicalSort.h"
 
@@ -363,21 +364,25 @@ void GenerateKami::generateKami(const shared_ptr<Expr> &expr, int depth, int pre
 }
 
 void GenerateKami::generateCoqType(const shared_ptr<BSVType> &bsvtype, int depth) {
+    generateCoqType(out, bsvtype, depth);
+}
+
+void GenerateKami::generateCoqType(ostream &ostr, const shared_ptr<BSVType> &bsvtype, int depth) {
     if (bsvtype->params.size())
-        out << "(";
+        ostr << "(";
     auto it = coqTypeMapping.find(bsvtype->name);
     if (it != coqTypeMapping.cend())
-        out << it->second;
+        ostr << it->second;
     else
-        out << bsvtype->name;
+        ostr << bsvtype->name;
     if (bsvtype->params.size()) {
         for (int i = 0; i < bsvtype->params.size(); i++) {
-            out << " ";
-            generateCoqType(bsvtype->params[i], depth);
+            ostr << " ";
+            generateCoqType(ostr, bsvtype->params[i], depth);
         }
     }
     if (bsvtype->params.size())
-        out << ")";
+        ostr << ")";
 }
 
 void GenerateKami::generateKami(const shared_ptr<BSVType> &bsvtype, int depth) {
@@ -477,7 +482,7 @@ void GenerateKami::generateKami(const shared_ptr<FunctionDefStmt> &functiondef, 
 }
 
 void GenerateKami::generateKami(const shared_ptr<IfStmt> &stmt, int depth) {
-    set<string> assignedVars = stmt->attrs().assignedVars;
+    map<string,shared_ptr<BSVType>> assignedVars = stmt->attrs().assignedVars;
     returnPending = "Retv";
 
     indent(out, depth);
@@ -494,7 +499,7 @@ void GenerateKami::generateKami(const shared_ptr<IfStmt> &stmt, int depth) {
         for (auto it = assignedVars.cbegin(); it != assignedVars.cend(); ++it, i++) {
             if (i > 0)
                 out << ", ";
-            out << " \"tpl_" << to_string(i) << "\" ::= #" << *it;
+            out << " \"tpl_" << to_string(i) << "\" ::= #" << it->first;
         }
         out << " } ;" << endl;
         indent(out, depth + 1);
@@ -519,7 +524,7 @@ void GenerateKami::generateKami(const shared_ptr<IfStmt> &stmt, int depth) {
             for (auto it = assignedVars.cbegin(); it != assignedVars.cend(); ++it, i++) {
                 if (i > 0)
                     out << ", ";
-                out << " \"tpl_" << to_string(i) << "\" ::= #" << *it;
+                out << " \"tpl_" << to_string(i) << "\" ::= #" << it->first;
             }
             out << " } ;" << endl;
             indent(out, depth + 1);
@@ -535,10 +540,13 @@ void GenerateKami::generateKami(const shared_ptr<IfStmt> &stmt, int depth) {
     out << endl;
     indent(out, depth);
     out << ") as retval ;" << endl;
+    string structfields = formatStructDecl(assignedVars);
     int i = 0;
     for (auto it = assignedVars.cbegin(); it != assignedVars.cend(); ++it, i++) {
         indent(out, depth);
-        out << "LET " << *it << " <- (* assigned var *) #retval ! _ @. \"tpl_" << to_string(i) << "\" ;" << endl;
+        out << "LET " << it->first << ": ";
+        generateCoqType(it->second, depth);
+        out << " <- (* assigned var *) #retval ! " << structfields << " @. \"tpl_" << to_string(i) << "\" ;" << endl;
     }
     returnPending = "Ret #retval";
 }
@@ -948,5 +956,19 @@ void GenerateKami::generateKamiLHS(const shared_ptr<LValue> &lvalue) {
         default:
             assert(lvalue->lvalueType == VarLValueType);
     }
+}
+
+string GenerateKami::formatStructDecl(const map<string,shared_ptr<BSVType>> &assignedVars) {
+    ostringstream result;
+    result << "STRUCT { ";
+    int i = 0;
+    for (auto it = assignedVars.cbegin(); it != assignedVars.cend(); ++it, ++i) {
+        if (i > 0)
+            result << ", ";
+        result << "\"" << it->first << "\" :: ";
+        generateCoqType(result, it->second, 0);
+    }
+    result << " } ";
+    return result.str();
 }
 

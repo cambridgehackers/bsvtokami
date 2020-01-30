@@ -7,34 +7,30 @@
 #include "LValue.h"
 #include "Stmt.h"
 
-VarLValue::VarLValue(const string &name)
-: LValue(VarLValueType), name(name) {
-    attrs_.boundVars.insert(name);
-    attrs_.freeVars.insert(name);
-}
-
-shared_ptr<VarLValue> VarLValue::create(const string &name) {
-    return shared_ptr<VarLValue>(new VarLValue(name));
+VarLValue::VarLValue(const string &name, const shared_ptr<BSVType> &bsvtype)
+: LValue(VarLValueType), name(name), bsvtype(bsvtype) {
+    attrs_.boundVars[name] = bsvtype;
+    attrs_.freeVars[name] = bsvtype;
 }
 
 VarLValue::~VarLValue(){}
 
 void VarLValue::prettyPrint(ostream &out, int depth) {
-    cout << name;
+    cout << name << ": " << bsvtype->to_string();
 }
 
 shared_ptr<VarLValue> VarLValue::varLValue() {
     return static_pointer_cast<VarLValue, LValue>(shared_from_this());
 }
 
-shared_ptr<struct LValue> VarLValue::rename(string prefix, shared_ptr<LexicalScope> &scope)
+shared_ptr<LValue> VarLValue::rename(string prefix, shared_ptr<LexicalScope> &scope)
 {
     //FIXME:
     shared_ptr<Declaration> binding = scope->lookup(name);
     if (binding) {
-        return shared_ptr<struct LValue>(new VarLValue(binding->name));
+        return make_shared<VarLValue>(binding->name, binding->bsvtype);
     } else {
-        return shared_ptr<struct LValue>(new VarLValue(name));
+        return make_shared<VarLValue>(name, binding->bsvtype);
     }
 }
 

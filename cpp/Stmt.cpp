@@ -10,17 +10,17 @@ void indent(ostream &s, int depth) {
         s << " ";
 }
 
-void uniteSet(set<string> &to, const set<string> &from) {
+void uniteSet(map<string,shared_ptr<BSVType>> &to, const map<string,shared_ptr<BSVType>> &from) {
     for (auto it = from.cbegin(); it != from.cend(); ++it) {
-        to.insert(*it);
+        to[it->first] = it->second;
     }
 }
 
-string to_string(const set<string> &s) {
+string to_string(const map<string,shared_ptr<BSVType>> &s) {
     string str;
     str += "set(" + to_string(s.size());
     for (auto it = s.cbegin(); it != s.cend(); ++it)
-        str += " " + *it;
+        str += " " + it->first + "=" + it->second->to_string();
     str += ")";
     return str;
 }

@@ -73,7 +73,9 @@ std::shared_ptr<LValue> GenerateAst::lvalue(BSVParser::LvalueContext *lhs) {
             return make_shared<FieldLValue>(lhsLValue, lhs->lowerCaseIdentifier()->getText());
         }
     } else {
-        return make_shared<VarLValue>(lhs->lowerCaseIdentifier()->getText());
+        shared_ptr<BSVType> bsvtype = typeChecker->lookup(lhs->lowerCaseIdentifier());
+        shared_ptr<LValue> lvalue = make_shared<VarLValue>(lhs->lowerCaseIdentifier()->getText(), bsvtype);
+        return lvalue;
     }
 }
 

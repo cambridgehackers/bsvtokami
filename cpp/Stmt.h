@@ -98,13 +98,13 @@ class VarAssignStmt;
 
 class StmtAttrs {
 public:
-    set<string> boundVars;
-    set<string> assignedVars;
-    set<string> freeVars;
+    map<string,shared_ptr<BSVType>> boundVars;
+    map<string,shared_ptr<BSVType>> assignedVars;
+    map<string,shared_ptr<BSVType>> freeVars;
 };
 
-void uniteSet(set<string> &to, const set<string> &from);
-string to_string(const set<string> &s);
+void uniteSet(map<string,shared_ptr<BSVType>> &to, const map<string,shared_ptr<BSVType>> &from);
+string to_string(const map<string,shared_ptr<BSVType>> &s);
 
 class Stmt : public enable_shared_from_this<Stmt> {
 

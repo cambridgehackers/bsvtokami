@@ -36,9 +36,9 @@ enum ExprType {
 
 class ExprAttrs {
 public:
-    set<string> boundVars;
-    set<string> assignedVars;
-    set<string> freeVars;
+    map<string, shared_ptr<BSVType>> boundVars;
+    map<string, shared_ptr<BSVType>> assignedVars;
+    map<string, shared_ptr<BSVType>> freeVars;
 };
 
 class FieldExpr;
