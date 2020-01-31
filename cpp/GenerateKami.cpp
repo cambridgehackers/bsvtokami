@@ -747,7 +747,7 @@ void GenerateKami::generateKami(const shared_ptr<VarAssignStmt> &stmt, int depth
             generateKami(obj, depth);
             out << " ! ";
             generateCoqType(obj->bsvtype, depth + 1);
-            out << " @{ \"" << fieldLValue->field << "\" <- ";
+            out << " @. { \"" << fieldLValue->field << "\" <- ";
             generateKami(stmt->rhs, depth + 1);
             out << " } ; " << endl;
             break;
