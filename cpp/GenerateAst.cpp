@@ -109,8 +109,8 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::CaseexprdefaultitemContext *ctx) {
 
 std::shared_ptr<Expr> GenerateAst::expr(BSVParser::CondexprContext *ctx) {
     shared_ptr<Expr> condexpr(expr(ctx->pred));
-    shared_ptr<Expr> thenexpr(expr(ctx->expression(0)));
-    shared_ptr<Expr> elseexpr(expr(ctx->expression(1)));
+    shared_ptr<Expr> thenexpr(expr(ctx->expression(1)));
+    shared_ptr<Expr> elseexpr(expr(ctx->expression(2)));
     if (!condexpr || !thenexpr || !elseexpr) {
         logstream << "Funny cond expr: " << ctx->getText() << endl;
         logstream << (bool) condexpr << (bool) thenexpr << (bool) elseexpr << endl;
