@@ -414,6 +414,7 @@ public:
     shared_ptr<BSVType> bsvtype(BSVParser::ModuleprotoformalContext *ctx);
 
     static string sourceLocation(antlr4::ParserRuleContext *pContext);
+    static SourcePos sourcePos(antlr4::ParserRuleContext *pContext);
 
     z3::expr instantiateType(z3::func_decl type_decl, const z3::expr_vector &params);
 

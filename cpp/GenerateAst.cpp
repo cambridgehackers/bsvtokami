@@ -293,7 +293,7 @@ shared_ptr<PackageDefStmt> GenerateAst::generateAst(BSVParser::PackagedefContext
         }
         generateAst(stmts[i], package_stmts);
     }
-    return make_shared<PackageDefStmt>(packageName, package_stmts);
+    return make_shared<PackageDefStmt>(packageName, package_stmts, sourcePos(ctx));
 }
 
 void GenerateAst::generateAst(BSVParser::PackagestmtContext *ctx, vector<shared_ptr<Stmt>> &stmts) {
@@ -567,7 +567,7 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::StmtContext *ctx) {
                       << ctx->getText() << "*)" << endl;
             elementType = make_shared<BSVType>("Bit", make_shared<BSVType>("32", BSVType_Numeric, false));
         }
-        return make_shared<RegWriteStmt>(regName, elementType, rhs);
+        return make_shared<RegWriteStmt>(regName, elementType, rhs, sourcePos(ctx));
     } else if (BSVParser::VarbindingContext *varbinding = ctx->varbinding()) {
         return generateAst(varbinding);
     } else if (BSVParser::ActionbindingContext *actionbinding = ctx->actionbinding()) {

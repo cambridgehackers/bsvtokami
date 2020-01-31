@@ -678,6 +678,8 @@ void GenerateKami::generateKami(const shared_ptr<ReturnStmt> &stmt, int depth) {
 
 void GenerateKami::generateKami(const shared_ptr<TypedefEnumStmt> &stmt, int depth) {
     logstream << "typedef enum " << stmt->enumType->to_string() << endl;
+    indent(out, depth);
+    out << "(* Enum " << stmt->name << " at " << stmt->sourcePos.toString() << " *)" << endl;
     out << "Definition " << stmt->name << "'Fields" << " := (STRUCT {\"$TAG\" :: Bit 4 })%kami." << endl;
     out << "Definition " << stmt->name << " := Struct " << stmt->name << "'Fields" << "." << endl;
 

@@ -465,8 +465,8 @@ shared_ptr<Declaration> TypeChecker::lookup(const string &varname, const string 
         if (vardecl)
             currentContext->logstream << "found global vardecl " << varname << " unique " << vardecl->uniqueName
                                       << endl;
-        return vardecl;
     }
+    return vardecl;
 }
 
 shared_ptr<BSVType> TypeChecker::dereferenceType(const shared_ptr<BSVType> &bsvtype) {
@@ -513,6 +513,11 @@ string TypeChecker::sourceLocation(antlr4::ParserRuleContext *ctx) {
     string filename = start->getTokenSource()->getSourceName();
     size_t line = start->getLine();
     return filename + ":" + to_string(line);
+}
+
+SourcePos TypeChecker::sourcePos(antlr4::ParserRuleContext *ctx) {
+    antlr4::Token *start = ctx->getStart();
+    return SourcePos(start->getTokenSource()->getSourceName(), start->getLine(), start->getCharPositionInLine());
 }
 
 void TypeChecker::addDeclaration(BSVParser::PackagestmtContext *pkgstmt) {
@@ -565,7 +570,7 @@ void TypeChecker::addDeclaration(BSVParser::InterfacedeclContext *ctx) {
     interfaceType->prettyPrint(currentContext->logstream);
     currentContext->logstream << " arity " << arity << endl;
 
-    shared_ptr<InterfaceDeclaration> decl(new InterfaceDeclaration(currentContext->packageName, name, interfaceType));
+    shared_ptr<InterfaceDeclaration> decl(new InterfaceDeclaration(currentContext->packageName, name, interfaceType, sourcePos(ctx)));
     currentContext->typeDeclarationList.push_back(decl);
     currentContext->typeDeclaration[name] = decl;
     lexicalScope->bind(name, decl);
@@ -593,10 +598,13 @@ void TypeChecker::addDeclaration(BSVParser::FunctiondefContext *functiondef) {
 void TypeChecker::addDeclaration(BSVParser::FunctionprotoContext *functionproto) {
     string functionName = functionproto->name->getText();
     shared_ptr<BSVType> functionType = bsvtype(functionproto);
-    shared_ptr<FunctionDefinition> functionDecl = make_shared<FunctionDefinition>(currentContext->packageName, functionName, functionType, GlobalBindingType);
+    shared_ptr<FunctionDefinition> functionDecl = make_shared<FunctionDefinition>(currentContext->packageName,
+                                                                                  functionName, functionType,
+                                                                                  GlobalBindingType,
+                                                                                  sourcePos(functionproto));
     lexicalScope->bind(functionName, functionDecl);
-    currentContext->logstream << "addDeclaration function proto " << functionName << " at " << sourceLocation(functionproto) << endl;
-
+    currentContext->logstream << "addDeclaration function proto " << functionName << " at "
+                              << sourceLocation(functionproto) << endl;
 }
 
 void TypeChecker::addDeclaration(BSVParser::ModuledefContext *module) {
@@ -608,7 +616,7 @@ void TypeChecker::addDeclaration(BSVParser::ModuleprotoContext *moduleproto) {
     string moduleName = moduleproto->name->getText();
     currentContext->logstream << "add declaration module proto " << moduleName << endl;
     shared_ptr<BSVType> moduleType = bsvtype(moduleproto);
-    lexicalScope->bind(moduleName, make_shared<ModuleDefinition>(currentContext->packageName, moduleName, moduleType));
+    lexicalScope->bind(moduleName, make_shared<ModuleDefinition>(currentContext->packageName, moduleName, moduleType, sourcePos(moduleproto)));
 }
 
 void TypeChecker::addDeclaration(BSVParser::OverloadeddeclContext *overloadeddecl) {
@@ -639,7 +647,7 @@ void TypeChecker::addDeclaration(BSVParser::TypedefenumContext *ctx) {
     BSVParser::UpperCaseIdentifierContext *id = ctx->upperCaseIdentifier();
     string name(id->getText());
     shared_ptr<BSVType> bsvtype(new BSVType(name));
-    shared_ptr<EnumDeclaration> decl(new EnumDeclaration(currentContext->packageName, name, bsvtype));
+    shared_ptr<EnumDeclaration> decl(new EnumDeclaration(currentContext->packageName, name, bsvtype, sourcePos(ctx)));
     parentDecl = decl;
     lexicalScope->bind(name, decl);
 
@@ -660,7 +668,7 @@ void TypeChecker::addDeclaration(BSVParser::TypedefstructContext *structdef) {
     shared_ptr<BSVType> typedeftype(bsvtype(structdef->typedeftype()));
     string name = typedeftype->name;
     currentContext->logstream << "visit typedef struct " << name << endl;
-    shared_ptr<StructDeclaration> structDecl = make_shared<StructDeclaration>(currentContext->packageName, name, typedeftype);
+    shared_ptr<StructDeclaration> structDecl = make_shared<StructDeclaration>(currentContext->packageName, name, typedeftype, sourcePos(structdef));
     for (int i = 0; structdef->structmember(i); i++) {
         shared_ptr<Declaration> subdecl = visit(structdef->structmember(i));
         structDecl->members.push_back(subdecl);
@@ -675,7 +683,7 @@ void TypeChecker::addDeclaration(BSVParser::TypedefsynonymContext *synonymdef) {
     shared_ptr<BSVType> typedeftype = bsvtype(synonymdef->typedeftype());
     currentContext->logstream << "visit typedef synonym " << typedeftype->name << endl;
     shared_ptr<TypeSynonymDeclaration> synonymDecl = make_shared<TypeSynonymDeclaration>(currentContext->packageName, typedeftype->name,
-                                                                                         lhstype, typedeftype);
+                                                                                         lhstype, typedeftype, sourcePos(synonymdef));
     currentContext->typeDeclaration[typedeftype->name] = synonymDecl;
     currentContext->typeDeclarationList.push_back(synonymDecl);
     lexicalScope->bind(typedeftype->name, synonymDecl);
@@ -684,7 +692,7 @@ void TypeChecker::addDeclaration(BSVParser::TypedefsynonymContext *synonymdef) {
 void TypeChecker::addDeclaration(BSVParser::TypedeftaggedunionContext *uniondef) {
     shared_ptr<BSVType> typedeftype(bsvtype(uniondef->typedeftype()));
     string name = typedeftype->name;
-    shared_ptr<UnionDeclaration> unionDecl(new UnionDeclaration(name, typedeftype));
+    shared_ptr<UnionDeclaration> unionDecl =  make_shared<UnionDeclaration>(name, typedeftype, sourcePos(uniondef));
     currentContext->logstream << "add declaration typedef union " << name << endl;
     for (int i = 0; uniondef->unionmember(i); i++) {
         shared_ptr<Declaration> subdecl = visit(uniondef->unionmember(i));
@@ -834,7 +842,7 @@ antlrcpp::Any TypeChecker::visitMethodproto(BSVParser::MethodprotoContext *ctx) 
         methodType->prettyPrint(currentContext->logstream);
     }
     currentContext->logstream << endl;
-    return (Declaration *) new MethodDeclaration(currentContext->packageName, ctx->name->getText(), methodType);
+    return (Declaration *) new MethodDeclaration(currentContext->packageName, ctx->name->getText(), methodType, sourcePos(ctx));
 }
 
 antlrcpp::Any TypeChecker::visitMethodprotoformals(BSVParser::MethodprotoformalsContext *ctx) {
@@ -867,7 +875,7 @@ antlrcpp::Any TypeChecker::visitSubinterfacedecl(BSVParser::SubinterfacedeclCont
     currentContext->logstream << "visit subinterfacedecl " << ctx->getText() << endl;
     string name(ctx->lowerCaseIdentifier()->getText());
     shared_ptr<BSVType> subinterfaceType(bsvtype(ctx->bsvtype()));
-    Declaration *subinterfaceDecl = new InterfaceDeclaration(currentContext->packageName, name, subinterfaceType);
+    Declaration *subinterfaceDecl = new InterfaceDeclaration(currentContext->packageName, name, subinterfaceType, sourcePos(ctx));
     return subinterfaceDecl;
 }
 
@@ -972,8 +980,8 @@ antlrcpp::Any TypeChecker::visitVarbinding(BSVParser::VarbindingContext *ctx) {
         string varName = varinit->var->getText();
         shared_ptr<BSVType> varType = (ctx->t ? bsvtype(ctx->t) : make_shared<BSVType>());
         shared_ptr<Declaration> varDecl = (!lexicalScope->isGlobal()
-                                           ? make_shared<Declaration>(currentContext->packageName, varName, varType, bindingType)
-                                           : make_shared<FunctionDefinition>(string(), varName, varType));
+                                           ? make_shared<Declaration>(currentContext->packageName, varName, varType, bindingType, sourcePos(ctx))
+                                           : make_shared<FunctionDefinition>(string(), varName, varType, bindingType, sourcePos(ctx)));
         if (lexicalScope->isGlobal()) {
             currentContext->logstream << "visitVarBinding " << varName << " at " << sourceLocation(varinit) << endl;
         }
@@ -1084,7 +1092,7 @@ antlrcpp::Any TypeChecker::visitModuledef(BSVParser::ModuledefContext *ctx) {
     currentContext->logstream << endl;
 
     // declare the module in the global scope
-    shared_ptr<ModuleDefinition> moduleDefinition = make_shared<ModuleDefinition>(currentContext->packageName, module_name, moduleType);
+    shared_ptr<ModuleDefinition> moduleDefinition = make_shared<ModuleDefinition>(currentContext->packageName, module_name, moduleType, sourcePos(ctx));
     currentContext->declaration[module_name] = moduleDefinition;
     currentContext->declarationList.push_back(moduleDefinition);
     lexicalScope->bind(module_name, moduleDefinition);
@@ -1220,7 +1228,7 @@ antlrcpp::Any TypeChecker::visitMethoddef(BSVParser::MethoddefContext *ctx) {
 
     actionContext = false;
     popScope();
-    return new MethodDefinition(ctx->name->getText(), methodType);
+    return new MethodDefinition(ctx->name->getText(), methodType, sourcePos(ctx));
 }
 
 antlrcpp::Any TypeChecker::visitMethodformals(BSVParser::MethodformalsContext *ctx) {
@@ -1302,7 +1310,9 @@ antlrcpp::Any TypeChecker::visitFunctiondef(BSVParser::FunctiondefContext *ctx) 
     bool wasActionContext = actionContext;
     string functionName = ctx->functionproto()->name->getText();
     string packageName = lexicalScope->isGlobal() ? currentContext->packageName : string();
-    lexicalScope->bind(functionName, make_shared<FunctionDefinition>(packageName, functionName, bsvtype(ctx->functionproto())));
+    lexicalScope->bind(functionName,
+                       make_shared<FunctionDefinition>(packageName, functionName, bsvtype(ctx->functionproto()),
+                                                       LocalBindingType, sourcePos(ctx)));
 
     pushScope(functionName);
     actionContext = true;

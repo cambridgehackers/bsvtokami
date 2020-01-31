@@ -33,6 +33,7 @@ void attrUpdate(StmtAttrs &dst, const StmtAttrs &src) {
 
 Stmt::Stmt(StmtType stmtType, const SourcePos &sourcePos)
         : stmtType(stmtType), sourcePos(sourcePos) {
+    //assert(sourcePos.sourceName.size() > 0);
 }
 
 shared_ptr<Stmt> Stmt::rename(string prefix, shared_ptr<LexicalScope> &scope) {
