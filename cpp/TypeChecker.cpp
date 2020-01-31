@@ -2063,6 +2063,18 @@ antlrcpp::Any TypeChecker::visitTaggedunionexpr(BSVParser::TaggedunionexprContex
     string exprname(freshString(tagname));
     z3::expr exprsym = constant(exprname, typeSort);
 
+    if (ctx->exprprimary()) {
+        z3::expr expr = visit(ctx->exprprimary());
+    } else {
+        BSVParser::MemberbindsContext *memberbinds = ctx->memberbinds();
+        if (memberbinds) {
+            for (int i = 0; memberbinds->memberbind(i); ++i) {
+                BSVParser::MemberbindContext *mb = memberbinds->memberbind(i);
+                visit(mb);
+            }
+        }
+    }
+
     vector<z3::expr> exprs;
     for (auto it = currentContext->enumtag.find(tagname); it != currentContext->enumtag.end() && it->first == tagname; ++it) {
         shared_ptr<Declaration> decl(it->second);
@@ -2160,7 +2172,9 @@ antlrcpp::Any TypeChecker::visitMemberbinds(BSVParser::MemberbindsContext *ctx) 
 }
 
 antlrcpp::Any TypeChecker::visitMemberbind(BSVParser::MemberbindContext *ctx) {
-    return visitChildren(ctx);
+    z3::expr expr = visit(ctx->expression());
+    insertExpr(ctx, expr);
+    return expr;
 }
 
 antlrcpp::Any TypeChecker::visitInterfacestmt(BSVParser::InterfacestmtContext *ctx) {
