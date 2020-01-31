@@ -171,7 +171,9 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExprprimaryContext *ctx) {
     } else if (BSVParser::IntliteralContext *intliteral = dynamic_cast<BSVParser::IntliteralContext *>(ctx)) {
         return make_shared<IntConst>(intliteral->getText(), sourcePos(ctx));
     } else if (BSVParser::StringliteralContext *stringliteral = dynamic_cast<BSVParser::StringliteralContext *>(ctx)) {
-        return make_shared<StringConst>(stringliteral->getText(), sourcePos(ctx));
+        string quotedString = stringliteral->getText();
+        string unquotedString = quotedString.substr(1, quotedString.size() - 2);
+        return make_shared<StringConst>(unquotedString, sourcePos(ctx));
     } else if (BSVParser::ValueofexprContext *valueofexpr = dynamic_cast<BSVParser::ValueofexprContext *>(ctx)) {
         shared_ptr<BSVType> bsvtype = typeChecker->lookup(valueofexpr->bsvtype());
         return make_shared<ValueofExpr>(bsvtype, sourcePos(ctx));
