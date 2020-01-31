@@ -814,7 +814,11 @@ void GenerateKami::generateKami(const shared_ptr<SubinterfaceExpr> &expr, int de
 }
 
 void GenerateKami::generateKami(const shared_ptr<VarExpr> &expr, int depth, int precedence) {
-    out << "#" << expr->name;
+    if (expr->name == "Undefined") {
+        out << "$$Default";
+    } else {
+        out << "#" << expr->name;
+    }
 }
 
 void GenerateKami::generateKami(const shared_ptr<CallExpr> &expr, int depth, int precedence) {
