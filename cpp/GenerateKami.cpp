@@ -346,9 +346,7 @@ void GenerateKami::generateKami(const shared_ptr<Expr> &expr, int depth, int pre
             out << " }";
             break;
         case StringConstType:
-            out << "Unimplemented " << expr->exprType << " { ";
-            expr->prettyPrint(out, depth);
-            out << " }";
+            out << "\"" << expr->stringConst()->repr << "\"";
             break;
         case InterfaceExprType:
             out << "Unimplemented " << expr->exprType << " { ";
