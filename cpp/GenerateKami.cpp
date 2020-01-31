@@ -678,9 +678,11 @@ void GenerateKami::generateKami(const shared_ptr<ReturnStmt> &stmt, int depth) {
 
 void GenerateKami::generateKami(const shared_ptr<TypedefEnumStmt> &stmt, int depth) {
     logstream << "typedef enum " << stmt->enumType->to_string() << endl;
-    out << "Definition " << stmt->name << " :=  STRUCT {\"$TAG\" :: Bit 4 }." << endl;
+    out << "Definition " << stmt->name << "'Fields" << " := (STRUCT {\"$TAG\" :: Bit 4 })%kami." << endl;
+    out << "Definition " << stmt->name << " := Struct " << stmt->name << "'Fields" << "." << endl;
+
     for (int i = 0; i < stmt->members.size(); i++) {
-        out << "Definition " << stmt->members[i] << " := " << i << "." << endl;
+        out << "Notation \"'" << stmt->members[i] << "'\" := (STRUCT { \"$TAG\" ::= " << i << "})%init ." << endl;
     }
 }
 
@@ -688,17 +690,18 @@ void GenerateKami::generateKami(const shared_ptr<TypedefStructStmt> &stmt, int d
     logstream << "typedef struct " << stmt->structType->to_string() << endl;
 
     indent(out, depth);
-    out << "Notation \"'";
-    generateKami(stmt->structType, depth + 1);
-    out << "'\" := (Struct (STRUCT {";
+    out << "(* Struct " << stmt->name << " at " << stmt->sourcePos.toString() << " *)" << endl;
+    indent(out, depth);
+    out << "Definition " << stmt->structType->name << "'Fields := (STRUCT {";
     for (int i = 0; i < stmt->members.size(); i++) {
         if (i > 0)
             out << ";";
         out << " \"" << stmt->members[i] << "\" :: ";
         generateKami(stmt->memberTypes[i], depth + 1);
     }
-    out << "})) (at level 80)";
-    out << ".";
+    out << "})%kami";
+    out << "." << endl;
+    out << "Definition " << stmt->structType->name << " := Struct " << stmt->structType->name << "'Fields ." << endl;
     out << endl;
 }
 
