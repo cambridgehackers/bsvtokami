@@ -37,12 +37,12 @@ void GenerateKami::open(const string &filename) {
             "Require Import Kami.Decomposition Kami.Notations Kami.Tactics.",
             "Require Import Kami.PrimFifo.",
             "Require Import Init.Nat.",
+            "Require Import Bsvtokami."
             "",
             "Require Import Ex.MemTypes.",
             "",
             "Set Implicit Arguments.",
-            "Definition Bit := word.",
-            "Definition Int := word.",
+            "Definition Int := Bit.",
             "Open Scope string.",
             ""
     };
