@@ -2041,12 +2041,16 @@ antlrcpp::Any TypeChecker::visitSyscallexpr(BSVParser::SyscallexprContext *ctx) 
     currentContext->logstream << "visit syscall at " << sourceLocation(ctx) << endl;
     currentContext->logstream << "      syscall   " << ctx->getText() << endl;
     visitChildren(ctx);
-    return instantiateType("Void");
+    z3::expr expr = freshConstant("syscall", typeSort);
+    insertExpr(ctx, expr);
+    return expr;
 }
 
 antlrcpp::Any TypeChecker::visitValueofexpr(BSVParser::ValueofexprContext *ctx) {
     visit(ctx->bsvtype());
-    return instantiateType("Integer");
+    z3::expr expr = instantiateType("Integer");
+    insertExpr(ctx, expr);
+    return expr;
 }
 
 antlrcpp::Any TypeChecker::visitTaggedunionexpr(BSVParser::TaggedunionexprContext *ctx) {
