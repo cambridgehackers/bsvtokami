@@ -1734,7 +1734,9 @@ antlrcpp::Any TypeChecker::visitVarexpr(BSVParser::VarexprContext *ctx) {
                 derefType = freshType(derefType);
                 currentContext->logstream << "global " << varname << " freshType " << derefType->to_string() << endl;
             }
-            return bsvTypeToExpr(derefType);
+            z3::expr varExpr = bsvTypeToExpr(derefType);
+            insertExpr(ctx, varExpr);
+            return varExpr;
         }
     }
 
@@ -1783,7 +1785,9 @@ antlrcpp::Any TypeChecker::visitBlockexpr(BSVParser::BlockexprContext *ctx) {
 }
 
 antlrcpp::Any TypeChecker::visitStringliteral(BSVParser::StringliteralContext *ctx) {
-    return instantiateType("String");
+    z3::expr expr = instantiateType("String");
+    insertExpr(ctx, expr);
+    return expr;
 }
 
 antlrcpp::Any TypeChecker::visitIntliteral(BSVParser::IntliteralContext *ctx) {
@@ -1810,7 +1814,9 @@ antlrcpp::Any TypeChecker::visitIntliteral(BSVParser::IntliteralContext *ctx) {
 }
 
 antlrcpp::Any TypeChecker::visitRealliteral(BSVParser::RealliteralContext *ctx) {
-    return instantiateType("Real");
+    z3::expr expr = instantiateType("Real");
+    insertExpr(ctx, expr);
+    return expr;
 }
 
 antlrcpp::Any TypeChecker::visitCastexpr(BSVParser::CastexprContext *ctx) {
@@ -1819,6 +1825,7 @@ antlrcpp::Any TypeChecker::visitCastexpr(BSVParser::CastexprContext *ctx) {
     z3::expr expr = visit(ctx->exprprimary());
     //addConstraint(typeExpr == expr, "typeassertion$trk", ctx);
     currentContext->logstream << "cast expr " << ctx->getText() << " at " << sourceLocation(ctx) << endl;
+    insertExpr(ctx, typeExpr);
     return typeExpr;
 }
 
@@ -1828,6 +1835,7 @@ antlrcpp::Any TypeChecker::visitTypeassertionexpr(BSVParser::TypeassertionexprCo
     z3::expr expr = visit(ctx->expression(0));
     assert(ctx->expression(1) == nullptr);
     addConstraint(typeExpr == expr, "typeassertion$trk", ctx);
+    insertExpr(ctx, typeExpr);
     return typeExpr;
 }
 
@@ -1852,7 +1860,9 @@ antlrcpp::Any TypeChecker::visitClockedbyexpr(BSVParser::ClockedbyexprContext *c
 
 
 antlrcpp::Any TypeChecker::visitActionvalueblockexpr(BSVParser::ActionvalueblockexprContext *ctx) {
-    return visit(ctx->actionvalueblock());
+    z3::expr expr = visit(ctx->actionvalueblock());
+    insertExpr(ctx, expr);
+    return expr;
 }
 
 antlrcpp::Any TypeChecker::visitFieldexpr(BSVParser::FieldexprContext *ctx) {
@@ -1969,7 +1979,9 @@ antlrcpp::Any TypeChecker::visitFieldexpr(BSVParser::FieldexprContext *ctx) {
 }
 
 antlrcpp::Any TypeChecker::visitParenexpr(BSVParser::ParenexprContext *ctx) {
-    return visit(ctx->expression());
+    z3::expr parenExpr = visit(ctx->expression());
+    insertExpr(ctx, parenExpr);
+    return parenExpr;
 }
 
 shared_ptr<BSVType> TypeChecker::resolveInterfaceTag(shared_ptr<BSVType> interfaceTypeOrTag) {
@@ -1993,6 +2005,7 @@ antlrcpp::Any TypeChecker::visitInterfaceexpr(BSVParser::InterfaceexprContext *c
     for (int i = 0; ctx->interfacestmt(i); i++) {
         visit(ctx->interfacestmt(i));
     }
+    insertExpr(ctx, interfaceExpr);
     return interfaceExpr;
 }
 
@@ -2020,6 +2033,7 @@ antlrcpp::Any TypeChecker::visitCallexpr(BSVParser::CallexprContext *ctx) {
     z3::expr result_expr = instantiateType(constructorName, arg_exprs);
     currentContext->logstream << "   constraint " << (result_expr == fcn_expr) << endl;
     addConstraint(result_expr == fcn_expr, ctx->fcn->getText(), ctx);
+    insertExpr(ctx, instance_expr);
     return instance_expr;
 }
 
