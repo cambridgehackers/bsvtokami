@@ -398,8 +398,8 @@ public:
 };
 
 class ValueofExpr : public Expr {
-    shared_ptr<BSVType> argtype;
 public:
+    const shared_ptr<BSVType> argtype;
 
     ValueofExpr(const shared_ptr<BSVType> argtype, const SourcePos &sourcePos = SourcePos());
 
