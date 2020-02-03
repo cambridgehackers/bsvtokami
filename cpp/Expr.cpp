@@ -428,7 +428,7 @@ ValueofExpr::ValueofExpr(const shared_ptr<BSVType> argtype, const SourcePos &sou
 ValueofExpr::~ValueofExpr() {}
 
 void ValueofExpr::prettyPrint(ostream &out, int depth) {
-    assert(0);
+    out << "(ValueOf " << argtype->to_string() << " )";
 }
 
 shared_ptr<ValueofExpr> ValueofExpr::valueofExpr() { return static_pointer_cast<ValueofExpr, Expr>(shared_from_this()); }
