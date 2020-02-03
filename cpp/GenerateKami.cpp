@@ -353,11 +353,18 @@ void GenerateKami::generateKami(const shared_ptr<Expr> &expr, int depth, int pre
             expr->prettyPrint(out, depth);
             out << " }";
             break;
-        case ValueofExprType:
-            out << "Unimplemented " << expr->exprType << " { ";
-            expr->prettyPrint(out, depth);
-            out << " }";
+        case ValueofExprType: {
+            shared_ptr<ValueofExpr> valueof = expr->valueofExpr();
+            shared_ptr<BSVType> argtype = valueof->argtype;
+            if (argtype->name == "Numeric") {
+                out << argtype->params[0]->to_string();
+            } else {
+                out << "Unimplemented " << expr->exprType << " { ";
+                expr->prettyPrint(out, depth);
+                out << " }";
+            }
             break;
+        }
     }
 }
 
@@ -454,6 +461,8 @@ void GenerateKami::generateKami(const shared_ptr<ExprStmt> &stmt, int depth) {
 
 
 void GenerateKami::generateKami(const shared_ptr<FunctionDefStmt> &functiondef, int depth) {
+    indent(out, depth);
+    out << "(* function def " << functiondef->name << " at " << functiondef->sourcePos.toString() << " *)" << endl;
     returnPending = "Retv";
     indent(out, depth);
     shared_ptr<BSVType> returnType = make_shared<BSVType>("Unknown");
@@ -709,6 +718,8 @@ void GenerateKami::generateKami(const shared_ptr<TypedefStructStmt> &stmt, int d
 
 void GenerateKami::generateKami(const shared_ptr<TypedefSynonymStmt> &stmt, int depth) {
     indent(out, depth);
+    out << "(* typedef synonym " << stmt->type->to_string() << " at " << stmt->sourcePos.toString() << " *)" << endl;
+    indent(out, depth);
     out << "Definition ";
     generateKami(stmt->typedeftype, depth + 1);
     out << " := ";
@@ -768,8 +779,8 @@ void GenerateKami::generateKami(const shared_ptr<VarAssignStmt> &stmt, int depth
 }
 void GenerateKami::generateKami(const shared_ptr<VarBindingStmt> &stmt, int depth) {
     indent(out, depth);
-    out << "(* varbinding " << depth << "*) ";
     if (actionContext) {
+        out << "(* varbinding *) ";
         out << "LET " << stmt->name;
         if (stmt->bsvtype) {
             out << " : ";
@@ -780,6 +791,19 @@ void GenerateKami::generateKami(const shared_ptr<VarBindingStmt> &stmt, int dept
             generateKami(stmt->rhs, depth + 1);
         }
         out << " ;";
+    } else {
+        out << "(* varbinding " << stmt->sourcePos.toString() << "*) ";
+        indent(out, depth);
+        out << "Definition " << stmt->name;
+        if (stmt->bsvtype) {
+            out << " : ";
+            generateKami(stmt->bsvtype, depth);
+        }
+        if (stmt->rhs) {
+            out << " := ";
+            generateKami(stmt->rhs, depth + 1);
+        }
+        out << " .";
     }
 }
 
