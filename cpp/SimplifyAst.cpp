@@ -464,9 +464,9 @@ shared_ptr<Expr> SimplifyAst::simplify(const shared_ptr<Expr> &expr, vector<shar
             shared_ptr<InterfaceExpr> simplifiedExpr = make_shared<InterfaceExpr>(interfaceExpr->bsvtype, stmts, interfaceExpr->sourcePos);
             return simplifiedExpr;
         }
-        case ValueofExprType:
-            assert(expr->exprType != ValueofExprType);
+        case ValueofExprType: {
             return expr;
+        }
     }
     return expr;
 }
