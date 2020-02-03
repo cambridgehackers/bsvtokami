@@ -1001,6 +1001,32 @@ antlrcpp::Any TypeChecker::visitVarbinding(BSVParser::VarbindingContext *ctx) {
         }
     }
     if (lexicalScope->isGlobal()) {
+        // do the solver thing here
+        z3::check_result checked = solver.check();
+        currentContext->logstream << "  Type checking varbinding " << ctx->varinit(0)->var->getText() << ": " << check_result_name[checked] << endl;
+        currentContext->logstream << solver << endl;
+        if (checked == z3::sat) {
+            z3::model mod = solver.get_model();
+            currentContext->logstream << "model: " << mod << endl;
+            currentContext->logstream << exprs.size() << " exprs" << endl;
+            for (auto it = exprs.cbegin(); it != exprs.cend(); ++it) {
+                z3::expr e = it->second;
+                try {
+                    z3::expr v = mod.eval(e, true);
+                    currentContext->logstream << e << " evaluates to " << v << " for " << it->first->getText() << " at "
+                                              << sourceLocation(it->first) << endl;
+                    exprTypes[it->first] = bsvtype(v, mod);
+                } catch (const exception &e) {
+                    currentContext->logstream << "exception " << e.what() << " on expr: " << it->second << " @"
+                                              << it->first->getRuleIndex()
+                                              << " at " << sourceLocation(it->first) << endl;
+                }
+            }
+        } else {
+            z3::expr_vector unsat_core = solver.unsat_core();
+            currentContext->logstream << "unsat_core " << unsat_core << endl;
+            currentContext->logstream << "unsat_core.size " << unsat_core.size() << endl;
+        }
         solver.pop();
     }
     return nullptr;
@@ -2047,7 +2073,9 @@ antlrcpp::Any TypeChecker::visitSyscallexpr(BSVParser::SyscallexprContext *ctx) 
 }
 
 antlrcpp::Any TypeChecker::visitValueofexpr(BSVParser::ValueofexprContext *ctx) {
-    visit(ctx->bsvtype());
+    z3::expr subexpr = visit(ctx->bsvtype());
+    z3::expr constraint = (freshConstant("valueof", typeSort) == subexpr);
+    currentContext->logstream << "valueof " << constraint << endl;
     z3::expr expr = instantiateType("Integer");
     insertExpr(ctx, expr);
     return expr;
