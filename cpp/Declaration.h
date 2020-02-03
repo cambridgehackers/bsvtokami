@@ -116,7 +116,7 @@ public:
 class FunctionDefinition : public Declaration {
 public:
     FunctionDefinition(const std::string &package, const std::string &name, std::shared_ptr<BSVType> bsvtype, const BindingType bt, SourcePos sourcePos)
-    : Declaration(package, name, bsvtype, bt) {};
+    : Declaration(package, name, bsvtype, bt, sourcePos) {};
     shared_ptr<FunctionDefinition> functionDefinition() override { return static_pointer_cast<FunctionDefinition, Declaration>(shared_from_this()); }
 };
 
