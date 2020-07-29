@@ -2,6 +2,7 @@
 // Created by Jamey Hicks on 10/28/19.
 //
 
+#include <assert.h>
 #include <sstream>
 #include "GenerateKami.h"
 #include "TopologicalSort.h"
