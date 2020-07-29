@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string>
+#include <string.h>
 #include <sys/stat.h>
 
 //#include <boost/filesystem.hpp>
@@ -50,7 +51,8 @@ struct BSVOptions {
 
 int processBSVFile(const string &inputFileName, shared_ptr<TypeChecker> typeChecker, const BSVOptions options) {
     char buffer[4096];
-    string packageName(::basename_r(inputFileName.c_str(), buffer));
+    strncpy(buffer, inputFileName.c_str(), sizeof(buffer));
+    string packageName(::basename(buffer));
     packageName = packageName.substr(0, packageName.size() - 4);
     cerr << "processBSVFile package " << packageName << " filename " << inputFileName << endl;
     BSVPreprocessor preprocessor(inputFileName);
@@ -92,7 +94,8 @@ int processBSVFile(const string &inputFileName, shared_ptr<TypeChecker> typeChec
 
             string koikaFileName("koika/");
             char buffer[4096];
-            koikaFileName += string(::basename_r(inputFileName.c_str(), buffer));
+	    strncpy(buffer, inputFileName.c_str(), sizeof(buffer));
+            koikaFileName += string(::basename(buffer));
             koikaFileName += string(".koika");
 
             GenerateKoika *generateKoika = new GenerateKoika();
@@ -179,7 +182,8 @@ int main(int argc, char *const argv[]) {
     for (int i = optind; i < argc; i++) {
         string inputFileName(argv[i]);
         char buffer[4096];
-        string input_basename(::basename_r(inputFileName.c_str(), buffer));
+	strncpy(buffer, inputFileName.c_str(), sizeof(buffer));
+        string input_basename(::basename(buffer));
         long dotpos = input_basename.find_first_of('.');
         string packageName = input_basename.substr(0, dotpos);
         std::cerr << "Parsing file -1- " << inputFileName << " package " << packageName << std::endl;
