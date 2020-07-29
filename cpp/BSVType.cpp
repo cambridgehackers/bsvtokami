@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <iostream>
 #include <map>
 #include <set>

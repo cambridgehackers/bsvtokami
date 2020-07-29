@@ -2,6 +2,7 @@
 // Created by Jamey Hicks on 1/27/20.
 //
 
+#include <assert.h>
 #include "AstVisitor.h"
 
 void AstVisitor::visit(const shared_ptr<Stmt> &stmt) {

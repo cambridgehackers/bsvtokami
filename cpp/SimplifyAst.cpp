@@ -2,6 +2,7 @@
 // Created by Jamey Hicks on 11/13/19.
 //
 
+#include <assert.h>
 #include "SimplifyAst.h"
 
 void
