@@ -167,7 +167,7 @@ typelist :
     ;
 overloadeddecl :
     attributeinstance*
-    ( functionproto ';'
+    ( functionproto ('=' defaultdef=expression)? ';'
     | moduleproto
     | varbinding )
     ;
@@ -189,8 +189,8 @@ moduleproto :
 /* MIT BSV module proto */
     'module' moduleinterface=bsvtype name=lowerCaseIdentifier '(' moduleprotoformals? ')' provisos? ';'
 /* Classic BSV module proto */
-    | 'module' name=lowerCaseIdentifier '(' moduleinterface=bsvtype ')' provisos? ';'
-    | 'module' name=lowerCaseIdentifier '#' '(' moduleprotoformals? ')' '(' moduleinterface=bsvtype ')' provisos? ';'
+    | 'module' ('[' monad=expression ']')? name=lowerCaseIdentifier '(' moduleinterface=bsvtype ')' provisos? ';'
+    | 'module' ('[' monad=expression ']')? name=lowerCaseIdentifier '#' '(' moduleprotoformals? ')' '(' moduleinterface=bsvtype ')' provisos? ';'
     ;
 moduleprotoformals :
     moduleprotoformal (',' moduleprotoformal)*
@@ -321,7 +321,7 @@ exprprimary :
     | array=exprprimary '[' msb=expression ((':' lsb=expression) | ('+:' widthup=IntLiteral) | ('-:' widthdown=IntLiteral))? ']' #arraysub
     | fcn=exprprimary '(' (expression (',' expression)*)? ')' #callexpr
     | 'when' '(' (expression (',' expression)*)? ')' #whenexpr
-    | fcn=DollarIdentifier '(' (expression (',' expression)*)? ')' #syscallexpr
+    | fcn=DollarIdentifier ( '(' (expression (',' expression)*)? ')' )? #syscallexpr
     | 'clocked_by' exprprimary #clockedbyexpr
     | 'reset_by' exprprimary #resetbyexpr
     | bsvtype '’' ( ('{' expression (',' expression)* '}' ) | ( '(' expression ')' ) ) #typeassertionexpr
