@@ -11,6 +11,16 @@ typedef struct {} Real;
 typedef struct {} String;
 typedef struct {} UInt#(numeric type n);
 typedef struct {} Vector#(numeric type n, type t);
+
+typedef struct {} TAdd#(numeric type n1, numeric type n2);
+typedef struct {} TSub#(numeric type n1, numeric type n2);
+typedef struct {} TMul#(numeric type n1, numeric type n2);
+typedef struct {} TDiv#(numeric type n1, numeric type n2);
+typedef struct {} TMax#(numeric type n1, numeric type n2);
+typedef struct {} TMin#(numeric type n1, numeric type n2);
+typedef struct {} TLog#(numeric type n);
+typedef struct {} TExp#(numeric type n);
+
 typedef enum { VoidValue} Void;
 
 typedef enum {
