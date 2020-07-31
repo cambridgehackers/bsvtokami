@@ -144,7 +144,7 @@ varbinding :
     attributeinstance* ('let' | t=bsvtype) varinit (',' varinit)*  ';'
     ;
 actionbinding:
-    attributeinstance* ('let' | t=bsvtype) var=lowerCaseIdentifier '<-' rhs=expression ';'
+    attributeinstance* ('let' | t=bsvtype) var=lowerCaseIdentifier ('[' arraydim=expression ']')? '<-' rhs=expression ';'
     ;
 patternbinding:
     attributeinstance* 'match' pattern op=('<-'|'=') rhs=expression ';'
@@ -298,7 +298,7 @@ binopexpr :
     |  left=binopexpr op=('==' | '!=') right=binopexpr
     |  left=binopexpr op=('&' | '^' | '^~' | '~^') right=binopexpr
     |  left=binopexpr op=('|' | '|') right=binopexpr
-    |  left=binopexpr op=('&&' | '&&') right=binopexpr
+    |  left=binopexpr op=('&&' | '&&&') right=binopexpr
     |  left=binopexpr op=('||' | '||') right=binopexpr
     | unopexpr
     ;
@@ -320,6 +320,7 @@ exprprimary :
     | '{' expression (',' expression)* '}' #bitconcat
     | array=exprprimary '[' msb=expression ((':' lsb=expression) | ('+:' widthup=IntLiteral) | ('-:' widthdown=IntLiteral))? ']' #arraysub
     | fcn=exprprimary '(' (expression (',' expression)*)? ')' #callexpr
+    | 'when' '(' (expression (',' expression)*)? ')' #whenexpr
     | fcn=DollarIdentifier '(' (expression (',' expression)*)? ')' #syscallexpr
     | 'clocked_by' exprprimary #clockedbyexpr
     | 'reset_by' exprprimary #resetbyexpr
