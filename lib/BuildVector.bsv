@@ -29,6 +29,9 @@ package BuildVector;
 
 import Vector::*;
 
+function Vector#(1, element_t) vec(element_t v0);
+//   return cons(v0, nul);
+endfunction
 function Vector#(1, element_t) vec1(element_t v0);
 //   return cons(v0, nul);
 endfunction
