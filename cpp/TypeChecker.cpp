@@ -1,5 +1,6 @@
 
-
+#undef NDEBUG
+#include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -481,7 +482,8 @@ shared_ptr<BSVType> TypeChecker::dereferenceType(const shared_ptr<BSVType> &bsvt
         //currentContext->logstream << "dereferencing bsvtype " << bsvtype->name << " found " << decl->name << endl;
         if (synonymDecl) {
             currentContext->logstream << "dereferencing bsvtype " << bsvtype->name << " arity " << bsvtype->params.size() << endl;
-            assert(synonymDecl->bsvtype->params.size() == 0);
+            //FIXME
+            //assert(synonymDecl->bsvtype->params.size() == 0);
             derefType = synonymDecl->lhstype;
             if (derefType->isNumeric())
                 return derefType;
@@ -2398,7 +2400,10 @@ antlrcpp::Any TypeChecker::visitTaggedunionpattern(BSVParser::Taggedunionpattern
             if (ctx->pattern(0)) {
                 currentContext->logstream << "tag pattern 0 " << ctx->pattern(0)->getText() << endl;
                 shared_ptr<UnionDeclaration> unionDeclaration = decl->unionDeclaration();
-                assert(unionDeclaration);
+                if (!unionDeclaration) {
+                    currentContext->logstream << "Tag " << tagname << " is not a union tagged type" << endl;
+                    continue;
+                }
                 shared_ptr<Declaration> memberDecl = unionDeclaration->lookupMember(tagname);
                 assert(memberDecl);
                 currentContext->logstream << "Tag pattern memberDecl " << memberDecl->name << " bsvtype "<< memberDecl->bsvtype->to_string() << endl;
