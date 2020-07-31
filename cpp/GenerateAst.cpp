@@ -673,6 +673,9 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ActionbindingContext *actio
         varType = typeChecker->bsvtype(actionbinding->t);
     else
         varType.reset(new BSVType());
+    if (actionbinding->arraydim) {
+        varType = make_shared<BSVType>("Array", varType);
+    }
     shared_ptr<Expr> rhs(expr(actionbinding->rhs));
 
     //cout << "action binding rhs ";
