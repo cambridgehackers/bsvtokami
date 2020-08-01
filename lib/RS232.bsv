@@ -397,11 +397,10 @@ endmodule
 `ifdef BSVTOKAMI
 (* nogen *)
 `endif
-module mkUART( Bit#(4) charsize
+module mkUART#( Bit#(4) charsize
              , Parity paritysel
              , StopBits stopbits
-             , Bit#(16) divider
-             , UART#(d) ifc)
+             , Bit#(16) divider)(UART#(d))
    provisos(Add#(2, _1, d));
 
    Integer fifodepth = valueof(d);
