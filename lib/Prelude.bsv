@@ -7,7 +7,9 @@ typedef struct {} Array#(type t);
 typedef struct {} Bit#(numeric type sz);
 typedef struct {} Int#(numeric type n);
 typedef struct {} Integer;
+typedef struct {} Nat;
 typedef struct {} Real;
+typedef struct {} Char;
 typedef struct {} String;
 typedef struct {} UInt#(numeric type n);
 typedef struct {} Vector#(numeric type n, type t);
@@ -178,6 +180,10 @@ endtypeclass
 (* nogen *)
 function String integerToString(Integer m);
    return (String)'m;
+endfunction
+
+function Integer charToInteger(Char c);
+   return (Integer)'c;
 endfunction
 
 typeclass Literal #(type data_t);
