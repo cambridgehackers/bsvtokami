@@ -14,6 +14,12 @@ endmodule
 module exposeCurrentReset(Reset);
 endmodule
 
+interface MakeClockIfc#(type t);
+endinterface
+
+module mkUngatedClock#(one_bit_type c)(MakeClockIfc#(one_bit_type));
+endmodule
+
 (* nogen *)
 module mkNullCrossingWire #( Clock dClk, a_type dataIn )
                            ( ReadOnly#(a_type) )
