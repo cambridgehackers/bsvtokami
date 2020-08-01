@@ -47,8 +47,11 @@ public:
 class TaggedPattern : public Pattern {
 public:
     const string value;
+    const shared_ptr<Pattern> pattern;
+    //FIXME struct patterns
 
     TaggedPattern(const string &value) : value(value) {}
+    TaggedPattern(const string &value, const shared_ptr<Pattern> &pattern) : value(value), pattern(pattern) {}
 
     ~TaggedPattern() {}
 

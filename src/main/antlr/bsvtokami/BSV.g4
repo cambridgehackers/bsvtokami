@@ -137,8 +137,11 @@ moduleinst:
     /* MIT BSV: "new" */
     attributeinstance* ('let' | t=bsvtype) var=lowerCaseIdentifier '=' 'new' rhs=expression ';'
     ;
+tuplebind :
+    '{' lowerCaseIdentifier (',' lowerCaseIdentifier)+ '}' ;
 varinit :
     var=lowerCaseIdentifier ('=' rhs=expression)?
+    | tuplebind '=' rhs=expression
     ;
 varbinding :
     attributeinstance* ('let' | t=bsvtype) varinit (',' varinit)*  ';'
@@ -197,6 +200,7 @@ moduleprotoformals :
     ;
 moduleprotoformal :
     attributeinstance* 'parameter'? bsvtype name=lowerCaseIdentifier
+    | functionproto
     ;
 modulestmt :
     methoddef
@@ -214,6 +218,7 @@ methodformals :
     ;
 methodformal :
     attributeinstance* bsvtype? name=lowerCaseIdentifier
+    | functionproto
     ;
 methodcond :
     /* MIT BSV allows when, Classic BSV: if */

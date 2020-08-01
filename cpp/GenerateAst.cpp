@@ -648,8 +648,6 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::VarbindingContext *varbindi
     std::vector<BSVParser::VarinitContext *> varinits = varbinding->varinit();
     for (size_t i = 0; i < varinits.size(); i++) {
         BSVParser::VarinitContext *varinit = varinits[i];
-        string varName = varinit->lowerCaseIdentifier()->getText();
-        shared_ptr<BSVType> varType = typeChecker->lookup(varinit->var);
         if (!varinit->rhs) {
             cerr << "varinit with no rhs at " << sourceLocation(varinit) << endl;
             cerr << "    " << varinit->getText() << endl;
@@ -658,7 +656,18 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::VarbindingContext *varbindi
         shared_ptr<Expr> rhs(expr(varinit->rhs));
         if (!rhs)
             logstream << "Unhandled var binding rhs at " << sourceLocation(varinit->expression()) << endl;
-        return make_shared<VarBindingStmt>(varType, varName, rhs, sourcePos(varbinding));
+        if (varinit->var) {
+            string varName = varinit->var->getText();
+            shared_ptr<BSVType> varType = typeChecker->lookup(varinit->var);
+            return make_shared<VarBindingStmt>(varType, varName, rhs, sourcePos(varbinding));
+        } else {
+            // tuple destructure
+            //FIXME: destructure tuple binding
+            string varName("fixmetuple");
+            shared_ptr<BSVType> varType = make_shared<BSVType>("Tuple");
+            return make_shared<VarBindingStmt>(varType, varName, rhs, sourcePos(varbinding));
+
+        }
     }
     //FIXME: how to make multiple bindings?
     assert(0);

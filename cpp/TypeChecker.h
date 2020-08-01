@@ -201,6 +201,8 @@ protected:
 
     antlrcpp::Any visitDerives(BSVParser::DerivesContext *ctx) override;
 
+    antlrcpp::Any visitTuplebind(BSVParser::TuplebindContext *ctx) override;
+
     antlrcpp::Any visitVarbinding(BSVParser::VarbindingContext *ctx) override;
 
     antlrcpp::Any visitActionbinding(BSVParser::ActionbindingContext *ctx) override;
