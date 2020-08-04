@@ -1960,8 +1960,14 @@ antlrcpp::Any TypeChecker::visitTypeassertionexpr(BSVParser::TypeassertionexprCo
 }
 
 antlrcpp::Any TypeChecker::visitResetbyexpr(BSVParser::ResetbyexprContext *ctx) {
+    auto it = exprs.find(ctx);
+    if (it != exprs.end())
+        return it->second;
     visitChildren(ctx);
-    return nullptr;
+    z3::expr expr = instantiateType("Reset");
+    z3::expr resetbyexpr = visit(ctx->exprprimary());
+    addConstraint(expr == resetbyexpr, "resetby", ctx);
+    return expr;
 }
 
 antlrcpp::Any TypeChecker::visitUndefinedexpr(BSVParser::UndefinedexprContext *ctx) {
@@ -1974,8 +1980,14 @@ antlrcpp::Any TypeChecker::visitUndefinedexpr(BSVParser::UndefinedexprContext *c
 }
 
 antlrcpp::Any TypeChecker::visitClockedbyexpr(BSVParser::ClockedbyexprContext *ctx) {
+    auto it = exprs.find(ctx);
+    if (it != exprs.end())
+        return it->second;
     visitChildren(ctx);
-    return nullptr;
+    z3::expr expr = instantiateType("Clock");
+    z3::expr clockedbyexpr = visit(ctx->exprprimary());
+    addConstraint(expr == clockedbyexpr, "clockedby", ctx);
+    return expr;
 }
 
 

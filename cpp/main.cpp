@@ -138,9 +138,9 @@ int main(int argc, char *const argv[]) {
 
     int ch;
     BSVOptions options;
-    options.opt_type_check = 1;
+    options.opt_type_check = 1; // mandatory -- used when generating AST
     options.opt_ast = 1;
-    options.opt_kami = 1;
+    options.opt_kami = 0;
     options.opt_koika = 0;
     options.opt_ir = 0;
     options.opt_inline = 0;
