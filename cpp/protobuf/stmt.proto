@@ -1,0 +1,211 @@
+syntax = "proto3";
+package BsvAst;
+
+import "source_pos.proto";
+import "bsvtype.proto";
+import "expr.proto";
+import "lvalue.proto";
+import "pattern.proto";
+
+message ActionBindingStmt{
+  SourcePos sourcePos = 1;
+  BSVType bsvtype = 2;
+  string name = 3;
+  Expr rhs = 4;
+}
+
+message BlockStmt{
+  SourcePos sourcePos = 1;
+  repeated Stmt stmts = 2;
+}
+
+// Kami call statement
+message CallStmt{
+  SourcePos sourcePos = 1;
+  string name = 2;
+  BSVType varType = 3;
+  Expr rhs = 4;
+}
+
+message ExprStmt{
+  SourcePos sourcePos = 1;
+  Expr expr = 2;
+}
+
+message FunctionDefStmt{
+  SourcePos sourcePos = 1;
+  string package = 2;
+  string name = 3;
+  BSVType returnType = 4;
+  repeated BSVType paramTypes = 5;
+  repeated string paramNames = 6;
+  Expr guard = 7;
+  repeated Stmt stmts = 8;
+}
+
+message IfStmt{
+  SourcePos sourcePos = 1;
+  Expr condition = 2;
+  Stmt thenStmt = 3;
+  Stmt elseStmt = 4;
+}
+
+message ImportStmt{
+  SourcePos sourcePos = 1;
+  string name = 2;
+  //FIXME: missing fields
+}
+
+message InterfaceDeclStmt{
+  SourcePos sourcePos = 1;
+  string package = 2;
+  string name = 3;
+  BSVType interfaceType = 4;
+  repeated Stmt decls = 5;
+}
+
+message InterfaceDefStmt{
+  SourcePos sourcePos = 1;
+  string package = 2;
+  string name = 3;
+  BSVType interfaceType = 4;
+  repeated Stmt defs = 5;
+}
+
+message MethodDeclStmt{
+  SourcePos sourcePos = 1;
+  string name = 2;
+  BSVType returnType = 3;
+  repeated BSVType paramTypes = 4;
+  repeated string paramNames = 5;
+}
+
+message MethodDefStmt{
+  SourcePos sourcePos = 1;
+  string name = 2;
+  BSVType returnType = 3;
+  repeated BSVType paramTypes = 4;
+  repeated string paramNames = 5;
+}
+
+message ModuleDefStmt{
+  SourcePos sourcePos = 1;
+  string package = 2;
+  string name = 3;
+  BSVType returnType = 4;
+  repeated BSVType paramTypes = 5;
+  repeated string paramNames = 6;
+  repeated Stmt stmts = 7;
+}
+
+message ModuleInstStmt{
+  SourcePos sourcePos = 1;
+  string name = 2;
+  BSVType varType = 3;
+  Expr rhs = 4;
+}
+
+enum BindingOp {
+  VALUE = 0;
+  ACTION = 1;
+}
+message PatternMatchStmt{
+  SourcePos sourcePos = 1;
+  Pattern pattern = 2;
+  BindingOp op = 3;
+  Expr expr = 4;
+}
+
+// for Kami
+message RegisterStmt{
+  SourcePos sourcePos = 1;
+  string regName = 2;
+  BSVType elementType = 3;
+}
+
+message RegReadStmt{
+  SourcePos sourcePos = 1;
+  string regName = 2;
+  string varName = 3;
+  BSVType elementType = 4;
+}
+
+message RegWriteStmt{
+  SourcePos sourcePos = 1;
+  string regName = 2;
+  BSVType elementType = 3;
+  Expr rhs = 4;
+}
+
+message ReturnStmt{
+  SourcePos sourcePos = 1;
+  BSVType returnType = 2;
+  Expr returnExpr = 3;
+}
+
+message RuleDefStmt{
+  SourcePos sourcePos = 1;
+  string name = 2;
+  Expr guard = 3;
+  repeated Stmt stmts = 4;
+}
+
+message TypedefEnumStmt{
+
+}
+
+message TypedefStructStmt{}
+
+message TypedefSynonymStmt{}
+
+message VarBindingStmt{
+  SourcePos sourcePos = 1;
+  string package = 2; // if global
+  BSVType bsvtype = 3;
+  string name = 4;
+  BindingOp op = 5;
+  Expr rhs = 6;
+}
+
+message VarAssignStmt{
+  SourcePos sourcePos = 1;
+  LValue lvalue = 2;
+  BindingOp op = 3;
+  Expr rhs = 4;
+}
+
+message Stmt {
+  oneof stmt {
+     ActionBindingStmt actionBindingStmt = 1;
+     BlockStmt blockStmt = 2;
+     CallStmt callStmt = 3;
+     ExprStmt exprStmt = 4;
+     FunctionDefStmt functionDefStmt = 5;
+     IfStmt ifStmt = 6;
+     ImportStmt importStmt = 7;
+     InterfaceDeclStmt interfaceDeclStmt = 8;
+     InterfaceDefStmt interfaceDefStmt = 9;
+     MethodDeclStmt methodDeclStmt = 10;
+     MethodDefStmt methodDefStmt = 11;
+     ModuleDefStmt moduleDefStmt = 12;
+     ModuleInstStmt moduleInstStmt = 13;
+     PatternMatchStmt patternMatchStmt = 15;
+     RegisterStmt registerStmt = 16;
+     RegReadStmt regReadStmt = 17;
+     RegWriteStmt regWriteStmt = 18;
+     ReturnStmt returnStmt = 19;
+     RuleDefStmt ruleDefStmt = 20;
+     TypedefEnumStmt typedefEnumStmt = 21;
+     TypedefStructStmt typedefStructStmt = 22;
+     TypedefSynonymStmt typedefSynonymStmt = 23;
+     VarBindingStmt varBindingStmt = 24;
+     VarAssignStmt varAssignStmt = 25;
+ }
+}
+
+message PackageDef {
+  SourcePos filename = 1;
+  SourcePos sourcePos = 2;
+  string name = 3;
+  repeated Stmt stmt = 4;
+}

@@ -1,0 +1,41 @@
+syntax = "proto3";
+package BsvAst;
+
+import "source_pos.proto";
+import "bsvtype.proto";
+import "expr.proto";
+
+
+message ArraySubLValue {
+  SourcePos sourcePos = 1;
+  Expr array = 2;
+  Expr index = 3;
+}
+
+message RangeSelLValue {
+  SourcePos sourcePos = 1;
+  Expr array = 2;
+  Expr lsb = 3;
+  Expr msb = 4;
+}
+
+message FieldLValue {
+  SourcePos sourcePos = 1;
+  Expr obj = 2;
+  string field = 3;
+}
+
+message VarLValue {
+  SourcePos sourcePos = 1;
+  string name = 2;
+  BSVType bsvtype = 3;
+}
+
+message LValue {
+  oneof lvalue {
+    ArraySubLValue array = 1;
+    FieldLValue field = 2;
+    VarLValue var = 3;
+    RangeSelLValue range = 4;
+  }
+}

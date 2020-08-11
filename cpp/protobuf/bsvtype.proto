@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package BsvAst;
+
+enum BSVTypeKind {
+  Symbolic = 0;
+  Numeric = 1;
+};
+
+message BSVType {
+  BSVTypeKind kind = 1;
+  string name = 2;
+  bool isVar = 3;
+  repeated BSVType params = 4;
+}

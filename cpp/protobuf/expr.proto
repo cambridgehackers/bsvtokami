@@ -1,0 +1,150 @@
+syntax = "proto3";
+
+package BsvAst;
+
+import "bsvtype.proto";
+import "pattern.proto";
+import "source_pos.proto";
+
+message FieldExpr{
+  SourcePos sourcePos = 1;
+  BSVType bsvtype = 2;
+  Expr object = 3;
+  string fieldname = 4;
+}
+
+message VarExpr{
+  SourcePos sourcePos = 1;
+  BSVType bsvtype = 2;
+  string sourceName = 3;
+  string uniqueName = 4;
+
+}
+
+message BitConcatExpr{
+  SourcePos sourcePos = 1;
+  BSVType bsvtype = 2;
+
+}
+
+message BitSelExpr{
+  SourcePos sourcePos = 1;
+  BSVType bsvtype = 2;
+  Expr value = 3;
+  Expr msb = 4;
+  Expr lsb = 5;
+
+}
+
+message CallExpr{
+  SourcePos sourcePos = 1;
+  BSVType bsvtype = 2;
+  Expr function = 3;
+  repeated Expr args = 4;
+}
+
+message CaseExpr{
+  SourcePos sourcePos = 1;
+  BSVType bsvtype = 2;
+
+}
+
+message CondExpr{
+  SourcePos sourcePos = 1;
+  BSVType bsvtype = 2;
+  Expr cond = 3;
+  Expr thenExpr = 4;
+  Expr elseExpr = 5;
+}
+
+message IntConst{
+  SourcePos sourcePos = 1;
+  BSVType bsvtype = 2;
+  uint32 value = 3;
+  uint32 base = 4;
+  uint32 width = 5;
+}
+
+message InterfaceExpr{
+  SourcePos sourcePos = 1;
+  BSVType bsvtype = 2;
+  //FIXME unfinished
+}
+
+message StringConst{
+  SourcePos sourcePos = 1;
+  BSVType bsvtype = 2;
+  string value = 3;
+}
+
+message MatchesExpr{
+  SourcePos sourcePos = 1;
+  BSVType bsvtype = 2;
+  Expr expr = 3;
+  Pattern pattern = 4;
+  repeated Expr patterncond = 5;
+}
+
+message MethodExpr{
+  SourcePos sourcePos = 1;
+  BSVType bsvtype = 2;
+  Expr object = 3;
+  string methodName = 4;
+}
+
+message OperatorExpr{
+  SourcePos sourcePos = 1;
+  BSVType bsvtype = 2;
+  string op = 3;
+  Expr lhs = 4;
+  Expr rhs = 5;
+}
+
+message ArraySubExpr{
+  SourcePos sourcePos = 1;
+  BSVType bsvtype = 2;
+  Expr array = 3;
+  Expr index = 4;
+}
+
+message EnumUnionStructExpr{
+  SourcePos sourcePos = 1;
+  BSVType bsvtype = 2;
+  //FIXME unfinished
+}
+
+message SubinterfaceExpr{
+  SourcePos sourcePos = 1;
+  BSVType bsvtype = 2;
+  Expr object = 3;
+  string subinterfaceName = 4;
+}
+
+message ValueofExpr{
+  SourcePos sourcePos = 1;
+  BSVType bsvtype = 2;
+  BSVType argtype = 3;
+}
+
+
+message Expr {
+  oneof expr {
+    FieldExpr fieldExpr = 1;
+    VarExpr varExpr = 2;
+    BitConcatExpr bitConcatExpr = 3;
+    BitSelExpr bitSelExpr = 4;
+    CallExpr callExpr = 5;
+    CaseExpr caseExpr = 6;
+    CondExpr condExpr = 7;
+    IntConst intConst = 8;
+    InterfaceExpr interfaceExpr = 9;
+    StringConst stringConst = 10;
+    MatchesExpr matchesExpr = 11;
+    MethodExpr methodExpr = 12;
+    OperatorExpr operatorExpr = 13;
+    ArraySubExpr arraySubExpr = 14;
+    EnumUnionStructExpr enumUnionStructExpr = 15;
+    SubinterfaceExpr subinterfaceExpr = 16;
+    ValueofExpr valueofExpr = 17;
+ }
+}

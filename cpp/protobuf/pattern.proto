@@ -1,0 +1,34 @@
+syntax = "proto3";
+package BsvAst;
+import "source_pos.proto";
+
+message IntPattern{
+  SourcePos sourcePos = 1;
+  uint32 value = 2;
+}
+
+message TaggedPattern{
+  SourcePos sourcePos = 1;
+  string name = 2;
+  Pattern pattern = 3;
+}
+
+message TuplePattern{
+  SourcePos sourcePos = 1;
+  repeated Pattern subpatterns = 2;
+}
+message VarPattern{
+  SourcePos sourcePos = 1;
+  string name = 2;
+}
+message WildcardPattern{
+  SourcePos sourcePos = 1;
+}
+
+message Pattern {
+  IntPattern intPattern = 1;
+  TaggedPattern taggedPattern = 2;
+  TuplePattern tuplePattern = 3;
+  VarPattern varPattern = 4;
+  WildcardPattern wildcardPattern = 5;
+}

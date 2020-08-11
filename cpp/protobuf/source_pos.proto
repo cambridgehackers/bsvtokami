@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package BsvAst;
+
+message SourcePos {
+  string filename = 1;
+  uint32 lineNumber = 2;
+}
