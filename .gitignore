@@ -22,3 +22,5 @@ build
 .classpath
 .gradle
 .idea
+*.pb.h
+*.pb.cc
