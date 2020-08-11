@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package BsvAst;
+package bsvproto;
 
 message SourcePos {
   string filename = 1;

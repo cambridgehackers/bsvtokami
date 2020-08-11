@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package BsvAst;
+package bsvproto;
 
 enum BSVTypeKind {
   Symbolic = 0;

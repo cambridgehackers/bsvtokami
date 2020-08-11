@@ -1,5 +1,5 @@
 syntax = "proto3";
-package BsvAst;
+package bsvproto;
 import "source_pos.proto";
 
 message IntPattern{

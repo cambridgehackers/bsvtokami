@@ -18,6 +18,7 @@
 
 
 #include "antlr4-runtime.h"
+#include "AstWriter.h"
 #include "BSVLexer.h"
 #include "BSVParser.h"
 #include "BSVPreprocessor.h"
@@ -71,7 +72,10 @@ int processBSVFile(const string &inputFileName, shared_ptr<TypeChecker> typeChec
     if (options.opt_ast) {
         typeChecker->visit(tree);
         GenerateAst *generateAst = new GenerateAst(packageName, typeChecker);
-        shared_ptr<PackageDefStmt> packageDef = generateAst->generateAst(tree);;
+        shared_ptr<PackageDefStmt> packageDef = generateAst->generateAst(tree);
+        AstWriter astWriter;
+        astWriter.visit(packageDef);
+        astWriter.writeAst(string("kami/") + packageName + string(".ast"));
         vector<shared_ptr<Stmt>> stmts = packageDef->stmts;
         SimplifyAst *simplifier = new SimplifyAst(packageName);
         vector<shared_ptr<Stmt>> simplifiedStmts;

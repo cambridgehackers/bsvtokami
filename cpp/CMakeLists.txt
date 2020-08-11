@@ -6,6 +6,7 @@ link_directories(
         antlr4-cpp-runtime/dist
         ../z3/build
 )
+add_subdirectory(protobuf)
 
 set(SOURCE
         BSVType.cpp
@@ -35,18 +36,21 @@ set(SOURCE
         AttributeInstanceVisitor.cpp
         AttributeInstanceVisitor.h
         TopologicalSort.cpp TopologicalSort.h
-        AstVisitor.cpp AstVisitor.h)
+        AstVisitor.cpp AstVisitor.h
+        AstWriter.cpp AstWriter.h)
 set(CMAKE_CXX_FLAGS "-O -g -std=c++14")
-add_executable(${PROJECT_NAME} ${SOURCE})
-target_include_directories(${PROJECT_NAME}
+add_executable(bsv-parser ${SOURCE})
+target_include_directories(bsv-parser
         PRIVATE
         generated
+        ${CMAKE_CURRENT_BINARY_DIR}/protobuf
         ../z3/src/api
         ../z3/src/api/c++
         antlr4-cpp-runtime/runtime/src
         /usr/local/include
         )
-target_link_libraries(${PROJECT_NAME}
+target_link_libraries(bsv-parser
+        bsvproto
         antlr4-runtime
         z3
         )
