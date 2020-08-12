@@ -204,7 +204,7 @@ void TypeChecker::setupModuleFunctionConstructors() {
     const string constructorNames[] = {"Function"};
     for (int c = 0; c < 1; c++) {
         string constructorPrefix = constructorNames[c];
-        for (int arity = 1; arity < 20; arity++) {
+        for (int arity = 1; arity < 30; arity++) {
             string constructorName = constructorPrefix + to_string(arity);
             vector<shared_ptr<BSVType>> paramTypes;
             for (int p = 0; p < arity; p++) {
@@ -1840,6 +1840,7 @@ antlrcpp::Any TypeChecker::visitVarexpr(BSVParser::VarexprContext *ctx) {
                                   << endl;
     } else {
         currentContext->logstream << "    no decl found at " << sourceLocation(ctx) << endl;
+        cerr << "    no decl found for " << varname << " at " << sourceLocation(ctx) << endl;
     }
     assert(varDecl);
     if (!varDecl || varDecl->bindingType == GlobalBindingType) {
@@ -2145,6 +2146,7 @@ antlrcpp::Any TypeChecker::visitCallexpr(BSVParser::CallexprContext *ctx) {
     vector<BSVParser::ExpressionContext *> args = ctx->expression();
     currentContext->logstream << "visit call expr " << ctx->getText()
                               << (actionContext ? " side effect " : " constructor ") << " arity " << args.size()
+                              << " at " << sourceLocation(ctx)
                               << endl;
     z3::expr instance_expr = freshConstant((actionContext ? "call$trk" : "mkinstance"), typeSort);
     z3::expr fcn_expr = visit(ctx->fcn);
@@ -2484,6 +2486,9 @@ antlrcpp::Any TypeChecker::visitPattern(BSVParser::PatternContext *ctx) {
         return visit(ctx->taggedunionpattern());
     } else if (ctx->tuplepattern()) {
         return visit(ctx->tuplepattern());
+    } else if (ctx->pattern()) {
+        currentContext->logstream << "Visit parenthesized pattern " << ctx->getText() << endl;
+        return visit(ctx->pattern());
     } else {
         currentContext->logstream << "Visit pattern wildcard " << ctx->getText() << endl;
         return freshConstant("wildcard", typeSort);
@@ -2491,8 +2496,12 @@ antlrcpp::Any TypeChecker::visitPattern(BSVParser::PatternContext *ctx) {
 }
 
 antlrcpp::Any TypeChecker::visitConstantpattern(BSVParser::ConstantpatternContext *ctx) {
-    //FIXME
-    return visitChildren(ctx);
+    auto it = exprs.find(ctx);
+    if (it != exprs.end())
+        return it->second;
+    z3::expr expr = freshConstant(string("literal-") + ctx->getText(), typeSort);
+    insertExpr(ctx, expr);
+    return expr;
 }
 
 antlrcpp::Any TypeChecker::visitTaggedunionpattern(BSVParser::TaggedunionpatternContext *ctx) {
@@ -2886,7 +2895,9 @@ z3::expr TypeChecker::bsvTypeToExprHelper(shared_ptr<BSVType> bsvtype) {
                                   << endl;
         z3::func_decl typeDecl = typeDecls.find(bsvtype->name)->second;
         currentContext->logstream << " typeDecl " << typeDecl << endl;
-
+        if (!foundDecl) {
+            return instantiateType("FreeVar", context.string_val(bsvtype->name));
+        }
         return instantiateType(typeDecl, arg_exprs);
     }
 }
