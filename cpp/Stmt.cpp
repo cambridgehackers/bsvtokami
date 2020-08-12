@@ -708,6 +708,11 @@ PackageDefStmt::PackageDefStmt(const string& name, const vector<shared_ptr<Stmt>
     }
 }
 
+shared_ptr<PackageDefStmt> PackageDefStmt::packageDefStmt() {
+    return static_pointer_cast<PackageDefStmt, Stmt>(shared_from_this());
+}
+
+
 shared_ptr<Stmt> PackageDefStmt::lookup(const string &name)
 {
     return bindings[name];
