@@ -285,7 +285,7 @@ class PackageDefStmt : public Stmt {
 public:
     PackageDefStmt(const string &name, const vector<shared_ptr<Stmt>> &package_stmts,
                    const SourcePos &sourcePos = SourcePos());
-
+    shared_ptr<PackageDefStmt> packageDefStmt() override;
     void prettyPrint(ostream &out, int depth) override;
 
     shared_ptr<Stmt> lookup(const string &name);
