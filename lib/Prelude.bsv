@@ -162,6 +162,11 @@ function Bool \$guard(Bool cond);
    return False;
 endfunction
 
+function Bit#(nsz) pack(a x);
+endfunction
+function a unpack(Bit#(nsz) x);
+endfunction
+
 typeclass Bits #(type a, numeric type nsz);
 (* nogen *)
    function Bit#(nsz) pack(a x);
@@ -183,7 +188,10 @@ function String integerToString(Integer m);
 endfunction
 
 function Integer charToInteger(Char c);
-   return (Integer)'c;
+   return (Integer)'(c);
+endfunction
+
+function data_t fromInteger(Integer x);
 endfunction
 
 typeclass Literal #(type data_t);
