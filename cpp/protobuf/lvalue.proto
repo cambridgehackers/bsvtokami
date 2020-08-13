@@ -1,4 +1,6 @@
 syntax = "proto3";
+option optimize_for = LITE_RUNTIME;
+
 package bsvproto;
 
 import "source_pos.proto";

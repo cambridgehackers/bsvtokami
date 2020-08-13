@@ -1,4 +1,6 @@
 syntax = "proto3";
+option optimize_for = LITE_RUNTIME;
+
 package bsvproto;
 
 import "source_pos.proto";
@@ -16,7 +18,7 @@ message ActionBindingStmt{
 
 message BlockStmt{
   SourcePos sourcePos = 1;
-  repeated Stmt stmts = 2;
+  repeated Stmt stmt = 2;
 }
 
 // Kami call statement
@@ -37,10 +39,10 @@ message FunctionDefStmt{
   string package = 2;
   string name = 3;
   BSVType returnType = 4;
-  repeated BSVType paramTypes = 5;
-  repeated string paramNames = 6;
+  repeated BSVType paramType = 5;
+  repeated string paramName = 6;
   Expr guard = 7;
-  repeated Stmt stmts = 8;
+  repeated Stmt stmt = 8;
 }
 
 message IfStmt{
@@ -61,7 +63,7 @@ message InterfaceDeclStmt{
   string package = 2;
   string name = 3;
   BSVType interfaceType = 4;
-  repeated Stmt decls = 5;
+  repeated Stmt decl = 5;
 }
 
 message InterfaceDefStmt{
@@ -69,23 +71,23 @@ message InterfaceDefStmt{
   string package = 2;
   string name = 3;
   BSVType interfaceType = 4;
-  repeated Stmt defs = 5;
+  repeated Stmt def = 5;
 }
 
 message MethodDeclStmt{
   SourcePos sourcePos = 1;
   string name = 2;
   BSVType returnType = 3;
-  repeated BSVType paramTypes = 4;
-  repeated string paramNames = 5;
+  repeated BSVType paramType = 4;
+  repeated string paramName = 5;
 }
 
 message MethodDefStmt{
   SourcePos sourcePos = 1;
   string name = 2;
   BSVType returnType = 3;
-  repeated BSVType paramTypes = 4;
-  repeated string paramNames = 5;
+  repeated BSVType paramType = 4;
+  repeated string paramName = 5;
 }
 
 message ModuleDefStmt{
@@ -93,9 +95,9 @@ message ModuleDefStmt{
   string package = 2;
   string name = 3;
   BSVType returnType = 4;
-  repeated BSVType paramTypes = 5;
-  repeated string paramNames = 6;
-  repeated Stmt stmts = 7;
+  repeated BSVType paramType = 5;
+  repeated string paramName = 6;
+  repeated Stmt stmt = 7;
 }
 
 message ModuleInstStmt{
@@ -147,7 +149,7 @@ message RuleDefStmt{
   SourcePos sourcePos = 1;
   string name = 2;
   Expr guard = 3;
-  repeated Stmt stmts = 4;
+  repeated Stmt stmt = 4;
 }
 
 message TypedefEnumStmt{

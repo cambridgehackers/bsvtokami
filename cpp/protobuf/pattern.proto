@@ -1,4 +1,6 @@
 syntax = "proto3";
+option optimize_for = LITE_RUNTIME;
+
 package bsvproto;
 import "source_pos.proto";
 
@@ -15,7 +17,7 @@ message TaggedPattern{
 
 message TuplePattern{
   SourcePos sourcePos = 1;
-  repeated Pattern subpatterns = 2;
+  repeated Pattern subpattern = 2;
 }
 message VarPattern{
   SourcePos sourcePos = 1;
