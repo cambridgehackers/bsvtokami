@@ -64,7 +64,7 @@ public:
     const SourcePos sourcePos;
 
     Declaration(const std::string &name, std::shared_ptr<BSVType> bsvtype)
-            : package(), name(name), uniqueName(genUniqueName(string(), name, LocalBindingType)), bsvtype(bsvtype), bindingType(LocalBindingType) {
+            : package(), name(name), uniqueName(genUniqueName(string(), name, LocalBindingType)), bsvtype(bsvtype), bindingType(LocalBindingType), parent(), sourcePos(), numericTypeParamVector() {
         if (bsvtype) {
             for (int i = 0; i < bsvtype->params.size(); i++) {
                 numericTypeParamVector.push_back(bsvtype->params[i]->isNumeric());
@@ -73,7 +73,7 @@ public:
     };
 
     Declaration(const std::string &package, const std::string &name, std::shared_ptr<BSVType> bsvtype, const BindingType bt = LocalBindingType, SourcePos sourcePos = SourcePos())
-    : package(package), name(name), uniqueName(genUniqueName(package, name, bt)), bsvtype(bsvtype), bindingType(bt), sourcePos(sourcePos) {
+    : package(package), name(name), uniqueName(genUniqueName(package, name, bt)), bsvtype(bsvtype), bindingType(bt), parent(), sourcePos(sourcePos), numericTypeParamVector() {
         if (bsvtype) {
             for (int i = 0; i < bsvtype->params.size(); i++) {
                 numericTypeParamVector.push_back(bsvtype->params[i]->isNumeric());
@@ -178,8 +178,8 @@ class UnionDeclaration : public Declaration {
 public:
     std::vector<std::shared_ptr<Declaration> > members;
 
-    UnionDeclaration(std::string name, std::shared_ptr<BSVType> bsvtype, SourcePos sourcePos)
-            : Declaration(package, name, bsvtype, GlobalBindingType, sourcePos) {};
+    UnionDeclaration(const std::string &package, std::string name, std::shared_ptr<BSVType> bsvtype, SourcePos sourcePos)
+            : Declaration(package, name, bsvtype, GlobalBindingType, sourcePos), members() {};
     shared_ptr<UnionDeclaration> unionDeclaration() override { return static_pointer_cast<UnionDeclaration, Declaration>(shared_from_this()); }
     shared_ptr<Declaration> lookupMember(const string &memberName);
 };

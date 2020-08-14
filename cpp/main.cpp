@@ -142,6 +142,7 @@ int main(int argc, char *const argv[]) {
 
     int ch;
     BSVOptions options;
+    options.dumptree = dumptree;
     options.opt_type_check = 1; // mandatory -- used when generating AST
     options.opt_ast = 1;
     options.opt_kami = 0;
