@@ -714,7 +714,7 @@ void TypeChecker::addDeclaration(BSVParser::TypedefsynonymContext *synonymdef) {
 void TypeChecker::addDeclaration(BSVParser::TypedeftaggedunionContext *uniondef) {
     shared_ptr<BSVType> typedeftype(bsvtype(uniondef->typedeftype()));
     string name = typedeftype->name;
-    shared_ptr<UnionDeclaration> unionDecl = make_shared<UnionDeclaration>(name, typedeftype, sourcePos(uniondef));
+    shared_ptr<UnionDeclaration> unionDecl = make_shared<UnionDeclaration>(currentContext->packageName, name, typedeftype, sourcePos(uniondef));
     currentContext->logstream << "add declaration typedef union " << name << endl;
     for (int i = 0; uniondef->unionmember(i); i++) {
         shared_ptr<Declaration> subdecl = visit(uniondef->unionmember(i));
