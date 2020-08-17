@@ -618,26 +618,41 @@ void AstWriter::visit(const shared_ptr <Pattern> &pattern, bsvproto::Pattern *pa
 
 
 void AstWriter::visitIntPattern(const shared_ptr <IntPattern> &intPattern, bsvproto::Pattern *pattern_proto) {
+    bsvproto::IntPattern intPattern_proto;
+    intPattern_proto.set_value(intPattern->value);
 
+    *pattern_proto->mutable_intpattern() = intPattern_proto;
 }
 
 void AstWriter::visitTaggedPattern(const shared_ptr <TaggedPattern> &taggedPattern,
                                    bsvproto::Pattern *pattern_proto) {
+    bsvproto::TaggedPattern taggedPattern_proto;
+    taggedPattern_proto.set_name(taggedPattern->value);
+    if (taggedPattern->pattern)
+        visit(taggedPattern->pattern, taggedPattern_proto.mutable_pattern());
 
+    *pattern_proto->mutable_taggedpattern() = taggedPattern_proto;
 }
 
 void
 AstWriter::visitTuplePattern(const shared_ptr <TuplePattern> &tuplePattern, bsvproto::Pattern *pattern_proto) {
-
+    bsvproto::TuplePattern tuplePattern_proto;
+    for (int i = 0; i < tuplePattern->subpatterns.size(); i++) {
+        visit(tuplePattern->subpatterns[i], tuplePattern_proto.add_subpattern());
+    }
+    *pattern_proto->mutable_tuplepattern() = tuplePattern_proto;
 }
 
 void AstWriter::visitVarPattern(const shared_ptr <VarPattern> &varPattern, bsvproto::Pattern *pattern_proto) {
-
+    bsvproto::VarPattern varPattern_proto;
+    varPattern_proto.set_name(varPattern->value);
+    *pattern_proto->mutable_varpattern() = varPattern_proto;
 }
 
 void AstWriter::visitWildcardPattern(const shared_ptr <WildcardPattern> &wildcardPattern,
                                      bsvproto::Pattern *pattern_proto) {
-
+    bsvproto::WildcardPattern wildcardPattern_proto;
+    *pattern_proto->mutable_wildcardpattern() = wildcardPattern_proto;
 }
 
 void AstWriter::visit(const shared_ptr <LValue> &lvalue, bsvproto::LValue *lvalue_proto) {
