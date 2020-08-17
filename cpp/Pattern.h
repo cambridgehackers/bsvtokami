@@ -12,6 +12,14 @@
 
 using namespace std;
 
+enum PatternType {
+    InvalidPatternType,
+    IntPatternType,
+    TaggedPatternType,
+    TuplePatternType,
+    VarPatternType,
+    WildcardPatternType
+};
 class IntPattern;
 class TaggedPattern;
 class TuplePattern;
@@ -20,7 +28,9 @@ class WildcardPattern;
 
 class Pattern: public enable_shared_from_this<Pattern>  {
 public:
-    Pattern() {}
+    PatternType patternType;
+
+    Pattern(PatternType patternType) : patternType(patternType) {}
     virtual ~Pattern() {}
 
     virtual void prettyPrint(ostream &out, int depth = 0, int precedence = 0) = 0;
@@ -34,8 +44,8 @@ public:
 class IntPattern : public Pattern {
 public:
     const int value;
-    IntPattern(int value) : value(value) {}
-    IntPattern(const string &value) : value(stol(value, 0, 0)) {}
+    IntPattern(int value) : Pattern(IntPatternType), value(value) {}
+    IntPattern(const string &value) : Pattern(IntPatternType), value(stol(value, 0, 0)) {}
 
     ~IntPattern() {}
 
@@ -50,8 +60,10 @@ public:
     const shared_ptr<Pattern> pattern;
     //FIXME struct patterns
 
-    TaggedPattern(const string &value) : value(value) {}
-    TaggedPattern(const string &value, const shared_ptr<Pattern> &pattern) : value(value), pattern(pattern) {}
+    TaggedPattern(const string &value) : Pattern(TaggedPatternType), value(value) {}
+
+    TaggedPattern(const string &value, const shared_ptr<Pattern> &pattern) : Pattern(TaggedPatternType), value(value),
+                                                                             pattern(pattern) {}
 
     ~TaggedPattern() {}
 
@@ -66,7 +78,7 @@ public:
 class TuplePattern : public Pattern {
 public:
     const vector<shared_ptr<Pattern>> subpatterns;
-    TuplePattern(const vector<shared_ptr<Pattern>> &subpatterns) : subpatterns(subpatterns) {}
+    TuplePattern(const vector<shared_ptr<Pattern>> &subpatterns) : Pattern(TuplePatternType), subpatterns(subpatterns) {}
     ~TuplePattern() {}
 
     virtual shared_ptr<TuplePattern> tuplePattern() override { return static_pointer_cast<TuplePattern, Pattern>(shared_from_this()); }
@@ -78,7 +90,7 @@ public:
 class VarPattern : public Pattern {
 public:
     const string value;
-    VarPattern(const string &value) : value(value) {}
+    VarPattern(const string &value) : Pattern(VarPatternType), value(value) {}
     ~VarPattern() {}
 
     virtual shared_ptr<VarPattern> varPattern() override { return static_pointer_cast<VarPattern, Pattern>(shared_from_this()); }
@@ -88,7 +100,7 @@ public:
 
 class WildcardPattern : public Pattern {
 public:
-    WildcardPattern() {}
+    WildcardPattern() : Pattern(WildcardPatternType) {}
     ~WildcardPattern() {}
 
     virtual shared_ptr<WildcardPattern> wildcardPattern() override { return static_pointer_cast<WildcardPattern, Pattern>(shared_from_this()); }

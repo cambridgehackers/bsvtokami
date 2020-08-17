@@ -28,6 +28,12 @@ public:
 
     void visit(const shared_ptr<BSVType> &bsvtype, bsvproto::BSVType *bsvtype_proto);
 
+    void visit(const shared_ptr<LValue> &lvalue, bsvproto::LValue *lvalue_proto);
+
+    void visit(const shared_ptr<Pattern> &pattern, bsvproto::Pattern *pattern_proto);
+
+    void visit(const SourcePos &sourcePos, bsvproto::SourcePos *sourcePos_proto);
+
 
     void visitPackageDefStmt(const shared_ptr<PackageDefStmt> packageDef);
 
@@ -114,5 +120,17 @@ public:
     void visitMethodExpr(shared_ptr<MethodExpr> methodExprType, bsvproto::Expr *expr_proto);
 
     void visitValueofExpr(shared_ptr<ValueofExpr> valueofExprType, bsvproto::Expr *expr_proto);
+
+    void visitIntPattern(const shared_ptr<IntPattern> &intPattern, bsvproto::Pattern *pattern_pro);
+
+    void visitTaggedPattern(const shared_ptr<TaggedPattern> &taggedPattern, bsvproto::Pattern *pattern_proto);
+
+    void
+    visitTuplePattern(const shared_ptr<TuplePattern> &tuplePattern, bsvproto::Pattern *pattern_pro);
+
+    void visitVarPattern(const shared_ptr<VarPattern> &varPattern, bsvproto::Pattern *pattern_pro);
+
+    void visitWildcardPattern(const shared_ptr<WildcardPattern> &wildcardPattern,
+                              bsvproto::Pattern *pattern_pro);
 
 };

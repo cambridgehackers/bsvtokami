@@ -98,6 +98,7 @@ void AstWriter::visit(const shared_ptr<Stmt> &stmt, bsvproto::Stmt *stmt_proto) 
 void AstWriter::visitModuleDefStmt(const shared_ptr<ModuleDefStmt> &moduledef, bsvproto::Stmt *stmt_proto) {
     cerr << "visitModuleDefStmt" << endl;
     bsvproto::ModuleDefStmt moduledef_proto;
+    visit(moduledef->sourcePos, moduledef_proto.mutable_sourcepos());
     moduledef_proto.set_name(moduledef->name);
     moduledef_proto.set_package(moduledef->package);
     visit(moduledef->interfaceType, moduledef_proto.mutable_returntype());
@@ -116,8 +117,8 @@ void AstWriter::visitModuleDefStmt(const shared_ptr<ModuleDefStmt> &moduledef, b
 void AstWriter::visitPackageDefStmt(const shared_ptr<PackageDefStmt> packageDef) {
     cerr << "visitPackageDefStmt" << endl;
     packagedef_proto.set_name(packageDef->name);
-    bsvproto::SourcePos *sourcePos = newSourcePos(packageDef->sourcePos);
-    packagedef_proto.set_allocated_sourcepos(sourcePos);
+    packagedef_proto.set_filename(packageDef->sourcePos.sourceName);
+    visit(packageDef->sourcePos, packagedef_proto.mutable_sourcepos());
     for (int i = 0; i < packageDef->stmts.size(); i++) {
         bsvproto::Stmt *substmt_proto = packagedef_proto.add_stmt();
         visit(packageDef->stmts[i], substmt_proto);
@@ -142,8 +143,10 @@ void AstWriter::visitActionBindingStmt(shared_ptr<ActionBindingStmt> actionBindi
     cerr << "visitActionBindingStmt " << actionBindingStmt->name << endl;
     bsvproto::ActionBindingStmt actionBindingStmt_proto;
     actionBindingStmt_proto.set_name(actionBindingStmt->name);
+    visit(actionBindingStmt->sourcePos, actionBindingStmt_proto.mutable_sourcepos());
     visit(actionBindingStmt->bsvtype, actionBindingStmt_proto.mutable_bsvtype());
     visit(actionBindingStmt->rhs, actionBindingStmt_proto.mutable_rhs());
+
     *stmt_proto->mutable_actionbindingstmt() = actionBindingStmt_proto;
 }
 
@@ -153,106 +156,204 @@ void AstWriter::visitBlockStmt(shared_ptr<BlockStmt> blockStmt, bsvproto::Stmt *
         bsvproto::Stmt *substmt_proto = blockStmt_proto.add_stmt();
         visit(blockStmt->stmts[i], substmt_proto);
     }
+
     *stmt_proto->mutable_blockstmt() = blockStmt_proto;
 }
 
 void AstWriter::visitCallStmt(shared_ptr<CallStmt> callStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitCallStmt" << endl;
     bsvproto::CallStmt callStmt_proto;
-    bsvproto::Expr *expr_proto = callStmt_proto.mutable_rhs();
-    visit(callStmt->rhs, expr_proto);
-    *stmt_proto->mutable_callstmt() = callStmt_proto;
+    callStmt_proto.set_name(callStmt->name);
+    visit(callStmt->interfaceType, callStmt_proto.mutable_vartype());
+    visit(callStmt->rhs, callStmt_proto.mutable_rhs());
 
+    *stmt_proto->mutable_callstmt() = callStmt_proto;
 }
 
 void AstWriter::visitExprStmt(shared_ptr<ExprStmt> exprStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitExprStmt" << endl;
     bsvproto::ExprStmt exprStmt_proto;
+    visit(exprStmt->sourcePos, exprStmt_proto.mutable_sourcepos());
     bsvproto::Expr *expr_proto = exprStmt_proto.mutable_expr();
     visit(exprStmt->expr, expr_proto);
+
     *stmt_proto->mutable_exprstmt() = exprStmt_proto;
 }
 
 void AstWriter::visitFunctionDefStmt(shared_ptr<FunctionDefStmt> functionDefStmt, bsvproto::Stmt *stmt_proto) {
+    cerr << "visitFunctionDefStmt" << endl;
+    bsvproto::FunctionDefStmt functionDefStmt_proto;
+    visit(functionDefStmt->sourcePos, functionDefStmt_proto.mutable_sourcepos());
+    functionDefStmt_proto.set_package(functionDefStmt->package);
+    functionDefStmt_proto.set_name(functionDefStmt->name);
+    visit(functionDefStmt->returnType, functionDefStmt_proto.mutable_returntype());
+    for (int i = 0; i < functionDefStmt->params.size(); i++) {
+        functionDefStmt_proto.add_paramname(functionDefStmt->params[i]);
+        visit(functionDefStmt->paramTypes[i], functionDefStmt_proto.add_paramtype());
+    }
+    for (int i = 0; i < functionDefStmt->stmts.size(); i++) {
+        visit(functionDefStmt->stmts[i], functionDefStmt_proto.add_stmt());
+    }
+    if (functionDefStmt->guard) {
+        visit(functionDefStmt->guard, functionDefStmt_proto.mutable_guard());
+    }
+
+    *stmt_proto->mutable_functiondefstmt() = functionDefStmt_proto;
 
 }
 
 void AstWriter::visitInterfaceDeclStmt(shared_ptr<InterfaceDeclStmt> interfaceDeclStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitInterfaceDeclStmt" << endl;
     bsvproto::InterfaceDeclStmt interfaceDeclStmt_proto;
+    visit(interfaceDeclStmt->sourcePos, interfaceDeclStmt_proto.mutable_sourcepos());
     interfaceDeclStmt_proto.set_name(interfaceDeclStmt->name);
     interfaceDeclStmt_proto.set_package(interfaceDeclStmt->package);
     //FIXME: more fields
+
     *stmt_proto->mutable_interfacedeclstmt() = interfaceDeclStmt_proto;
 }
 
 void AstWriter::visitInterfaceDefStmt(shared_ptr<InterfaceDefStmt> interfaceDefStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitInterfaceDefStmt " << interfaceDefStmt->name << endl;
+    bsvproto::InterfaceDefStmt interfaceDefStmt_proto;
+    visit(interfaceDefStmt->sourcePos, interfaceDefStmt_proto.mutable_sourcepos());
+    //FIXME: more fields
+
+    *stmt_proto->mutable_interfacedefstmt() = interfaceDefStmt_proto;
 }
 
-void AstWriter::visitIfStmt(shared_ptr<IfStmt> sharedPtr, bsvproto::Stmt *stmt_proto) {
+void AstWriter::visitIfStmt(shared_ptr<IfStmt> ifStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitIfStmt" << endl;
+    bsvproto::IfStmt ifStmt_proto;
+    visit(ifStmt->sourcePos, ifStmt_proto.mutable_sourcepos());
+    visit(ifStmt->condition, ifStmt_proto.mutable_condition());
+    visit(ifStmt->thenStmt, ifStmt_proto.mutable_thenstmt());
+    visit(ifStmt->elseStmt, ifStmt_proto.mutable_elsestmt());
+
+    *stmt_proto->mutable_ifstmt() = ifStmt_proto;
 }
 
-void AstWriter::visitImportStmt(shared_ptr<ImportStmt> sharedPtr, bsvproto::Stmt *stmt_proto) {
+void AstWriter::visitImportStmt(shared_ptr<ImportStmt> importStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitImportStmt" << endl;
+    bsvproto::ImportStmt importStmt_proto;
+    visit(importStmt->sourcePos, importStmt_proto.mutable_sourcepos());
+    importStmt_proto.set_name(importStmt->name);
+
+    *stmt_proto->mutable_importstmt() = importStmt_proto;
 }
 
-void AstWriter::visitMethodDeclStmt(shared_ptr<MethodDeclStmt> sharedPtr, bsvproto::Stmt *stmt_proto) {
+void AstWriter::visitMethodDeclStmt(shared_ptr<MethodDeclStmt> methodDeclStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitMethodDefStmt" << endl;
+    bsvproto::MethodDeclStmt methodDeclStmt_proto;
+    visit(methodDeclStmt->sourcePos, methodDeclStmt_proto.mutable_sourcepos());
+    methodDeclStmt_proto.set_name(methodDeclStmt->name);
+    visit(methodDeclStmt->returnType, methodDeclStmt_proto.mutable_returntype());
+    for (int i = 0; i < methodDeclStmt->params.size(); i++) {
+        methodDeclStmt_proto.add_paramname(methodDeclStmt->params[i]);
+        visit(methodDeclStmt->paramTypes[i], methodDeclStmt_proto.add_paramtype());
+    }
+
+    *stmt_proto->mutable_methoddeclstmt() = methodDeclStmt_proto;
 }
 
-void AstWriter::visitMethodDefStmt(shared_ptr<MethodDefStmt> sharedPtr, bsvproto::Stmt *stmt_proto) {
+void AstWriter::visitMethodDefStmt(shared_ptr<MethodDefStmt> methodDefStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitMethodDefStmt" << endl;
+    bsvproto::MethodDefStmt methodDefStmt_proto;
+    visit(methodDefStmt->sourcePos, methodDefStmt_proto.mutable_sourcepos());
+    methodDefStmt_proto.set_name(methodDefStmt->name);
+    visit(methodDefStmt->returnType, methodDefStmt_proto.mutable_returntype());
+    for (int i = 0; i < methodDefStmt->params.size(); i++) {
+        methodDefStmt_proto.add_paramname(methodDefStmt->params[i]);
+        visit(methodDefStmt->paramTypes[i], methodDefStmt_proto.add_paramtype());
+    }
+    visit(methodDefStmt->guard, methodDefStmt_proto.mutable_guard());
+
+    *stmt_proto->mutable_methoddefstmt() = methodDefStmt_proto;
 }
 
 void AstWriter::visitModuleInstStmt(shared_ptr<ModuleInstStmt> sharedPtr, bsvproto::Stmt *stmt_proto) {
     cerr << "visitModuleInstStmt" << endl;
+    //FIXME
 }
 
-void AstWriter::visitPatternMatchStmt(shared_ptr<PatternMatchStmt> sharedPtr, bsvproto::Stmt *stmt_proto) {
+void AstWriter::visitPatternMatchStmt(shared_ptr<PatternMatchStmt> patternMatchStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitPatternMatchStmt" << endl;
+    bsvproto::PatternMatchStmt patternMatchStmt_proto;
+    visit(patternMatchStmt->sourcePos, patternMatchStmt_proto.mutable_sourcepos());
+    visit(patternMatchStmt->pattern, patternMatchStmt_proto.mutable_pattern());
+
+    *stmt_proto->mutable_patternmatchstmt() = patternMatchStmt_proto;
 }
 
 void AstWriter::visitRegisterStmt(shared_ptr<RegisterStmt> sharedPtr, bsvproto::Stmt *stmt_proto) {
     cerr << "visitRegisterStmt" << endl;
+    //FIXME
 }
 
 void AstWriter::visitRegReadStmt(shared_ptr<RegReadStmt> sharedPtr, bsvproto::Stmt *stmt_proto) {
     cerr << "visitRegReadStmt" << endl;
+    //FIXME
 }
 
 void AstWriter::visitRegWriteStmt(shared_ptr<RegWriteStmt> regWriteStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitRegWriteStmt" << endl;
+    //FIXME
 }
 
 void AstWriter::visitReturnStmt(shared_ptr<ReturnStmt> returnStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitReturnStmt" << endl;
+    bsvproto::ReturnStmt returnStmt_proto;
+    visit(returnStmt->sourcePos, returnStmt_proto.mutable_sourcepos());
+    visit(returnStmt->value, returnStmt_proto.mutable_returnexpr());
+    if (returnStmt->value)
+        visit(returnStmt->value->bsvtype, returnStmt_proto.mutable_returntype());
+
+    *stmt_proto->mutable_returnstmt() = returnStmt_proto;
 }
 
 void AstWriter::visitTypedefEnumStmt(shared_ptr<TypedefEnumStmt> typedefEnumStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitTypedefEnumStmt" << endl;
+    //FIXME
 }
 
 void AstWriter::visitTypedefStructStmt(shared_ptr<TypedefStructStmt> typedefStructStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitTypedefStructStmt" << endl;
+    //FIXME
 }
 
 void AstWriter::visitTypedefSynonymStmt(shared_ptr<TypedefSynonymStmt> typedefSynonymStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitTypedefSynonymStmt" << endl;
+    //FIXME
 }
 
 void AstWriter::visitVarBindingStmt(shared_ptr<VarBindingStmt> varBindingStmt, bsvproto::Stmt *stmt_proto) {
-    cerr << "visitVarAssignStmt" << endl;
+    cerr << "visitVarBindingStmt" << endl;
+    bsvproto::VarBindingStmt varBindingStmt_proto;
+    visit(varBindingStmt->sourcePos, varBindingStmt_proto.mutable_sourcepos());
+    varBindingStmt_proto.set_package(varBindingStmt->package);
+    visit(varBindingStmt->bsvtype, varBindingStmt_proto.mutable_bsvtype());
+    varBindingStmt_proto.set_name(varBindingStmt->name);
+    varBindingStmt_proto.set_op(bsvproto::VALUE);
+    visit(varBindingStmt->rhs, varBindingStmt_proto.mutable_rhs());
+
+    *stmt_proto->mutable_varbindingstmt() = varBindingStmt_proto;
 }
 
 void AstWriter::visitVarAssignStmt(shared_ptr<VarAssignStmt> varAssignStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitVarAssignStmt" << endl;
+    bsvproto::VarAssignStmt varAssignStmt_proto;
+    visit(varAssignStmt->sourcePos, varAssignStmt_proto.mutable_sourcepos());
+    visit(varAssignStmt->lhs, varAssignStmt_proto.mutable_lvalue());
+    varAssignStmt_proto.set_op(varAssignStmt->op == "<-" ? bsvproto::ACTION : bsvproto::VALUE);
+    visit(varAssignStmt->rhs, varAssignStmt_proto.mutable_rhs());
+
+    *stmt_proto->mutable_varassignstmt() = varAssignStmt_proto;
 }
 
 void AstWriter::visitRuleDefStmt(shared_ptr<RuleDefStmt> ruleDefStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitRuleDefStmt" << endl;
     bsvproto::RuleDefStmt ruleDefStmt_proto;
+    visit(ruleDefStmt->sourcePos, ruleDefStmt_proto.mutable_sourcepos());
     ruleDefStmt_proto.set_name(ruleDefStmt->name);
     if (ruleDefStmt->guard) {
         visit(ruleDefStmt->guard, ruleDefStmt_proto.mutable_guard());
@@ -261,6 +362,7 @@ void AstWriter::visitRuleDefStmt(shared_ptr<RuleDefStmt> ruleDefStmt, bsvproto::
         bsvproto::Stmt *substmt_proto = ruleDefStmt_proto.add_stmt();
         visit(ruleDefStmt->stmts[i], substmt_proto);
     }
+
     *stmt_proto->mutable_ruledefstmt() = ruleDefStmt_proto;
 }
 
@@ -406,4 +508,62 @@ void AstWriter::visit(const shared_ptr<BSVType> &bsvtype, bsvproto::BSVType *bsv
     for (int i = 0; i < bsvtype->params.size(); i++) {
         visit(bsvtype->params[i], bsvtype_proto->add_param());
     }
+}
+
+void AstWriter::visit(const SourcePos &sourcePos, bsvproto::SourcePos *sourcePos_proto) {
+    sourcePos_proto->set_filename(sourcePos.sourceName);
+    sourcePos_proto->set_linenumber(sourcePos.line);
+}
+
+void AstWriter::visit(const shared_ptr<Pattern> &pattern, bsvproto::Pattern *pattern_proto) {
+  cerr << "visitPattern " << endl;
+  switch (pattern->patternType) {
+  case InvalidPatternType:
+    cerr << "InvalidPatternType" << endl;
+    break;
+  case IntPatternType:
+    visitIntPattern(pattern->intPattern(), pattern_proto);
+    break;
+  case TaggedPatternType:
+    visitTaggedPattern(pattern->taggedPattern(), pattern_proto);
+    break;
+  case TuplePatternType:
+    visitTuplePattern(pattern->tuplePattern(), pattern_proto);
+    break;
+  case VarPatternType:
+    visitVarPattern(pattern->varPattern(), pattern_proto);
+    break;
+  case WildcardPatternType:
+    visitWildcardPattern(pattern->wildcardPattern(), pattern_proto);
+    break;
+  }
+}
+
+
+void AstWriter::visitIntPattern(const shared_ptr<IntPattern> &intPattern, bsvproto::Pattern *pattern_proto)
+{
+
+}
+
+void AstWriter::visitTaggedPattern(const shared_ptr<TaggedPattern> &taggedPattern,
+                                   bsvproto::Pattern *pattern_proto) {
+
+}
+
+void
+AstWriter::visitTuplePattern(const shared_ptr<TuplePattern> &tuplePattern, bsvproto::Pattern *pattern_proto) {
+
+}
+
+void AstWriter::visitVarPattern(const shared_ptr<VarPattern> &varPattern, bsvproto::Pattern *pattern_proto) {
+
+}
+
+void AstWriter::visitWildcardPattern(const shared_ptr<WildcardPattern> &wildcardPattern,
+                                     bsvproto::Pattern *pattern_proto) {
+
+}
+
+void AstWriter::visit(const shared_ptr<LValue> &lvalue, bsvproto::LValue *lvalue_proto) {
+
 }

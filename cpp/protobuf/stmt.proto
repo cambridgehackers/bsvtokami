@@ -88,6 +88,7 @@ message MethodDefStmt{
   BSVType returnType = 3;
   repeated BSVType paramType = 4;
   repeated string paramName = 5;
+  Expr guard = 6;
 }
 
 message ModuleDefStmt{
@@ -206,7 +207,7 @@ message Stmt {
 }
 
 message PackageDef {
-  SourcePos filename = 1;
+  string filename = 1;
   SourcePos sourcePos = 2;
   string name = 3;
   repeated Stmt stmt = 4;
