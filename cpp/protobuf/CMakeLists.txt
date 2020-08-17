@@ -20,3 +20,6 @@ protobuf_generate_python(PROTO_PY
         stmt.proto)
 add_library(bsvproto ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(bsvproto ${Protobuf_LIBRARIES})
+message("PROTO_PY ${PROTO_PY}")
+add_custom_target(bsvprotopy ALL
+        DEPENDS ${PROTO_PY})
