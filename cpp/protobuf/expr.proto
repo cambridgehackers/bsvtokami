@@ -25,7 +25,7 @@ message VarExpr{
 message BitConcatExpr{
   SourcePos sourcePos = 1;
   BSVType bsvtype = 2;
-
+  repeated Expr value = 3;
 }
 
 message BitSelExpr{
