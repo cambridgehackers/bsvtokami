@@ -133,4 +133,12 @@ public:
     void visitWildcardPattern(const shared_ptr<WildcardPattern> &wildcardPattern,
                               bsvproto::Pattern *pattern_pro);
 
+    void visitArraySubLValue(const shared_ptr<ArraySubLValue> &arraySubLValue, bsvproto::LValue *lvalue_proto);
+
+    void visitFieldLValue(const shared_ptr<FieldLValue> &fieldLValue, bsvproto::LValue *lvalue_proto);
+
+    void visitVarLValue(const shared_ptr<VarLValue> &varLValue, bsvproto::LValue *lvalue_proto);
+
+    void visitRangeSelLValue(const shared_ptr<RangeSelLValue> &rangeSelLValue, bsvproto::LValue *lvalue_proto);
+
 };

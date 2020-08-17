@@ -113,9 +113,9 @@ void RangeSelLValue::prettyPrint(ostream &out, int depth) {
 }
 
 shared_ptr<struct LValue> RangeSelLValue::rename(string prefix, shared_ptr<LexicalScope> &scope) {
-    return create(bitarray->rename(prefix, scope), msb->rename(prefix, scope), lsb->rename(prefix, scope));
+    return make_shared<RangeSelLValue>(bitarray->rename(prefix, scope), msb->rename(prefix, scope), lsb->rename(prefix, scope));
 }
 
-shared_ptr<LValue> RangeSelLValue::create(shared_ptr<Expr> bitarray, const shared_ptr<Expr> &msb, const shared_ptr<Expr> &lsb) {
-    return shared_ptr<LValue>(new RangeSelLValue(bitarray, msb, lsb));
+shared_ptr<RangeSelLValue> RangeSelLValue::rangeSelLValue() {
+    return static_pointer_cast<RangeSelLValue, LValue>(shared_from_this());
 }

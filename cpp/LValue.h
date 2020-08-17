@@ -23,6 +23,7 @@ enum LValueType {
 class ArraySubLValue;
 class FieldLValue;
 class VarLValue;
+class RangeSelLValue;
 
 class LValueAttrs {
 public:
@@ -45,6 +46,7 @@ public:
     virtual shared_ptr<ArraySubLValue> arraySubLValue() { return shared_ptr<ArraySubLValue>(); }
     virtual shared_ptr<FieldLValue> fieldLValue() { return shared_ptr<FieldLValue>(); }
     virtual shared_ptr<VarLValue> varLValue() { return shared_ptr<VarLValue>(); }
+    virtual shared_ptr<RangeSelLValue> rangeSelLValue() { return shared_ptr<RangeSelLValue>(); }
 
     virtual shared_ptr<struct LValue> rename(string prefix, shared_ptr<LexicalScope> &scope) = 0;
 
@@ -89,8 +91,7 @@ public:
     ~RangeSelLValue() override;
     void prettyPrint(ostream &out, int depth) override;
     shared_ptr<struct LValue> rename(string prefix, shared_ptr<LexicalScope> &scope) override;
-
-    static shared_ptr<LValue> create(shared_ptr<Expr> bitarray, const shared_ptr<Expr> &msb, const shared_ptr<Expr> &lsb);
+    shared_ptr<RangeSelLValue> rangeSelLValue() override;
 };
 
 class FieldLValue : public LValue {

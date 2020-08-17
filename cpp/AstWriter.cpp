@@ -656,5 +656,55 @@ void AstWriter::visitWildcardPattern(const shared_ptr <WildcardPattern> &wildcar
 }
 
 void AstWriter::visit(const shared_ptr <LValue> &lvalue, bsvproto::LValue *lvalue_proto) {
+    cerr << "visit LValue " << lvalue->lvalueType << endl;
+    switch (lvalue->lvalueType) {
+        case InvalidLValueType:
+            break;
+        case ArraySubLValueType:
+            visitArraySubLValue(lvalue->arraySubLValue(), lvalue_proto);
+            break;
+        case FieldLValueType:
+            visitFieldLValue(lvalue->fieldLValue(), lvalue_proto);
+            break;
+        case VarLValueType:
+            visitVarLValue(lvalue->varLValue(), lvalue_proto);
+            break;
+        case RangeSelLValueType:
+            visitRangeSelLValue(lvalue->rangeSelLValue(), lvalue_proto);
+            break;
+    }
+}
 
+void AstWriter::visitArraySubLValue(const shared_ptr<ArraySubLValue> &arraySubLValue, bsvproto::LValue *lvalue_proto) {
+    bsvproto::ArraySubLValue arraySubLValue_proto;
+    visit(arraySubLValue->array, arraySubLValue_proto.mutable_array());
+    visit(arraySubLValue->index, arraySubLValue_proto.mutable_index());
+
+    *lvalue_proto->mutable_array() = arraySubLValue_proto;
+}
+
+void AstWriter::visitFieldLValue(const shared_ptr<FieldLValue> &fieldLValue, bsvproto::LValue *lvalue_proto) {
+    bsvproto::FieldLValue fieldLValue_proto;
+    visit(fieldLValue->obj, fieldLValue_proto.mutable_obj());
+    fieldLValue_proto.set_field(fieldLValue->field);
+
+    *lvalue_proto->mutable_field() = fieldLValue_proto;
+}
+
+void AstWriter::visitVarLValue(const shared_ptr<VarLValue> &varLValue, bsvproto::LValue *lvalue_proto) {
+    bsvproto::VarLValue varLValue_proto;
+    varLValue_proto.set_name(varLValue->name);
+    if (varLValue->bsvtype)
+        visit(varLValue->bsvtype, varLValue_proto.mutable_bsvtype());
+
+    *lvalue_proto->mutable_var() = varLValue_proto;
+}
+
+void AstWriter::visitRangeSelLValue(const shared_ptr<RangeSelLValue> &rangeSelLValue, bsvproto::LValue *lvalue_proto) {
+    bsvproto::RangeSelLValue rangeSelLValue_proto;
+    visit(rangeSelLValue->bitarray, rangeSelLValue_proto.mutable_array());
+    visit(rangeSelLValue->lsb, rangeSelLValue_proto.mutable_lsb());
+    visit(rangeSelLValue->msb, rangeSelLValue_proto.mutable_msb());
+
+    *lvalue_proto->mutable_range() = rangeSelLValue_proto;
 }
