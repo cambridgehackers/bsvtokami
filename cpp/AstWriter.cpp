@@ -134,7 +134,7 @@ bsvproto::SourcePos *AstWriter::newSourcePos(const SourcePos &sourcePos) {
 
 bool AstWriter::writeAst(std::string filename) {
     ofstream output(filename, ios::out | ios::trunc | ios::binary);
-    packagedef_proto.SerializeToOstream(&output);
+    output << packagedef_proto.SerializeAsString();
     output.close();
     return true;
 }
