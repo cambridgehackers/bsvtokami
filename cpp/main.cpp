@@ -34,7 +34,9 @@ using namespace antlr4;
 //namespace fs = boost::filesystem;
 
 void usage(char *const argv[]) {
-    fprintf(stderr, "Usage: %s [-t]\n", argv[0]);
+    fprintf(stderr, "Usage: %s [-I dir]* [-k]\n", argv[0]);
+    fprintf(stderr, "   -I dir     Adds dir to the search path for imports\n");
+    fprintf(stderr, "   -k         Enables kami code generation\n");
     exit(-1);
 }
 
@@ -151,7 +153,7 @@ int main(int argc, char *const argv[]) {
     options.opt_inline = 0;
     string opt_rename;
 
-    while ((ch = getopt(argc, argv, "D:I:air:t")) != -1) {
+    while ((ch = getopt(argc, argv, "D:I:aikr:t")) != -1) {
         switch (ch) {
             case 'a':
                 options.opt_ast = 1;
