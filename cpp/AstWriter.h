@@ -107,11 +107,11 @@ public:
 
     void visitCallExpr(shared_ptr<CallExpr> callExprType, bsvproto::Expr *expr_proto);
 
+    void visitCaseExpr(shared_ptr<CaseExpr> caseExpr, bsvproto::Expr *expr_proto);
+
     void visitFieldExpr(shared_ptr<FieldExpr> fieldExprType, bsvproto::Expr *expr_proto);
 
     void visitCondExpr(shared_ptr<CondExpr> condExprType, bsvproto::Expr *expr_proto);
-
-    void visitCaseExpr(shared_ptr<CaseExpr> caseExprType, bsvproto::Expr *expr_proto);
 
     void visitEnumUnionStructExpr(shared_ptr<EnumUnionStructExpr> enumUnionStructExprType, bsvproto::Expr *expr_proto);
 

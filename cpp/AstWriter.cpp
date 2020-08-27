@@ -271,9 +271,14 @@ void AstWriter::visitMethodDefStmt(shared_ptr <MethodDefStmt> methodDefStmt, bsv
     *stmt_proto->mutable_methoddefstmt() = methodDefStmt_proto;
 }
 
-void AstWriter::visitModuleInstStmt(shared_ptr <ModuleInstStmt> sharedPtr, bsvproto::Stmt *stmt_proto) {
+void AstWriter::visitModuleInstStmt(shared_ptr <ModuleInstStmt> moduleInstStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitModuleInstStmt" << endl;
-    //FIXME
+    bsvproto::ModuleInstStmt moduleInstStmt_proto;
+    moduleInstStmt_proto.set_name(moduleInstStmt->name);
+    visit(moduleInstStmt->sourcePos, moduleInstStmt_proto.mutable_sourcepos());
+    visit(moduleInstStmt->interfaceType, moduleInstStmt_proto.mutable_vartype());
+    visit(moduleInstStmt->rhs, moduleInstStmt_proto.mutable_rhs());
+    *stmt_proto->mutable_moduleinststmt() = moduleInstStmt_proto;
 }
 
 void AstWriter::visitPatternMatchStmt(shared_ptr <PatternMatchStmt> patternMatchStmt, bsvproto::Stmt *stmt_proto) {
@@ -313,18 +318,42 @@ void AstWriter::visitReturnStmt(shared_ptr <ReturnStmt> returnStmt, bsvproto::St
 
 void AstWriter::visitTypedefEnumStmt(shared_ptr <TypedefEnumStmt> typedefEnumStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitTypedefEnumStmt" << endl;
-    //FIXME
+    bsvproto::TypedefEnumStmt typedefEnumStmt_proto;
+    visit(typedefEnumStmt->sourcePos, typedefEnumStmt_proto.mutable_sourcepos());
+    typedefEnumStmt_proto.set_name(typedefEnumStmt->name);
+    typedefEnumStmt_proto.set_package(typedefEnumStmt->package);
+    visit(typedefEnumStmt->enumType, typedefEnumStmt_proto.mutable_enumtype());
+    for (int i = 0; i < typedefEnumStmt->members.size(); i++) {
+        typedefEnumStmt_proto.add_member(typedefEnumStmt->members[i]);
+    }
+    *stmt_proto->mutable_typedefenumstmt() = typedefEnumStmt_proto;
 }
 
 void AstWriter::visitTypedefStructStmt(shared_ptr <TypedefStructStmt> typedefStructStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitTypedefStructStmt" << endl;
-    //FIXME
+    bsvproto::TypedefStructStmt typedefStructStmt_proto;
+    visit(typedefStructStmt->sourcePos, typedefStructStmt_proto.mutable_sourcepos());
+    typedefStructStmt_proto.set_name(typedefStructStmt->name);
+    typedefStructStmt_proto.set_package(typedefStructStmt->package);
+    visit(typedefStructStmt->structType, typedefStructStmt_proto.mutable_structtype());
+    for (int i = 0; i < typedefStructStmt->members.size(); i++) {
+        typedefStructStmt_proto.add_member(typedefStructStmt->members[i]);
+        visit(typedefStructStmt->memberTypes[i], typedefStructStmt_proto.add_membertype());
+    }
+    *stmt_proto->mutable_typedefstructstmt() = typedefStructStmt_proto;
 }
 
 void
 AstWriter::visitTypedefSynonymStmt(shared_ptr <TypedefSynonymStmt> typedefSynonymStmt, bsvproto::Stmt *stmt_proto) {
     cerr << "visitTypedefSynonymStmt" << endl;
-    //FIXME
+    bsvproto::TypedefSynonymStmt typedefSynonymStmt_proto;
+    visit(typedefSynonymStmt->sourcePos, typedefSynonymStmt_proto.mutable_sourcepos());
+    typedefSynonymStmt_proto.set_name(typedefSynonymStmt->typedeftype->name);
+    typedefSynonymStmt_proto.set_package(typedefSynonymStmt->package);
+    visit(typedefSynonymStmt->typedeftype, typedefSynonymStmt_proto.mutable_synonymtype());
+    visit(typedefSynonymStmt->type, typedefSynonymStmt_proto.mutable_type());
+
+    *stmt_proto->mutable_typedefsynonymstmt() = typedefSynonymStmt_proto;
 }
 
 void AstWriter::visitVarBindingStmt(shared_ptr <VarBindingStmt> varBindingStmt, bsvproto::Stmt *stmt_proto) {
@@ -403,14 +432,14 @@ void AstWriter::visit(const shared_ptr <Expr> &expr, bsvproto::Expr *expr_proto)
         case CallExprType:
             visitCallExpr(expr->callExpr(), expr_proto);
             break;
+        case CaseExprType:
+            visitCaseExpr(expr->caseExpr(), expr_proto);
+            break;
         case FieldExprType:
             visitFieldExpr(expr->fieldExpr(), expr_proto);
             break;
         case CondExprType:
             visitCondExpr(expr->condExpr(), expr_proto);
-            break;
-        case CaseExprType:
-            visitCaseExpr(expr->caseExpr(), expr_proto);
             break;
         case EnumUnionStructExprType:
             visitEnumUnionStructExpr(expr->enumUnionStructExpr(), expr_proto);
@@ -522,6 +551,17 @@ void AstWriter::visitCallExpr(shared_ptr <CallExpr> callExpr, bsvproto::Expr *ex
     *expr_proto->mutable_callexpr() = callExpr_proto;
 }
 
+void AstWriter::visitCaseExpr(shared_ptr<CaseExpr> caseExpr, bsvproto::Expr *expr_proto) {
+    cerr << "visitCaseExpr " << endl;
+    bsvproto::CaseExpr caseExpr_proto;
+    visit(caseExpr->sourcePos, caseExpr_proto.mutable_sourcepos());
+    if (caseExpr->bsvtype)
+        visit(caseExpr->bsvtype, caseExpr_proto.mutable_bsvtype());
+    visit(caseExpr->matchValue, caseExpr_proto.mutable_matchvalue());
+
+    *expr_proto->mutable_caseexpr() = caseExpr_proto;
+}
+
 void AstWriter::visitFieldExpr(shared_ptr <FieldExpr> fieldExpr, bsvproto::Expr *expr_proto) {
     bsvproto::FieldExpr fieldExpr_proto;
     if (fieldExpr->bsvtype)
@@ -543,13 +583,10 @@ void AstWriter::visitCondExpr(shared_ptr <CondExpr> condExpr, bsvproto::Expr *ex
     *expr_proto->mutable_condexpr() = condExpr_proto;
 }
 
-void AstWriter::visitCaseExpr(shared_ptr <CaseExpr> caseExpr, bsvproto::Expr *expr_proto) {
-    cerr << "FIXME: visitCaseExpr" << endl;
-}
-
 void
 AstWriter::visitEnumUnionStructExpr(shared_ptr <EnumUnionStructExpr> enumUnionStructExpr, bsvproto::Expr *expr_proto) {
     cerr << "FIXME: visitEnumUnionStructExpr" << endl;
+    //FIXME tagged expr
 }
 
 void AstWriter::visitMatchesExpr(shared_ptr <MatchesExpr> matchesExpr, bsvproto::Expr *expr_proto) {
