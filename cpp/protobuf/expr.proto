@@ -44,10 +44,18 @@ message CallExpr{
   repeated Expr arg = 4;
 }
 
+message CaseExprItem{
+  repeated Expr exprMatch = 1;
+  Pattern patternMatch = 2;
+  repeated Expr patternCond = 3;
+  Expr expr = 4;
+}
+
 message CaseExpr{
   SourcePos sourcePos = 1;
   BSVType bsvtype = 2;
-
+  Expr matchValue = 3;
+  repeated CaseExprItem exprItem = 4;
 }
 
 message CondExpr{

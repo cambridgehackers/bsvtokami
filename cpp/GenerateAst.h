@@ -46,9 +46,13 @@ public:
 
     std::shared_ptr<Expr> expr(BSVParser::ExpressionContext *ctx);
 
-    std::shared_ptr<Expr> expr(BSVParser::CaseexpritemContext *ctx);
+    std::shared_ptr<Expr> expr(BSVParser::CaseexprContext *ctx);
 
-    std::shared_ptr<Expr> expr(BSVParser::CaseexprdefaultitemContext *ctx);
+    std::shared_ptr<CaseExprItem> caseExprItem(BSVParser::CaseexpritemContext *ctx);
+
+    std::shared_ptr<CaseExprItem> caseExprItem(BSVParser::CaseexprpatitemContext *ctx);
+
+    std::shared_ptr<CaseExprItem> caseExprItem(BSVParser::CaseexprdefaultitemContext *ctx);
 
     std::shared_ptr<Expr> expr(BSVParser::CondexprContext *ctx);
 

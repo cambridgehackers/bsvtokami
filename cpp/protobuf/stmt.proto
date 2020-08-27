@@ -154,12 +154,29 @@ message RuleDefStmt{
 }
 
 message TypedefEnumStmt{
-
+  SourcePos sourcePos = 1;
+  string package = 2;
+  string name = 3;
+  BSVType enumType = 4;
+  repeated string member = 5;
 }
 
-message TypedefStructStmt{}
+message TypedefStructStmt{
+  SourcePos sourcePos = 1;
+  string package = 2;
+  string name = 3;
+  BSVType structType = 4;
+  repeated string member = 5;
+  repeated BSVType memberType = 6;
+}
 
-message TypedefSynonymStmt{}
+message TypedefSynonymStmt{
+  SourcePos sourcePos = 1;
+  string package = 2;
+  string name = 3;
+  BSVType synonymType = 4;
+  BSVType type = 5;
+}
 
 message VarBindingStmt{
   SourcePos sourcePos = 1;

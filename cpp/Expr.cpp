@@ -362,6 +362,53 @@ shared_ptr<Expr> StringConst::rename(string prefix, shared_ptr<LexicalScope> &sc
     return shared_ptr<StringConst>(new StringConst(repr));
 }
 
+void CaseExprItem::prettyPrint(ostream &out, int depth) {
+    indent(out, depth);
+    out << "case ";
+    for (int i = 0; i < exprMatch.size(); i++) {
+        if (i > 0) out << ", ";
+        exprMatch[i]->prettyPrint(out, depth + 1);
+    }
+    if (patternMatch)
+        patternMatch->prettyPrint(out, depth + 1);
+    for (int i = 0; i < patternCond.size(); i++) {
+        patternCond[i]->prettyPrint(out, depth + 1);
+    }
+    out << " : ";
+    expr->prettyPrint(out, depth + 1);
+    out << ";" << endl;
+}
+
+CaseExpr::CaseExpr(const shared_ptr<Expr> &matchValue, const vector<shared_ptr<CaseExprItem>> &exprItems,
+                   const shared_ptr<BSVType> &bsvtype,
+                   const SourcePos &sourcePos)
+        : Expr(CaseExprType, bsvtype, sourcePos), matchValue(matchValue), exprItems(exprItems) {
+}
+
+CaseExpr::~CaseExpr() {}
+
+void CaseExpr::prettyPrint(ostream &out, int depth) {
+   indent(out, depth);
+   out << "case (";
+   matchValue->prettyPrint(out, depth+1);
+   out << ")" << endl;
+   for (int i = 0; i < exprItems.size(); i++) {
+        exprItems[i]->prettyPrint(out, depth+1);
+   }
+   indent(out, depth);
+   out << "endcase";
+
+};
+
+shared_ptr<CaseExpr> CaseExpr::caseExpr() {
+    return static_pointer_cast<CaseExpr, Expr>(shared_from_this());
+}
+
+shared_ptr<Expr> CaseExpr::rename(string prefix, shared_ptr<LexicalScope> &renames) {
+    //FIXME rename
+    return shared_from_this();
+}
+
 CondExpr::CondExpr(const shared_ptr<Expr> &cond, const shared_ptr<Expr> &thenExpr, const shared_ptr<Expr> &elseExpr,
                    const SourcePos &sourcePos)
         : Expr(CondExprType, sourcePos), cond(cond), thenExpr(thenExpr), elseExpr(elseExpr) {

@@ -89,22 +89,54 @@ shared_ptr<Expr> GenerateAst::expr(BSVParser::ExpressionContext *ctx) {
     } else if (BSVParser::MatchesexprContext *matchesExpr = dynamic_cast<BSVParser::MatchesexprContext *>(ctx)) {
         logstream << "Unhandled matches expr " << ctx->getText() << endl;
         return expr(matchesExpr);
-    } else if (BSVParser::CaseexprContext *caseexpr = dynamic_cast<BSVParser::CaseexprContext *>(ctx)) {
+    } else if (BSVParser::CaseexprContext *caseExpr = dynamic_cast<BSVParser::CaseexprContext *>(ctx)) {
         logstream << "Unhandled case expr " << ctx->getText() << endl;
-        return result;
+        return expr(caseExpr);
     }
     logstream << "How did we get here: expr " << ctx->getRuleIndex() << " " << ctx->getText() << endl;
     return result;
 }
 
-shared_ptr<Expr> GenerateAst::expr(BSVParser::CaseexpritemContext *ctx) {
-    shared_ptr<Expr> result;
-    return result;
+std::shared_ptr<Expr> GenerateAst::expr(BSVParser::CaseexprContext *ctx) {
+    shared_ptr<Expr> matchValue(expr(ctx->expression()));
+    vector<shared_ptr<CaseExprItem>> exprItems;
+    for (int i = 0; true; ctx->caseexpritem()) {
+        exprItems.push_back(caseExprItem(ctx->caseexpritem(i)));
+    }
+    for (int i = 0; true; ctx->caseexprpatitem()) {
+        exprItems.push_back(caseExprItem(ctx->caseexprpatitem(i)));
+    }
+    if (ctx->caseexprdefaultitem()) {
+        exprItems.push_back(caseExprItem(ctx->caseexprdefaultitem()));
+    }
+    shared_ptr<BSVType> bsvtype(typeChecker->lookup(ctx));
+    return make_shared<CaseExpr>(matchValue, exprItems, bsvtype, sourcePos(ctx));
 }
 
-shared_ptr<Expr> GenerateAst::expr(BSVParser::CaseexprdefaultitemContext *ctx) {
-    shared_ptr<Expr> result;
-    return result;
+std::shared_ptr<CaseExprItem> GenerateAst::caseExprItem(BSVParser::CaseexprpatitemContext *ctx) {
+    shared_ptr<Expr> value = expr(ctx->expression());
+    shared_ptr<Pattern> matchPattern = generateAst(ctx->pattern());
+    vector<shared_ptr<Expr>> patternGuards;
+    for (int i = 0; true; ctx->patterncond(i)) {
+        patternGuards.push_back(expr(ctx->patterncond(i)->expression()));
+    }
+    return make_shared<CaseExprItem>(matchPattern, patternGuards, value, sourcePos(ctx));
+}
+
+shared_ptr<CaseExprItem> GenerateAst::caseExprItem(BSVParser::CaseexpritemContext *ctx) {
+    auto expressions = ctx->expression();
+    shared_ptr<Expr> value = expr(expressions.back());
+    vector<shared_ptr<Expr>> matchExprs;
+    for (int i = 0; i < expressions.size() - 1; i++) {
+        matchExprs.push_back(expr(expressions[i]));
+    }
+    return make_shared<CaseExprItem>(matchExprs, value, sourcePos(ctx));
+}
+
+shared_ptr<CaseExprItem> GenerateAst::caseExprItem(BSVParser::CaseexprdefaultitemContext *ctx) {
+    shared_ptr<Expr> value(expr(ctx->expression()));
+    const vector<shared_ptr<Expr>> matchExprs; // empty because default
+    return make_shared<CaseExprItem>(matchExprs, value, sourcePos(ctx));
 }
 
 std::shared_ptr<Expr> GenerateAst::expr(BSVParser::CondexprContext *ctx) {

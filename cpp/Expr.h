@@ -25,9 +25,9 @@ enum ExprType {
     StringConstType,
     OperatorExprType,
     CallExprType,
+    CaseExprType,
     FieldExprType,
     CondExprType,
-    CaseExprType,
     EnumUnionStructExprType,
     MatchesExprType,
     MethodExprType,
@@ -207,6 +207,42 @@ public:
     virtual void prettyPrint(ostream &out, int depth = 0) override;
 
     virtual shared_ptr<CallExpr> callExpr() override;
+
+    shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
+};
+
+class CaseExprItem {
+public:
+    const vector<shared_ptr<Expr>> exprMatch;
+    const shared_ptr<Pattern> patternMatch;
+    const vector<shared_ptr<Expr>> patternCond;
+    const shared_ptr<Expr> expr;
+    const SourcePos sourcePos;
+
+    CaseExprItem(const vector<shared_ptr<Expr>> &exprMatch, const shared_ptr<Expr> &expr,
+                 const SourcePos &sourcePos = SourcePos())
+            : exprMatch(exprMatch), expr(expr), sourcePos(sourcePos) {}
+
+    CaseExprItem(const shared_ptr<Pattern> &patternMatch, const vector<shared_ptr<Expr>> &patternCond,
+                 const shared_ptr<Expr> &expr, const SourcePos &sourcePos = SourcePos())
+            : patternMatch(patternMatch), patternCond(patternCond), expr(expr), sourcePos(sourcePos) {}
+    void prettyPrint(ostream &out, int depth);
+};
+
+class CaseExpr : public Expr {
+public:
+    const shared_ptr<Expr> matchValue;
+    const vector<shared_ptr<CaseExprItem>> exprItems;
+    const SourcePos sourcePos;
+
+public:
+    CaseExpr(const shared_ptr<Expr> &matchValue, const vector<shared_ptr<CaseExprItem>> &exprItems,
+             const shared_ptr<BSVType> &bsvtype, const SourcePos &sourcePos);
+    virtual ~CaseExpr();
+
+    virtual void prettyPrint(ostream &out, int depth = 0) override;
+
+    virtual shared_ptr<CaseExpr> caseExpr() override;
 
     shared_ptr<Expr> rename(string prefix, shared_ptr<LexicalScope> &renames) override;
 };
