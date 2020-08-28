@@ -154,6 +154,13 @@ void GenerateKami::generateModuleStmt(const shared_ptr<class RuleDefStmt> & rule
         generateKami(actionStmts[i], depth + 1);
         out << endl;
     }
+    if (ruledef->guard) {
+        indent(out, depth + 1);
+        out << "Assert(";
+        generateKami(ruledef->guard);
+        out << ") ;";
+        out << endl;
+    }
     int num_stmts = ruledef->stmts.size();
     for (int i = 0; i < num_stmts; i++) {
         shared_ptr<Stmt> stmt = ruledef->stmts[i];
@@ -583,6 +590,13 @@ void GenerateKami::generateKami(const shared_ptr<MethodDefStmt> &method, int dep
         out << ") ";
     }
     out << " := " << endl;
+    if (method->guard) {
+        indent(out, depth + 1);
+        out << "Assert(";
+        generateKami(method->guard);
+        out << ") ;";
+        out << endl;
+    }
     for (int i = 0; i < method->stmts.size(); i++) {
         generateKami(method->stmts[i], depth + 1);
     }
