@@ -268,6 +268,8 @@ void GenerateKami::generateKami(const shared_ptr<Stmt> &stmt, int depth) {
             out << "(* Package: " << stmt->packageDefStmt()->name << " *)";
             break;
         case ModuleInstStmtType:
+            generateKami(stmt->moduleInstStmt(), depth);
+            break;
         case RegisterStmtType:
         case RuleDefStmtType:
         case InvalidStmtType:
@@ -417,6 +419,13 @@ void GenerateKami::generateKami(const shared_ptr<BSVType> &bsvtype, int depth) {
     }
     if (bsvtype->params.size())
         out << ")";
+}
+
+void GenerateKami::generateKami(const shared_ptr<ModuleInstStmt> &stmt, int depth) {
+    indent(out, depth);
+    out << "(* ";
+    stmt->prettyPrint(out, depth + 1);
+    out << " *);" << endl;
 }
 
 void GenerateKami::generateKami(const shared_ptr<ActionBindingStmt> &actionbinding, int depth) {

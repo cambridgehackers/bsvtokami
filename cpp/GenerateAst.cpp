@@ -711,14 +711,25 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ActionbindingContext *actio
     string varName = actionbinding->lowerCaseIdentifier()->getText();
     shared_ptr<BSVType> varType;
     if (actionbinding->t)
-        varType = typeChecker->bsvtype(actionbinding->t);
+        varType = typeChecker->lookup(actionbinding->t);
     else
         varType.reset(new BSVType());
     if (actionbinding->arraydim) {
         varType = make_shared<BSVType>("Array", varType);
     }
     shared_ptr<Expr> rhs(expr(actionbinding->rhs));
+    shared_ptr<BSVType> rhsType = typeChecker->lookup(actionbinding->rhs);
+    if (rhsType) {
+        cerr << "ActionBinding rhs type ";
+        rhsType->prettyPrint(cerr, 1);
+        cerr << endl;
 
+        // if it is a module instantiation, translate to ModuleInstStmt
+        if (rhsType->name == "Module") {
+            cerr << "ModuleInst" << endl;
+            return make_shared<ModuleInstStmt>(varName, varType, rhs, sourcePos(actionbinding));
+        }
+    }
     //cout << "action binding rhs ";
     //expr(actionbinding->rhs)->prettyPrint(cout, 0); cout << endl;
 
@@ -746,9 +757,8 @@ shared_ptr<Stmt> GenerateAst::generateAst(BSVParser::ModuleinstContext *modulein
     else
         varType.reset(new BSVType());
     shared_ptr<Expr> rhs(expr(moduleinst->rhs));
-    //FIXME: mark it as module instantiation?
-    shared_ptr<Stmt> actionBindingStmt = make_shared<ActionBindingStmt>(varType, varName, rhs, sourcePos(moduleinst));
-    return actionBindingStmt;
+    shared_ptr<Stmt> moduleInstStmt = make_shared<ModuleInstStmt>(varName, varType, rhs, sourcePos(moduleinst));
+    return moduleInstStmt;
 }
 
 std::shared_ptr<Pattern> GenerateAst::generateAst(BSVParser::PatternContext *ctx) {

@@ -119,61 +119,63 @@ void SimplifyAst::simplify(const shared_ptr<struct Stmt> &stmt, vector<shared_pt
 
 void
 SimplifyAst::simplify(const shared_ptr<ActionBindingStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
-    if (!actionContext) {
-        //FIXME: maybe this should be done in GenerateAst
-        shared_ptr<BSVType> bsvtype = stmt->bsvtype;
-        if (bsvtype->name == "Reg") {
-            string regname = stmt->name;
-            logstream << "regname " << regname << endl;
-            registers[regname] = bsvtype->params[0];
-        }
-    }
     shared_ptr<Expr> expr = stmt->rhs;
-    if (actionContext) {
-        switch (expr->exprType) {
-            case CallExprType: {
-                simplifiedStmts.push_back(make_shared<CallStmt>(stmt->name, stmt->bsvtype, stmt->rhs, stmt->sourcePos));
+    switch (expr->exprType) {
+        case CallExprType: {
+            simplifiedStmts.push_back(make_shared<CallStmt>(stmt->name, stmt->bsvtype, stmt->rhs, stmt->sourcePos));
+        }
+            break;
+        case VarExprType:
+        case FieldExprType:
+        case MethodExprType: {
+            vector<shared_ptr<Expr>> args;
+            simplifiedStmts.push_back(make_shared<CallStmt>(stmt->name, stmt->bsvtype,
+                                                            make_shared<CallExpr>(stmt->rhs, args),
+                                                            stmt->sourcePos));
+        }
+            break;
+        default:
+            simplifiedStmts.push_back(stmt);
+    }
+}
+
+void
+SimplifyAst::simplify(const shared_ptr<ModuleInstStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts) {
+    shared_ptr<BSVType> bsvtype = stmt->interfaceType;
+    if (bsvtype->name == "Reg") {
+        string regname = stmt->name;
+        logstream << "regname " << regname << endl;
+        registers[regname] = bsvtype->params[0];
+    }
+
+    shared_ptr<Expr> expr = stmt->rhs;
+
+    switch (expr->exprType) {
+        case CallExprType: {
+            if (stmt->interfaceType->name == "Reg") {
+                shared_ptr<BSVType> elementType = stmt->interfaceType->params[0];
+                simplifiedStmts.push_back(make_shared<RegisterStmt>(stmt->name, elementType, stmt->sourcePos));
+            } else {
+                simplifiedStmts.push_back(
+                        make_shared<ModuleInstStmt>(stmt->name, stmt->interfaceType, stmt->rhs, stmt->sourcePos));
             }
-                break;
-            case VarExprType:
-            case FieldExprType:
-            case MethodExprType: {
+        }
+            break;
+        case VarExprType: {
+            if (stmt->interfaceType->name == "Reg") {
+                shared_ptr<BSVType> elementType = stmt->interfaceType->params[0];
+                simplifiedStmts.push_back(make_shared<RegisterStmt>(stmt->name, elementType, stmt->sourcePos));
+            } else {
                 vector<shared_ptr<Expr>> args;
-                simplifiedStmts.push_back(make_shared<CallStmt>(stmt->name, stmt->bsvtype,
-                                                                make_shared<CallExpr>(stmt->rhs, args),
-                                                                stmt->sourcePos));
+                simplifiedStmts.push_back(make_shared<ModuleInstStmt>(stmt->name, stmt->interfaceType,
+                                                                      make_shared<CallExpr>(stmt->rhs, args),
+                                                                      stmt->sourcePos));
             }
-                break;
-            default:
-                simplifiedStmts.push_back(stmt);
         }
-    } else {
-        switch (expr->exprType) {
-            case CallExprType: {
-                if (stmt->bsvtype->name == "Reg") {
-                    shared_ptr<BSVType> elementType = stmt->bsvtype->params[0];
-                    simplifiedStmts.push_back(make_shared<RegisterStmt>(stmt->name, elementType, stmt->sourcePos));
-                } else {
-                    simplifiedStmts.push_back(
-                            make_shared<CallStmt>(stmt->name, stmt->bsvtype, stmt->rhs, stmt->sourcePos));
-                }
-            }
-                break;
-            case VarExprType: {
-                if (stmt->bsvtype->name == "Reg") {
-                    shared_ptr<BSVType> elementType = stmt->bsvtype->params[0];
-                    simplifiedStmts.push_back(make_shared<RegisterStmt>(stmt->name, elementType, stmt->sourcePos));
-                } else {
-                    vector<shared_ptr<Expr>> args;
-                    simplifiedStmts.push_back(make_shared<CallStmt>(stmt->name, stmt->bsvtype,
-                                                                    make_shared<CallExpr>(stmt->rhs, args),
-                                                                    stmt->sourcePos));
-                }
-            }
-                break;
-            default:
-                simplifiedStmts.push_back(stmt);
-        }
+            break;
+        default:
+            cerr << "regular module instantiation " << bsvtype->name << endl;
+            simplifiedStmts.push_back(stmt);
     }
 }
 

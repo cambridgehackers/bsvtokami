@@ -59,6 +59,8 @@ public:
 
     void simplify(const shared_ptr<ModuleDefStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
+    void simplify(const shared_ptr<ModuleInstStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
+
     void simplify(const shared_ptr<PatternMatchStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
 
     void simplify(const shared_ptr<RegReadStmt> &stmt, vector<shared_ptr<struct Stmt>> &simplifiedStmts);
