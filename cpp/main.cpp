@@ -126,7 +126,7 @@ int processBSVFile(const string &inputFileName, shared_ptr<TypeChecker> typeChec
             }
         }
         if (options.opt_inline) {
-            Inliner *inliner = new Inliner();
+            std::unique_ptr<Inliner> inliner = std::make_unique<Inliner>();
             vector<shared_ptr<Stmt>> inlinedStmts = inliner->processPackage(stmts);
             for (size_t i = 0; i < inlinedStmts.size(); i++) {
                 //inlinedStmts[i]->prettyPrint(cout, 0);
