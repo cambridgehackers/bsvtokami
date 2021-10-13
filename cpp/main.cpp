@@ -54,7 +54,7 @@ struct BSVOptions {
 
 int processBSVFile(const string &inputFileName, shared_ptr<TypeChecker> typeChecker, const BSVOptions options) {
     char buffer[4096];
-    strncpy(buffer, inputFileName.c_str(), sizeof(buffer));
+    strncpy(buffer, inputFileName.c_str(), sizeof(buffer)-1);
     string packageName(::basename(buffer));
     packageName = packageName.substr(0, packageName.size() - 4);
     cerr << "processBSVFile package " << packageName << " filename " << inputFileName << endl;
@@ -87,7 +87,6 @@ int processBSVFile(const string &inputFileName, shared_ptr<TypeChecker> typeChec
             ::mkdir("kami", 0755);
 
             string kamiFileName("kami/");
-            char buffer[4096];
             kamiFileName += packageName;
             kamiFileName += string(".v");
             GenerateKami *generateKami = new GenerateKami();
@@ -100,7 +99,7 @@ int processBSVFile(const string &inputFileName, shared_ptr<TypeChecker> typeChec
 
             string koikaFileName("koika/");
             char buffer[4096];
-	    strncpy(buffer, inputFileName.c_str(), sizeof(buffer));
+	    strncpy(buffer, inputFileName.c_str(), sizeof(buffer)-1);
             koikaFileName += string(::basename(buffer));
             koikaFileName += string(".koika");
 
@@ -189,7 +188,7 @@ int main(int argc, char *const argv[]) {
     for (int i = optind; i < argc; i++) {
         string inputFileName(argv[i]);
         char buffer[4096];
-	strncpy(buffer, inputFileName.c_str(), sizeof(buffer));
+	strncpy(buffer, inputFileName.c_str(), sizeof(buffer)-1);
         string input_basename(::basename(buffer));
         long dotpos = input_basename.find_first_of('.');
         string packageName = input_basename.substr(0, dotpos);
