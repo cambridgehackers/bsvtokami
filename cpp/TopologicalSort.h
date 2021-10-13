@@ -24,6 +24,7 @@ class Graph
     void topologicalSortUtil(int v, bool visited[], stack<int> &Stack);
 public:
     Graph(int V); // Constructor
+    ~Graph();
 
     // function to add an edge to graph
     void addEdge(int v, int w);

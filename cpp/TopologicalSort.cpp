@@ -12,6 +12,11 @@ Graph::Graph(int V)
     adj = new list<int>[V];
 }
 
+Graph::~Graph()
+{
+    delete [] adj;
+}
+
 void Graph::addEdge(int v, int w)
 {
     adj[v].push_back(w); // Add w to v’s list.
@@ -57,6 +62,7 @@ void Graph::topologicalSort()
         cout << Stack.top() << " ";
         Stack.pop();
     }
+    delete visited;
 }
 
 // Driver program to test above functions
